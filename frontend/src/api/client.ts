@@ -105,8 +105,8 @@ class APIClient {
     const logStore = useLogStore.getState()
 
     // Determine source domain
-    let source: 'API' | 'IA' | 'Coleta' | 'Triagem' | 'Extração' | 'Exportação' | 'Protocolo' = 'API'
-    if (path.includes('/ai/') || path.includes('/ai-settings') || path.includes('/suggest')) source = 'IA'
+    let source: 'API' | 'Assistência' | 'IA' | 'Coleta' | 'Triagem' | 'Extração' | 'Exportação' | 'Protocolo' = 'API'
+    if (path.includes('/ai/') || path.includes('/ai-settings') || path.includes('/suggest')) source = 'Assistência'
     else if (path.includes('/harvest')) source = 'Coleta'
     else if (path.includes('/screening') || path.includes('/papers')) source = 'Triagem'
     else if (path.includes('/extractions')) source = 'Extração'
@@ -380,9 +380,44 @@ class APIClient {
     })
   }
 
-  async downloadPaperPDF(projectId: string, paperId: string): Promise<any> {
-    return this.request<any>(`/projects/${projectId}/papers/${paperId}/extraction/pdf/download`, {
+  async downloadPaperPDF(projectId: string, paperId: string): Promise<{ status: string; pdf_path: string }> {
+    return this.request<{ status: string; pdf_path: string }>(`/projects/${projectId}/papers/${paperId}/extraction/pdf/download`, {
       method: 'POST',
+    })
+  }
+
+  async uploadPaperPDF(projectId: string, paperId: string, file: File): Promise<{ status: string; pdf_path: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch(`${this.baseUrl}/projects/${projectId}/papers/${paperId}/extraction/pdf/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Erro ao enviar o arquivo PDF.' }))
+      throw new Error(err.detail || 'Falha no upload do PDF.')
+    }
+    return res.json()
+  }
+
+  getPaperPdfUrl(projectId: string, paperId: string): string {
+    return `${this.baseUrl}/projects/${projectId}/papers/${paperId}/extraction/pdf`
+  }
+
+  async getPaperPdfText(projectId: string, paperId: string): Promise<{ paper_id: string; text: string }> {
+    return this.request<{ paper_id: string; text: string }>(`/projects/${projectId}/papers/${paperId}/extraction/pdf/text`)
+  }
+
+  async deletePaperPDF(projectId: string, paperId: string): Promise<{ status: string }> {
+    return this.request<{ status: string }>(`/projects/${projectId}/papers/${paperId}/extraction/pdf`, {
+      method: 'DELETE',
+    })
+  }
+
+  async updatePaperDownloadUrl(projectId: string, paperId: string, downloadUrl: string): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/papers/${paperId}/extraction/download-url`, {
+      method: 'PATCH',
+      body: JSON.stringify({ download_url: downloadUrl }),
     })
   }
 

@@ -7,7 +7,7 @@
 import { create } from 'zustand'
 
 export type LogLevel = 'info' | 'success' | 'warn' | 'error' | 'debug'
-export type LogSource = 'API' | 'WebSocket' | 'IA' | 'Sistema' | 'Coleta' | 'Triagem' | 'Extração' | 'Exportação' | 'Protocolo' | 'Deduplicação'
+export type LogSource = 'API' | 'WebSocket' | 'Assistência' | 'IA' | 'Sistema' | 'Coleta' | 'Triagem' | 'Extração' | 'Exportação' | 'Protocolo' | 'Deduplicação'
 
 export interface LogEntry {
   id: string

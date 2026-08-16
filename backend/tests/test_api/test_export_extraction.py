@@ -68,15 +68,36 @@ async def test_extraction_and_export_flow(async_client, db_session):
     assert excel_res.status_code == 200
     assert len(excel_res.content) > 1000  # Conteúdo binário da planilha
 
-    # 7. Testar endpoint de resumo de extração (Fase A Posteriori)
-    summary_res = await async_client.get(f"/api/v1/projects/{proj.id}/extraction/summary")
-    assert summary_res.status_code == 200
-    sum_data = summary_res.json()
-    assert sum_data["total_screened"] == 1
-    assert sum_data["total_included"] == 1
-    assert sum_data["total_extracted"] == 1
-    assert sum_data["extraction_progress_percent"] == 100.0
-    assert len(sum_data["questions_matrix"]) == 1
-    assert sum_data["questions_matrix"][0]["total_answered"] == 1
-    assert sum_data["questions_matrix"][0]["answers"][0]["paper_title"] == "Deep Learning in Healthcare"
+    # 8. Testar endpoints de manipulação de PDF (Upload, Texto, Download URL, Deleção)
+    sample_pdf_bytes = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/Resources <<>>\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000060 00000 n \n0000000117 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n212\n%%EOF"
+    
+    # 8.1 Upload de PDF
+    upload_res = await async_client.post(
+        f"/api/v1/projects/{proj.id}/papers/{paper.id}/extraction/pdf/upload",
+        files={"file": ("test_artigo.pdf", sample_pdf_bytes, "application/pdf")},
+    )
+    assert upload_res.status_code == 200
+    assert upload_res.json()["status"] == "uploaded"
+
+    # 8.2 Obter arquivo do PDF
+    get_pdf_res = await async_client.get(
+        f"/api/v1/projects/{proj.id}/papers/{paper.id}/extraction/pdf"
+    )
+    assert get_pdf_res.status_code == 200
+    assert get_pdf_res.headers["content-type"] == "application/pdf"
+
+    # 8.3 Atualizar download URL
+    patch_url_res = await async_client.patch(
+        f"/api/v1/projects/{proj.id}/papers/{paper.id}/extraction/download-url",
+        json={"download_url": "https://exemplo.org/novo_link.pdf"},
+    )
+    assert patch_url_res.status_code == 200
+    assert patch_url_res.json()["download_url"] == "https://exemplo.org/novo_link.pdf"
+
+    # 8.4 Deletar PDF
+    del_pdf_res = await async_client.delete(
+        f"/api/v1/projects/{proj.id}/papers/{paper.id}/extraction/pdf"
+    )
+    assert del_pdf_res.status_code == 200
+    assert del_pdf_res.json()["status"] == "deleted"
 

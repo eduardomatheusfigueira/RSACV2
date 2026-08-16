@@ -38,6 +38,10 @@ import {
   CheckSquare,
   Square,
   CheckCheck,
+  FileCode,
+  FileX,
+  FileCheck,
+  Upload,
   RotateCcw,
   ShieldCheck,
   ShieldAlert,
@@ -58,6 +62,12 @@ export function ScreeningPage(): React.JSX.Element {
   const [papers, setPapers] = useState<Paper[]>([])
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   const [loading, setLoading] = useState(true)
+  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [readingViewMode, setReadingViewMode] = useState<'abstract' | 'pdf_text'>('abstract')
+  const [pdfExtractedText, setPdfExtractedText] = useState<string | null>(null)
+  const [loadingPdfText, setLoadingPdfText] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
 
   // Deduplication Report State
@@ -263,6 +273,43 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
+
+  const handleUploadFile = async (file: File) => {
+    if (!id || !selectedPaper) return
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      error('Triagem', 'O arquivo selecionado não é um PDF válido (.pdf).')
+      return
+    }
+
+    try {
+      setUploadingPdf(true)
+      const res = await api.uploadPaperPDF(id, selectedPaper.id, file)
+      const updated = { ...selectedPaper, pdf_path: res.pdf_path, pdf_text_extracted: true }
+      setSelectedPaper(updated)
+      setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updated : p)))
+      success('Triagem', 'PDF anexado e vinculado com sucesso!')
+    } catch (err: any) {
+      error('Triagem', `Falha no upload do PDF: ${err.message}`)
+    } finally {
+      setUploadingPdf(false)
+    }
+  }
+
+  const handleToggleReadingView = async (mode: 'abstract' | 'pdf_text') => {
+    setReadingViewMode(mode)
+    if (mode === 'pdf_text' && selectedPaper?.pdf_path && !pdfExtractedText && id && selectedPaper) {
+      try {
+        setLoadingPdfText(true)
+        const res = await api.getPaperPdfText(id, selectedPaper.id)
+        setPdfExtractedText(res.text)
+      } catch (err: any) {
+        setPdfExtractedText('[Não foi possível extrair o texto deste PDF ou o arquivo é escaneado em imagem.]')
+      } finally {
+        setLoadingPdfText(false)
+      }
+    }
+  }
+
   const handleSelectNextPaper = () => {
     if (!selectedPaper || papers.length === 0) return
     const currentIndex = papers.findIndex((p) => p.id === selectedPaper.id)
@@ -330,19 +377,19 @@ export function ScreeningPage(): React.JSX.Element {
     try {
       setIsAiScreeningSingle(true)
       setAiLastResult(null)
-      info('IA', `Iniciando triagem por IA do estudo "${selectedPaper.title.slice(0, 50)}..."`)
+      info('Assistência', `Iniciando triagem assistida do estudo "${selectedPaper.title.slice(0, 50)}..."`)
 
       const res = await api.screenSinglePaperAI(id, selectedPaper.id)
       setAiLastResult(res)
 
-      success('IA', `Parecer IA: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.justification || (res as any).reasoning}\nCritérios atendidos: ${(res as any).criteria_met?.join(', ') || 'Nenhum'}`)
+      success('Assistência', `Parecer da Assistência: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.justification || (res as any).reasoning}\nCritérios atendidos: ${(res as any).criteria_met?.join(', ') || 'Nenhum'}`)
 
       const updatedPaper = await api.getPaper(id, selectedPaper.id)
       setSelectedPaper(updatedPaper)
       setPapers(papers.map((p) => (p.id === selectedPaper.id ? updatedPaper : p)))
       loadStats(id)
     } catch (err: any) {
-      error('IA', `Falha na triagem com IA: ${err.message}`)
+      error('Assistência', `Falha na triagem com assistência: ${err.message}`)
     } finally {
       setIsAiScreeningSingle(false)
     }
@@ -533,11 +580,13 @@ export function ScreeningPage(): React.JSX.Element {
     <div className="screening-page animate-fade-in">
       {/* Header */}
       <div className="page-header">
-        <div>
-          <button className="btn-back" onClick={() => navigate('/projects')}>
-            <ArrowLeft size={16} /> Voltar para Projetos
-          </button>
-          <h1 className="page-title">Triagem de Estudos (Triagem 1)</h1>
+        <div className="page-header-left">
+          <div className="page-header-title-row">
+            <button className="btn-back" onClick={() => navigate('/projects')}>
+              <ArrowLeft size={13} /> Voltar
+            </button>
+            <h1 className="page-title">Triagem de Estudos (Triagem 1)</h1>
+          </div>
           <p className="page-subtitle">
             Projeto: <strong>{activeProject?.title}</strong> — Avaliação rápida de título, resumo e critérios de inclusão/exclusão
           </p>
@@ -549,16 +598,16 @@ export function ScreeningPage(): React.JSX.Element {
             disabled={isDeduplicating}
             title="Verificar e auditar registros duplicados"
           >
-            <Layers size={16} className="icon-accent" />
+            <Layers size={14} className="icon-accent" />
             {isDeduplicating ? 'Auditando...' : 'Auditoria de Duplicatas'}
           </button>
           {aiEnabled && (
             <button className="btn-secondary" onClick={() => setIsBatchModalOpen(true)}>
-              <Zap size={16} className="icon-accent" /> Triagem em Lote com IA
+              <Zap size={14} className="icon-accent" /> Triagem em Lote com Assistência
             </button>
           )}
           <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={18} /> Adicionar Manual
+            <Plus size={14} /> Adicionar Manual
           </button>
         </div>
       </div>
@@ -695,7 +744,7 @@ export function ScreeningPage(): React.JSX.Element {
                         {paper.decision}
                       </span>
                       {paper.ai_confidence !== null && (
-                        <span className="badge-ai-conf" title="Confiança da IA">
+                        <span className="badge-ai-conf" title="Confiança da Assistência">
                           <Sparkles size={10} /> {Math.round(paper.ai_confidence * 100)}%
                         </span>
                       )}
@@ -729,7 +778,27 @@ export function ScreeningPage(): React.JSX.Element {
       {selectedPaper ? (
         <div className="screening-workbench-grid animate-fade-in">
           {/* ── COLUNA DA ESQUERDA: TEXTO, METADADOS & AÇÕES ────────────── */}
-          <div className="study-reading-pane">
+          <input
+        type="file"
+        ref={fileInputRef}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) handleUploadFile(file)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        }}
+        accept=".pdf,application/pdf"
+        style={{ display: 'none' }}
+      />
+          <div
+            className={`study-reading-pane ${isDragOver ? 'drag-over-active' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false) }}
+            onDrop={(e) => {
+              e.preventDefault(); e.stopPropagation(); setIsDragOver(false)
+              const file = e.dataTransfer.files?.[0]
+              if (file) handleUploadFile(file)
+            }}
+          >
             {/* Action Bar with Quick Decision & Navigation */}
             <div className="study-actions-toolbar">
               <div className="decision-buttons-group">
@@ -768,7 +837,7 @@ export function ScreeningPage(): React.JSX.Element {
                     className="btn-ai-triage"
                     onClick={handleSingleAIScreening}
                     disabled={isAiScreeningSingle}
-                    title="Avaliar este artigo com Inteligência Artificial"
+                    title="Avaliar este artigo com Assistência"
                   >
                     {isAiScreeningSingle ? (
                       <>
@@ -776,7 +845,7 @@ export function ScreeningPage(): React.JSX.Element {
                       </>
                     ) : (
                       <>
-                        <Sparkles size={14} /> Triar com IA
+                        <Sparkles size={14} /> Triar com Assistência
                       </>
                     )}
                   </button>
@@ -848,7 +917,7 @@ export function ScreeningPage(): React.JSX.Element {
                 <div className="ai-result-callout animate-fade-in">
                   <div className="ai-callout-header">
                     <div className="ai-tag">
-                      <Sparkles size={14} /> Parecer da IA ({aiLastResult.model_used})
+                      <Sparkles size={14} /> Parecer da Assistência ({aiLastResult.model_used})
                     </div>
                     <span className="ai-confidence">
                       Confiança: {Math.round(aiLastResult.confidence * 100)}%
@@ -1101,7 +1170,7 @@ export function ScreeningPage(): React.JSX.Element {
         <div className="modal-overlay animate-fade-in" onClick={() => !isBatchRunning && setIsBatchModalOpen(false)}>
           <div className="modal-content batch-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Triagem em Lote com Inteligência Artificial</h2>
+              <h2>Triagem em Lote com Assistência</h2>
               <p>Execute a avaliação automática em massa de artigos com status Pendente</p>
             </div>
 
@@ -1148,7 +1217,7 @@ export function ScreeningPage(): React.JSX.Element {
             ) : (
               <div className="batch-progress-view animate-fade-in">
                 <div className="progress-top-row">
-                  <span className="progress-label">Processando com IA...</span>
+                  <span className="progress-label">Processando com Assistência...</span>
                   <span className="progress-percentage">{batchProgress?.percentage || 0}%</span>
                 </div>
 

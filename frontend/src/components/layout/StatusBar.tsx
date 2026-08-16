@@ -14,10 +14,6 @@ export function StatusBar(): JSX.Element {
 
   const errorCount = entries.filter((e) => e.level === 'error').length
 
-  const statusIcon =
-    backendStatus === 'online' ? '🟢' :
-    backendStatus === 'connecting' ? '🟡' : '🔴'
-
   const statusText =
     backendStatus === 'online' ? 'Backend Online' :
     backendStatus === 'connecting' ? 'Conectando...' : 'Backend Offline'
@@ -26,17 +22,18 @@ export function StatusBar(): JSX.Element {
     <footer className="status-bar">
       <div className="status-bar-left">
         <span className="status-indicator">
-          {statusIcon} {statusText}
+          <span className={`status-dot ${backendStatus || 'offline'}`} />
+          {statusText}
         </span>
         <span className="status-divider">|</span>
         <span className={`status-ai-mode ${aiEnabled ? 'active' : 'manual'}`}>
           {aiEnabled ? (
             <>
-              <Sparkles size={12} /> Recursos de I.A. Ativos
+              <Sparkles size={12} /> Modo Assistido
             </>
           ) : (
             <>
-              <Edit3 size={12} /> Modo 100% Manual (I.A. Desativada)
+              <Edit3 size={12} /> Modo Manual
             </>
           )}
         </span>

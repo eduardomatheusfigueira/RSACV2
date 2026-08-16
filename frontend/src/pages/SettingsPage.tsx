@@ -414,7 +414,7 @@ export function SettingsPage(): JSX.Element {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err) {
-      console.error('Erro ao salvar configurações de IA:', err)
+      console.error('Erro ao salvar configurações de assistência:', err)
     } finally {
       setSaving(false)
     }
@@ -433,7 +433,7 @@ export function SettingsPage(): JSX.Element {
     } catch (err: any) {
       setTestResult({
         success: false,
-        message: err.message || 'Falha na conexão com o modelo de IA.',
+        message: err.message || 'Falha na conexão com o serviço de assistência.',
       })
     } finally {
       setTesting(false)
@@ -446,16 +446,18 @@ export function SettingsPage(): JSX.Element {
     <div className="settings-page animate-fade-in">
       {/* Top Header */}
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Configurações & Modos de Operação</h1>
+        <div className="page-header-left">
+          <div className="page-header-title-row">
+            <h1 className="page-title">Configurações & Modos de Operação</h1>
+          </div>
           <p className="page-subtitle">
-            Ative ou desative recursos de Inteligência Artificial e configure modelos em nuvem ou locais
+            Ative ou desative recursos de assistência e configure modelos em nuvem ou locais
           </p>
         </div>
         <div className="header-actions">
           {saveSuccess && (
-            <span className="save-indicator success">
-              <CheckCircle2 size={16} /> Salvo com sucesso!
+            <span className="save-indicator success animate-fade-in">
+              <CheckCircle2 size={13} /> Salvo com sucesso!
             </span>
           )}
           <button className="btn-primary" onClick={() => handleSave()} disabled={saving}>
@@ -471,11 +473,11 @@ export function SettingsPage(): JSX.Element {
             {isAiActive ? <Sparkles size={28} /> : <Edit3 size={28} />}
           </div>
           <div>
-            <h3>{isAiActive ? 'Recursos de Inteligência Artificial Ativados' : 'Modo 100% Manual (I.A. Desativada)'}</h3>
+            <h3>{isAiActive ? 'Recursos de Assistência Ativos' : 'Modo Manual'}</h3>
             <p>
               {isAiActive
-                ? 'A IA auxiliará na sugestão do protocolo (PICO/Critérios), triagem de estudos (Triagem 1) e extração de dados do texto integral (Triagem 2).'
-                : 'Todo o processo de revisão será conduzido manualmente pelo pesquisador, ocultando botões e automações de IA para máxima conformidade e rigor manual.'}
+                ? 'A assistência auxilia na sugestão de protocolo, triagem de estudos e extração de dados.'
+                : 'O processo de revisão é conduzido integralmente pelo pesquisador.'}
             </p>
           </div>
         </div>
@@ -486,14 +488,14 @@ export function SettingsPage(): JSX.Element {
             className={`btn-mode-toggle ${isAiActive ? 'active' : ''}`}
             onClick={() => handleToggleAiActive(true)}
           >
-            <Sparkles size={15} /> Ativar Modo I.A.
+            <Sparkles size={15} /> Modo Assistido
           </button>
           <button
             type="button"
             className={`btn-mode-toggle manual ${!isAiActive ? 'active' : ''}`}
             onClick={() => handleToggleAiActive(false)}
           >
-            <Edit3 size={15} /> Modo 100% Manual
+            <Edit3 size={15} /> Modo Manual
           </button>
         </div>
       </div>
@@ -549,7 +551,7 @@ export function SettingsPage(): JSX.Element {
           <div className="settings-card">
             <div className="card-section-title">
               <Sparkles size={20} className="icon-accent" />
-              <h2>Provedor de Inteligência Artificial</h2>
+              <h2>Provedor de Assistência</h2>
             </div>
             <p className="section-help">
               Selecione o provedor e o modelo desejado para triagem, sugestão de protocolo e extração de dados.
@@ -734,7 +736,7 @@ export function SettingsPage(): JSX.Element {
                   </>
                 ) : (
                   <>
-                    <Cpu size={15} /> Testar Conexão com IA
+                    <Cpu size={15} /> Testar Conexão da Assistência
                   </>
                 )}
               </button>

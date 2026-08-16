@@ -246,16 +246,23 @@
 }
 
 .queue-paper-card.selected {
-  background: var(--color-accent);
-  color: #ffffff;
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-neo-pressed);
+  background: var(--color-bg-elevated) !important;
+  border: 2px solid var(--color-accent) !important;
+  box-shadow: var(--shadow-neo-raised), 0 0 0 1px var(--color-accent);
 }
 
-.queue-paper-card.selected .queue-card-title,
-.queue-paper-card.selected .queue-card-authors,
+.queue-paper-card.selected .queue-card-title {
+  color: var(--color-accent) !important;
+  font-weight: var(--weight-bold);
+}
+
+.queue-paper-card.selected .queue-card-authors {
+  color: var(--color-text-secondary) !important;
+}
+
 .queue-paper-card.selected .queue-card-year {
-  color: #ffffff;
+  color: var(--color-accent) !important;
+  font-weight: var(--weight-bold);
 }
 
 .queue-card-meta {
@@ -376,6 +383,13 @@
   flex-direction: column;
   overflow: hidden;
   height: 100%;
+  position: relative;
+  transition: border-color var(--transition-fast);
+}
+
+.study-reading-pane.drag-over-active {
+  border: 2px dashed var(--color-accent) !important;
+  background: rgba(188, 108, 37, 0.04);
 }
 
 .study-actions-toolbar {

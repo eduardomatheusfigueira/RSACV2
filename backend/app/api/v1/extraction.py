@@ -4,8 +4,10 @@
 """RSAC V2 — Router de Extração de Dados e Gestão de PDFs."""
 
 import logging
+import os
 from typing import Dict, List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -242,3 +244,81 @@ async def download_paper_pdf(
     db.commit()
 
     return {"status": "downloaded", "pdf_path": saved_path}
+
+
+@router.get("/pdf")
+def get_paper_pdf_file(
+    project_id: str,
+    paper_id: str,
+    db: Session = Depends(get_db),
+):
+    """Serve o arquivo PDF do artigo para visualização ou download externo."""
+    paper = db.query(PaperModel).filter(PaperModel.project_id == project_id, PaperModel.id == paper_id).first()
+    if not paper or not paper.pdf_path or not os.path.exists(paper.pdf_path):
+        raise HTTPException(status_code=404, detail="Arquivo PDF não encontrado localmente.")
+
+    return FileResponse(
+        path=paper.pdf_path,
+        media_type="application/pdf",
+        filename=f"{paper_id}.pdf",
+    )
+
+
+@router.get("/pdf/text")
+def get_paper_pdf_extracted_text(
+    project_id: str,
+    paper_id: str,
+    db: Session = Depends(get_db),
+):
+    """Extrai e retorna o texto completo do PDF do artigo."""
+    paper = db.query(PaperModel).filter(PaperModel.project_id == project_id, PaperModel.id == paper_id).first()
+    if not paper or not paper.pdf_path or not os.path.exists(paper.pdf_path):
+        raise HTTPException(status_code=404, detail="Arquivo PDF não encontrado localmente.")
+
+    try:
+        full_text = pdf_service.extract_text_from_pdf(paper.pdf_path)
+        return {"paper_id": paper_id, "text": full_text}
+    except Exception as e:
+        logger.error(f"[PDFText] Erro ao extrair texto do PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao extrair texto do PDF: {e}")
+
+
+@router.delete("/pdf")
+def delete_paper_pdf_file(
+    project_id: str,
+    paper_id: str,
+    db: Session = Depends(get_db),
+):
+    """Remove o PDF anexado do artigo."""
+    paper = db.query(PaperModel).filter(PaperModel.project_id == project_id, PaperModel.id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="Artigo não encontrado.")
+
+    if paper.pdf_path and os.path.exists(paper.pdf_path):
+        try:
+            os.remove(paper.pdf_path)
+        except Exception as e:
+            logger.warning(f"[PDFService] Falha ao deletar arquivo físico: {e}")
+
+    paper.pdf_path = None
+    paper.pdf_text_extracted = False
+    db.commit()
+
+    return {"status": "deleted"}
+
+
+@router.patch("/download-url")
+def update_paper_download_url(
+    project_id: str,
+    paper_id: str,
+    data: Dict[str, str],
+    db: Session = Depends(get_db),
+):
+    """Atualiza a URL de download direto do artigo."""
+    paper = db.query(PaperModel).filter(PaperModel.project_id == project_id, PaperModel.id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail="Artigo não encontrado.")
+
+    paper.download_url = data.get("download_url", paper.download_url)
+    db.commit()
+    return {"status": "updated", "download_url": paper.download_url}

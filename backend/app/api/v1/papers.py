@@ -8,7 +8,7 @@ import math
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from app.api.deps import get_db
 from app.infrastructure.persistence.models import (
@@ -90,7 +90,7 @@ def list_papers(
         query = query.filter(or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)))
 
     if decision:
-        query = query.filter(PaperModel.decision == decision)
+        query = query.filter(func.lower(PaperModel.decision) == decision.lower())
 
     if search:
         search_term = f"%{search}%"

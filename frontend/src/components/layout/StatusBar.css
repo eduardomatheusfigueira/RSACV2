@@ -43,6 +43,26 @@
   font-size: 0.6875rem;
 }
 
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.online {
+  background: #2b9348;
+  box-shadow: 0 0 6px rgba(43, 147, 72, 0.5);
+}
+
+.status-dot.connecting {
+  background: #e09f3e;
+}
+
+.status-dot.offline {
+  background: #d90429;
+}
+
 .status-divider {
   display: none;
 }

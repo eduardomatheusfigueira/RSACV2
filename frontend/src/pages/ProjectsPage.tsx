@@ -111,16 +111,19 @@ export function ProjectsPage(): JSX.Element {
     <div className="projects-page animate-fade-in">
       {/* Top Header */}
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Projetos de Revisão</h1>
+        <div className="page-header-left">
+          <div className="page-header-title-row">
+            <h1 className="page-title">Projetos de Revisão Sistemática</h1>
+          </div>
           <p className="page-subtitle">
-            Crie, selecione ou gerencie seus protocolos e revisões sistemáticas
+            Crie, selecione e gerencie seus protocolos e revisões com rigor metodológico
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} />
-          Novo Projeto
-        </button>
+        <div className="header-actions">
+          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
+            <Plus size={14} /> Novo Projeto
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}

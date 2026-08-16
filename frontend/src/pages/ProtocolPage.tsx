@@ -24,10 +24,12 @@ import {
   Filter,
   HelpCircle,
   Sparkles,
+  Cpu,
   Save,
   Plus,
   Trash2,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   AlertTriangle,
   FileText,
@@ -38,10 +40,15 @@ import {
   ShieldCheck,
   BarChart3,
   Database,
-  ArrowRight,
+  Clock,
+  ExternalLink,
   ChevronDown,
   ChevronUp,
-  FileSpreadsheet,
+  ChevronRight,
+  BookMarked,
+  ListChecks,
+  Check,
+  X,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -559,8 +566,8 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
 
       setAiSuggestions(suggestions)
     } catch (err: any) {
-      console.error('Erro ao sugerir protocolo via IA:', err)
-      setErrorMessage(err.message || 'Falha na comunicação com o provedor de IA.')
+      console.error('Erro ao sugerir protocolo via assistência:', err)
+      setErrorMessage(err.message || 'Falha na comunicação com o serviço de assistência.')
       setIsAiModalOpen(false)
     } finally {
       setAiLoading(false)
@@ -633,11 +640,13 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
     <div className="protocol-page animate-fade-in">
       {/* Header */}
       <div className="page-header">
-        <div>
-          <button className="btn-back" onClick={() => navigate('/projects')}>
-            <ArrowLeft size={16} /> Voltar para Projetos
-          </button>
-          <h1 className="page-title">Estúdio de Redação do Protocolo & Artigo</h1>
+        <div className="page-header-left">
+          <div className="page-header-title-row">
+            <button className="btn-back" onClick={() => navigate('/projects')}>
+              <ArrowLeft size={13} /> Voltar
+            </button>
+            <h1 className="page-title">Estúdio de Redação do Protocolo & Artigo</h1>
+          </div>
           <div className="page-subtitle-with-select">
             <span>Projeto: <strong>{activeProject?.title}</strong></span>
             <span className="subtitle-divider">·</span>
@@ -689,10 +698,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               className="btn-secondary"
               onClick={handleSuggestWithAI}
               disabled={saving}
-              title="Gera proposta com IA"
+              title="Gera proposta com Assistência"
             >
               <Sparkles size={16} className="icon-accent" />
-              Sugerir com IA
+              Sugerir com Assistência
             </button>
           )}
           <button className="btn-primary" onClick={handleSave} disabled={saving}>
@@ -2891,9 +2900,9 @@ Conclusões:
         <div className="modal-overlay animate-fade-in" onClick={() => setIsAiModalOpen(false)}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-titlebar">
-              <span>Proposta de Protocolo Gerada por IA ({activeProject?.methodology})</span>
+              <span>Proposta de Protocolo Gerada por Assistência ({activeProject?.methodology})</span>
               <button className="modal-titlebar-btn" onClick={() => setIsAiModalOpen(false)}>
-                ✕
+                <X size={14} />
               </button>
             </div>
             <div className="modal-body">

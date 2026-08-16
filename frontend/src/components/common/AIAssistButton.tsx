@@ -89,7 +89,7 @@ export function AIAssistButton({
       shorten: 'Síntese',
     }
 
-    logStore.info('IA', `Solicitando ${actionNames[action]} para: "${fieldLabel}"`, `Ação: ${action}`)
+    logStore.info('Assistência', `Solicitando ${actionNames[action]} para: "${fieldLabel}"`, `Ação: ${action}`)
 
     try {
       // Salva valor anterior para permitir desfazer
@@ -113,8 +113,8 @@ export function AIAssistButton({
         setShowUndo(true)
 
         logStore.success(
-          'IA',
-          `"${fieldLabel}" atualizado com sucesso (${response.model_used || 'IA'})`,
+          'Assistência',
+          `"${fieldLabel}" atualizado com sucesso (${response.model_used || 'Assistência'})`,
           response.explanation ? `Justificativa: ${response.explanation}` : undefined
         )
 
@@ -126,8 +126,8 @@ export function AIAssistButton({
       }
     } catch (err: any) {
       console.error(`[AIAssistButton] Erro ao processar campo ${fieldId}:`, err)
-      logStore.error('IA', `Falha ao processar "${fieldLabel}"`, err.message || 'Erro desconhecido')
-      alert(`Falha no assistente de IA: ${err.message || 'Erro de comunicação com o servidor'}`)
+      logStore.error('Assistência', `Falha ao processar "${fieldLabel}"`, err.message || 'Erro desconhecido')
+      alert(`Falha no assistente: ${err.message || 'Erro de comunicação com o servidor'}`)
     } finally {
       setLoading(false)
     }
@@ -139,7 +139,7 @@ export function AIAssistButton({
       onApply(lastOriginalValue)
       setShowUndo(false)
       setLastOriginalValue(null)
-      logStore.info('IA', `Alteração de IA desfeita em "${fieldLabel}"`)
+      logStore.info('Assistência', `Alteração de assistência desfeita em "${fieldLabel}"`)
     }
   }
 
@@ -152,7 +152,7 @@ export function AIAssistButton({
           className={`btn-ai-assist ${loading ? 'loading' : ''} ${justApplied ? 'applied' : ''}`}
           onClick={() => handleExecuteAI(hasText ? 'improve' : 'generate')}
           disabled={loading}
-          title={hasText ? `Aperfeiçoar "${fieldLabel}" com IA` : `Preencher "${fieldLabel}" com IA`}
+          title={hasText ? `Aperfeiçoar "${fieldLabel}" com Assistência` : `Preencher "${fieldLabel}" com Assistência`}
         >
           {loading ? (
             <Loader2 size={13} className="ai-spin-icon" />
@@ -163,7 +163,7 @@ export function AIAssistButton({
           )}
           {!compact && (
             <span className="ai-btn-text">
-              {loading ? 'Processando...' : justApplied ? 'Aplicado!' : hasText ? 'Aperfeiçoar com IA' : 'Preencher com IA'}
+              {loading ? 'Processando...' : justApplied ? 'Aplicado!' : hasText ? 'Aperfeiçoar com Assistência' : 'Preencher com Assistência'}
             </span>
           )}
         </button>
@@ -177,7 +177,7 @@ export function AIAssistButton({
             setDropdownOpen(!dropdownOpen)
           }}
           disabled={loading}
-          title="Mais opções de assistência de IA"
+          title="Mais opções de assistência"
         >
           <ChevronDown size={11} />
         </button>
@@ -201,7 +201,7 @@ export function AIAssistButton({
         <div className="ai-assist-dropdown-menu animate-fade-in">
           <div className="ai-dropdown-header">
             <Sparkles size={12} className="icon-accent" />
-            <span>Assistente Especializado de IA</span>
+            <span>Assistente Especializado</span>
           </div>
 
           <div className="ai-dropdown-options">
@@ -279,7 +279,7 @@ export function AIAssistButton({
                 <MessageSquare size={13} className="item-icon" />
                 <div className="item-content">
                   <span className="item-title">Instrução Personalizada...</span>
-                  <span className="item-desc">Forneça uma diretriz específica para a IA</span>
+                  <span className="item-desc">Forneça uma diretriz específica para a assistência</span>
                 </div>
               </button>
             ) : (

@@ -375,6 +375,22 @@ export interface ExtractionSummaryResponse {
   questions_matrix: ExtractionQuestionSummary[]
 }
 
+export interface PrismaFlowData {
+  identification: {
+    total_records_identified: number
+    duplicates_removed: number
+    sources_breakdown: Record<string, number>
+  }
+  screening: {
+    records_screened: number
+    records_excluded: number
+    records_pending?: number
+  }
+  included: {
+    studies_included_in_synthesis: number
+  }
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────
 
 export interface ProjectStats {

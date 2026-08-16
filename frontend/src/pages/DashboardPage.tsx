@@ -50,23 +50,24 @@ export function DashboardPage(): JSX.Element {
   return (
     <div className="dashboard animate-slide-up">
       {/* Header */}
-      <div className="dashboard-header">
-        <div>
-          <h1 className="dashboard-title">
-            <Sparkles size={28} className="dashboard-title-icon" />
-            Revisão Sistemática Assistida por Computador
-          </h1>
-          <p className="dashboard-subtitle">
-            Gerencie suas revisões sistemáticas com assistência de Inteligência Artificial
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-title-row">
+            <Sparkles size={18} className="icon-accent" />
+            <h1 className="page-title">Revisão Sistemática Assistida por Computador</h1>
+          </div>
+          <p className="page-subtitle">
+            Gerencie seus protocolos, coletas e revisões com rigor metodológico e assistência computacional
           </p>
         </div>
-        <button
-          className="dashboard-cta"
-          onClick={() => navigate('/projects')}
-        >
-          <Plus size={18} />
-          Novo Projeto
-        </button>
+        <div className="header-actions">
+          <button
+            className="btn-primary"
+            onClick={() => navigate('/projects')}
+          >
+            <Plus size={14} /> Novo Projeto
+          </button>
+        </div>
       </div>
 
       {/* Stat Cards */}

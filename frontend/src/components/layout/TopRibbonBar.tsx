@@ -185,10 +185,10 @@ export function TopRibbonBar(): JSX.Element {
             type="button"
             className={`ribbon-action-pill ${aiEnabled ? 'ai-active' : 'ai-manual'}`}
             onClick={() => setAiEnabled(!aiEnabled)}
-            title={aiEnabled ? 'IA Ativa — Clique para Modo Manual' : 'Modo Manual — Clique para ativar IA'}
+            title={aiEnabled ? 'Assistência Ativa — Clique para Modo Manual' : 'Modo Manual — Clique para ativar Assistência'}
           >
             {aiEnabled ? <Sparkles size={12} /> : <Edit3 size={12} />}
-            <span>{aiEnabled ? 'IA' : 'Manual'}</span>
+            <span>{aiEnabled ? 'Assistência' : 'Manual'}</span>
           </button>
 
           <button type="button" className={`ribbon-icon-btn collapse-btn ${ribbonCollapsed ? 'active' : ''}`}
@@ -362,9 +362,9 @@ export function TopRibbonBar(): JSX.Element {
                     <span>Copiar<br />Artigo</span>
                   </button>
                   {aiEnabled && (
-                    <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Sugerir com IA')}>
+                    <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Sugerir com Assistência')}>
                       <Sparkles size={20} className="icon-sparkle" />
-                      <span>Sugerir<br />com IA</span>
+                      <span>Sugerir<br />com Assistência</span>
                     </button>
                   )}
                 </div>
@@ -520,21 +520,21 @@ export function TopRibbonBar(): JSX.Element {
 
               <div className="ribbon-divider" />
 
-              {/* Group: Assistente IA */}
+              {/* Group: Assistência */}
               {aiEnabled && (
                 <>
                   <div className="ribbon-group">
                     <div className="ribbon-group-tools">
                       <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Triar')}>
                         <Sparkles size={15} className="icon-sparkle" />
-                        <span>Triar com IA</span>
+                        <span>Triar com Assistência</span>
                       </button>
                       <button type="button" className="tool-btn-vertical" onClick={() => clickDom('.btn-secondary')}>
                         <Zap size={15} />
-                        <span>Lote com IA</span>
+                        <span>Lote com Assistência</span>
                       </button>
                     </div>
-                    <span className="ribbon-group-title">Assistente de IA</span>
+                    <span className="ribbon-group-title">Assistência</span>
                   </div>
                   <div className="ribbon-divider" />
                 </>
@@ -609,9 +609,9 @@ export function TopRibbonBar(): JSX.Element {
                     <span>Salvar<br />Respostas</span>
                   </button>
                   {aiEnabled && (
-                    <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Extrair com IA')}>
+                    <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Extrair com Assistência')}>
                       <Sparkles size={20} className="icon-sparkle" />
-                      <span>Extrair<br />com IA</span>
+                      <span>Extrair<br />com Assistência</span>
                     </button>
                   )}
                 </div>
@@ -741,7 +741,7 @@ export function TopRibbonBar(): JSX.Element {
                   <button type="button" className={`tool-btn-large ${aiEnabled ? 'tool-active' : ''}`}
                     onClick={() => setAiEnabled(true)}>
                     <Sparkles size={20} className={aiEnabled ? 'icon-sparkle' : ''} />
-                    <span>Modo<br />IA</span>
+                    <span>Modo<br />Assistido</span>
                   </button>
                   <button type="button" className={`tool-btn-large ${!aiEnabled ? 'tool-active' : ''}`}
                     onClick={() => setAiEnabled(false)}>
@@ -754,7 +754,7 @@ export function TopRibbonBar(): JSX.Element {
 
               <div className="ribbon-divider" />
 
-              {/* Group: Provedores de IA */}
+              {/* Group: Provedores de Assistência */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
                   <div className="ribbon-provider-stack">
@@ -773,7 +773,7 @@ export function TopRibbonBar(): JSX.Element {
                 <div className="ribbon-group-tools">
                   <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Testar')}>
                     <Zap size={15} />
-                    <span>Testar IA</span>
+                    <span>Testar Conexão</span>
                   </button>
                   <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Salvar')}>
                     <Save size={15} />
