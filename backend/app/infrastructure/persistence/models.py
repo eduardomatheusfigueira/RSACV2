@@ -146,6 +146,18 @@ class PaperModel(Base):
     ai_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     pdf_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     pdf_text_extracted: Mapped[bool] = mapped_column(Boolean, default=False)
+    # ── Procedência e diagnóstico do PDF ──────────────────────────────
+    # "ausente" | "obtido" | "manual" | "falhou" | "indisponivel"
+    pdf_status: Mapped[str] = mapped_column(String(20), default="ausente")
+    pdf_resolved_url: Mapped[str] = mapped_column(Text, default="")
+    pdf_strategy: Mapped[str] = mapped_column(String(40), default="")
+    pdf_attempts: Mapped[str] = mapped_column(Text, default="[]")  # JSON da trilha
+    pdf_page_count: Mapped[int] = mapped_column(Integer, default=0)
+    pdf_size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    pdf_sha256: Mapped[str] = mapped_column(String(64), default="")
+    pdf_text_chars: Mapped[int] = mapped_column(Integer, default=0)
+    pdf_is_scanned: Mapped[bool] = mapped_column(Boolean, default=False)
+    pdf_acquired_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_duplicate: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     merged_into_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
@@ -232,6 +244,11 @@ class ExtractionAnswerModel(Base):
     question_id: Mapped[str] = mapped_column(ForeignKey("extraction_questions.id"))
     answer: Mapped[str] = mapped_column(Text, default="")
     ai_generated: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Trecho literal do estudo que sustenta a resposta e a página onde está —
+    # sem isso a extração assistida não é auditável em revisão sistemática.
+    evidence: Mapped[str] = mapped_column(Text, default="")
+    page_ref: Mapped[str] = mapped_column(String(20), default="")
+    source_kind: Mapped[str] = mapped_column(String(20), default="")  # pdf | resumo | manual
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="extraction_answers")

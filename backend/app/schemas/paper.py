@@ -41,6 +41,11 @@ class PaperResponse(PaperBase):
     title_normalized: str
     pdf_path: Optional[str] = None
     pdf_text_extracted: bool = False
+    pdf_status: str = "ausente"
+    pdf_strategy: str = ""
+    pdf_resolved_url: str = ""
+    pdf_page_count: int = 0
+    pdf_is_scanned: bool = False
     sources: List[str] = []
     created_at: datetime
     updated_at: datetime

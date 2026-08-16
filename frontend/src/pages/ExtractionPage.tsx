@@ -4,11 +4,17 @@
  * Layout Metodológico Otimizado e Ergonômico:
  * 1. Fila Horizontal de Estudos Incluídos (no topo): busca rápida, contagem e esteira de cards.
  * 2. Área de Trabalho Lado a Lado (Two-Column Workspace) com ROLAGEM INDEPENDENTE:
- *    - Coluna da Esquerda: Metadados, Leitor Avançado de Texto Completo / Resumo com busca e zoom tipográfico.
- *    - Coluna da Direita: Formulário de Extração (Q1..Qn) com scroll independente e barra de progresso.
+ *    - Coluna da Esquerda: Metadados e três modos de leitura — Resumo, PDF renderizado
+ *      e Texto extraído — com busca, zoom tipográfico e diagnóstico de aquisição.
+ *    - Coluna da Direita: Formulário de Extração (Q1..Qn) com evidência ancorada por página.
+ *
+ * A obtenção do PDF passa pelo resolvedor multi-estratégia do backend: o link
+ * coletado é quase sempre uma landing page (DOI, PubMed, SciELO, repositório),
+ * e não o arquivo. Quando nenhuma via funciona, a trilha de tentativas fica
+ * visível para que o usuário saiba exatamente qual é o próximo passo manual.
  */
 
-import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   FileText,
@@ -16,11 +22,13 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Download,
   FileCheck,
   FileX,
+  FileSearch,
   Search,
   ExternalLink,
   BookOpen,
@@ -30,21 +38,83 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Layers,
+  ListChecks,
   Upload,
   Trash2,
   Link,
   FileCode,
+  Quote,
   X,
   ZoomIn,
   ZoomOut,
   Copy,
   Check,
+  StopCircle,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import type { Paper, Protocol } from '@/types/api'
+import { useLogStore } from '@/stores/useLogStore'
+import type {
+  Paper,
+  Protocol,
+  PdfAttempt,
+  PdfBatchState,
+  PdfCandidate,
+  PdfState,
+  PdfTextResponse,
+} from '@/types/api'
 import './ExtractionPage.css'
+
+type ReadingViewMode = 'abstract' | 'pdf_view' | 'pdf_text'
+
+/** Rótulos das vias de busca, para explicar a procedência ao usuário. */
+const STRATEGY_LABELS: Record<string, string> = {
+  direct: 'Link direto',
+  pattern: 'Padrão de repositório',
+  unpaywall: 'Unpaywall',
+  openalex: 'OpenAlex',
+  semantic: 'Semantic Scholar',
+  crossref: 'Crossref',
+  europepmc: 'Europe PMC',
+  landing: 'Página de origem',
+  doi_landing: 'Página do DOI',
+  upload: 'Arquivo anexado',
+}
+
+const ATTEMPT_STATUS_LABELS: Record<PdfAttempt['status'], string> = {
+  ok: 'PDF obtido',
+  nao_pdf: 'Devolveu HTML',
+  http_erro: 'Erro HTTP',
+  timeout: 'Sem resposta',
+  erro: 'Falha de conexão',
+  vazio: 'Resposta vazia',
+  pequeno_demais: 'Arquivo inválido',
+}
+
+function strategyLabel(strategy: string): string {
+  if (!strategy) return '—'
+  const [base, suffix] = strategy.split('+')
+  const label = STRATEGY_LABELS[base] || base
+  return suffix ? `${label} (via página intermediária)` : label
+}
+
+const EMPTY_PDF_STATE: PdfState = {
+  has_pdf: false,
+  pdf_path: null,
+  pdf_status: 'ausente',
+  pdf_strategy: '',
+  pdf_resolved_url: '',
+  pdf_page_count: 0,
+  pdf_size_bytes: 0,
+  pdf_text_chars: 0,
+  pdf_is_scanned: false,
+  pdf_acquired_at: null,
+  download_url: '',
+  attempts: [],
+  file_missing: false,
+}
 
 export function ExtractionPage(): JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -58,10 +128,10 @@ export function ExtractionPage(): JSX.Element {
 
   // Extraction State for Selected Paper
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [hasPdf, setHasPdf] = useState(false)
-  const [pdfPath, setPdfPath] = useState<string | null>(null)
-  const [pdfExtractedText, setPdfExtractedText] = useState<string | null>(null)
-  const [readingViewMode, setReadingViewMode] = useState<'abstract' | 'pdf_text'>('abstract')
+  const [evidences, setEvidences] = useState<Record<string, { text: string; page: string }>>({})
+  const [pdfState, setPdfState] = useState<PdfState>(EMPTY_PDF_STATE)
+  const [pdfDoc, setPdfDoc] = useState<PdfTextResponse | null>(null)
+  const [readingViewMode, setReadingViewMode] = useState<ReadingViewMode>('abstract')
   const [loadingPdfText, setLoadingPdfText] = useState(false)
 
   // Advanced Full-Text Reader Tools
@@ -69,15 +139,25 @@ export function ExtractionPage(): JSX.Element {
   const [textSearchTerm, setTextSearchTerm] = useState('')
   const [copiedText, setCopiedText] = useState(false)
 
+  // Aquisição de PDF (individual, diagnóstico e lote)
+  const [acquiring, setAcquiring] = useState(false)
+  const [acquireMessage, setAcquireMessage] = useState('')
+  const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const [candidates, setCandidates] = useState<PdfCandidate[] | null>(null)
+  const [loadingCandidates, setLoadingCandidates] = useState(false)
+  const [batchState, setBatchState] = useState<PdfBatchState | null>(null)
+
   const [saving, setSaving] = useState(false)
   const [extractingAI, setExtractingAI] = useState(false)
-  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false)
   const [customDownloadUrl, setCustomDownloadUrl] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+
+  const hasPdf = pdfState.has_pdf
+  const pdfExtractedText = pdfDoc?.text ?? null
 
   // Search & Navigation in Included Papers
   const [searchTerm, setSearchTerm] = useState('')
@@ -94,11 +174,43 @@ export function ExtractionPage(): JSX.Element {
     if (id && selectedPaper) {
       loadPaperExtraction(id, selectedPaper.id)
       setReadingViewMode('abstract')
-      setPdfExtractedText(null)
+      setPdfDoc(null)
       setTextSearchTerm('')
+      setCandidates(null)
+      setShowDiagnostics(false)
+      setAcquireMessage('')
       setCustomDownloadUrl(selectedPaper.download_url || '')
     }
   }, [id, selectedPaper?.id])
+
+  // Enquanto o lote roda, acompanha o progresso e recarrega a fila ao terminar.
+  useEffect(() => {
+    if (!id || !batchState || batchState.status !== 'running') return
+
+    const timer = window.setInterval(async () => {
+      try {
+        const state = await api.getPdfBatchStatus(id)
+        setBatchState(state)
+        if (state.status !== 'running') {
+          window.clearInterval(timer)
+          useLogStore
+            .getState()
+            .log(
+              state.succeeded > 0 ? 'success' : 'warn',
+              'Extração',
+              `Busca de PDFs concluída: ${state.succeeded} obtidos, ${state.failed} sem arquivo`,
+            )
+          const papersRes = await api.listPapers(id, { decision: 'Incluído', page_size: 200 })
+          setPapers(papersRes.items)
+          if (selectedPaper) loadPaperExtraction(id, selectedPaper.id)
+        }
+      } catch (err) {
+        window.clearInterval(timer)
+      }
+    }, 1500)
+
+    return () => window.clearInterval(timer)
+  }, [id, batchState?.status])
 
   const loadInitialData = async (projectId: string) => {
     try {
@@ -129,14 +241,19 @@ export function ExtractionPage(): JSX.Element {
     try {
       setErrorMessage('')
       const extRes = await api.getExtractionAnswers(projectId, paperId)
-      setHasPdf(extRes.has_pdf)
-      setPdfPath(extRes.pdf_path)
+      const { answers: answerList, paper_id: _pid, ...state } = extRes
+      setPdfState({ ...EMPTY_PDF_STATE, ...state })
 
       const ansMap: Record<string, string> = {}
-      extRes.answers.forEach((a) => {
+      const evidenceMap: Record<string, { text: string; page: string }> = {}
+      answerList.forEach((a) => {
         ansMap[a.question_id] = a.answer
+        if (a.evidence) {
+          evidenceMap[a.question_id] = { text: a.evidence, page: a.page_ref }
+        }
       })
       setAnswers(ansMap)
+      setEvidences(evidenceMap)
     } catch (err) {
       console.error('Erro ao carregar respostas de extração:', err)
     }
@@ -169,10 +286,22 @@ export function ExtractionPage(): JSX.Element {
       setErrorMessage('')
       const res = await api.extractAnswersWithAI(id, selectedPaper.id)
       const nextAns = { ...answers }
+      const nextEvidence = { ...evidences }
       res.answers?.forEach((a: any) => {
         nextAns[a.question_id] = a.answer
+        if (a.evidence) {
+          nextEvidence[a.question_id] = { text: a.evidence, page: a.page_ref || '' }
+        }
       })
       setAnswers(nextAns)
+      setEvidences(nextEvidence)
+
+      const usedAbstract = res.answers?.some((a: any) => a.source_kind === 'resumo')
+      if (usedAbstract && !hasPdf) {
+        setAcquireMessage(
+          'A extração assistida usou apenas o resumo — anexe ou busque o PDF para respostas ancoradas no texto completo.'
+        )
+      }
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: any) {
@@ -194,11 +323,18 @@ export function ExtractionPage(): JSX.Element {
     try {
       setUploadingPdf(true)
       setErrorMessage('')
-      const res = await api.uploadPaperPDF(id, selectedPaper.id, file)
-      setHasPdf(true)
-      setPdfPath(res.pdf_path)
+      const res: any = await api.uploadPaperPDF(id, selectedPaper.id, file)
+      setPdfDoc(null)
+      setAcquireMessage(res.message || 'PDF anexado.')
+      await refreshPdfState()
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
+      if (res.is_scanned) {
+        setErrorMessage(
+          'O PDF anexado não possui texto selecionável (documento digitalizado). ' +
+            'A leitura de texto e a extração assistida ficarão limitadas ao resumo.'
+        )
+      }
     } catch (err: any) {
       console.error('Erro no upload do PDF:', err)
       setErrorMessage(err.message || 'Falha no upload do arquivo PDF.')
@@ -207,50 +343,133 @@ export function ExtractionPage(): JSX.Element {
     }
   }
 
-  const handleDownloadPDF = async () => {
+  const refreshPdfState = async () => {
+    if (!id || !selectedPaper) return
+    const state = await api.getPaperPdfStatus(id, selectedPaper.id)
+    const { paper_id: _pid, ...rest } = state
+    setPdfState({ ...EMPTY_PDF_STATE, ...rest })
+  }
+
+  /**
+   * Dispara a busca multi-estratégia. A falha não é exceção: vem no corpo com a
+   * trilha completa, que abrimos automaticamente para orientar o próximo passo.
+   */
+  const handleAcquirePDF = async () => {
     if (!id || !selectedPaper) return
     try {
-      setDownloadingPdf(true)
+      setAcquiring(true)
       setErrorMessage('')
-      const res = await api.downloadPaperPDF(id, selectedPaper.id)
-      setHasPdf(true)
-      setPdfPath(res.pdf_path)
+      setAcquireMessage('')
+      setCandidates(null)
+
+      const res = await api.acquirePaperPDF(id, selectedPaper.id)
+      const { paper_id: _pid, ...rest } = res as any
+      setPdfState({ ...EMPTY_PDF_STATE, ...rest })
+      setAcquireMessage(res.message || '')
+      setPdfDoc(null)
+
+      if (res.success) {
+        setShowDiagnostics(false)
+        setPapers((prev) =>
+          prev.map((p) =>
+            p.id === selectedPaper.id
+              ? { ...p, pdf_path: res.pdf_path, pdf_status: 'obtido', pdf_text_extracted: true }
+              : p
+          )
+        )
+        useLogStore
+          .getState()
+          .log('success', 'Extração', `PDF obtido via ${strategyLabel(res.strategy)}`, res.message)
+        if (res.is_scanned) {
+          setErrorMessage(
+            'PDF obtido, mas sem texto selecionável (documento digitalizado). ' +
+              'A extração assistida usará o resumo.'
+          )
+        }
+      } else {
+        setShowDiagnostics(true)
+        useLogStore
+          .getState()
+          .log(
+            'warn',
+            'Extração',
+            'Busca automática de PDF sem sucesso',
+            `${res.attempts?.length || 0} caminho(s) tentado(s).`
+          )
+      }
     } catch (err: any) {
-      console.error('Erro ao baixar PDF:', err)
-      setErrorMessage(err.message || 'Não foi possível baixar o PDF automaticamente da URL.')
+      console.error('Erro ao buscar PDF:', err)
+      setErrorMessage(err.message || 'Falha ao executar a busca automática do PDF.')
     } finally {
-      setDownloadingPdf(false)
+      setAcquiring(false)
+    }
+  }
+
+  const handleLoadCandidates = async () => {
+    if (!id || !selectedPaper) return
+    try {
+      setLoadingCandidates(true)
+      const res = await api.getPaperPdfCandidates(id, selectedPaper.id)
+      setCandidates(res.candidates)
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Não foi possível levantar links candidatos.')
+    } finally {
+      setLoadingCandidates(false)
     }
   }
 
   const handleSaveCustomDownloadUrl = async () => {
     if (!id || !selectedPaper || !customDownloadUrl.trim()) return
     try {
-      setDownloadingPdf(true)
+      setAcquiring(true)
       setErrorMessage('')
       await api.updatePaperDownloadUrl(id, selectedPaper.id, customDownloadUrl.trim())
       selectedPaper.download_url = customDownloadUrl.trim()
       setIsUrlModalOpen(false)
-      const res = await api.downloadPaperPDF(id, selectedPaper.id)
-      setHasPdf(true)
-      setPdfPath(res.pdf_path)
+      setAcquiring(false)
+      await handleAcquirePDF()
     } catch (err: any) {
       console.error('Erro ao baixar por novo link:', err)
       setErrorMessage(err.message || 'Link salvo, mas não foi possível obter o PDF diretamente.')
-    } finally {
-      setDownloadingPdf(false)
+      setAcquiring(false)
     }
   }
 
-  const handleToggleReadingView = async (mode: 'abstract' | 'pdf_text') => {
+  // ── Lote: buscar PDFs de todos os estudos incluídos ───────────────
+  const handleStartBatch = async () => {
+    if (!id) return
+    try {
+      setErrorMessage('')
+      const state = await api.startPdfBatch(id, true, 'Incluído')
+      setBatchState(state)
+      if (state.status === 'empty') {
+        setAcquireMessage(state.message || 'Todos os estudos incluídos já possuem PDF.')
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Não foi possível iniciar a busca em lote.')
+    }
+  }
+
+  const handleCancelBatch = async () => {
+    if (!id) return
+    await api.cancelPdfBatch(id)
+    const state = await api.getPdfBatchStatus(id)
+    setBatchState(state)
+  }
+
+  const handleToggleReadingView = async (mode: ReadingViewMode) => {
     setReadingViewMode(mode)
-    if (mode === 'pdf_text' && hasPdf && !pdfExtractedText && id && selectedPaper) {
+    if (mode === 'pdf_text' && hasPdf && !pdfDoc && id && selectedPaper) {
       try {
         setLoadingPdfText(true)
         const res = await api.getPaperPdfText(id, selectedPaper.id)
-        setPdfExtractedText(res.text)
+        setPdfDoc(res)
       } catch (err: any) {
-        setPdfExtractedText('[Não foi possível extrair o texto deste PDF ou o arquivo é composto por páginas escaneadas como imagem.]')
+        setPdfDoc(null)
+        setErrorMessage(
+          err.message ||
+            'Não foi possível extrair o texto deste PDF — o arquivo pode ser composto por páginas digitalizadas como imagem.'
+        )
       } finally {
         setLoadingPdfText(false)
       }
@@ -268,9 +487,9 @@ export function ExtractionPage(): JSX.Element {
     try {
       setErrorMessage('')
       await api.deletePaperPDF(id, selectedPaper.id)
-      setHasPdf(false)
-      setPdfPath(null)
-      setPdfExtractedText(null)
+      setPdfState(EMPTY_PDF_STATE)
+      setPdfDoc(null)
+      setAcquireMessage('')
       setReadingViewMode('abstract')
     } catch (err: any) {
       setErrorMessage(err.message || 'Falha ao desvincular PDF.')
@@ -417,6 +636,23 @@ export function ExtractionPage(): JSX.Element {
               <CheckCircle2 size={14} /> Respostas Salvas!
             </span>
           )}
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={handleStartBatch}
+            disabled={batchState?.status === 'running' || papers.length === 0}
+            title="Procura o texto completo de todos os estudos incluídos que ainda não têm PDF"
+          >
+            {batchState?.status === 'running' ? (
+              <>
+                <RefreshCw size={14} className="animate-spin" /> Buscando PDFs...
+              </>
+            ) : (
+              <>
+                <Download size={14} /> Buscar PDFs de todos
+              </>
+            )}
+          </button>
           {aiEnabled && (
             <button
               type="button"
@@ -448,6 +684,52 @@ export function ExtractionPage(): JSX.Element {
           <AlertCircle size={16} />
           <span>{errorMessage}</span>
           <button className="btn-close-error" onClick={() => setErrorMessage('')}>✕</button>
+        </div>
+      )}
+
+      {/* Progresso da busca de PDFs em lote */}
+      {batchState && batchState.status !== 'idle' && batchState.status !== 'empty' && (
+        <div className="pdf-batch-banner animate-fade-in">
+          <div className="batch-banner-info">
+            <Download size={15} className="icon-accent" />
+            <div>
+              <strong>
+                {batchState.status === 'running'
+                  ? 'Buscando PDFs dos estudos incluídos'
+                  : batchState.status === 'cancelled'
+                    ? 'Busca de PDFs cancelada'
+                    : 'Busca de PDFs concluída'}
+              </strong>
+              <span className="batch-banner-counts">
+                {batchState.processed} de {batchState.total} processados — {batchState.succeeded}{' '}
+                obtidos, {batchState.failed} sem arquivo
+                {batchState.current_title && batchState.status === 'running' && (
+                  <em> — {batchState.current_title}</em>
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="batch-banner-actions">
+            <div className="progress-bar-container batch">
+              <div
+                className="progress-bar-fill"
+                style={{ width: `${batchState.progress_percent}%` }}
+              />
+            </div>
+            {batchState.status === 'running' ? (
+              <button type="button" className="btn-secondary small" onClick={handleCancelBatch}>
+                <StopCircle size={13} /> Parar
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn-close-error"
+                onClick={() => setBatchState(null)}
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -576,8 +858,19 @@ export function ExtractionPage(): JSX.Element {
             <div className="reading-actions-toolbar">
               <div className="pdf-status-group">
                 {hasPdf ? (
-                  <div className="badge-pdf ready">
-                    <FileCheck size={14} /> PDF Vinculado
+                  <div
+                    className={`badge-pdf ${pdfState.pdf_is_scanned ? 'warning' : 'ready'}`}
+                    title={
+                      pdfState.pdf_resolved_url
+                        ? `Origem: ${pdfState.pdf_resolved_url}`
+                        : 'Arquivo anexado manualmente'
+                    }
+                  >
+                    <FileCheck size={14} />
+                    {pdfState.pdf_is_scanned ? 'PDF sem texto' : 'PDF vinculado'}
+                    {pdfState.pdf_page_count > 0 && (
+                      <span className="badge-pdf-meta">{pdfState.pdf_page_count}p</span>
+                    )}
                   </div>
                 ) : (
                   <div className="badge-pdf missing">
@@ -585,25 +878,53 @@ export function ExtractionPage(): JSX.Element {
                   </div>
                 )}
 
-                {/* Alternador de Visão: Resumo <-> Texto Integral */}
-                {hasPdf && (
-                  <div className="view-mode-toggle-group">
-                    <button
-                      type="button"
-                      className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
-                      onClick={() => handleToggleReadingView('abstract')}
-                    >
-                      <BookOpen size={11} /> Resumo
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
-                      onClick={() => handleToggleReadingView('pdf_text')}
-                    >
-                      <FileCode size={11} /> Texto do PDF
-                    </button>
-                  </div>
-                )}
+                {/* Alternador de Visão: Resumo | PDF renderizado | Texto extraído */}
+                <div className="view-mode-toggle-group">
+                  <button
+                    type="button"
+                    className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
+                    onClick={() => handleToggleReadingView('abstract')}
+                  >
+                    <BookOpen size={11} /> Resumo
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn-view-mode ${readingViewMode === 'pdf_view' ? 'active' : ''}`}
+                    onClick={() => handleToggleReadingView('pdf_view')}
+                    disabled={!hasPdf}
+                    title={hasPdf ? 'Ver o PDF original' : 'Nenhum PDF vinculado'}
+                  >
+                    <FileText size={11} /> PDF
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
+                    onClick={() => handleToggleReadingView('pdf_text')}
+                    disabled={!hasPdf}
+                    title={hasPdf ? 'Ver o texto extraído do PDF' : 'Nenhum PDF vinculado'}
+                  >
+                    <FileCode size={11} /> Texto
+                  </button>
+                </div>
+
+                {/* Busca automática multi-estratégia */}
+                <button
+                  type="button"
+                  className="btn-pdf-action primary"
+                  onClick={handleAcquirePDF}
+                  disabled={acquiring}
+                  title="Procura o texto completo por DOI, Unpaywall, OpenAlex, Crossref, Europe PMC, padrões de repositório e na página de origem"
+                >
+                  {acquiring ? (
+                    <>
+                      <RefreshCw size={12} className="animate-spin" /> Procurando...
+                    </>
+                  ) : (
+                    <>
+                      <FileSearch size={12} /> {hasPdf ? 'Buscar novamente' : 'Buscar PDF'}
+                    </>
+                  )}
+                </button>
 
                 {/* Botão de Anexar / Substituir PDF Local */}
                 <button
@@ -619,30 +940,10 @@ export function ExtractionPage(): JSX.Element {
                     </>
                   ) : (
                     <>
-                      <Upload size={12} /> {hasPdf ? 'Substituir' : 'Anexar PDF'}
+                      <Upload size={12} /> {hasPdf ? 'Substituir' : 'Anexar'}
                     </>
                   )}
                 </button>
-
-                {selectedPaper.download_url && !hasPdf && (
-                  <button
-                    type="button"
-                    className="btn-pdf-action"
-                    onClick={handleDownloadPDF}
-                    disabled={downloadingPdf}
-                    title="Baixar PDF automaticamente da fonte"
-                  >
-                    {downloadingPdf ? (
-                      <>
-                        <RefreshCw size={12} className="animate-spin" /> Baixando...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={12} /> Baixar
-                      </>
-                    )}
-                  </button>
-                )}
 
                 <button
                   type="button"
@@ -652,6 +953,17 @@ export function ExtractionPage(): JSX.Element {
                 >
                   <Link size={12} /> Link
                 </button>
+
+                {(pdfState.attempts.length > 0 || candidates) && (
+                  <button
+                    type="button"
+                    className={`btn-pdf-action ${showDiagnostics ? 'highlight' : ''}`}
+                    onClick={() => setShowDiagnostics((prev) => !prev)}
+                    title="Ver o que a busca automática tentou"
+                  >
+                    <ListChecks size={12} /> Diagnóstico
+                  </button>
+                )}
 
                 {hasPdf && (
                   <>
@@ -710,6 +1022,159 @@ export function ExtractionPage(): JSX.Element {
               </div>
             </div>
 
+            {/* Mensagem de resultado da última aquisição */}
+            {acquireMessage && (
+              <div className="pdf-acquire-note animate-fade-in">
+                <FileSearch size={14} className="icon-accent" />
+                <span>{acquireMessage}</span>
+                <button
+                  type="button"
+                  className="btn-close-error"
+                  onClick={() => setAcquireMessage('')}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Painel de Diagnóstico da Busca de PDF */}
+            {showDiagnostics && (
+              <div className="pdf-diagnostics-panel animate-fade-in">
+                <div className="diagnostics-header">
+                  <div className="diagnostics-title-group">
+                    <ListChecks size={15} className="icon-accent" />
+                    <h4>Trilha da busca automática</h4>
+                    <span className="diagnostics-count">
+                      {pdfState.attempts.length} tentativa(s)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close-error"
+                    onClick={() => setShowDiagnostics(false)}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+
+                {pdfState.attempts.length === 0 ? (
+                  <p className="diagnostics-empty">
+                    Nenhuma busca automática executada para este trabalho ainda.
+                  </p>
+                ) : (
+                  <ul className="diagnostics-list">
+                    {pdfState.attempts.map((attempt, idx) => (
+                      <li key={idx} className={`diagnostics-item status-${attempt.status}`}>
+                        <span className="diag-strategy">{strategyLabel(attempt.strategy)}</span>
+                        <span className={`diag-status ${attempt.status}`}>
+                          {ATTEMPT_STATUS_LABELS[attempt.status] || attempt.status}
+                        </span>
+                        <span className="diag-detail">{attempt.detail}</span>
+                        {attempt.url && (
+                          <a
+                            className="diag-url"
+                            href={attempt.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={attempt.url}
+                          >
+                            abrir link <ExternalLink size={10} />
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="diagnostics-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary small"
+                    onClick={handleLoadCandidates}
+                    disabled={loadingCandidates}
+                  >
+                    {loadingCandidates ? (
+                      <>
+                        <RefreshCw size={12} className="animate-spin" /> Levantando links...
+                      </>
+                    ) : (
+                      <>
+                        <Search size={12} /> Listar links candidatos
+                      </>
+                    )}
+                  </button>
+                  {selectedPaper.doi && (
+                    <a
+                      className="btn-secondary small"
+                      href={`https://doi.org/${selectedPaper.doi}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <ExternalLink size={12} /> Abrir DOI
+                    </a>
+                  )}
+                  <a
+                    className="btn-secondary small"
+                    href={`https://scholar.google.com/scholar?q=${encodeURIComponent(
+                      selectedPaper.title
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Search size={12} /> Procurar no Google Acadêmico
+                  </a>
+                  <button
+                    type="button"
+                    className="btn-secondary small"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload size={12} /> Anexar arquivo baixado
+                  </button>
+                </div>
+
+                {candidates && (
+                  <div className="candidates-block">
+                    <h5>
+                      Links candidatos encontrados ({candidates.length})
+                      <span className="candidates-hint">
+                        — abra no navegador e, se for o arquivo certo, use "Link" ou anexe
+                      </span>
+                    </h5>
+                    {candidates.length === 0 ? (
+                      <p className="diagnostics-empty">
+                        Nenhum link candidato: o registro não tem DOI nem página de origem
+                        utilizável.
+                      </p>
+                    ) : (
+                      <ul className="candidates-list">
+                        {candidates.map((candidate, idx) => (
+                          <li key={idx}>
+                            <span className="cand-strategy">
+                              {strategyLabel(candidate.strategy)}
+                            </span>
+                            <a href={candidate.url} target="_blank" rel="noreferrer">
+                              {candidate.url}
+                            </a>
+                            <button
+                              type="button"
+                              className="btn-cand-use"
+                              title="Usar este link como origem e tentar baixar"
+                              onClick={() => {
+                                setCustomDownloadUrl(candidate.url)
+                                setIsUrlModalOpen(true)
+                              }}
+                            >
+                              usar
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Reading Content (Scrollable Container) */}
             <div className="paper-reading-content">
               <h2 className="reading-title">{selectedPaper.title}</h2>
@@ -750,15 +1215,32 @@ export function ExtractionPage(): JSX.Element {
                     <h3>
                       {readingViewMode === 'abstract'
                         ? 'Resumo do Estudo (Abstract)'
-                        : 'Texto Integral do Documento (PDF)'}
+                        : readingViewMode === 'pdf_view'
+                          ? 'Documento Original (PDF)'
+                          : 'Texto Integral Extraído do PDF'}
                     </h3>
-                    <span className="word-count-badge">
-                      {wordCount} palavras
-                    </span>
+                    {readingViewMode === 'pdf_view' ? (
+                      <span className="word-count-badge">
+                        {pdfState.pdf_page_count || '—'} páginas
+                      </span>
+                    ) : (
+                      <span className="word-count-badge">{wordCount} palavras</span>
+                    )}
+                    {readingViewMode !== 'abstract' && pdfState.pdf_strategy && (
+                      <span
+                        className="provenance-badge"
+                        title={pdfState.pdf_resolved_url || 'Arquivo anexado manualmente'}
+                      >
+                        origem: {strategyLabel(pdfState.pdf_strategy)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Search inside text & Typography Zoom */}
-                  <div className="academic-reader-tools">
+                  <div
+                    className="academic-reader-tools"
+                    style={{ display: readingViewMode === 'pdf_view' ? 'none' : undefined }}
+                  >
                     <div className="reader-search-input-box">
                       <Search size={12} className="icon-subtle" />
                       <input
@@ -809,7 +1291,37 @@ export function ExtractionPage(): JSX.Element {
                   </div>
                 </div>
 
-                {/* Article Typography Reader Card */}
+                {/* Visualizador do PDF original (renderizado pelo Chromium) */}
+                {readingViewMode === 'pdf_view' ? (
+                  <div className="pdf-embed-container">
+                    {hasPdf && id && selectedPaper ? (
+                      <>
+                        {pdfState.pdf_is_scanned && (
+                          <div className="pdf-scanned-warning">
+                            <AlertTriangle size={14} />
+                            <span>
+                              Documento digitalizado: é possível ler as páginas aqui, mas não há
+                              texto selecionável para busca nem para a extração assistida.
+                            </span>
+                          </div>
+                        )}
+                        <iframe
+                          key={`${selectedPaper.id}-${pdfState.pdf_acquired_at || 'local'}`}
+                          className="pdf-embed-frame"
+                          title={`PDF — ${selectedPaper.title}`}
+                          src={api.getPaperPdfUrl(id, selectedPaper.id)}
+                        />
+                      </>
+                    ) : (
+                      <div className="empty-abstract-state">
+                        <FileX size={24} />
+                        <p>Nenhum PDF vinculado a este trabalho.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+
+                /* Article Typography Reader Card */
                 <div
                   className="abstract-reading-card academic-reader-body"
                   style={{ fontSize: `${fontSizeLevel}px` }}
@@ -876,13 +1388,42 @@ export function ExtractionPage(): JSX.Element {
                         </div>
                       ) : (
                         <div className="empty-abstract-state">
-                          <AlertCircle size={24} />
-                          <p>O texto do PDF não pôde ser extraído ou está vazio.</p>
+                          <AlertTriangle size={24} />
+                          <p>
+                            {pdfState.pdf_is_scanned
+                              ? 'Este PDF é composto por páginas digitalizadas (imagem), sem camada de texto. Use a aba "PDF" para ler o documento; para extração assistida, anexe uma versão com texto pesquisável (OCR).'
+                              : 'O texto deste PDF não pôde ser extraído ou está vazio.'}
+                          </p>
+                          <div className="empty-abstract-actions">
+                            <button
+                              type="button"
+                              className="btn-secondary small"
+                              onClick={() => handleToggleReadingView('pdf_view')}
+                            >
+                              <FileText size={13} /> Ver documento original
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary small"
+                              onClick={async () => {
+                                if (!id || !selectedPaper) return
+                                setLoadingPdfText(true)
+                                try {
+                                  setPdfDoc(await api.getPaperPdfText(id, selectedPaper.id, true))
+                                } finally {
+                                  setLoadingPdfText(false)
+                                }
+                              }}
+                            >
+                              <RefreshCw size={13} /> Reextrair texto
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
                   )}
                 </div>
+                )}
               </div>
             </div>
           </div>
@@ -924,6 +1465,7 @@ export function ExtractionPage(): JSX.Element {
               ) : (
                 questions.map((q, idx) => {
                   const currentAnswer = (q.id && answers[q.id]) || ''
+                  const evidence = q.id ? evidences[q.id] : undefined
                   const isFilled = currentAnswer.trim().length > 0
 
                   return (
@@ -953,6 +1495,33 @@ export function ExtractionPage(): JSX.Element {
                         value={currentAnswer}
                         onChange={(e) => q.id && handleAnswerChange(q.id, e.target.value)}
                       />
+
+                      {/* Evidência ancorada: trecho literal e página de onde veio */}
+                      {evidence?.text && (
+                        <div className="answer-evidence-block">
+                          <div className="evidence-header">
+                            <Quote size={11} />
+                            <span>Evidência no texto</span>
+                            {evidence.page && (
+                              <button
+                                type="button"
+                                className="evidence-page-chip"
+                                title="Abrir o documento original nesta página"
+                                onClick={() => {
+                                  if (!id || !selectedPaper || !hasPdf) return
+                                  window.open(
+                                    `${api.getPaperPdfUrl(id, selectedPaper.id)}#page=${evidence.page}`,
+                                    '_blank'
+                                  )
+                                }}
+                              >
+                                p. {evidence.page}
+                              </button>
+                            )}
+                          </div>
+                          <blockquote>{evidence.text}</blockquote>
+                        </div>
+                      )}
                     </div>
                   )
                 })
@@ -1040,15 +1609,15 @@ export function ExtractionPage(): JSX.Element {
                 type="button"
                 className="btn-primary"
                 onClick={handleSaveCustomDownloadUrl}
-                disabled={!customDownloadUrl.trim() || downloadingPdf}
+                disabled={!customDownloadUrl.trim() || acquiring}
               >
-                {downloadingPdf ? (
+                {acquiring ? (
                   <>
-                    <RefreshCw size={14} className="animate-spin" /> Baixando...
+                    <RefreshCw size={14} className="animate-spin" /> Procurando...
                   </>
                 ) : (
                   <>
-                    <Download size={14} /> Salvar & Baixar PDF
+                    <Download size={14} /> Salvar link e buscar PDF
                   </>
                 )}
               </button>

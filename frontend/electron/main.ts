@@ -25,7 +25,11 @@ function createWindow(backendPort: number): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      // Habilita o visualizador de PDF embutido do Chromium — é o que permite
+      // ler o documento original dentro da aba de Extração, sem depender de
+      // aplicativo externo nem de biblioteca de terceiros no renderer.
+      plugins: true
     }
   })
 

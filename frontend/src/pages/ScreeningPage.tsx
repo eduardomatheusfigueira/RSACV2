@@ -42,6 +42,7 @@ import {
   FileX,
   FileCheck,
   Upload,
+  FileSearch,
   RotateCcw,
   ShieldCheck,
   ShieldAlert,
@@ -64,9 +65,10 @@ export function ScreeningPage(): React.JSX.Element {
   const [loading, setLoading] = useState(true)
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
-  const [readingViewMode, setReadingViewMode] = useState<'abstract' | 'pdf_text'>('abstract')
+  const [readingViewMode, setReadingViewMode] = useState<'abstract' | 'pdf_view' | 'pdf_text'>('abstract')
   const [pdfExtractedText, setPdfExtractedText] = useState<string | null>(null)
   const [loadingPdfText, setLoadingPdfText] = useState(false)
+  const [acquiringPdf, setAcquiringPdf] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
 
@@ -283,11 +285,15 @@ export function ScreeningPage(): React.JSX.Element {
 
     try {
       setUploadingPdf(true)
-      const res = await api.uploadPaperPDF(id, selectedPaper.id, file)
+      const res: any = await api.uploadPaperPDF(id, selectedPaper.id, file)
       const updated = { ...selectedPaper, pdf_path: res.pdf_path, pdf_text_extracted: true }
       setSelectedPaper(updated)
       setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updated : p)))
+      setPdfExtractedText(null)
       success('Triagem', 'PDF anexado e vinculado com sucesso!')
+      if (res.is_scanned) {
+        warn('Triagem', 'O PDF anexado é digitalizado (imagem): não há texto selecionável.')
+      }
     } catch (err: any) {
       error('Triagem', `Falha no upload do PDF: ${err.message}`)
     } finally {
@@ -295,7 +301,36 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
-  const handleToggleReadingView = async (mode: 'abstract' | 'pdf_text') => {
+  /**
+   * Busca o texto completo pelas mesmas vias usadas na Extração — o link
+   * coletado normalmente é a página do registro, não o arquivo.
+   */
+  const handleAcquirePdf = async () => {
+    if (!id || !selectedPaper) return
+    try {
+      setAcquiringPdf(true)
+      const res = await api.acquirePaperPDF(id, selectedPaper.id)
+      if (res.success) {
+        const updated = { ...selectedPaper, pdf_path: res.pdf_path, pdf_text_extracted: true }
+        setSelectedPaper(updated)
+        setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updated : p)))
+        setPdfExtractedText(null)
+        success('Triagem', `PDF obtido (${res.strategy})`, res.message)
+      } else {
+        warn(
+          'Triagem',
+          'Busca automática de PDF sem sucesso',
+          `${res.attempts?.length || 0} caminho(s) tentado(s). ${res.message}`
+        )
+      }
+    } catch (err: any) {
+      error('Triagem', `Falha ao buscar PDF: ${err.message}`)
+    } finally {
+      setAcquiringPdf(false)
+    }
+  }
+
+  const handleToggleReadingView = async (mode: 'abstract' | 'pdf_view' | 'pdf_text') => {
     setReadingViewMode(mode)
     if (mode === 'pdf_text' && selectedPaper?.pdf_path && !pdfExtractedText && id && selectedPaper) {
       try {
@@ -927,32 +962,126 @@ export function ScreeningPage(): React.JSX.Element {
                 </div>
               )}
 
-              {/* Abstract Reading Box */}
+              {/* Caixa de Leitura: Resumo | PDF original | Texto extraído */}
               <div className="study-abstract-container">
                 <div className="abstract-header-row">
                   <FileText size={16} className="icon-accent" />
-                  <h3>Resumo do Estudo (Abstract)</h3>
-                </div>
-                <div className="abstract-reading-card">
-                  {selectedPaper.abstract ? (
-                    <p className="abstract-text">{selectedPaper.abstract}</p>
-                  ) : (
-                    <div className="empty-abstract-state">
-                      <AlertCircle size={24} />
-                      <p>Resumo não disponível nos metadados coletados deste registro.</p>
-                      {selectedPaper.doi && (
-                        <a
-                          href={`https://doi.org/${selectedPaper.doi}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn-secondary small"
-                        >
-                          <ExternalLink size={13} /> Consultar via DOI
-                        </a>
-                      )}
+                  <h3>
+                    {readingViewMode === 'abstract'
+                      ? 'Resumo do Estudo (Abstract)'
+                      : readingViewMode === 'pdf_view'
+                        ? 'Documento Original (PDF)'
+                        : 'Texto Integral Extraído do PDF'}
+                  </h3>
+
+                  <div className="screening-pdf-tools">
+                    <div className="view-mode-toggle-group">
+                      <button
+                        type="button"
+                        className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
+                        onClick={() => handleToggleReadingView('abstract')}
+                      >
+                        Resumo
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-view-mode ${readingViewMode === 'pdf_view' ? 'active' : ''}`}
+                        onClick={() => handleToggleReadingView('pdf_view')}
+                        disabled={!selectedPaper.pdf_path}
+                      >
+                        PDF
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
+                        onClick={() => handleToggleReadingView('pdf_text')}
+                        disabled={!selectedPaper.pdf_path}
+                      >
+                        Texto
+                      </button>
                     </div>
-                  )}
+
+                    <button
+                      type="button"
+                      className="btn-pdf-action primary"
+                      onClick={handleAcquirePdf}
+                      disabled={acquiringPdf}
+                      title="Procura o texto completo por DOI, bases de acesso aberto e na página de origem"
+                    >
+                      {acquiringPdf ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin" /> Procurando...
+                        </>
+                      ) : (
+                        <>
+                          <FileSearch size={12} /> {selectedPaper.pdf_path ? 'Rebuscar' : 'Buscar PDF'}
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn-pdf-action"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingPdf}
+                      title="Anexar arquivo PDF do computador"
+                    >
+                      {uploadingPdf ? (
+                        <>
+                          <RefreshCw size={12} className="animate-spin" /> Anexando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={12} /> Anexar
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
+
+                {readingViewMode === 'pdf_view' && selectedPaper.pdf_path && id ? (
+                  <div className="pdf-embed-container">
+                    <iframe
+                      key={selectedPaper.id}
+                      className="pdf-embed-frame"
+                      title={`PDF — ${selectedPaper.title}`}
+                      src={api.getPaperPdfUrl(id, selectedPaper.id)}
+                    />
+                  </div>
+                ) : (
+                  <div className="abstract-reading-card">
+                    {readingViewMode === 'pdf_text' ? (
+                      loadingPdfText ? (
+                        <div className="empty-abstract-state">
+                          <RefreshCw size={22} className="animate-spin icon-accent" />
+                          <p>Extraindo o texto integral do PDF...</p>
+                        </div>
+                      ) : (
+                        <p className="abstract-text">{pdfExtractedText}</p>
+                      )
+                    ) : selectedPaper.abstract ? (
+                      <p className="abstract-text">{selectedPaper.abstract}</p>
+                    ) : (
+                      <div className="empty-abstract-state">
+                        <AlertCircle size={24} />
+                        <p>Resumo não disponível nos metadados coletados deste registro.</p>
+                        <p className="empty-abstract-hint">
+                          Busque ou anexe o PDF acima para ler o texto completo do estudo.
+                        </p>
+                        {selectedPaper.doi && (
+                          <a
+                            href={`https://doi.org/${selectedPaper.doi}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-secondary small"
+                          >
+                            <ExternalLink size={13} /> Consultar via DOI
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -32,6 +32,23 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────────────────
     cors_origins: list[str] = ["http://localhost:*", "http://127.0.0.1:*"]
 
+    # ── Aquisição de PDFs ─────────────────────────────────────────────
+    # E-mail de contato usado nas APIs acadêmicas de acesso aberto.
+    # Unpaywall o exige; OpenAlex e Crossref dão prioridade de fila
+    # ("polite pool") a quem se identifica. Sem ele, a via Unpaywall é pulada.
+    contact_email: str = ""
+    # Tempo total (s) de busca por trabalho, somando todas as vias tentadas.
+    pdf_search_timeout: float = 120.0
+    # Tempo (s) de cada requisição isolada durante a busca.
+    pdf_request_timeout: float = 25.0
+    # Trabalhos buscados simultaneamente na aquisição em lote.
+    pdf_batch_concurrency: int = 3
+
+    # ── Contexto de IA ────────────────────────────────────────────────
+    # Orçamento de caracteres do texto do estudo enviado à IA na extração.
+    # ~28k caracteres ≈ 7–9k tokens, folgado para janelas de 32k em diante.
+    ai_context_budget_chars: int = 28000
+
     @property
     def data_dir(self) -> Path:
         """Diretório de dados da aplicação (cross-platform)."""

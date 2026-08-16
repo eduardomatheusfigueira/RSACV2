@@ -1077,3 +1077,35 @@
   text-align: center;
   margin: 0;
 }
+
+/* ── Ferramentas de PDF na caixa de leitura da triagem ──────────────── */
+
+.screening-pdf-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.study-abstract-container .pdf-embed-container {
+  display: flex;
+  flex: 1;
+  min-height: 420px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  box-shadow: var(--shadow-neo-sunken);
+  overflow: hidden;
+}
+
+.study-abstract-container .pdf-embed-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 420px;
+  border: none;
+}
+
+.empty-abstract-hint {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}

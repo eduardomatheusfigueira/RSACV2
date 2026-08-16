@@ -23,21 +23,14 @@ import type {
   AISettingsUpdate,
   AIScreeningSingleResult,
   ProtocolSuggestions,
+  ExtractionResponse,
 } from '@/types/api'
 
 import { useLogStore } from '@/stores/useLogStore'
 
-export interface ExtractionResponse {
-  paper_id: string
-  has_pdf: boolean
-  pdf_path: string | null
-  answers: Array<{
-    id: string
-    question_id: string
-    answer: string
-    ai_generated: boolean
-  }>
-}
+// A forma da resposta de extração vive em `types/api.ts` (junto do estado do
+// PDF que ela carrega); aqui apenas reexportamos para quem importa do cliente.
+export type { ExtractionResponse }
 
 export interface PrismaFlowData {
   identification: {
@@ -380,10 +373,54 @@ class APIClient {
     })
   }
 
-  async downloadPaperPDF(projectId: string, paperId: string): Promise<{ status: string; pdf_path: string }> {
-    return this.request<{ status: string; pdf_path: string }>(`/projects/${projectId}/papers/${paperId}/extraction/pdf/download`, {
-      method: 'POST',
+  /**
+   * Busca o PDF por todas as vias disponíveis (DOI, Unpaywall, OpenAlex,
+   * Crossref, Europe PMC, padrões de repositório, raspagem da landing page).
+   * Não lança quando não encontra: a falha vem no corpo, com a trilha do que
+   * foi tentado, para que a interface possa orientar o próximo passo.
+   */
+  async acquirePaperPDF(
+    projectId: string,
+    paperId: string
+  ): Promise<import('@/types/api').PdfAcquisitionResult> {
+    return this.request<import('@/types/api').PdfAcquisitionResult>(
+      `/projects/${projectId}/papers/${paperId}/extraction/pdf/acquire`,
+      { method: 'POST' }
+    )
+  }
+
+  async getPaperPdfStatus(
+    projectId: string,
+    paperId: string
+  ): Promise<import('@/types/api').PdfState & { paper_id: string }> {
+    return this.request(`/projects/${projectId}/papers/${paperId}/extraction/pdf/status`)
+  }
+
+  async getPaperPdfCandidates(
+    projectId: string,
+    paperId: string
+  ): Promise<{ paper_id: string; total: number; candidates: import('@/types/api').PdfCandidate[] }> {
+    return this.request(`/projects/${projectId}/papers/${paperId}/extraction/pdf/candidates`)
+  }
+
+  async startPdfBatch(
+    projectId: string,
+    onlyMissing = true,
+    decision = 'Incluído'
+  ): Promise<import('@/types/api').PdfBatchState> {
+    const params = new URLSearchParams({
+      only_missing: String(onlyMissing),
+      decision,
     })
+    return this.request(`/projects/${projectId}/extraction/pdf/batch?${params}`, { method: 'POST' })
+  }
+
+  async getPdfBatchStatus(projectId: string): Promise<import('@/types/api').PdfBatchState> {
+    return this.request(`/projects/${projectId}/extraction/pdf/batch`)
+  }
+
+  async cancelPdfBatch(projectId: string): Promise<{ status: string }> {
+    return this.request(`/projects/${projectId}/extraction/pdf/batch`, { method: 'DELETE' })
   }
 
   async uploadPaperPDF(projectId: string, paperId: string, file: File): Promise<{ status: string; pdf_path: string }> {
@@ -400,12 +437,21 @@ class APIClient {
     return res.json()
   }
 
-  getPaperPdfUrl(projectId: string, paperId: string): string {
-    return `${this.baseUrl}/projects/${projectId}/papers/${paperId}/extraction/pdf`
+  /** URL do arquivo servido pelo backend — usada pelo visualizador embutido. */
+  getPaperPdfUrl(projectId: string, paperId: string, forceDownload = false): string {
+    const suffix = forceDownload ? '?download=true' : ''
+    return `${this.baseUrl}/projects/${projectId}/papers/${paperId}/extraction/pdf${suffix}`
   }
 
-  async getPaperPdfText(projectId: string, paperId: string): Promise<{ paper_id: string; text: string }> {
-    return this.request<{ paper_id: string; text: string }>(`/projects/${projectId}/papers/${paperId}/extraction/pdf/text`)
+  async getPaperPdfText(
+    projectId: string,
+    paperId: string,
+    refresh = false
+  ): Promise<import('@/types/api').PdfTextResponse> {
+    const suffix = refresh ? '?refresh=true' : ''
+    return this.request<import('@/types/api').PdfTextResponse>(
+      `/projects/${projectId}/papers/${paperId}/extraction/pdf/text${suffix}`
+    )
   }
 
   async deletePaperPDF(projectId: string, paperId: string): Promise<{ status: string }> {

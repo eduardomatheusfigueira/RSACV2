@@ -137,6 +137,11 @@ export interface Paper {
   criteria_evaluations?: Record<string, boolean>
   pdf_path: string | null
   pdf_text_extracted: boolean
+  pdf_status?: PdfStatus
+  pdf_strategy?: string
+  pdf_resolved_url?: string
+  pdf_page_count?: number
+  pdf_is_scanned?: boolean
   created_at: string
   updated_at: string
 }
@@ -241,15 +246,98 @@ export interface SourceCredentialUpdate {
   custom_endpoint?: string | null
 }
 
-export interface ExtractionResponse {
-  paper_id: string
+// ── PDF: aquisição, procedência e leitura ─────────────────────────────
+
+export type PdfStatus = 'ausente' | 'obtido' | 'manual' | 'falhou' | 'indisponivel'
+
+/** Uma tentativa registrada pelo resolvedor multi-estratégia. */
+export interface PdfAttempt {
+  strategy: string
+  url: string
+  status: 'ok' | 'nao_pdf' | 'http_erro' | 'timeout' | 'erro' | 'vazio' | 'pequeno_demais'
+  detail: string
+  http_status: number | null
+}
+
+/** Estado do PDF de um trabalho, comum a todas as respostas de PDF. */
+export interface PdfState {
   has_pdf: boolean
   pdf_path: string | null
+  pdf_status: PdfStatus
+  pdf_strategy: string
+  pdf_resolved_url: string
+  pdf_page_count: number
+  pdf_size_bytes: number
+  pdf_text_chars: number
+  pdf_is_scanned: boolean
+  pdf_acquired_at: string | null
+  download_url: string
+  attempts: PdfAttempt[]
+  file_missing: boolean
+}
+
+export interface PdfAcquisitionResult extends PdfState {
+  status: 'downloaded' | 'failed'
+  success: boolean
+  strategy: string
+  label: string
+  message: string
+  page_count: number
+  is_scanned: boolean
+  text_chars: number
+}
+
+export interface PdfCandidate {
+  url: string
+  strategy: string
+  label: string
+}
+
+export interface PdfTextResponse {
+  paper_id: string
+  text: string
+  pages: Array<{ number: number; text: string }>
+  page_count: number
+  char_count: number
+  is_scanned: boolean
+  engine: string
+  error: string
+  sections: Array<{ key: string; title: string; start_page: number; char_count: number }>
+}
+
+export interface PdfBatchState {
+  project_id: string
+  status: 'idle' | 'running' | 'done' | 'cancelled' | 'error' | 'empty'
+  total: number
+  processed: number
+  succeeded: number
+  failed: number
+  current_title: string
+  progress_percent: number
+  started_at?: string
+  finished_at?: string | null
+  error_message?: string
+  message?: string
+  results: Array<{
+    paper_id: string
+    title: string
+    success: boolean
+    strategy: string
+    message: string
+    attempts: number
+  }>
+}
+
+export interface ExtractionResponse extends PdfState {
+  paper_id: string
   answers: Array<{
     id: string
     question_id: string
     answer: string
     ai_generated: boolean
+    evidence: string
+    page_ref: string
+    source_kind: string
   }>
 }
 
