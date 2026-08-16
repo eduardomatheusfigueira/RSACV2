@@ -1,0 +1,173 @@
+# RSAC V2 — Revisão Sistemática Assistida por Computador
+
+<div align="center">
+
+![RSAC V2 Banner](https://img.shields.io/badge/RSAC_V2-v2.0.0-283618?style=for-the-badge&logo=electron&logoColor=fefae0)
+![Python Version](https://img.shields.io/badge/Python-3.12+-606c38?style=for-the-badge&logo=python&logoColor=fefae0)
+![React Version](https://img.shields.io/badge/React-19.0-bc6c25?style=for-the-badge&logo=react&logoColor=fefae0)
+![License](https://img.shields.io/badge/License-MIT-dda15e?style=for-the-badge)
+
+**Plataforma Desktop Profissional para Condução Rigorosa de Revisões Sistemáticas e de Escopo da Literatura Científica**
+
+</div>
+
+---
+
+## 📖 Visão Geral
+
+O **RSAC V2** é a evolução de segunda geração do ambiente de Revisões Sistemáticas Assistidas por Computador. Desenvolvido para pesquisadores, acadêmicos e cientistas de dados, o software combina a velocidade e robustez de um backend em **Python (FastAPI / SQLAlchemy)** com a fluidez de uma interface desktop moderna em **Electron / React 19 / TypeScript / Vite**.
+
+A plataforma cobre integralmente o ciclo de vida da pesquisa secundária conforme as diretrizes internacionais (**PRISMA 2020**, **PRISMA-ScR**, **JBI**, **Cochrane**, **MECIR**, **ROSES**, **Campbell Collaboration** e **CEE**), com ênfase em rigor metodológico, reprodutibilidade e zero alucinação.
+
+---
+
+## ✨ Principais Funcionalidades
+
+### 1. 🗂️ Gestão de Projetos & Diretrizes Metodológicas
+- Suporte a múltiplos protocolos metodológicos pré-configurados:
+  - **PRISMA 2020**: Revisão Sistemática com/sem Meta-análise
+  - **PRISMA-ScR (Tricco et al., 2018)**: Revisões de Escopo (*Scoping Reviews*)
+  - **JBI (Joanna Briggs Institute)**: Revisões com foco em Metassíntese / Evidências Mistas
+  - **Cochrane Handbook & MECIR**: Padrão ouro em síntese de intervenções
+  - **ROSES**: Revisões sistemáticas e mapas em gestão ambiental e sustentabilidade
+  - **Campbell Collaboration**: Políticas sociais, educação, economia e desenvolvimento
+  - **CEE (Collaboration for Environmental Evidence)**: Evidências socioambientais
+- Estruturação completa em frameworks de questão: **PICO**, **PCC**, **PICOS**, **SPICE** e **SPIDER**.
+- Estratégia de descritores de busca estruturada em pares compatível com o motor **VuFind da BDTD**.
+
+### 2. 🌐 Coleta Automatizada (*Harvesters*)
+- Integração nativa e assíncrona com as principais bases científicas nacionais e internacionais:
+  - **BDTD** (Biblioteca Digital Brasileira de Teses e Dissertações — OAI-PMH & VuFind)
+  - **SciELO** (Scientific Electronic Library Online)
+  - **PubMed / MEDLINE** (NCBI E-Utilities)
+  - **Scopus / ScienceDirect** (Elsevier API)
+  - **OpenAlex** (Scholarly Graph API)
+  - **arXiv** & Importadores de arquivos **RIS / BibTeX / CSV / XLSX**
+- Sistema de desduplicação probabilística e exata (DOI, Title Levenshtein Distance e Ano).
+
+### 3. 🎯 Triagem de Estudos (Triagem 1 — Título & Resumo)
+- Triagem com suporte a **Modo 100% Manual** ou **Assistido por I.A.** (com justificativa ancorada e zero alucinação).
+- Atalhos de teclado para alta produtividade (`I` = Incluir, `E` = Excluir, `P` = Pendente).
+- Filtros por decisão, base de dados, ano e busca textual instantânea.
+
+### 4. 📊 Extração de Dados & Análise Causal (Triagem 2 — Texto Integral)
+- Extração tabular estruturada com base no formulário configurado no protocolo.
+- Análise de mecanismos causais, populações/atores, conceitos e contextos territoriais.
+
+### 5. 📄 Exportação Científica
+- Geração automática do **Diagrama de Fluxo PRISMA 2020** com contagem exata em cada fase.
+- Exportação em **Markdown**, **Word (.docx)**, **Planilhas Excel/CSV** e pacotes de citações **BibTeX/RIS**.
+
+### 6. 🎨 Design System & 13 Paletas de Cores
+- Identidade visual contemporânea de engenharia com cantos de precisão cirúrgica (`2px`).
+- Catálogo com **13 paletas cromáticas harmônicas** ajustadas para leitura prolongada:
+  - *Organic Earth (Florestal / Soft Warm)*
+  - *Molten Lava & Deep Space*
+  - *Pastel Dream & Thistle*
+  - *Ink Black & Stormy Tangerine*
+  - *Platinum & Dusk Blue*
+  - *Indigo Bloom & Brilliant Rose*
+  - *Dark Amethyst & Royal Violet*
+  - *Parchment & Almond Silk*
+  - *Alice Blue & Baby Blue Ice*
+  - *Hot Fuchsia & Cotton Candy*
+  - *Powder Blush & Icy Aqua*
+  - *Synthwave Neon & Electric Sapphire*
+
+### 7. 📡 Painel de Logs em Tempo Real
+- Gaveta lateral de auditoria em tempo real via **WebSocket**.
+- Detalhamento de cada etapa dos harvesters, deduplicação, chamadas de IA e persistência.
+
+---
+
+## 🏗️ Arquitetura Tecnológica
+
+```
+┌────────────────────────────────────────────────────────┐
+│               RSAC V2 Desktop App                     │
+├──────────────────────────┬─────────────────────────────┤
+│   FRONTEND (Electron)    │     BACKEND (Python)        │
+│   • Electron 33          │     • Python 3.12+          │
+│   • React 19             │     • FastAPI (REST + WS)   │
+│   • TypeScript 5         │     • SQLAlchemy 2.0        │
+│   • Vite 6               │     • SQLite / Aiosqlite    │
+│   • Zustand (State)      │     • Pydantic V2           │
+│   • Lucide Icons         │     • Harvesters Assíncronos│
+└──────────────────────────┴─────────────────────────────┘
+```
+
+---
+
+## 🚀 Como Executar
+
+### Pré-requisitos
+- **Python 3.12+** instalado
+- **Node.js 20+** e **npm 10+** instalados
+- **Git**
+
+### 1. Clonar o Repositório
+```bash
+git clone https://github.com/eduardomatheusfigueira/RSACV2.git
+cd RSACV2
+```
+
+### 2. Configurar o Backend (Python)
+```bash
+cd backend
+python -m venv .venv
+
+# Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+
+# Linux / macOS:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 3. Configurar o Frontend (Electron/React)
+```bash
+cd ../frontend
+npm install
+```
+
+### 4. Iniciar a Aplicação
+```bash
+# Opção 1: Usando o script unificado (Windows PowerShell)
+.\scripts\dev.ps1
+
+# Opção 2: Em terminais separados
+# Terminal 1 (Backend):
+cd backend
+python run.py --port 8000 --reload --debug
+
+# Terminal 2 (Frontend):
+cd frontend
+npm run dev
+```
+
+---
+
+## 📚 Documentação Técnica
+
+O diretório [`planejamento/`](./planejamento/) contém 13 especificações arquiteturais detalhadas:
+
+1. `00_INDICE.md` — Índice e mapa do repositório
+2. `01_DIAGNOSTICO_V1.md` — Lições aprendidas da V1
+3. `02_VISAO_PRODUTO_V2.md` — Escopo do produto
+4. `03_STACK_TECNOLOGICA.md` — Especificação das tecnologias
+5. `04_ARQUITETURA_GERAL.md` — Diagramas de blocos e fluxo de dados
+6. `05_BACKEND_PYTHON_API.md` — Rotas e contratos OpenAPI
+7. `06_FRONTEND_ELECTRON.md` — Componentes e design system
+8. `07_ESTRUTURA_DIRETORIOS.md` — Estrutura física de arquivos
+9. `08_PIPELINE_DADOS.md` — Harvesters e processamento
+10. `09_INTEGRACOES_IA.md` — Integrações com LLMs (Gemini, Qwen, Locais)
+11. `10_BANCO_DE_DADOS.md` — Esquema relacional SQLite
+12. `11_TESTES_QUALIDADE.md` — Estratégia de testes
+13. `12_ROADMAP_FASES.md` — Histórico e fases de entrega
+
+---
+
+## 📄 Licença
+
+Distribuído sob a licença **MIT**. Consulte `LICENSE` para mais informações.

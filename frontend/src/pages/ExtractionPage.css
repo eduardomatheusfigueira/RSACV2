@@ -1,0 +1,202 @@
+/* RSAC V2 — Extraction Page Styles (Contemporary Neo-Retro System) */
+
+.extraction-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  height: calc(100vh - var(--header-height) - var(--statusbar-height) - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.extraction-layout {
+  display: flex;
+  gap: var(--space-4);
+  flex: 1;
+  min-height: 0;
+}
+
+.extraction-error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+/* Left Col (Contemporary Neo-Retro Listbox) */
+.extraction-list-col {
+  width: 380px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neo-raised);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.list-col-header {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list-col-header h3 {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+/* Right Col (Raised Neo-Retro Window Panel) */
+.extraction-detail-col {
+  flex: 1;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neo-raised);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.extraction-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.paper-info-bar {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  background: var(--color-bg-secondary);
+}
+
+.info-main h2 {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.info-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.meta-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+}
+
+/* PDF Status Controls */
+.pdf-status-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.pdf-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.pdf-badge.ready {
+  background: var(--color-included-bg);
+  color: var(--color-included);
+}
+
+.pdf-badge.missing {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+/* Questions Form */
+.questions-form-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--color-bg-elevated);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.question-field-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.question-num {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--copperwood);
+}
+
+.question-text {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.question-textarea {
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  outline: none;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+}
+
+.question-textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-neo-sunken), 0 0 0 2px rgba(188, 108, 37, 0.15);
+}

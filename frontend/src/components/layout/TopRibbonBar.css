@@ -1,0 +1,620 @@
+/* RSAC V2 — TopRibbonBar Styles
+   Professional Desktop Workstation Ribbon (Word/Revit/ArcGIS)
+   Group titles at BOTTOM of each group (Microsoft pattern).
+   Large primary buttons, compact secondary buttons, decision color-coding. */
+
+.ribbon-container {
+  width: 100%;
+  background: var(--color-bg-secondary);
+  border-bottom: 2px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 1: TITLE BAR
+═══════════════════════════════════════════════════════════════════ */
+.ribbon-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 var(--space-3);
+  background: var(--black-forest);
+  color: var(--cornsilk);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ribbon-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--copperwood);
+  color: #fff;
+  border-radius: 3px;
+}
+
+.brand-name {
+  font-size: 0.8125rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
+}
+
+.brand-ver {
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  background: var(--olive-leaf);
+  color: #fff;
+  padding: 0 3px;
+  border-radius: 2px;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+
+/* Active Project Pill */
+.ribbon-active-project-bar {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 500px;
+  margin: 0 var(--space-4);
+  justify-content: center;
+}
+
+.active-project-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(254, 250, 224, 0.15);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.active-project-pill:hover {
+  background: rgba(0, 0, 0, 0.45);
+  border-color: var(--sunlit-clay);
+}
+
+.icon-project { color: var(--sunlit-clay); flex-shrink: 0; }
+
+.project-label {
+  font-size: 0.625rem;
+  color: rgba(254, 250, 224, 0.6);
+  flex-shrink: 0;
+}
+
+.project-title {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  color: var(--cornsilk);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-methodology-tag {
+  font-size: 0.5rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  padding: 0 4px;
+  background: var(--copperwood);
+  color: #fff;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.btn-select-project-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  background: var(--copperwood);
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: filter var(--transition-fast);
+}
+
+.btn-select-project-alert:hover { filter: brightness(1.12); }
+
+/* Quick Actions */
+.ribbon-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ribbon-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.ribbon-action-pill.ai-active {
+  background: var(--olive-leaf);
+  color: #fff;
+}
+
+.ribbon-action-pill.ai-manual {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sunlit-clay);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.ribbon-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--cornsilk);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ribbon-icon-btn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.ribbon-icon-btn.collapse-btn.active { background: var(--copperwood); color: #fff; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 2: TAB BAR
+═══════════════════════════════════════════════════════════════════ */
+.ribbon-tabs-bar {
+  display: flex;
+  align-items: flex-end;
+  background: var(--color-bg-primary);
+  padding: 0 var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.ribbon-tabs-nav {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.ribbon-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-top-left-radius: var(--radius-sm);
+  border-top-right-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.ribbon-tab-btn:hover:not(.disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+}
+
+.ribbon-tab-btn.active {
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  border-top: 2px solid var(--color-accent);
+  border-bottom: 1px solid var(--color-bg-secondary);
+  box-shadow: none;
+  margin-bottom: -1px;
+  z-index: 2;
+}
+
+.ribbon-tab-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ribbon-tab-btn.active .ribbon-tab-icon { color: var(--color-accent); }
+
+.ribbon-tab-icon { display: flex; align-items: center; }
+
+.tab-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-tertiary);
+}
+
+.ribbon-tab-btn.active .tab-step-num {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LAYER 3: TOOLSTRIP
+   Each ribbon-group has tools on top and a title label at BOTTOM
+   (Microsoft Office pattern — label identifies the group purpose)
+═══════════════════════════════════════════════════════════════════ */
+.ribbon-toolstrip {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 5px var(--space-3);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  min-height: 68px;
+}
+
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 8px 2px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.ribbon-group-flex { flex: 1; }
+
+/* Group title — BOTTOM of group (Office pattern) */
+.ribbon-group-title {
+  font-size: 0.5rem;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.04em;
+  text-align: center;
+  border-top: 1px solid var(--color-border);
+  padding-top: 2px;
+  margin-top: 3px;
+}
+
+.ribbon-group-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.ribbon-group-tools-wrap {
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.ribbon-divider {
+  width: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+  opacity: 0.5;
+}
+
+/* ── LARGE PRIMARY BUTTONS (vertical with icon on top) ───────────── */
+.tool-btn-large {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 54px;
+  padding: 4px 8px;
+  font-size: 0.5625rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+  line-height: 1.15;
+  text-align: center;
+}
+
+.tool-btn-large:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-accent);
+}
+
+.tool-btn-large:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.tool-btn-large.tool-active {
+  background: var(--copperwood);
+  color: #fff;
+  border-color: var(--copperwood);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+/* ── MEDIUM VERTICAL BUTTONS ─────────────────────────────────────── */
+.tool-btn-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 52px;
+  padding: 3px 6px;
+  font-size: 0.5625rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+}
+
+.tool-btn-vertical:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-accent);
+}
+
+.tool-btn-vertical:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.tool-btn-vertical:disabled, .tool-btn-vertical.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── COMPACT HORIZONTAL BUTTONS (small secondary actions) ────────── */
+.tool-btn-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 7px;
+  font-size: 0.5625rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tool-btn-compact:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+.tool-btn-compact:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.tool-btn-compact.tool-btn-highlight {
+  border-color: var(--copperwood);
+  color: var(--copperwood);
+}
+
+/* ── DECISION BUTTONS (colored for Include/Exclude/Pending) ──────── */
+.tool-btn-decision {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 52px;
+  padding: 4px 8px;
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+  border: 1px solid;
+}
+
+.tool-btn-decision:active {
+  transform: translateY(1px);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.tool-btn-decision.included {
+  color: var(--color-included);
+  background: var(--color-included-bg);
+  border-color: var(--color-included);
+}
+
+.tool-btn-decision.included:hover {
+  background: var(--color-included);
+  color: #fff;
+}
+
+.tool-btn-decision.excluded {
+  color: var(--color-excluded);
+  background: var(--color-excluded-bg);
+  border-color: var(--color-excluded);
+}
+
+.tool-btn-decision.excluded:hover {
+  background: var(--color-excluded);
+  color: #fff;
+}
+
+.tool-btn-decision.pending {
+  color: var(--color-pending);
+  background: var(--color-pending-bg);
+  border-color: var(--color-pending);
+}
+
+.tool-btn-decision.pending:hover {
+  background: var(--color-pending);
+  color: #fff;
+}
+
+/* Compact filter buttons with subtle color hints */
+.tool-btn-pending { color: var(--color-pending); }
+.tool-btn-included { color: var(--color-included); }
+.tool-btn-excluded { color: var(--color-excluded); }
+
+/* ── NEXT STEP SMART INDICATOR ───────────────────────────────────── */
+.ribbon-next-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  flex: 1;
+}
+
+.ribbon-next-step .next-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+}
+
+.ribbon-next-step .next-step-text strong {
+  font-size: 0.5625rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.ribbon-next-step .next-step-text span {
+  font-size: 0.5625rem;
+  color: var(--color-text-secondary);
+  line-height: 1.3;
+}
+
+.tool-btn-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  font-size: 0.5625rem;
+  font-weight: var(--weight-bold);
+  color: #fff;
+  background: var(--copperwood);
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tool-btn-next:hover { filter: brightness(1.12); }
+.tool-btn-next:active { transform: translateY(1px); box-shadow: var(--shadow-neo-pressed); }
+
+.ribbon-step-final .icon-accent { color: var(--olive-leaf); }
+
+/* ── INFO BOXES ──────────────────────────────────────────────────── */
+.ribbon-info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 1px 6px;
+}
+
+.info-label {
+  font-size: 0.5rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.info-value {
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.status-dot-inline {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.status-dot-inline.online { background: var(--olive-leaf); box-shadow: 0 0 3px var(--olive-leaf); }
+.status-dot-inline.offline { background: var(--color-error); }
+
+/* ── DATABASE BADGES ─────────────────────────────────────────────── */
+.db-badge {
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.db-badge.bdtd    { background: var(--olive-leaf);  color: #fff; }
+.db-badge.scielo  { background: #c0392b;           color: #fff; }
+.db-badge.scopus  { background: #e67e22;           color: #fff; }
+.db-badge.pubmed  { background: #2980b9;           color: #fff; }
+.db-badge.openalex { background: #8e44ad;          color: #fff; }
+.db-badge.google  { background: #1e88e5;           color: #fff; }
+.db-badge.qwen    { background: #6a1b9a;           color: #fff; }
+.db-badge.local   { background: #37474f;           color: #fff; }
+
+.ribbon-provider-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ── ICON ACCENT CLASSES ─────────────────────────────────────────── */
+.icon-accent  { color: var(--copperwood); }
+.icon-sparkle { color: var(--sunlit-clay); }

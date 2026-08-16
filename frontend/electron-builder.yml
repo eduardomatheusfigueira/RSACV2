@@ -1,0 +1,21 @@
+appId: br.ufsc.rsac
+productName: RSAC V2
+copyright: Copyright © 2026 Eduardo Matheus Figueira
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: RSAC V2

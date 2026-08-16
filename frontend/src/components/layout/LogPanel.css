@@ -1,0 +1,283 @@
+/* RSAC V2 — LogPanel Styles (Contemporary Workstation Right Dock Panel) */
+
+.log-panel {
+  width: 380px;
+  max-width: 90vw;
+  height: 100%;
+  background: var(--color-bg-secondary);
+  border-left: 1px solid var(--color-border);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 50;
+  font-family: var(--font-sans);
+  animation: slideInRight var(--transition-fast) ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0.8;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.log-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.log-panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-panel-title {
+  font-size: 0.75rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.log-panel-count {
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  padding: 1px 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  color: var(--color-text-tertiary);
+}
+
+.log-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.log-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.log-action-btn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+/* ── Filter Bar ────────────────────────────────────────── */
+.log-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.filter-icon {
+  color: var(--color-text-tertiary);
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.log-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 0.625rem;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.log-filter-btn:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+.log-filter-btn.active {
+  background: var(--copperwood);
+  color: #fff;
+  border-color: var(--copperwood);
+}
+
+.log-filter-btn .filter-count {
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  opacity: 0.85;
+}
+
+/* ── Entries Scroll Area ───────────────────────────────── */
+.log-entries-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--color-bg-base);
+}
+
+.log-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── Individual Log Entry Row ──────────────────────────── */
+.log-entry {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-raised);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.log-entry:hover {
+  border-color: var(--color-border-hover);
+}
+
+.log-entry-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 0.6875rem;
+  min-height: 28px;
+}
+
+.log-level-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.level-info .log-level-badge { color: var(--color-info); }
+.level-success .log-level-badge { color: var(--color-success); }
+.level-warn .log-level-badge { color: var(--color-warning); }
+.level-error .log-level-badge { color: var(--color-error); }
+.level-debug .log-level-badge { color: var(--color-text-tertiary); }
+
+.log-time {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.log-source-tag {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: var(--weight-bold);
+  padding: 0 4px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.log-message {
+  flex: 1;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+}
+
+.log-duration {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  color: var(--olive-leaf);
+  background: rgba(107, 142, 35, 0.12);
+  padding: 0 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.log-expand-indicator {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ── Entry Detail (Expanded JSON/Text) ─────────────────── */
+.log-entry-detail {
+  padding: 6px 8px;
+  background: var(--black-forest);
+  border-top: 1px solid var(--color-border);
+  color: var(--cornsilk);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.log-entry-detail pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Level Borders & Accent Bars */
+.log-entry.level-error {
+  border-left: 3px solid var(--color-error);
+}
+
+.log-entry.level-warn {
+  border-left: 3px solid var(--color-warning);
+}
+
+.log-entry.level-success {
+  border-left: 3px solid var(--color-success);
+}
+
+.log-entry.level-info {
+  border-left: 3px solid var(--color-info);
+}
+
+.log-entry.level-debug {
+  border-left: 3px solid var(--color-text-tertiary);
+}

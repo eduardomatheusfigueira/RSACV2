@@ -1,0 +1,147 @@
+/**
+ * RSAC V2 — StatusBar Styles (Contemporary Segmented Sunken Bar)
+ */
+
+.status-bar {
+  height: var(--statusbar-height);
+  background: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border);
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+
+.status-bar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px 10px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  font-weight: var(--weight-semibold);
+  font-size: 0.6875rem;
+}
+
+.status-divider {
+  display: none;
+}
+
+.status-ai-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  padding: 2px 10px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.status-ai-mode.active {
+  color: var(--color-success);
+}
+
+.status-ai-mode.manual {
+  color: var(--color-text-secondary);
+}
+
+.status-version {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  padding: 2px 10px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--color-text-tertiary);
+}
+
+.status-log-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  padding: 2px 10px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-raised);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.status-log-btn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+.status-log-btn:active {
+  box-shadow: var(--shadow-neo-sunken);
+  transform: translateY(1px);
+}
+
+.status-log-btn.active {
+  background: var(--copperwood);
+  color: #fff;
+  border-color: var(--copperwood);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.status-log-btn.has-errors {
+  border-color: var(--color-error);
+}
+
+.log-badge {
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  padding: 0 4px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.log-badge.count {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.status-log-btn.active .log-badge.count {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.log-badge.error {
+  background: var(--color-error);
+  color: #fff;
+}

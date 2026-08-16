@@ -1,0 +1,89 @@
+/**
+ * RSAC V2 — Settings & Project Store (Zustand + localStorage Persistence)
+ * Persiste preferências do usuário (tema, modo IA, projeto ativo) no localStorage,
+ * para que sobrevivam a recarregamentos de página e reinícios do app.
+ */
+
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import type { Project } from '@/types/api'
+
+export type ThemeId =
+  | 'dark'
+  | 'light'
+  | 'lava-steel'
+  | 'pastel-dream'
+  | 'stormy-tangerine'
+  | 'platinum-dusk'
+
+interface SettingsState {
+  theme: string
+  backendStatus: 'connecting' | 'online' | 'offline'
+  backendVersion: string
+  sidebarCollapsed: boolean
+  activeProject: Project | null
+  aiEnabled: boolean
+
+  // Actions
+  setTheme: (theme: string) => void
+  toggleTheme: () => void
+  setBackendStatus: (status: 'connecting' | 'online' | 'offline') => void
+  setBackendVersion: (version: string) => void
+  toggleSidebar: () => void
+  setActiveProject: (project: Project | null) => void
+  setAiEnabled: (enabled: boolean) => void
+}
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      theme: 'dark',
+      backendStatus: 'connecting',
+      backendVersion: '',
+      sidebarCollapsed: false,
+      activeProject: null,
+      aiEnabled: true,
+
+      setTheme: (theme) => {
+        document.documentElement.setAttribute('data-theme', theme)
+        set({ theme })
+      },
+
+      toggleTheme: () =>
+        set((state) => {
+          const isDark =
+            state.theme === 'dark' ||
+            state.theme === 'organic-dark' ||
+            state.theme === 'lava-steel' ||
+            state.theme === 'stormy-tangerine'
+          const newTheme = isDark ? 'light' : 'dark'
+          document.documentElement.setAttribute('data-theme', newTheme)
+          return { theme: newTheme }
+        }),
+
+      setBackendStatus: (backendStatus) => set({ backendStatus }),
+      setBackendVersion: (backendVersion) => set({ backendVersion }),
+      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      setActiveProject: (activeProject) => set({ activeProject }),
+      setAiEnabled: (aiEnabled) => set({ aiEnabled }),
+    }),
+    {
+      name: 'rsac-v2-settings',
+      // Persistir apenas as preferências do usuário, não o estado de runtime (backend status/version)
+      partialize: (state) => ({
+        theme: state.theme,
+        aiEnabled: state.aiEnabled,
+        activeProject: state.activeProject,
+        sidebarCollapsed: state.sidebarCollapsed,
+      }),
+      // Ao reidratar do localStorage, aplicar o tema salvo ao DOM imediatamente
+      onRehydrateStorage: () => {
+        return (state) => {
+          if (state?.theme) {
+            document.documentElement.setAttribute('data-theme', state.theme)
+          }
+        }
+      },
+    }
+  )
+)

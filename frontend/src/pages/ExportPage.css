@@ -1,0 +1,189 @@
+/* RSAC V2 — Export Page Styles (Contemporary Neo-Retro System) */
+
+.export-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: var(--space-16);
+}
+
+/* Actions Grid */
+.export-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+}
+
+.export-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neo-raised);
+  padding: var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.export-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.export-card:active {
+  box-shadow: var(--shadow-neo-pressed);
+  transform: translateY(1px);
+}
+
+.export-card-icon {
+  width: 52px;
+  height: 52px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.export-card-icon.excel {
+  color: var(--olive-leaf);
+}
+
+.export-card-icon.bibtex {
+  color: var(--copperwood);
+}
+
+.export-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.export-card-content h3 {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.export-card-content p {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+}
+
+.export-btn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--copperwood);
+  margin-top: var(--space-3);
+}
+
+/* PRISMA Section (Flow Chart Window) */
+.prisma-section {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neo-raised);
+  padding: var(--space-8);
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.section-title-row h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+/* Flow Chart Grid */
+.prisma-flow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+  align-items: center;
+}
+
+.flow-stage {
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stage-title-tag {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 12px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--copperwood);
+  margin-bottom: var(--space-3);
+}
+
+.flow-nodes-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  width: 100%;
+}
+
+.flow-node {
+  flex: 1;
+  max-width: 360px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.node-title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+}
+
+.node-value {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.flow-node.highlight {
+  border: 2px solid var(--olive-leaf);
+  background: var(--color-included-bg);
+}
+
+.flow-node.highlight .node-value {
+  color: var(--olive-leaf);
+}
+
+.flow-arrow-down {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--copperwood);
+  margin: var(--space-1) 0;
+}
