@@ -1,0 +1,262 @@
+/* RSAC V2 — AIAssistButton Styles (Contemporary Neo-Retro System) */
+
+.ai-assist-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-assist-btn-group {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+}
+
+.ai-assist-btn-group:hover {
+  border-color: var(--color-accent);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.btn-ai-assist {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  color: var(--color-text-primary);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.btn-ai-assist:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
+
+.btn-ai-assist.loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.btn-ai-assist.applied {
+  background: var(--color-included-bg);
+  color: var(--color-included);
+}
+
+.ai-sparkle-icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.ai-spin-icon {
+  color: var(--color-accent);
+  animation: ai-spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes ai-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ai-check-icon {
+  color: var(--color-included);
+  flex-shrink: 0;
+}
+
+.ai-btn-text {
+  font-family: var(--font-sans);
+}
+
+.btn-ai-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 5px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.btn-ai-dropdown-toggle:hover:not(:disabled),
+.btn-ai-dropdown-toggle.active {
+  background: var(--color-bg-hover);
+  color: var(--color-accent);
+}
+
+/* Undo Button */
+.btn-ai-undo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+}
+
+.btn-ai-undo:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-bg-elevated);
+}
+
+/* Dropdown Menu */
+.ai-assist-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 280px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), var(--shadow-neo-raised);
+  z-index: 1050;
+  overflow: hidden;
+}
+
+.ai-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+}
+
+.ai-dropdown-options {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.ai-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+  width: 100%;
+}
+
+.ai-dropdown-item:hover {
+  background: var(--color-bg-primary);
+  color: var(--color-accent);
+}
+
+.ai-dropdown-item .item-icon {
+  margin-top: 2px;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.ai-dropdown-item .item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ai-dropdown-item .item-title {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.ai-dropdown-item .item-desc {
+  font-size: 0.5625rem;
+  color: var(--color-text-tertiary);
+  line-height: 1.2;
+}
+
+.ai-dropdown-item.custom-prompt-trigger {
+  border-top: 1px dashed var(--color-border);
+  margin-top: 4px;
+  padding-top: 6px;
+}
+
+/* Custom Prompt Box */
+.ai-custom-prompt-box {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-xs);
+  border-top: 1px dashed var(--color-border);
+  margin-top: 4px;
+}
+
+.ai-custom-prompt-box input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.6875rem;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-primary);
+  outline: none;
+}
+
+.ai-custom-prompt-box input:focus {
+  border-color: var(--color-accent);
+}
+
+.custom-prompt-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.btn-custom-cancel {
+  padding: 2px 6px;
+  font-size: 0.625rem;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.btn-custom-submit {
+  padding: 2px 8px;
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  background: var(--color-accent);
+  color: #ffffff;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}

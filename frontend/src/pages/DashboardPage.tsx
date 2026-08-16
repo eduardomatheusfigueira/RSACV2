@@ -21,7 +21,7 @@ import './DashboardPage.css'
 
 export function DashboardPage(): JSX.Element {
   const navigate = useNavigate()
-  const { backendStatus } = useSettingsStore()
+  const { backendStatus, activeProject, setActiveProject } = useSettingsStore()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -40,6 +40,11 @@ export function DashboardPage(): JSX.Element {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleOpenProject = (project: Project) => {
+    setActiveProject(project)
+    navigate(`/projects/${project.id}/protocol`)
   }
 
   return (
@@ -130,27 +135,48 @@ export function DashboardPage(): JSX.Element {
           </div>
         ) : (
           <div className="project-grid">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="project-card"
-                onClick={() => navigate(`/projects/${project.id}`)}
-              >
-                <div className="project-card-header">
-                  <h3 className="project-card-title">{project.title}</h3>
-                  <span className="project-card-methodology">{project.methodology}</span>
+            {projects.map((project) => {
+              const isActive = activeProject?.id === project.id
+              return (
+                <div
+                  key={project.id}
+                  className={`project-card ${isActive ? 'active-card' : ''}`}
+                  onClick={() => handleOpenProject(project)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleOpenProject(project)
+                    }
+                  }}
+                  title={`Abrir projeto: ${project.title}`}
+                >
+                  <div className="project-card-header">
+                    <h3 className="project-card-title">{project.title}</h3>
+                    <div className="project-card-meta">
+                      <span className="project-card-methodology">{project.methodology}</span>
+                      {isActive && (
+                        <span className="badge-active">
+                          <CheckCircle2 size={11} /> Ativo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {project.description && (
+                    <p className="project-card-description">{project.description}</p>
+                  )}
+                  <div className="project-card-footer">
+                    <span className="project-card-date">
+                      {new Date(project.created_at).toLocaleDateString('pt-BR')}
+                    </span>
+                    <span className="project-card-action">
+                      Abrir Projeto <ArrowRight size={14} className="project-card-arrow" />
+                    </span>
+                  </div>
                 </div>
-                {project.description && (
-                  <p className="project-card-description">{project.description}</p>
-                )}
-                <div className="project-card-footer">
-                  <span className="project-card-date">
-                    {new Date(project.created_at).toLocaleDateString('pt-BR')}
-                  </span>
-                  <ArrowRight size={16} className="project-card-arrow" />
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

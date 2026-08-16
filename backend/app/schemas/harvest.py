@@ -13,7 +13,9 @@ class HarvestStartRequest(BaseModel):
     sources: List[str] = Field(
         ..., min_length=1, description="Lista de fontes: BDTD, SciELO, OpenAlex, PubMed, Scopus"
     )
-    max_records_per_descriptor: int = Field(default=100, ge=1, le=500)
+    max_records_per_descriptor: Optional[int] = Field(
+        default=0, ge=0, description="Limite de registros por descritor (0 ou None = Ilimitado)"
+    )
     custom_descriptors: Optional[List[str]] = None
 
 

@@ -67,6 +67,10 @@ class APIClient {
     this.baseUrl = `http://127.0.0.1:${port}/api/v1`
   }
 
+  getPort(): number {
+    return this.port
+  }
+
   /**
    * Detecta a porta do backend a partir da query string (passada pelo Electron).
    */
@@ -139,6 +143,11 @@ class APIClient {
       logStore.success(source, `${method} ${path} [${response.status} OK]`, `Resposta:\n${JSON.stringify(data, null, 2).slice(0, 1000)}`, duration)
       return data
     } catch (err: any) {
+      // Se deu erro de rede (Failed to fetch) e a porta configurada não for 8000, tenta fallback para 8000
+      if (this.port !== 8000 && err.message?.includes('fetch')) {
+        this.setPort(8000)
+        return this.request<T>(path, options)
+      }
       const duration = Math.round(performance.now() - startTime)
       if (!err.message?.includes('falhou')) {
         logStore.error(source, `${method} ${path} erro de rede`, `Detalhe: ${err.message}\nTempo: ${duration}ms`)
@@ -278,6 +287,13 @@ class APIClient {
 
   async suggestProtocol(data: { title: string; methodology: string; description?: string }): Promise<ProtocolSuggestions> {
     return this.request<ProtocolSuggestions>('/ai/suggest-protocol', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async assistField(data: import('@/types/api').FieldAssistRequest): Promise<import('@/types/api').FieldAssistResponse> {
+    return this.request<import('@/types/api').FieldAssistResponse>('/ai/assist-field', {
       method: 'POST',
       body: JSON.stringify(data),
     })

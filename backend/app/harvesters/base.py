@@ -51,7 +51,7 @@ class BaseHarvester(ABC):
         self,
         descriptors: List[str],
         on_progress: Optional[Callable[[HarvestProgress], None]] = None,
-        max_records_per_descriptor: int = 100,
+        max_records_per_descriptor: Optional[int] = None,
     ) -> AsyncGenerator[RawPaperRecord, None]:
         """
         Executa a coleta de artigos para a lista de descritores fornecida.

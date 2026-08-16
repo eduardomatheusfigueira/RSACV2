@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -29,8 +29,13 @@ const queryClient = new QueryClient({
   },
 })
 
+function ProjectRedirect(): JSX.Element {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={`/projects/${id}/protocol`} replace />
+}
+
 function AppContent(): JSX.Element {
-  const { setBackendStatus, setBackendVersion, theme } = useSettingsStore()
+  const { setBackendStatus, setBackendVersion, theme, setTheme } = useSettingsStore()
 
   useEffect(() => {
     // Detectar porta do backend passada via query string pelo Electron
@@ -45,9 +50,22 @@ function AppContent(): JSX.Element {
         const health = await api.health()
         setBackendStatus('online')
         setBackendVersion(health.version)
-        console.log(`[App] Backend conectado — v${health.version}`)
+        console.log(`[App] Backend conectado na porta ${api.getPort()} — v${health.version}`)
       } catch (error) {
-        console.warn('[App] Backend não disponível, tentando novamente...')
+        if (api.getPort() !== 8000) {
+          console.warn(`[App] Backend não respondeu na porta ${api.getPort()}, tentando porta padrão 8000...`)
+          api.setPort(8000)
+          try {
+            const health = await api.health()
+            setBackendStatus('online')
+            setBackendVersion(health.version)
+            console.log(`[App] Backend conectado na porta 8000 — v${health.version}`)
+            return
+          } catch {
+            // Continua
+          }
+        }
+        console.warn('[App] Backend não disponível, tentando novamente em 2s...')
         setBackendStatus('connecting')
         // Retry após 2 segundos
         setTimeout(checkHealth, 2000)
@@ -69,6 +87,7 @@ function AppContent(): JSX.Element {
       <Route element={<AppShell />}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/:id" element={<ProjectRedirect />} />
         <Route path="/projects/:id/protocol" element={<ProtocolPage />} />
         <Route path="/projects/:id/harvest" element={<HarvestPage />} />
         <Route path="/projects/:id/screening" element={<ScreeningPage />} />

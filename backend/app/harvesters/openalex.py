@@ -43,8 +43,9 @@ class OpenAlexHarvester(BaseHarvester):
         self,
         descriptors: List[str],
         on_progress: Optional[Callable[[HarvestProgress], None]] = None,
-        max_records_per_descriptor: int = 100,
+        max_records_per_descriptor: Optional[int] = None,
     ) -> AsyncGenerator[RawPaperRecord, None]:
+        limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
         async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
             for desc in descriptors:
                 desc_clean = desc.strip().replace('"', '')
@@ -55,7 +56,7 @@ class OpenAlexHarvester(BaseHarvester):
                 total_for_desc = 0
                 per_page = 25
 
-                while total_for_desc < max_records_per_descriptor:
+                while total_for_desc < limit:
                     if on_progress:
                         on_progress(
                             HarvestProgress(
@@ -129,7 +130,7 @@ class OpenAlexHarvester(BaseHarvester):
                             if paper.title:
                                 yield paper
                                 total_for_desc += 1
-                                if total_for_desc >= max_records_per_descriptor:
+                                if total_for_desc >= limit:
                                     break
 
                         meta = data.get("meta", {})

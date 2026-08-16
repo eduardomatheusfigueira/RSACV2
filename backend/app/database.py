@@ -52,15 +52,55 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-# ── Criação de Tabelas ────────────────────────────────────────────────
+# ── Criação de Tabelas e Migrações Automáticas ───────────────────────
+
+def _migrate_missing_columns() -> None:
+    """
+    Migra automaticamente colunas novas adicionadas aos modelos ORM para bancos
+    SQLite já existentes, evitando erros de 'table has no column named...'.
+    """
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        existing_tables = inspector.get_table_names()
+
+        with engine.connect() as conn:
+            for table_name, table in Base.metadata.tables.items():
+                if table_name in existing_tables:
+                    existing_columns = {col["name"] for col in inspector.get_columns(table_name)}
+                    for column in table.columns:
+                        if column.name not in existing_columns:
+                            col_type = column.type.compile(engine.dialect)
+                            default_clause = ""
+                            if column.default is not None and hasattr(column.default, "arg"):
+                                arg = column.default.arg
+                                if isinstance(arg, str):
+                                    default_clause = f" DEFAULT '{arg}'"
+                                elif isinstance(arg, (int, float)):
+                                    default_clause = f" DEFAULT {arg}"
+                                elif isinstance(arg, bool):
+                                    default_clause = " DEFAULT 1" if arg else " DEFAULT 0"
+                            elif str(col_type).upper().startswith("TEXT") or str(col_type).upper().startswith("VARCHAR"):
+                                default_clause = " DEFAULT ''"
+
+                            sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}{default_clause}"
+                            logger.info(f"Migração automática de esquema: {sql}")
+                            conn.execute(text(sql))
+                            conn.commit()
+                            logger.info(f"Coluna '{column.name}' adicionada à tabela '{table_name}' com sucesso.")
+    except Exception as e:
+        logger.warning(f"Aviso na verificação de migrações automáticas: {e}")
+
 
 def create_tables() -> None:
-    """Cria todas as tabelas no banco de dados (desenvolvimento)."""
-    logger.info(f"Criando tabelas no banco: {settings.effective_database_url}")
+    """Cria todas as tabelas e sincroniza colunas no banco de dados."""
+    logger.info(f"Sincronizando tabelas no banco: {settings.effective_database_url}")
     Base.metadata.create_all(bind=engine)
-    logger.info("Tabelas criadas com sucesso.")
+    _migrate_missing_columns()
+    logger.info("Tabelas e colunas sincronizadas com sucesso.")
 
 
 def drop_tables() -> None:
     """Remove todas as tabelas (CUIDADO — apenas para testes)."""
     Base.metadata.drop_all(bind=engine)
+

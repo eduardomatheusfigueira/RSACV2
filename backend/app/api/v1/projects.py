@@ -10,7 +10,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.infrastructure.persistence.models import ProjectModel, ProtocolModel
+from app.infrastructure.persistence.models import (
+    AuditLogModel,
+    CriterionModel,
+    ExtractionAnswerModel,
+    ExtractionQuestionModel,
+    HarvestRunModel,
+    PaperCriterionModel,
+    PaperModel,
+    PaperSourceModel,
+    ProjectModel,
+    ProtocolModel,
+)
 from app.schemas.project import ProjectCreate, ProjectListResponse, ProjectResponse, ProjectUpdate
 
 logger = logging.getLogger(__name__)
@@ -100,15 +111,50 @@ def delete_project(
     project_id: str,
     db: Session = Depends(get_db),
 ):
-    """Exclui um projeto e todos os dados associados."""
+    """Exclui um projeto e todos os dados associados com cascata rigorosa."""
     project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
 
-    db.delete(project)
-    db.commit()
+    try:
+        # 1. Coleta IDs de Papers vinculados ao projeto
+        paper_ids = [r[0] for r in db.query(PaperModel.id).filter(PaperModel.project_id == project_id).all()]
+        
+        # 2. Deleta entidades filhas dos papers
+        if paper_ids:
+            db.query(PaperSourceModel).filter(PaperSourceModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
+            db.query(PaperCriterionModel).filter(PaperCriterionModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
+            db.query(ExtractionAnswerModel).filter(ExtractionAnswerModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
+            db.query(AuditLogModel).filter(AuditLogModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
+            db.query(PaperModel).filter(PaperModel.project_id == project_id).delete(synchronize_session=False)
 
-    logger.info(f"Projeto excluído: ID {project_id}")
+        # 3. Coleta protocolos do projeto e deleta critérios e perguntas de extração
+        protocol_ids = [r[0] for r in db.query(ProtocolModel.id).filter(ProtocolModel.project_id == project_id).all()]
+        if protocol_ids:
+            criterion_ids = [r[0] for r in db.query(CriterionModel.id).filter(CriterionModel.protocol_id.in_(protocol_ids)).all()]
+            if criterion_ids:
+                db.query(PaperCriterionModel).filter(PaperCriterionModel.criterion_id.in_(criterion_ids)).delete(synchronize_session=False)
+                db.query(CriterionModel).filter(CriterionModel.protocol_id.in_(protocol_ids)).delete(synchronize_session=False)
+
+            question_ids = [r[0] for r in db.query(ExtractionQuestionModel.id).filter(ExtractionQuestionModel.protocol_id.in_(protocol_ids)).all()]
+            if question_ids:
+                db.query(ExtractionAnswerModel).filter(ExtractionAnswerModel.question_id.in_(question_ids)).delete(synchronize_session=False)
+                db.query(ExtractionQuestionModel).filter(ExtractionQuestionModel.protocol_id.in_(protocol_ids)).delete(synchronize_session=False)
+
+            db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).delete(synchronize_session=False)
+
+        # 4. Deleta execuções de coleta (harvest runs)
+        db.query(HarvestRunModel).filter(HarvestRunModel.project_id == project_id).delete(synchronize_session=False)
+
+        # 5. Deleta o projeto raiz
+        db.query(ProjectModel).filter(ProjectModel.id == project_id).delete(synchronize_session=False)
+        db.commit()
+
+        logger.info(f"Projeto excluído com sucesso: ID {project_id}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao excluir projeto {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Falha ao excluir projeto: {str(e)}")
 
 
 @router.get("/{project_id}/stats")

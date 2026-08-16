@@ -407,7 +407,7 @@ export function TopRibbonBar(): JSX.Element {
                     <HelpCircle size={14} className="icon-accent" />
                     <div className="next-step-text">
                       <strong>Descritores VuFind:</strong>
-                      <span>Máx. 2 termos com AND por par · Máx. 5 pares por idioma</span>
+                      <span>Máx. 2 termos com AND por par · Sugestão: ~5 pares por idioma</span>
                     </div>
                     <button type="button" className="tool-btn-next" onClick={() => navToProjectPage('harvest')}>
                       Próximo: Coleta <ArrowRight size={12} />

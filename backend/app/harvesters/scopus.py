@@ -29,12 +29,13 @@ class ScopusHarvester(BaseHarvester):
         self,
         descriptors: List[str],
         on_progress: Optional[Callable[[HarvestProgress], None]] = None,
-        max_records_per_descriptor: int = 100,
+        max_records_per_descriptor: Optional[int] = None,
     ) -> AsyncGenerator[RawPaperRecord, None]:
         if not self.api_key:
             logger.info("[Scopus] API Key não configurada. Pulando Scopus.")
             return
 
+        limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
         async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
             for desc in descriptors:
                 desc_clean = desc.strip()
@@ -45,7 +46,7 @@ class ScopusHarvester(BaseHarvester):
                 total_for_desc = 0
                 count_per_page = 25
 
-                while total_for_desc < max_records_per_descriptor:
+                while total_for_desc < limit:
                     if on_progress:
                         on_progress(
                             HarvestProgress(
@@ -80,28 +81,29 @@ class ScopusHarvester(BaseHarvester):
                             break
 
                         for entry in entries:
-                            title_str = entry.get("dc:title", "")
-                            creator = entry.get("dc:creator", "")
-                            pub_date = entry.get("prism:coverDate", "")
-                            year_str = pub_date[:4] if pub_date else ""
-                            doi = entry.get("prism:doi") or None
-                            doc_type = entry.get("subtypeDescription", "Article")
+                            title = entry.get("dc:title", "").strip()
+                            authors = entry.get("dc:creator", "")
+                            year_val = entry.get("prism:coverDate", "")
+                            year = year_val[:4] if year_val else ""
+                            doi = entry.get("prism:doi")
+                            scopus_id = entry.get("dc:identifier", "")
+                            doc_type = entry.get("subtypeDescription", "Artigo")
                             pub_name = entry.get("prism:publicationName", "Scopus")
 
-                            link_obj = next(
-                                (l for l in entry.get("link", []) if l.get("@ref") == "scopus"),
-                                None,
-                            )
-                            scopus_url = link_obj.get("@href", "") if link_obj else ""
+                            scopus_url = ""
+                            for link in entry.get("link", []):
+                                if link.get("@ref") == "scopus":
+                                    scopus_url = link.get("@href", "")
+                                    break
 
                             paper = RawPaperRecord(
-                                title=title_str.strip(),
-                                authors=creator,
-                                year=year_str,
-                                abstract=entry.get("dc:description", "") or "",
+                                title=title,
+                                authors=authors,
+                                year=year,
+                                abstract="",
                                 doi=doi,
                                 source_name=self.source_name,
-                                source_id=entry.get("dc:identifier", ""),
+                                source_id=scopus_id,
                                 download_url=scopus_url,
                                 research_type=doc_type,
                                 institution=pub_name,
@@ -110,7 +112,7 @@ class ScopusHarvester(BaseHarvester):
                             if paper.title:
                                 yield paper
                                 total_for_desc += 1
-                                if total_for_desc >= max_records_per_descriptor:
+                                if total_for_desc >= limit:
                                     break
 
                         total_results = int(search_results.get("opensearch:totalResults", 0))

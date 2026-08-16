@@ -12,7 +12,13 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.infrastructure.ai.factory import AIFactory
 from app.infrastructure.persistence.models import AISettingsModel
-from app.schemas.ai import AISettingsResponse, AISettingsUpdate, ProtocolSuggestRequest
+from app.schemas.ai import (
+    AISettingsResponse,
+    AISettingsUpdate,
+    FieldAssistRequest,
+    FieldAssistResponse,
+    ProtocolSuggestRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +35,7 @@ def get_ai_settings(db: Session = Depends(get_db)):
             provider="gemini",
             model="gemini-3.6-flash",
             has_api_keys=False,
+            api_keys=[],
             endpoint=None,
             temperature=0.2,
             max_tokens=4096,
@@ -36,6 +43,8 @@ def get_ai_settings(db: Session = Depends(get_db)):
 
     try:
         keys = json.loads(settings.api_keys_encrypted) if settings.api_keys_encrypted else []
+        if isinstance(keys, str):
+            keys = [keys]
     except Exception:
         keys = []
 
@@ -44,6 +53,7 @@ def get_ai_settings(db: Session = Depends(get_db)):
         provider=settings.provider,
         model=settings.model,
         has_api_keys=len(keys) > 0,
+        api_keys=keys,
         endpoint=settings.endpoint,
         temperature=settings.temperature,
         max_tokens=settings.max_tokens,
@@ -58,10 +68,12 @@ def update_ai_settings(data: AISettingsUpdate, db: Session = Depends(get_db)):
         settings = AISettingsModel()
         db.add(settings)
 
+    clean_keys = [k.strip() for k in data.api_keys if k and k.strip()]
+
     settings.ai_enabled = data.ai_enabled
     settings.provider = data.provider.lower()
     settings.model = data.model
-    settings.api_keys_encrypted = json.dumps([k.strip() for k in data.api_keys if k.strip()])
+    settings.api_keys_encrypted = json.dumps(clean_keys)
     settings.endpoint = data.endpoint
     settings.temperature = data.temperature
     settings.max_tokens = data.max_tokens
@@ -73,7 +85,8 @@ def update_ai_settings(data: AISettingsUpdate, db: Session = Depends(get_db)):
         ai_enabled=settings.ai_enabled,
         provider=settings.provider,
         model=settings.model,
-        has_api_keys=len(data.api_keys) > 0,
+        has_api_keys=len(clean_keys) > 0,
+        api_keys=clean_keys,
         endpoint=settings.endpoint,
         temperature=settings.temperature,
         max_tokens=settings.max_tokens,
@@ -117,12 +130,47 @@ async def suggest_protocol(data: ProtocolSuggestRequest, db: Session = Depends(g
 
     client = AIFactory.get_client(db)
     try:
-        suggestions = await client.suggest_protocol(
+        suggestions = await client.generate_protocol_suggestions(
             title=data.title,
             methodology=data.methodology,
-            description=data.description,
+            initial_description=data.description,
         )
         return suggestions
     except Exception as e:
         logger.error(f"[AI] Erro ao sugerir protocolo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/assist-field", response_model=FieldAssistResponse)
+async def assist_field(data: FieldAssistRequest, db: Session = Depends(get_db)):
+    """Preenche, corrige ou aprimora o conteúdo de um campo específico com IA baseada nas diretrizes do item."""
+    settings = db.query(AISettingsModel).first()
+    if settings and not settings.ai_enabled:
+        raise HTTPException(
+            status_code=400,
+            detail="Os recursos de IA estão desativados nas Configurações (Modo 100% Manual). Ative a IA para usar o assistente.",
+        )
+
+    client = AIFactory.get_client(db)
+    try:
+        result = await client.assist_field(
+            field_label=data.field_label,
+            field_guidelines=data.field_guidelines,
+            current_value=data.current_value,
+            project_title=data.project_title,
+            methodology=data.methodology,
+            project_context=data.project_context,
+            action=data.action,
+            custom_instruction=data.custom_instruction,
+        )
+        return FieldAssistResponse(
+            field_id=data.field_id,
+            suggested_text=result.get("suggested_text", ""),
+            explanation=result.get("explanation", ""),
+            model_used=result.get("model_used", client.model_name),
+            provider=result.get("provider", client.provider_name),
+        )
+    except Exception as e:
+        logger.error(f"[AI] Erro ao processar assistente de campo para '{data.field_label}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+

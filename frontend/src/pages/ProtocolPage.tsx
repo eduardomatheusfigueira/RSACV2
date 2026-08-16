@@ -33,6 +33,7 @@ import {
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
+import { AIAssistButton } from '@/components/common/AIAssistButton'
 import type { Criterion, ExtractionQuestion, ProtocolSuggestions, Methodology } from '@/types/api'
 import './ProtocolPage.css'
 
@@ -166,7 +167,7 @@ export function ProtocolPage(): JSX.Element {
       })
 
       setCriteria(proto.criteria || [])
-      setQuestions(proto.extraction_questions || [])
+      setQuestions((proto.extraction_questions || []).map((q) => ({ ...q, text: q.text || (q as any).question || '' })))
 
       if (proto.manuscript_sections) {
         setManuscript((prev) => ({
@@ -193,6 +194,44 @@ export function ProtocolPage(): JSX.Element {
       ...prev,
       [key]: value,
     }))
+  }
+
+  const getFullProtocolContext = (excludeFieldId?: string): Record<string, string> => {
+    const ctx: Record<string, string> = {}
+    if (activeProject?.title) ctx['project_title'] = activeProject.title
+    if (activeProject?.description) ctx['project_description'] = activeProject.description
+    if (activeProject?.methodology) ctx['methodology'] = activeProject.methodology
+    if (objective && excludeFieldId !== 'objective') ctx['objective'] = objective
+    if (pico.population && excludeFieldId !== 'pico_population') ctx['pico_population'] = pico.population
+    if (pico.intervention && excludeFieldId !== 'pico_intervention') ctx['pico_intervention'] = pico.intervention
+    if (pico.comparison && excludeFieldId !== 'pico_comparison') ctx['pico_comparison'] = pico.comparison
+    if (pico.outcome && excludeFieldId !== 'pico_outcome') ctx['pico_outcome'] = pico.outcome
+
+    const descPt = descriptors.pt.filter(Boolean).join('; ')
+    const descEn = descriptors.en.filter(Boolean).join('; ')
+    const descEs = descriptors.es.filter(Boolean).join('; ')
+    if (descPt && excludeFieldId !== 'descriptors_pt') ctx['descriptors_pt'] = descPt
+    if (descEn && excludeFieldId !== 'descriptors_en') ctx['descriptors_en'] = descEn
+    if (descEs && excludeFieldId !== 'descriptors_es') ctx['descriptors_es'] = descEs
+
+    const incCrit = criteria.filter((c) => !c.is_exclusion && c.text.trim()).map((c) => c.text.trim()).join('; ')
+    const excCrit = criteria.filter((c) => c.is_exclusion && c.text.trim()).map((c) => c.text.trim()).join('; ')
+    if (incCrit && excludeFieldId !== 'inclusion_criteria') ctx['inclusion_criteria'] = incCrit
+    if (excCrit && excludeFieldId !== 'exclusion_criteria') ctx['exclusion_criteria'] = excCrit
+
+    const qList = questions
+      .map((q) => (q.text || (q as any).question || '').trim())
+      .filter(Boolean)
+      .join('; ')
+    if (qList && excludeFieldId !== 'questions') ctx['extraction_questions'] = qList
+
+    Object.entries(manuscript).forEach(([k, v]) => {
+      if (v && v.trim() && k !== excludeFieldId) {
+        ctx[k] = v.trim()
+      }
+    })
+
+    return ctx
   }
 
   const toggleHelp = (key: string) => {
@@ -235,10 +274,6 @@ export function ProtocolPage(): JSX.Element {
   // ── Handlers de Descritores em Pares (VuFind/BDTD Compliance) ──────
 
   const addDescriptor = (lang: 'pt' | 'en' | 'es') => {
-    if (descriptors[lang].length >= 5) {
-      alert('Limite máximo de 5 pares de descritores por idioma atingido.')
-      return
-    }
     setDescriptors({
       ...descriptors,
       [lang]: [...descriptors[lang], ''],
@@ -268,10 +303,7 @@ export function ProtocolPage(): JSX.Element {
     setQuestions([
       ...questions,
       {
-        question: '',
-        field_type: 'text',
-        options: [],
-        required: true,
+        text: '',
         order: questions.length,
       },
     ])
@@ -279,7 +311,10 @@ export function ProtocolPage(): JSX.Element {
 
   const updateQuestion = (index: number, text: string) => {
     const updated = [...questions]
-    updated[index].question = text
+    updated[index] = {
+      ...updated[index],
+      text: text,
+    }
     setQuestions(updated)
   }
 
@@ -306,8 +341,8 @@ export function ProtocolPage(): JSX.Element {
         .map((c, idx) => ({ ...c, order: idx }))
 
       const cleanQuestions = questions
-        .filter((q) => q.question.trim().length > 0)
-        .map((q, idx) => ({ ...q, order: idx }))
+        .filter((q) => (q.text || (q as any).question || '').trim().length > 0)
+        .map((q, idx) => ({ ...q, text: (q.text || (q as any).question || '').trim(), order: idx }))
 
       await api.updateProtocol(id, {
         objective,
@@ -466,11 +501,8 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
     if (newCriteria.length) setCriteria(newCriteria)
 
     const newQuestions: ExtractionQuestion[] = (aiSuggestions.extraction_questions || []).map(
-      (question, idx) => ({
-        question,
-        field_type: 'text',
-        options: [],
-        required: true,
+      (questionText, idx) => ({
+        text: questionText,
         order: idx,
       })
     )
@@ -650,15 +682,27 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 <Edit3 size={20} className="icon-accent" />
                 <h2>Título Oficial da Revisão de Escopo (Scoping Review)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.title ? 'active' : ''}`}
-                onClick={() => toggleHelp('title')}
-                title="Ver guia de elaboração do título"
-              >
-                <HelpCircle size={16} />
-                <span>Guia do Título (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="manuscript_title"
+                  fieldLabel="Título Oficial da Revisão"
+                  currentValue={manuscript.manuscript_title}
+                  fieldGuidelines="Identifique claramente o trabalho como uma Scoping Review / Revisão Sistemática e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional)."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('manuscript_title')}
+                  onApply={(text) => updateManuscriptField('manuscript_title', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.title ? 'active' : ''}`}
+                  onClick={() => toggleHelp('title')}
+                  title="Ver guia de elaboração do título"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia do Título (?)</span>
+                </button>
+              </div>
             </div>
             <p className="section-help">
               Conforme PRISMA-ScR Item 1: Identifique claramente o trabalho como uma <strong>Scoping Review</strong> e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).
@@ -716,15 +760,27 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 <FileText size={20} className="icon-accent" />
                 <h2>Resumo Estruturado do Artigo / Protocolo (Structured Summary)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.summary ? 'active' : ''}`}
-                onClick={() => toggleHelp('summary')}
-                title="Ver tópicos sugeridos e guia estruturado do resumo"
-              >
-                <HelpCircle size={16} />
-                <span>Guia do Resumo (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="structured_summary"
+                  fieldLabel="Resumo Estruturado da Revisão"
+                  currentValue={manuscript.structured_summary}
+                  fieldGuidelines="Estruture o resumo com os tópicos recomendados: Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('structured_summary')}
+                  onApply={(text) => updateManuscriptField('structured_summary', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.summary ? 'active' : ''}`}
+                  onClick={() => toggleHelp('summary')}
+                  title="Ver tópicos sugeridos e guia estruturado do resumo"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia do Resumo (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -829,15 +885,27 @@ Conclusões:
                 <BookOpen size={20} className="icon-accent" />
                 <h2>Justificativa e Estado da Arte (Rationale)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.rationale ? 'active' : ''}`}
-                onClick={() => toggleHelp('rationale')}
-                title="Ver tópicos recomendados para a justificativa"
-              >
-                <HelpCircle size={16} />
-                <span>Guia da Justificativa (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="rationale"
+                  fieldLabel="Justificativa e Racional da Revisão"
+                  currentValue={manuscript.rationale}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 3: Descreva o contexto do conhecimento existente na área e fundamente por que o escopo necessita de uma Scoping Review em vez de uma revisão sistemática tradicional nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('rationale')}
+                  onApply={(text) => updateManuscriptField('rationale', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.rationale ? 'active' : ''}`}
+                  onClick={() => toggleHelp('rationale')}
+                  title="Ver tópicos recomendados para a justificativa"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia da Justificativa (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -939,15 +1007,27 @@ Relevância e Contribuição Esperada:
                   ? 'Conforme PRISMA-ScR Item 4 e JBI: Estruture os objetivos centrais em População/Atores (P), Conceito Central (C) e Contexto Territorial (C).'
                   : 'Estruture os objetivos em População/Atores (P), Intervenção/Política (I), Comparador (C) e Desfecho (O).'}
               </p>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.objective ? 'active' : ''}`}
-                onClick={() => toggleHelp('objective')}
-                title="Ver guia de formulação de objetivos e PCC"
-              >
-                <HelpCircle size={16} />
-                <span>Guia dos Objetivos (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="objective"
+                  fieldLabel="Objetivo Geral da Revisão"
+                  currentValue={objective}
+                  fieldGuidelines={`Conforme PRISMA-ScR Item 4: Formule o objetivo geral da scoping review delimitando a questão norteadora com base nos elementos ${frameworkType} em Ciências Sociais Aplicadas / Desenvolvimento Regional.`}
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('objective')}
+                  onApply={(text) => setObjective(text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.objective ? 'active' : ''}`}
+                  onClick={() => toggleHelp('objective')}
+                  title="Ver guia de formulação de objetivos e PCC"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia dos Objetivos (?)</span>
+                </button>
+              </div>
             </div>
 
             {helpOpen.objective && (
@@ -1003,9 +1083,22 @@ Relevância e Contribuição Esperada:
 
             <div className="pico-grid">
               <div className="pico-field">
-                <label>
-                  <strong>P</strong> — População / Atores Sociais
-                </label>
+                <div className="pico-label-row">
+                  <label>
+                    <strong>P</strong> — População / Atores Sociais
+                  </label>
+                  <AIAssistButton
+                    fieldId="pico_population"
+                    fieldLabel="População e Atores Sociais (P)"
+                    currentValue={pico.population}
+                    fieldGuidelines="Delimite os atores sociais, grupos produtivos, cooperativas, comunidades ou organizações em foco no contexto regional."
+                    projectTitle={activeProject?.title}
+                    methodology={activeProject?.methodology}
+                    projectContext={getFullProtocolContext('pico_population')}
+                    compact
+                    onApply={(text) => setPico({ ...pico, population: text })}
+                  />
+                </div>
                 <textarea
                   rows={2}
                   placeholder="Ex: Produtores locais, cooperativas, pequenas e médias empresas, comunidades rurais ou gestores públicos..."
@@ -1013,11 +1106,25 @@ Relevância e Contribuição Esperada:
                   onChange={(e) => setPico({ ...pico, population: e.target.value })}
                 />
               </div>
+
               <div className="pico-field">
-                <label>
-                  <strong>{frameworkType === 'PCC' ? 'C' : 'I'}</strong> —{' '}
-                  {frameworkType === 'PCC' ? 'Conceito Central (Concept)' : 'Intervenção / Política (Intervention)'}
-                </label>
+                <div className="pico-label-row">
+                  <label>
+                    <strong>{frameworkType === 'PCC' ? 'C' : 'I'}</strong> —{' '}
+                    {frameworkType === 'PCC' ? 'Conceito Central (Concept)' : 'Intervenção / Política (Intervention)'}
+                  </label>
+                  <AIAssistButton
+                    fieldId="pico_intervention"
+                    fieldLabel="Conceito Central / Política Pública (C)"
+                    currentValue={pico.intervention}
+                    fieldGuidelines="Defina o conceito central, política pública territorial, APL, governança ou instrumento socioeconômico investigado."
+                    projectTitle={activeProject?.title}
+                    methodology={activeProject?.methodology}
+                    projectContext={getFullProtocolContext('pico_intervention')}
+                    compact
+                    onApply={(text) => setPico({ ...pico, intervention: text })}
+                  />
+                </div>
                 <textarea
                   rows={2}
                   placeholder={
@@ -1029,11 +1136,25 @@ Relevância e Contribuição Esperada:
                   onChange={(e) => setPico({ ...pico, intervention: e.target.value })}
                 />
               </div>
+
               <div className="pico-field">
-                <label>
-                  <strong>{frameworkType === 'PCC' ? 'C' : 'C'}</strong> —{' '}
-                  {frameworkType === 'PCC' ? 'Contexto Territorial (Context)' : 'Comparador (Comparison)'}
-                </label>
+                <div className="pico-label-row">
+                  <label>
+                    <strong>{frameworkType === 'PCC' ? 'C' : 'C'}</strong> —{' '}
+                    {frameworkType === 'PCC' ? 'Contexto Territorial (Context)' : 'Comparador (Comparison)'}
+                  </label>
+                  <AIAssistButton
+                    fieldId="pico_comparison"
+                    fieldLabel="Contexto Territorial / Espacial (C)"
+                    currentValue={pico.comparison}
+                    fieldGuidelines="Delimite o recorte espacial, territorial, regional ou institucional (ex: semiárido, arranjos locais, bacias, municípios)."
+                    projectTitle={activeProject?.title}
+                    methodology={activeProject?.methodology}
+                    projectContext={getFullProtocolContext('pico_comparison')}
+                    compact
+                    onApply={(text) => setPico({ ...pico, comparison: text })}
+                  />
+                </div>
                 <textarea
                   rows={2}
                   placeholder={
@@ -1045,11 +1166,25 @@ Relevância e Contribuição Esperada:
                   onChange={(e) => setPico({ ...pico, comparison: e.target.value })}
                 />
               </div>
+
               <div className="pico-field">
-                <label>
-                  <strong>{frameworkType === 'PCC' ? 'M' : 'O'}</strong> —{' '}
-                  {frameworkType === 'PCC' ? 'Mapeamento de Escopo' : 'Desfecho Socioeconômico (Outcomes)'}
-                </label>
+                <div className="pico-label-row">
+                  <label>
+                    <strong>{frameworkType === 'PCC' ? 'M' : 'O'}</strong> —{' '}
+                    {frameworkType === 'PCC' ? 'Mapeamento de Escopo' : 'Desfecho Socioeconômico (Outcomes)'}
+                  </label>
+                  <AIAssistButton
+                    fieldId="pico_outcome"
+                    fieldLabel="Mapeamento de Escopo / Desfecho (M/O)"
+                    currentValue={pico.outcome}
+                    fieldGuidelines="Defina os eixos de mapeamento, tipologia de evidências, impactos socioeconômicos e lacunas de conhecimento."
+                    projectTitle={activeProject?.title}
+                    methodology={activeProject?.methodology}
+                    projectContext={getFullProtocolContext('pico_outcome')}
+                    compact
+                    onApply={(text) => setPico({ ...pico, outcome: text })}
+                  />
+                </div>
                 <textarea
                   rows={2}
                   placeholder={
@@ -1080,15 +1215,27 @@ Relevância e Contribuição Esperada:
                 <ShieldCheck size={20} className="icon-accent" />
                 <h2>Registro do Protocolo a Priori (Protocol & Registration)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.registration ? 'active' : ''}`}
-                onClick={() => toggleHelp('registration')}
-                title="Ver guia de registro do protocolo"
-              >
-                <HelpCircle size={16} />
-                <span>Guia de Registro (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="protocol_registration"
+                  fieldLabel="Registro do Protocolo (OSF / Repositório)"
+                  currentValue={manuscript.protocol_registration}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('protocol_registration')}
+                  onApply={(text) => updateManuscriptField('protocol_registration', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.registration ? 'active' : ''}`}
+                  onClick={() => toggleHelp('registration')}
+                  title="Ver guia de registro do protocolo"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia de Registro (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1147,15 +1294,27 @@ Relevância e Contribuição Esperada:
                 <Search size={20} className="icon-accent" />
                 <h2>Fontes de Informação & Período de Cobertura (Information Sources)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.sources ? 'active' : ''}`}
-                onClick={() => toggleHelp('sources')}
-                title="Ver guia de reporte das fontes de informação"
-              >
-                <HelpCircle size={16} />
-                <span>Guia das Fontes (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="info_sources"
+                  fieldLabel="Fontes de Informação e Bases"
+                  currentValue={manuscript.info_sources}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 7: Descreva todas as bases de dados bibliográficas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, recorte temporal e a data da busca mais recente."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('info_sources')}
+                  onApply={(text) => updateManuscriptField('info_sources', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.sources ? 'active' : ''}`}
+                  onClick={() => toggleHelp('sources')}
+                  title="Ver guia de reporte das fontes de informação"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia das Fontes (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1233,19 +1392,42 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 <Search size={20} className="icon-accent" />
                 <h2>Estratégia de Busca Eletrônica em Pares (Search Strategy)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.descriptors ? 'active' : ''}`}
-                onClick={() => toggleHelp('descriptors')}
-                title="Ver regras de descritores VuFind / BDTD"
-              >
-                <HelpCircle size={16} />
-                <span>Guia dos Descritores (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId={`descriptors_${activeLangTab}`}
+                  fieldLabel={`Descritores de Busca em Pares (${activeLangTab.toUpperCase()})`}
+                  currentValue={descriptors[activeLangTab].join('\n')}
+                  fieldGuidelines={`Gere pares de descritores (recomendado ~5 pares) no formato "termo 1" AND "termo 2", separados por quebra de linha. Mantenha o formato de pares (máximo 2 termos por linha) para compatibilidade com o VuFind da BDTD. Idioma: ${activeLangTab === 'pt' ? 'Português' : activeLangTab === 'en' ? 'Inglês' : 'Espanhol'}.`}
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext(`descriptors_${activeLangTab}`)}
+                  onApply={(text) => {
+                    const lines = text
+                      .split('\n')
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                    if (lines.length > 0) {
+                      setDescriptors((prev) => ({
+                        ...prev,
+                        [activeLangTab]: lines,
+                      }))
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.descriptors ? 'active' : ''}`}
+                  onClick={() => toggleHelp('descriptors')}
+                  title="Ver regras de descritores VuFind / BDTD"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia dos Descritores (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 8 e Diretrizes RSAC: Formulação em <strong>pares de termos com AND</strong> (máximo 2 termos por expressão e até 5 pares por idioma), garantindo perfeita compatibilidade com o motor VuFind da BDTD.
+              Conforme PRISMA-ScR Item 8 e Diretrizes RSAC: Formulação em <strong>pares de termos com AND</strong> (máximo 2 termos por expressão e sugestão de ~5 pares por idioma), garantindo perfeita compatibilidade com o motor VuFind da BDTD.
             </p>
 
             {helpOpen.descriptors && (
@@ -1262,8 +1444,8 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                     <p>No máximo 2 termos combinados com AND por expressão (ex: <code>"desenvolvimento regional" AND "arranjos produtivos"</code>).</p>
                   </div>
                   <div className="guide-item">
-                    <span className="guide-tag">2. Limite de 5 Pares por Idioma</span>
-                    <p>Até 5 pares em Português, 5 em Inglês e 5 em Espanhol para evitar sobrecarga ou falha no VuFind.</p>
+                    <span className="guide-tag">2. Sugestão de ~5 Pares por Idioma</span>
+                    <p>Recomenda-se cerca de 5 pares em Português, 5 em Inglês e 5 em Espanhol para equilibrar especificidade e abrangência sem sobrecarga de consultas.</p>
                   </div>
                   <div className="guide-item">
                     <span className="guide-tag">3. Aspas em Termos Compostos</span>
@@ -1280,21 +1462,21 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 className={`lang-tab ${activeLangTab === 'pt' ? 'active' : ''}`}
                 onClick={() => setActiveLangTab('pt')}
               >
-                🇧🇷 Português ({descriptors.pt.filter(Boolean).length}/5)
+                🇧🇷 Português ({descriptors.pt.filter(Boolean).length})
               </button>
               <button
                 type="button"
                 className={`lang-tab ${activeLangTab === 'en' ? 'active' : ''}`}
                 onClick={() => setActiveLangTab('en')}
               >
-                🇺🇸 Inglês ({descriptors.en.filter(Boolean).length}/5)
+                🇺🇸 Inglês ({descriptors.en.filter(Boolean).length})
               </button>
               <button
                 type="button"
                 className={`lang-tab ${activeLangTab === 'es' ? 'active' : ''}`}
                 onClick={() => setActiveLangTab('es')}
               >
-                🇪🇸 Espanhol ({descriptors.es.filter(Boolean).length}/5)
+                🇪🇸 Espanhol ({descriptors.es.filter(Boolean).length})
               </button>
             </div>
 
@@ -1320,15 +1502,13 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 </div>
               ))}
 
-              {descriptors[activeLangTab].length < 5 && (
-                <button
-                  type="button"
-                  className="btn-add-descriptor"
-                  onClick={() => addDescriptor(activeLangTab)}
-                >
-                  <Plus size={14} /> Adicionar Par de Descritores ({descriptors[activeLangTab].length}/5)
-                </button>
-              )}
+              <button
+                type="button"
+                className="btn-add-descriptor"
+                onClick={() => addDescriptor(activeLangTab)}
+              >
+                <Plus size={14} /> Adicionar Par de Descritores ({descriptors[activeLangTab].length})
+              </button>
             </div>
           </div>
 
@@ -1343,15 +1523,44 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 <Filter size={20} className="icon-accent" />
                 <h2>Critérios de Elegibilidade (Eligibility Criteria)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.criteria ? 'active' : ''}`}
-                onClick={() => toggleHelp('criteria')}
-                title="Ver guia de formulação dos critérios"
-              >
-                <HelpCircle size={16} />
-                <span>Guia dos Critérios (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="criteria"
+                  fieldLabel="Critérios de Elegibilidade (Inclusão e Exclusão)"
+                  currentValue={criteria.map((c) => (c.is_exclusion ? 'EXC: ' : 'INC: ') + c.text).join('\n')}
+                  fieldGuidelines="Gere critérios de inclusão (prefixados com 'INC: ') e de exclusão (prefixados com 'EXC: '), um por linha, alinhados com o escopo temático em Ciências Sociais Aplicadas / Desenvolvimento Regional."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('criteria')}
+                  onApply={(text) => {
+                    const lines = text
+                      .split('\n')
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                    const parsedCriteria = lines.map((l, idx) => {
+                      const isExc = l.toUpperCase().startsWith('EXC:')
+                      const cleanText = l.replace(/^(INC:|EXC:)\s*/i, '').trim()
+                      return {
+                        text: cleanText || l,
+                        is_exclusion: isExc,
+                        order: idx,
+                      }
+                    })
+                    if (parsedCriteria.length > 0) {
+                      setCriteria(parsedCriteria)
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.criteria ? 'active' : ''}`}
+                  onClick={() => toggleHelp('criteria')}
+                  title="Ver guia de formulação dos critérios"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia dos Critérios (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1434,15 +1643,27 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 <Filter size={20} className="icon-accent" />
                 <h2>Processo de Seleção de Estudos & Calibração (Selection Process)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.selection ? 'active' : ''}`}
-                onClick={() => toggleHelp('selection')}
-                title="Ver guia do processo de seleção"
-              >
-                <HelpCircle size={16} />
-                <span>Guia da Seleção (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="selection_process"
+                  fieldLabel="Processo de Seleção de Estudos"
+                  currentValue={manuscript.selection_process}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 9: Especifique os métodos de triagem em duas etapas (títulos/resumos e texto integral), duplo-cego independente, teste piloto prévio e resolução de conflitos."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('selection_process')}
+                  onApply={(text) => updateManuscriptField('selection_process', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.selection ? 'active' : ''}`}
+                  onClick={() => toggleHelp('selection')}
+                  title="Ver guia do processo de seleção"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia da Seleção (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1513,15 +1734,27 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
                 <HelpCircle size={20} className="icon-accent" />
                 <h2>Processo de Extração de Dados (Data Charting Process)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.charting ? 'active' : ''}`}
-                onClick={() => toggleHelp('charting')}
-                title="Ver guia do processo de extração"
-              >
-                <HelpCircle size={16} />
-                <span>Guia do Charting (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="data_charting_process"
+                  fieldLabel="Processo de Extração de Dados"
+                  currentValue={manuscript.data_charting_process}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 10: Descreva o formulário de extração de dados calibrado, o procedimento de extração em duplicata independente e a resolução de discordâncias."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('data_charting_process')}
+                  onApply={(text) => updateManuscriptField('data_charting_process', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.charting ? 'active' : ''}`}
+                  onClick={() => toggleHelp('charting')}
+                  title="Ver guia do processo de extração"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia do Charting (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1583,9 +1816,35 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
               <span className="item-tag essential">Item 11 — Essencial</span>
               <span className="item-section-tag">MÉTODOS / VARIÁVEIS</span>
             </div>
-            <div className="card-section-title">
-              <HelpCircle size={20} className="icon-accent" />
-              <h2>Perguntas e Variáveis de Mapeamento (Data Items)</h2>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <HelpCircle size={20} className="icon-accent" />
+                <h2>Perguntas e Variáveis de Mapeamento (Data Items)</h2>
+              </div>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="questions"
+                  fieldLabel="Perguntas de Mapeamento e Extração"
+                  currentValue={questions.map((q) => q.text || (q as any).question || '').join('\n')}
+                  fieldGuidelines="Gere perguntas estruturadas de extração (uma por linha) para mapear atores, conceitos, variáveis metodológicas e impactos socioeconômicos dos estudos incluídos nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('questions')}
+                  onApply={(text) => {
+                    const lines = text
+                      .split('\n')
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                    const parsedQuestions = lines.map((l, idx) => ({
+                      text: l.replace(/^Q-?\d+[:.]\s*/i, '').trim(),
+                      order: idx,
+                    }))
+                    if (parsedQuestions.length > 0) {
+                      setQuestions(parsedQuestions)
+                    }
+                  }}
+                />
+              </div>
             </div>
             <p className="section-help">
               Conforme PRISMA-ScR Item 11: Liste as perguntas estruturadas de extração que responderão aos objetivos e mapearão as variáveis de cada estudo na Triagem 2.
@@ -1593,13 +1852,13 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
 
             <div className="criteria-list">
               {questions.map((q, idx) => (
-                <div key={idx} className="criterion-card">
+                <div key={q.id || idx} className="criterion-card">
                   <span className="criterion-code inclusion">Q-{idx + 1}</span>
                   <input
                     type="text"
                     className="criterion-desc-input"
                     placeholder="Ex: Qual foi o modelo de governança territorial ou instrumento de política pública avaliado?"
-                    value={q.question}
+                    value={q.text || (q as any).question || ''}
                     onChange={(e) => updateQuestion(idx, e.target.value)}
                   />
                   <button
@@ -1632,15 +1891,27 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                 <ShieldCheck size={20} className="icon-accent" />
                 <h2>Avaliação Crítica da Qualidade Metodológica (Critical Appraisal)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.appraisal ? 'active' : ''}`}
-                onClick={() => toggleHelp('appraisal')}
-                title="Ver orientação sobre avaliação crítica em scoping reviews"
-              >
-                <HelpCircle size={16} />
-                <span>Guia da Avaliação Crítica (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="critical_appraisal"
+                  fieldLabel="Avaliação Crítica e Risco de Viés"
+                  currentValue={manuscript.critical_appraisal}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 12: Em revisões de escopo, a avaliação de risco de viés é opcional. Descreva o instrumento ou justifique a dispensa metodológica formal."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('critical_appraisal')}
+                  onApply={(text) => updateManuscriptField('critical_appraisal', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.appraisal ? 'active' : ''}`}
+                  onClick={() => toggleHelp('appraisal')}
+                  title="Ver orientação sobre avaliação crítica em scoping reviews"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia da Avaliação Crítica (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1699,15 +1970,27 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                 <Layers size={20} className="icon-accent" />
                 <h2>Métodos de Síntese e Mapeamento de Evidências (Synthesis of Results)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.synthesis ? 'active' : ''}`}
-                onClick={() => toggleHelp('synthesis')}
-                title="Ver guia de métodos de síntese"
-              >
-                <HelpCircle size={16} />
-                <span>Guia da Síntese (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="synthesis_methods"
+                  fieldLabel="Métodos de Síntese e Mapeamento"
+                  currentValue={manuscript.synthesis_methods}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 14: Descreva os métodos de agrupamento temático, mapas de evidências tabulares, gráficos de tendências e matriz de identificação de lacunas."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('synthesis_methods')}
+                  onApply={(text) => updateManuscriptField('synthesis_methods', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.synthesis ? 'active' : ''}`}
+                  onClick={() => toggleHelp('synthesis')}
+                  title="Ver guia de métodos de síntese"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia da Síntese (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1786,15 +2069,27 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
                 <Bookmark size={20} className="icon-accent" />
                 <h2>Síntese Geral das Evidências (Summary of Evidence)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.summaryEvidence ? 'active' : ''}`}
-                onClick={() => toggleHelp('summaryEvidence')}
-                title="Ver guia de síntese das evidências"
-              >
-                <HelpCircle size={16} />
-                <span>Guia dos Achados (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="summary_evidence"
+                  fieldLabel="Síntese Geral das Evidências"
+                  currentValue={manuscript.summary_evidence}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 24: Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('summary_evidence')}
+                  onApply={(text) => updateManuscriptField('summary_evidence', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.summaryEvidence ? 'active' : ''}`}
+                  onClick={() => toggleHelp('summaryEvidence')}
+                  title="Ver guia de síntese das evidências"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia dos Achados (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1865,15 +2160,27 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
                 <AlertTriangle size={20} className="icon-accent" />
                 <h2>Limitações da Revisão de Escopo (Limitations)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.limitations ? 'active' : ''}`}
-                onClick={() => toggleHelp('limitations')}
-                title="Ver guia de limitações"
-              >
-                <HelpCircle size={16} />
-                <span>Guia das Limitações (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="limitations"
+                  fieldLabel="Limitações da Revisão"
+                  currentValue={manuscript.limitations}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados)."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('limitations')}
+                  onApply={(text) => updateManuscriptField('limitations', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.limitations ? 'active' : ''}`}
+                  onClick={() => toggleHelp('limitations')}
+                  title="Ver guia de limitações"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia das Limitações (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -1944,15 +2251,27 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
                 <CheckCircle2 size={20} className="icon-accent" />
                 <h2>Conclusões e Lacunas de Conhecimento (Conclusions)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.conclusions ? 'active' : ''}`}
-                onClick={() => toggleHelp('conclusions')}
-                title="Ver guia de conclusões e lacunas"
-              >
-                <HelpCircle size={16} />
-                <span>Guia das Conclusões (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="conclusions"
+                  fieldLabel="Conclusões e Lacunas de Conhecimento"
+                  currentValue={manuscript.conclusions}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('conclusions')}
+                  onApply={(text) => updateManuscriptField('conclusions', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.conclusions ? 'active' : ''}`}
+                  onClick={() => toggleHelp('conclusions')}
+                  title="Ver guia de conclusões e lacunas"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia das Conclusões (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">
@@ -2023,15 +2342,27 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
                 <ShieldCheck size={20} className="icon-accent" />
                 <h2>Financiamento & Declaração de Conflitos de Interesse (Funding)</h2>
               </div>
-              <button
-                type="button"
-                className={`btn-help-toggle ${helpOpen.funding ? 'active' : ''}`}
-                onClick={() => toggleHelp('funding')}
-                title="Ver guia de financiamento e conflitos"
-              >
-                <HelpCircle size={16} />
-                <span>Guia do Financiamento (?)</span>
-              </button>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="funding"
+                  fieldLabel="Financiamento e Declaração de Conflitos"
+                  currentValue={manuscript.funding}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 27: Declare as agências de fomento, bolsas (CAPES, CNPq, FAPESP) e confirme a inexistência de conflitos de interesse."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('funding')}
+                  onApply={(text) => updateManuscriptField('funding', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.funding ? 'active' : ''}`}
+                  onClick={() => toggleHelp('funding')}
+                  title="Ver guia de financiamento e conflitos"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia do Financiamento (?)</span>
+                </button>
+              </div>
             </div>
 
             <p className="section-help">

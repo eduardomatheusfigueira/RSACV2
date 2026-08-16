@@ -3,6 +3,7 @@
 
 """Testes unitários do Serviço de Triagem com IA."""
 
+from typing import Optional
 import pytest
 from app.domain.entities import Paper, Protocol
 from app.infrastructure.ai.base import BaseAIClient, ProtocolSuggestions, ScreeningResult
@@ -53,6 +54,24 @@ class MockAIClient(BaseAIClient):
             inclusion_criteria=["Critério A"],
             exclusion_criteria=["Critério B"],
         )
+
+    async def assist_field(
+        self,
+        field_label: str,
+        field_guidelines: str = "",
+        current_value: str = "",
+        project_title: str = "",
+        methodology: str = "PRISMA-ScR",
+        project_context: Optional[dict] = None,
+        action: str = "generate",
+        custom_instruction: str = "",
+    ) -> dict:
+        return {
+            "suggested_text": f"Texto sugerido para {field_label}",
+            "explanation": "Justificativa mock de preenchimento.",
+            "model_used": "mock-model",
+            "provider": "mock",
+        }
 
     async def test_connection(self) -> bool:
         return True

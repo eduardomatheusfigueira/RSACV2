@@ -23,6 +23,7 @@ class AISettingsResponse(BaseModel):
     provider: str
     model: str
     has_api_keys: bool
+    api_keys: List[str] = Field(default_factory=list, description="Lista de API Keys cadastradas")
     endpoint: Optional[str] = None
     temperature: float
     max_tokens: int
@@ -32,6 +33,26 @@ class ProtocolSuggestRequest(BaseModel):
     title: str = Field(..., min_length=3)
     methodology: str = "PRISMA-P"
     description: str = ""
+
+
+class FieldAssistRequest(BaseModel):
+    field_id: str
+    field_label: str
+    current_value: str = ""
+    field_guidelines: str = ""
+    project_title: str = ""
+    methodology: str = "PRISMA-ScR"
+    project_context: Optional[Dict[str, str]] = None
+    action: str = "generate"  # "generate", "improve", "grammar", "expand", "shorten"
+    custom_instruction: str = ""
+
+
+class FieldAssistResponse(BaseModel):
+    field_id: str
+    suggested_text: str
+    explanation: Optional[str] = None
+    model_used: str = ""
+    provider: str = ""
 
 
 class BatchScreeningRequest(BaseModel):

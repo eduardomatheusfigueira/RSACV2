@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { AIAssistButton } from '@/components/common/AIAssistButton'
 import type { ExtractionResponse, Paper, Protocol } from '@/types/api'
 import './ExtractionPage.css'
 
@@ -346,13 +347,30 @@ export function ExtractionPage(): JSX.Element {
                     {questions.map((q, idx) => (
                       <div key={q.id || idx} className="question-field-card">
                         <div className="question-field-header">
-                          <span className="q-badge">Q{idx + 1}</span>
-                          <span className="q-title">{q.text}</span>
+                          <div className="question-title-group">
+                            <span className="q-badge">Q{idx + 1}</span>
+                            <span className="q-title">{q.text}</span>
+                          </div>
+                          <AIAssistButton
+                            fieldId={`extraction_q_${q.id || idx}`}
+                            fieldLabel={`Pergunta Q${idx + 1}: ${q.text}`}
+                            currentValue={answers[q.id || ''] || ''}
+                            fieldGuidelines={`Extraia com ancoragem estrita no artigo (Título: "${selectedPaper?.title || ''}", Resumo: "${selectedPaper?.abstract || ''}") a resposta objetiva para a seguinte questão: "${q.text}". Não extrapole além dos achados relatados no texto.`}
+                            projectTitle={activeProject?.title}
+                            methodology={activeProject?.methodology}
+                            projectContext={{
+                              paper_title: selectedPaper?.title || '',
+                              paper_abstract: selectedPaper?.abstract || '',
+                              paper_year: selectedPaper?.year ? String(selectedPaper.year) : '',
+                            }}
+                            compact
+                            onApply={(text) => handleAnswerChange(q.id || '', text)}
+                          />
                         </div>
                         <textarea
                           rows={3}
                           className="q-textarea"
-                          placeholder="Digite ou gere com IA a resposta extraída deste artigo..."
+                          placeholder="Digite ou preencha/aperfeiçoe com IA a resposta extraída deste artigo..."
                           value={answers[q.id || ''] || ''}
                           onChange={(e) => handleAnswerChange(q.id || '', e.target.value)}
                         />

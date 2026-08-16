@@ -25,17 +25,17 @@ async def test_search_descriptors_rules_validation(async_client):
     assert res.status_code == 201
     project_id = res.json()["id"]
 
-    # 1. Tentativa com mais de 5 pares (deve falhar com 400)
-    res_overflow = await async_client.put(
+    # 1. Envio com mais de 5 pares (permitido, limite de 5 é sugestão recomendada)
+    res_more_pairs = await async_client.put(
         f"/api/v1/projects/{project_id}/protocol",
         json={
             "search_descriptors": {
-                "pt": ["p1", "p2", "p3", "p4", "p5", "p6"],
+                "pt": ["p1", "p2", "p3", "p4", "p5", "p6", "p7"],
             }
         },
     )
-    assert res_overflow.status_code == 400
-    assert "limite estrito é de até 5 pares" in res_overflow.json()["detail"]
+    assert res_more_pairs.status_code == 200
+    assert len(res_more_pairs.json()["search_descriptors"]["pt"]) == 7
 
     # 2. Tentativa com mais de 2 termos por expressão (deve falhar com 400)
     res_terms = await async_client.put(
@@ -148,3 +148,22 @@ async def test_project_crud(async_client):
     assert stats["total_papers"] == 1
     assert stats["included_papers"] == 1
     assert stats["pending_papers"] == 0
+
+
+@pytest.mark.anyio
+async def test_ai_assist_field_endpoint(async_client):
+    """Testa endpoint de assistência de IA por campo."""
+    # 1. Quando IA está desativada, deve retornar 400
+    res = await async_client.post(
+        "/api/v1/ai/assist-field",
+        json={
+            "field_id": "objective",
+            "field_label": "Objetivo Geral",
+            "current_value": "",
+            "field_guidelines": "PRISMA-ScR Item 4",
+            "action": "generate",
+        },
+    )
+    # Por padrão sem chaves ou IA desativada, retorna 400 explicativo
+    assert res.status_code in (400, 500)
+

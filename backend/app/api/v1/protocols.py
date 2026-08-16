@@ -102,13 +102,8 @@ def update_protocol(
         protocol.manuscript_sections = json.dumps(data.manuscript_sections, ensure_ascii=False)
 
     if data.search_descriptors is not None:
-        # Validar regras de descritores (máximo 5 pares por idioma, máximo 2 termos por expressão)
+        # Validar regras de descritores (formulação em pares recomendada para BDTD/VuFind)
         for lang, pairs in data.search_descriptors.items():
-            if len(pairs) > 5:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Idioma '{lang}' possui {len(pairs)} pares de descritores. O limite estrito é de até 5 pares por idioma.",
-                )
             for pair in pairs:
                 terms = [t.strip() for t in pair.split(" AND ") if t.strip()]
                 if len(terms) > 2:

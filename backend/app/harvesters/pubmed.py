@@ -31,8 +31,9 @@ class PubMedHarvester(BaseHarvester):
         self,
         descriptors: List[str],
         on_progress: Optional[Callable[[HarvestProgress], None]] = None,
-        max_records_per_descriptor: int = 100,
+        max_records_per_descriptor: Optional[int] = None,
     ) -> AsyncGenerator[RawPaperRecord, None]:
+        limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
         async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
             for desc in descriptors:
                 desc_clean = desc.strip()
@@ -40,7 +41,7 @@ class PubMedHarvester(BaseHarvester):
                     continue
 
                 total_for_desc = 0
-                retmax = min(max_records_per_descriptor, 100)
+                retmax = 500 if limit == float("inf") else min(int(limit), 500)
 
                 if on_progress:
                     on_progress(

@@ -187,6 +187,7 @@ export interface AISettings {
   provider: 'gemini' | 'qwen' | 'local'
   model: string
   has_api_keys: boolean
+  api_keys?: string[]
   endpoint: string | null
   temperature: number
   max_tokens: number
@@ -226,6 +227,26 @@ export interface ProtocolSuggestions {
   inclusion_criteria: string[]
   exclusion_criteria: string[]
   extraction_questions: string[]
+}
+
+export interface FieldAssistRequest {
+  field_id: string
+  field_label: string
+  current_value?: string
+  field_guidelines?: string
+  project_title?: string
+  methodology?: string
+  project_context?: Record<string, string>
+  action?: 'generate' | 'improve' | 'grammar' | 'expand' | 'shorten'
+  custom_instruction?: string
+}
+
+export interface FieldAssistResponse {
+  field_id: string
+  suggested_text: string
+  explanation?: string
+  model_used: string
+  provider: string
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────

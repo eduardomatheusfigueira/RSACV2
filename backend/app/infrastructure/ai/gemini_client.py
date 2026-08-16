@@ -16,7 +16,11 @@ import httpx
 
 from app.domain.entities import Paper, Protocol
 from app.infrastructure.ai.base import BaseAIClient, ProtocolSuggestions, ScreeningResult
-from app.infrastructure.ai.prompts import build_protocol_suggestion_prompt, build_screening_prompt
+from app.infrastructure.ai.prompts import (
+    build_field_assist_prompt,
+    build_protocol_suggestion_prompt,
+    build_screening_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +158,14 @@ class GeminiAIClient(BaseAIClient):
             provider="gemini",
         )
 
+    async def generate_protocol_suggestions(
+        self,
+        title: str,
+        methodology: str,
+        initial_description: str = "",
+    ) -> ProtocolSuggestions:
+        return await self.suggest_protocol(title, methodology, initial_description)
+
     async def suggest_protocol(
         self,
         title: str,
@@ -181,3 +193,50 @@ class GeminiAIClient(BaseAIClient):
             exclusion_criteria=data.get("criterios_exclusao", []),
             extraction_questions=data.get("perguntas_extracao", []),
         )
+
+    async def assist_field(
+        self,
+        field_label: str,
+        field_guidelines: str = "",
+        current_value: str = "",
+        project_title: str = "",
+        methodology: str = "PRISMA-ScR",
+        project_context: Optional[dict] = None,
+        action: str = "generate",
+        custom_instruction: str = "",
+    ) -> dict:
+        prompt = build_field_assist_prompt(
+            field_label=field_label,
+            field_guidelines=field_guidelines,
+            current_value=current_value,
+            project_title=project_title,
+            methodology=methodology,
+            project_context=project_context,
+            action=action,
+            custom_instruction=custom_instruction,
+        )
+        data = await self._call_gemini_api(prompt)
+        return {
+            "suggested_text": data.get("suggested_text", ""),
+            "explanation": data.get("explanation", ""),
+            "model_used": self.model_name,
+            "provider": self.provider_name,
+        }
+
+    async def test_connection(self) -> bool:
+        """Testa conectividade e validade das chaves com o Google Gemini."""
+        if not self.api_keys or not any(self.api_keys):
+            raise ValueError("Nenhuma API Key do Google Gemini cadastrada nas Configurações.")
+        try:
+            current_key = self._get_current_key()
+            url = f"{self.BASE_URL}/{self.model_name}:generateContent?key={current_key}"
+            payload = {
+                "contents": [{"parts": [{"text": "ping"}]}],
+                "generationConfig": {"temperature": 0.0},
+            }
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(url, json=payload)
+                return res.status_code == 200
+        except Exception as e:
+            logger.error(f"[Gemini] Erro no teste de conexão: {e}")
+            raise

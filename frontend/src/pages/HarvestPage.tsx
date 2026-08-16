@@ -50,7 +50,7 @@ export function HarvestPage(): JSX.Element {
   const [sources, setSources] = useState<HarvestSourceInfo[]>([])
   const [selectedSources, setSelectedSources] = useState<string[]>(['BDTD', 'SciELO', 'OpenAlex'])
   const [protocol, setProtocol] = useState<Protocol | null>(null)
-  const [maxRecords, setMaxRecords] = useState<number>(100)
+  const [maxRecords, setMaxRecords] = useState<number>(0)
   const [harvestRuns, setHarvestRuns] = useState<HarvestRun[]>([])
   const [loading, setLoading] = useState(true)
   const [isHarvesting, setIsHarvesting] = useState(false)
@@ -145,7 +145,7 @@ export function HarvestPage(): JSX.Element {
         timestamp: new Date().toLocaleTimeString('pt-BR'),
       }
 
-      setLiveFeed((prev) => [feedItem, ...prev.slice(0, 30)])
+      setLiveFeed((prev) => [feedItem, ...prev.slice(0, 499)])
 
       if (msg.is_new) {
         success('Coleta', `[${msg.source}] Estudo novo inserido`, `Título: ${msg.title}\nID: ${msg.paper_id || 'N/A'}`)
@@ -303,17 +303,18 @@ export function HarvestPage(): JSX.Element {
               <h2>3. Limite por Descritor</h2>
             </div>
             <div className="limit-selector">
-              <label>Máximo de registros por descritor:</label>
+              <label>Limite de registros por descritor:</label>
               <select
                 value={maxRecords}
                 onChange={(e) => setMaxRecords(Number(e.target.value))}
                 disabled={isHarvesting}
               >
-                <option value={25}>25 artigos</option>
-                <option value={50}>50 artigos</option>
-                <option value={100}>100 artigos (Recomendado)</option>
-                <option value={200}>200 artigos</option>
-                <option value={300}>300 artigos</option>
+                <option value={0}>♾️ Ilimitado (Recuperar todos os registros disponíveis)</option>
+                <option value={50}>50 artigos por descritor</option>
+                <option value={100}>100 artigos por descritor</option>
+                <option value={200}>200 artigos por descritor</option>
+                <option value={500}>500 artigos por descritor</option>
+                <option value={1000}>1.000 artigos por descritor</option>
               </select>
             </div>
           </div>
@@ -349,7 +350,12 @@ export function HarvestPage(): JSX.Element {
 
             {/* Live Feed Stream */}
             <div className="live-feed-container">
-              <h3>Stream de Artigos Recebidos:</h3>
+              <div className="live-feed-header-row">
+                <h3>Stream de Artigos Recebidos:</h3>
+                {liveFeed.length > 0 && (
+                  <span className="live-feed-counter">{liveFeed.length} estudos no feed</span>
+                )}
+              </div>
               {liveFeed.length === 0 ? (
                 <div className="empty-feed-placeholder">
                   <p>Inicie a coleta para visualizar os artigos sendo recuperados e deduplicados em tempo real.</p>
@@ -359,7 +365,8 @@ export function HarvestPage(): JSX.Element {
                   {liveFeed.map((item) => (
                     <div key={item.id} className={`feed-item ${item.isNew ? 'is-new' : 'is-dup'}`}>
                       <span className="feed-badge-source">{item.source}</span>
-                      <span className="feed-title">{item.title}</span>
+                      {item.timestamp && <span className="feed-time">{item.timestamp}</span>}
+                      <span className="feed-title" title={item.title}>{item.title}</span>
                       <span className={`feed-tag ${item.isNew ? 'tag-new' : 'tag-dup'}`}>
                         {item.isNew ? <FileCheck size={13} /> : <FileX size={13} />}
                         {item.isNew ? 'Novo' : 'Duplicata'}

@@ -24,6 +24,8 @@ import {
   ShieldCheck,
   Palette,
   Check,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -263,6 +265,7 @@ export function SettingsPage(): JSX.Element {
   const [provider, setProvider] = useState<'gemini' | 'qwen' | 'local'>('gemini')
   const [model, setModel] = useState('gemini-3.6-flash')
   const [apiKeys, setApiKeys] = useState<string[]>([''])
+  const [showKeyVisibility, setShowKeyVisibility] = useState<Record<number, boolean>>({})
   const [endpoint, setEndpoint] = useState('http://localhost:11434/v1')
   const [temperature, setTemperature] = useState(0.2)
   const [maxTokens, setMaxTokens] = useState(4096)
@@ -279,6 +282,11 @@ export function SettingsPage(): JSX.Element {
       setAiEnabled(data.ai_enabled !== false)
       setProvider(data.provider)
       setModel(data.model)
+      if (data.api_keys && data.api_keys.length > 0) {
+        setApiKeys(data.api_keys)
+      } else {
+        setApiKeys([''])
+      }
       setEndpoint(data.endpoint || (data.provider === 'qwen' ? QWEN_REGIONS[0].id : 'http://localhost:11434/v1'))
       setTemperature(data.temperature)
       setMaxTokens(data.max_tokens)
@@ -328,6 +336,13 @@ export function SettingsPage(): JSX.Element {
     setApiKeys(list.length ? list : [''])
   }
 
+  const toggleKeyVisibility = (index: number) => {
+    setShowKeyVisibility((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }))
+  }
+
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     try {
@@ -335,7 +350,7 @@ export function SettingsPage(): JSX.Element {
       const cleanKeys = apiKeys.map((k) => k.trim()).filter(Boolean)
       const finalModel = model || (provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'qwen' ? 'qwen3.8-max' : 'Llama-3.2-3B')
 
-      await api.updateAISettings({
+      const updated = await api.updateAISettings({
         ai_enabled: isAiActive,
         provider,
         model: finalModel,
@@ -344,6 +359,9 @@ export function SettingsPage(): JSX.Element {
         temperature,
         max_tokens: maxTokens,
       })
+      if (updated.api_keys && updated.api_keys.length > 0) {
+        setApiKeys(updated.api_keys)
+      }
       setAiEnabled(isAiActive)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -601,7 +619,7 @@ export function SettingsPage(): JSX.Element {
                   type="text"
                   disabled={!isAiActive}
                   value={endpoint}
-                  onChange={(e) => setEndpoint(ep.url || e.target.value)}
+                  onChange={(e) => setEndpoint(e.target.value)}
                   placeholder="http://localhost:11434/v1"
                   style={{ marginTop: 'var(--space-2)' }}
                 />
@@ -622,18 +640,28 @@ export function SettingsPage(): JSX.Element {
                     <div key={idx} className="key-input-row">
                       <Key size={16} className="key-icon" />
                       <input
-                        type="password"
+                        type={showKeyVisibility[idx] ? 'text' : 'password'}
                         disabled={!isAiActive}
                         placeholder={provider === 'gemini' ? 'Cole sua API Key do Google AI Studio...' : 'Cole sua API Key do DashScope...'}
                         value={k}
                         onChange={(e) => updateKeyField(idx, e.target.value)}
                       />
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => toggleKeyVisibility(idx)}
+                        disabled={!isAiActive}
+                        title={showKeyVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
+                      >
+                        {showKeyVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
                       {apiKeys.length > 1 && (
                         <button
                           type="button"
                           className="btn-icon danger"
                           onClick={() => removeKeyField(idx)}
                           disabled={!isAiActive}
+                          title="Remover chave"
                         >
                           <Trash2 size={16} />
                         </button>

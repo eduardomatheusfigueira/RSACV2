@@ -32,6 +32,20 @@ export class PythonManager {
    * Retorna a porta onde o backend está escutando.
    */
   async start(): Promise<number> {
+    // Em dev, se o backend na porta 8000 já estiver rodando, reutiliza-o diretamente
+    if (!app.isPackaged) {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/v1/health')
+        if (response.ok) {
+          console.log('[PythonManager] Backend Python ativo detectado na porta 8000. Reutilizando.')
+          this.port = 8000
+          return 8000
+        }
+      } catch {
+        // Backend não está rodando na porta 8000, prossegue para spawn
+      }
+    }
+
     this.port = await this.findFreePort()
 
     // Em produção, Python está embarcado; em dev, usa o do sistema

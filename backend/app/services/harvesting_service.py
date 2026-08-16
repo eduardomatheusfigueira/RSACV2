@@ -67,7 +67,7 @@ class HarvestingService:
         self,
         project_id: str,
         sources: List[str],
-        max_records_per_descriptor: int = 100,
+        max_records_per_descriptor: Optional[int] = None,
         custom_descriptors: Optional[List[str]] = None,
     ):
         """Executa a coleta para as fontes selecionadas."""

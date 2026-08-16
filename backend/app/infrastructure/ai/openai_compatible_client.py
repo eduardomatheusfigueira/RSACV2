@@ -16,7 +16,11 @@ import httpx
 
 from app.domain.entities import Paper, Protocol
 from app.infrastructure.ai.base import BaseAIClient, ProtocolSuggestions, ScreeningResult
-from app.infrastructure.ai.prompts import build_protocol_suggestion_prompt, build_screening_prompt
+from app.infrastructure.ai.prompts import (
+    build_field_assist_prompt,
+    build_protocol_suggestion_prompt,
+    build_screening_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +153,14 @@ class OpenAICompatibleAIClient(BaseAIClient):
             provider=self.provider_name,
         )
 
+    async def generate_protocol_suggestions(
+        self,
+        title: str,
+        methodology: str,
+        initial_description: str = "",
+    ) -> ProtocolSuggestions:
+        return await self.suggest_protocol(title, methodology, initial_description)
+
     async def suggest_protocol(
         self,
         title: str,
@@ -177,3 +189,54 @@ class OpenAICompatibleAIClient(BaseAIClient):
             exclusion_criteria=data.get("criterios_exclusao", []),
             extraction_questions=data.get("perguntas_extracao", []),
         )
+
+    async def assist_field(
+        self,
+        field_label: str,
+        field_guidelines: str = "",
+        current_value: str = "",
+        project_title: str = "",
+        methodology: str = "PRISMA-ScR",
+        project_context: Optional[dict] = None,
+        action: str = "generate",
+        custom_instruction: str = "",
+    ) -> dict:
+        """Preenche, corrige ou aprimora o conteúdo de um campo específico com system prompt adequado."""
+        prompt = build_field_assist_prompt(
+            field_label=field_label,
+            field_guidelines=field_guidelines,
+            current_value=current_value,
+            project_title=project_title,
+            methodology=methodology,
+            project_context=project_context,
+            action=action,
+            custom_instruction=custom_instruction,
+        )
+        data = await self._call_chat_completion(prompt)
+        return {
+            "suggested_text": data.get("suggested_text", ""),
+            "explanation": data.get("explanation", ""),
+            "model_used": self.model_name,
+            "provider": self.provider_name,
+        }
+
+    async def test_connection(self) -> bool:
+        """Testa conectividade e validade das chaves com o endpoint compatível."""
+        if not self.api_key:
+            raise ValueError("Nenhuma API Key cadastrada para este provedor.")
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": self.model_name,
+                "messages": [{"role": "user", "content": "ping"}],
+                "max_tokens": 5,
+            }
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
+                return res.status_code == 200
+        except Exception as e:
+            logger.error(f"[{self.provider_name}] Erro no teste de conexão: {e}")
+            raise

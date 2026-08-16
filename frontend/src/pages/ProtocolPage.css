@@ -129,6 +129,13 @@
   gap: var(--space-1);
 }
 
+.pico-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .pico-field label {
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
@@ -624,6 +631,21 @@
   font-weight: var(--weight-bold);
   color: var(--color-text-tertiary);
   letter-spacing: 0.05em;
+}
+
+.card-section-title-with-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .protocol-input-large {

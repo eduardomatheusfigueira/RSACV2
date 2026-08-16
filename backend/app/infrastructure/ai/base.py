@@ -68,6 +68,22 @@ class BaseAIClient(ABC):
         pass
 
     @abstractmethod
+    async def assist_field(
+        self,
+        field_label: str,
+        field_guidelines: str = "",
+        current_value: str = "",
+        project_title: str = "",
+        methodology: str = "PRISMA-ScR",
+        project_context: Optional[dict] = None,
+        action: str = "generate",
+        custom_instruction: str = "",
+    ) -> dict:
+        """Preenche, corrige ou aprimora o conteúdo de um campo específico com system prompt adequado."""
+        pass
+
+    @abstractmethod
     async def test_connection(self) -> bool:
         """Testa conectividade e validade das chaves com o provedor."""
         pass
+
