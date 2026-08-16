@@ -156,7 +156,7 @@ def _client(handler) -> httpx.AsyncClient:
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_via_landing_page_quando_url_e_html():
     """A URL cadastrada é uma landing page; o PDF está num link dentro dela."""
     landing = "https://repositorio.br/handle/1/2"
@@ -182,7 +182,7 @@ async def test_acquire_via_landing_page_quando_url_e_html():
     assert any(a.status == "ok" for a in attempts)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_segue_pagina_intermediaria_html():
     """Um candidato devolve HTML; o arquivo real está a um salto de distância."""
     direct = "https://revista.org/a/9/?format=pdf"
@@ -209,7 +209,7 @@ async def test_acquire_segue_pagina_intermediaria_html():
     assert any(a.strategy.endswith("+html") for a in attempts)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_rejeita_html_e_registra_trilha():
     """Nunca salvar HTML como se fosse PDF — a falha antiga mais comum."""
     landing = "https://editora.com/artigo/1"
@@ -233,7 +233,7 @@ async def test_acquire_rejeita_html_e_registra_trilha():
     assert any("HTML" in a.detail for a in attempts)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_registra_bloqueio_por_assinatura():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(403, text="forbidden")
@@ -250,7 +250,7 @@ async def test_acquire_registra_bloqueio_por_assinatura():
     assert "assinatura" in blocked[0].detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_descarta_pdf_minusculo():
     """Página de erro servida com content-type de PDF não vira arquivo salvo."""
 
@@ -269,7 +269,7 @@ async def test_acquire_descarta_pdf_minusculo():
     assert any(a.status == "pequeno_demais" for a in attempts)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_via_unpaywall_por_doi():
     pdf_url = "https://repositorio.org/oa/artigo.pdf"
 
@@ -297,7 +297,7 @@ async def test_acquire_via_unpaywall_por_doi():
     assert resolved.strategy == "unpaywall"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_unpaywall_e_pulado_sem_email_de_contato():
     chamadas: list[str] = []
 
@@ -312,7 +312,7 @@ async def test_unpaywall_e_pulado_sem_email_de_contato():
     assert not any("unpaywall" in url for url in chamadas)
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_via_openalex_quando_unpaywall_indisponivel():
     pdf_url = "https://oa.org/works/1.pdf"
 
@@ -343,7 +343,7 @@ async def test_acquire_via_openalex_quando_unpaywall_indisponivel():
     assert resolved.strategy == "openalex"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_find_candidates_nao_baixa_arquivos():
     baixados: list[str] = []
 

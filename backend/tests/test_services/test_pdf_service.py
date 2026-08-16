@@ -118,7 +118,7 @@ def test_contexto_para_ia_prioriza_pergunta(service):
     assert contexto
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_persiste_metadados_de_procedencia(service):
     conteudo = _make_pdf(PAGINAS)
     pdf_url = "https://repositorio.org/artigo.pdf"
@@ -145,7 +145,7 @@ async def test_acquire_persiste_metadados_de_procedencia(service):
     assert result.attempts and result.attempts[-1].status == "ok"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_acquire_falha_devolve_mensagem_acionavel(service):
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(403)
@@ -163,7 +163,7 @@ async def test_acquire_falha_devolve_mensagem_acionavel(service):
     assert result.attempts_json().startswith("[")
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_download_pdf_compat_resolve_landing_page(service):
     """A assinatura antiga continua funcionando — e agora atravessa a landing page."""
     landing = "https://repositorio.org/handle/1/2"
