@@ -50,8 +50,11 @@ A plataforma cobre integralmente o ciclo de vida da pesquisa secundária conform
 - Atalhos de teclado para alta produtividade (`I` = Incluir, `E` = Excluir, `P` = Pendente).
 - Filtros por decisão, base de dados, ano e busca textual instantânea.
 
-### 4. 📊 Extração de Dados & Análise Causal (Triagem 2 — Texto Integral)
-- Extração tabular estruturada com base no formulário configurado no protocolo.
+### 4. 📊 Extração de Dados & Texto Integral (Triagem 2)
+- **Localizador de PDF multi-estratégia**: o link coletado pelas bases raramente é o arquivo — é a página do registro (DOI, PubMed, SciELO, repositório institucional). O sistema busca o texto completo em 9 vias combinadas (padrões de repositório, Unpaywall, OpenAlex, Semantic Scholar, Crossref, Europe PMC e raspagem da página de origem), com validação de conteúdo e trilha auditável de cada tentativa.
+- **Busca em lote** de todos os estudos incluídos, com progresso e cancelamento.
+- **Leitor integrado** com três modos — Resumo, PDF renderizado no próprio app e Texto extraído — com paginação preservada, limpeza tipográfica (de-hifenização, remoção de cabeçalho/rodapé) e detecção de documentos digitalizados.
+- Extração tabular estruturada com base no formulário configurado no protocolo, com **evidência ancorada**: cada resposta assistida traz o trecho literal e a página de origem no PDF.
 - Análise de mecanismos causais, populações/atores, conceitos e contextos territoriais.
 
 ### 5. 📄 Exportação Científica
@@ -122,7 +125,7 @@ python -m venv .venv
 # Linux / macOS:
 source .venv/bin/activate
 
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 ### 3. Configurar o Frontend (Electron/React)
@@ -131,7 +134,13 @@ cd ../frontend
 npm install
 ```
 
-### 4. Iniciar a Aplicação
+### 4. (Opcional) Configurar o e-mail de contato para busca de PDF
+As APIs de acesso aberto usadas na localização de PDFs (Unpaywall, OpenAlex, Crossref) dão prioridade — e no caso do Unpaywall, exigem — identificação por e-mail. Crie `backend/.env` com:
+```
+RSAC_CONTACT_EMAIL=seu-email@instituicao.br
+```
+
+### 5. Iniciar a Aplicação
 ```bash
 # Opção 1: Usando o script unificado (Windows PowerShell)
 .\scripts\dev.ps1
@@ -150,7 +159,7 @@ npm run dev
 
 ## 📚 Documentação Técnica
 
-O diretório [`planejamento/`](./planejamento/) contém 13 especificações arquiteturais detalhadas:
+O diretório [`planejamento/`](./planejamento/) contém 22 especificações arquiteturais detalhadas:
 
 1. `00_INDICE.md` — Índice e mapa do repositório
 2. `01_DIAGNOSTICO_V1.md` — Lições aprendidas da V1
@@ -165,6 +174,15 @@ O diretório [`planejamento/`](./planejamento/) contém 13 especificações arqu
 11. `10_BANCO_DE_DADOS.md` — Esquema relacional SQLite
 12. `11_TESTES_QUALIDADE.md` — Estratégia de testes
 13. `12_ROADMAP_FASES.md` — Histórico e fases de entrega
+14. `13_DIAGNOSTICO_COLETA_V2.md` — Diagnóstico crítico dos coletores (harvesters)
+15. `14_ESPECIFICACAO_COLETA.md` — Contrato de coleta, filtros e credenciais por fonte
+16. `15_PLANO_EXECUCAO.md` — Plano de correção dos coletores
+17. `16_TESTES_VALIDACAO.md` — Validação de paridade V1 ↔ V2 da coleta
+18. `17_GUIA_DE_USO.md` — Manual de operação do aplicativo
+19. `18_DIAGNOSTICO_PDF_EXTRACAO.md` — Diagnóstico da obtenção de PDF, leitura e extração assistida
+20. `19_ESPECIFICACAO_AQUISICAO_PDF.md` — Contrato do resolvedor multi-estratégia de PDF e do pipeline de texto
+21. `20_PLANO_EXECUCAO_PDF.md` — Fases de implementação do subsistema de PDF
+22. `21_TESTES_VALIDACAO_PDF.md` — Estratégia de testes e roteiro de validação em acervo real
 
 ---
 
