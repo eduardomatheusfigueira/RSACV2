@@ -3,13 +3,13 @@
 
 """
 RSAC V2 — Serviço de Extração de Dados Estruturados (Triagem 2).
-Responde às perguntas do protocolo com base no texto completo do PDF ou resumo,
-utilizando IA com ancoragem estrita e citação de trechos comprovatórios.
+Responde às perguntas do protocolo com base no texto completo do PDF e metadados,
+utilizando IA com ancoragem empírica rigorosa e citação de trechos comprovatórios.
 """
 
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.infrastructure.ai.factory import AIFactory
@@ -34,8 +34,12 @@ class ExtractionService:
         db: Session,
         project_id: str,
         paper_id: str,
+        question_id: Optional[str] = None,
     ) -> List[Dict[str, str]]:
-        """Extrai respostas para todas as perguntas do protocolo usando IA e o texto do PDF/Resumo."""
+        """
+        Extrai respostas para todas as perguntas do protocolo (ou apenas uma pergunta específica)
+        usando IA com acesso aos metadados completos e ao texto integral do PDF.
+        """
         paper = db.query(PaperModel).filter(PaperModel.project_id == project_id, PaperModel.id == paper_id).first()
         if not paper:
             raise ValueError(f"Artigo '{paper_id}' não encontrado.")
@@ -44,9 +48,17 @@ class ExtractionService:
         if not protocol or not protocol.extraction_questions:
             raise ValueError("Nenhuma pergunta de extração configurada no protocolo.")
 
-        questions = sorted(protocol.extraction_questions, key=lambda x: x.order)
+        all_questions = sorted(protocol.extraction_questions, key=lambda x: x.order)
+        if question_id:
+            questions = [q for q in all_questions if q.id == question_id]
+            if not questions:
+                questions = all_questions
+        else:
+            questions = all_questions
+
         questions_list_text = "\n".join(
-            f"- Q{i + 1} (ID: {q.id}): {q.text}" for i, q in enumerate(questions)
+            f"- Q{q.order + 1 if hasattr(q, 'order') else i + 1} (ID: {q.id}): {q.text}"
+            for i, q in enumerate(questions)
         )
         question_texts = [q.text for q in questions]
 
@@ -92,17 +104,16 @@ class ExtractionService:
                 existing.page_ref = page_ref
                 existing.source_kind = source_kind
             else:
-                db.add(
-                    ExtractionAnswerModel(
-                        paper_id=paper.id,
-                        question_id=q_id,
-                        answer=ans_text,
-                        ai_generated=True,
-                        evidence=evidence,
-                        page_ref=page_ref,
-                        source_kind=source_kind,
-                    )
+                existing = ExtractionAnswerModel(
+                    paper_id=paper.id,
+                    question_id=q_id,
+                    answer=ans_text,
+                    ai_generated=True,
+                    evidence=evidence,
+                    page_ref=page_ref,
+                    source_kind=source_kind,
                 )
+                db.add(existing)
 
             saved_answers.append(
                 {
@@ -119,79 +130,88 @@ class ExtractionService:
             logger.info("[ExtractionService] %s (paper %s)", warning, paper.id)
         return saved_answers
 
-    # ── Montagem de contexto ──────────────────────────────────────────
+    # ── Montagem de contexto enriquecido ──────────────────────────────
 
     def _build_context(self, paper: PaperModel, question_texts: List[str]) -> tuple[str, str, str]:
         """
-        Escolhe a melhor base textual disponível e devolve `(texto, tipo, aviso)`.
-
-        Preferência: texto completo do PDF, recortado por relevância às perguntas.
-        Se o PDF não existe, não abre ou é digitalizado sem texto, cai para o
-        resumo — e o aviso explica ao usuário por que a resposta veio mais rasa.
+        Monta o contexto documental com metadados integrais e o texto do PDF/Resumo.
+        Garante que informações em metadados (autores, ano, instituição, tipo de pesquisa, resumo)
+        estejam sempre visíveis junto ao texto integral do artigo.
         """
         header = (
-            f"TÍTULO: {paper.title}\n"
-            f"AUTORIA: {paper.authors or 'não informada'}\n"
-            f"ANO: {paper.year or 'não informado'}\n"
+            "==================== METADADOS DO ARTIGO ====================\n"
+            f"TÍTULO DO ESTUDO: {paper.title}\n"
+            f"AUTORES: {paper.authors or 'Não informado nos metadados'}\n"
+            f"ANO DE PUBLICAÇÃO: {paper.year or 'Não informado nos metadados'}\n"
+            f"INSTITUIÇÃO / FILIAÇÃO ACADÊMICA: {paper.institution or 'Não informada'}\n"
+            f"TIPO DE ESTUDO / PUBLICAÇÃO: {paper.research_type or 'Não informado'}\n"
+            f"DOI / LINK OFICIAL: {paper.doi or paper.download_url or 'Não informado'}\n"
+            f"RESUMO (ABSTRACT) COLETADO:\n{paper.abstract or '(Resumo não disponível nos metadados)'}\n"
+            "=============================================================\n"
         )
-        abstract_context = f"{header}RESUMO: {paper.abstract or '(resumo não coletado)'}"
 
         if not paper.pdf_path or not os.path.exists(paper.pdf_path):
-            return abstract_context, "resumo", "Sem PDF vinculado — extração baseada no resumo."
+            return header, "resumo", "Sem PDF vinculado — extração baseada em metadados e resumo."
 
         try:
-            context = self.pdf_service.build_ai_context(paper.pdf_path, question_texts)
-        except Exception as exc:  # noqa: BLE001 — motor de PDF externo
-            logger.warning("[ExtractionService] Falha ao ler PDF (%s). Usando resumo.", exc)
-            return abstract_context, "resumo", f"Falha na leitura do PDF: {exc}"
+            document = self.pdf_service.read_document(paper.pdf_path)
+            full_text = document.text
+            
+            # Se o PDF tem texto integral de até 120.000 caracteres (~35 páginas), envia o texto completo com marcações de página
+            if len(full_text) <= 120000:
+                context_body = document.text_with_page_marks()
+            else:
+                # Se for um documento muito extenso (ex: tese de 100+ páginas), recorta orientando às perguntas
+                context_body = self.pdf_service.build_ai_context(
+                    paper.pdf_path,
+                    question_texts,
+                    budget_chars=120000,
+                )
+        except Exception as exc:
+            logger.warning("[ExtractionService] Falha ao ler PDF (%s). Usando metadados.", exc)
+            return header, "resumo", f"Falha na leitura do PDF: {exc}"
 
-        if len(context.strip()) < 400:
+        if len(context_body.strip()) < 300:
             return (
-                abstract_context,
+                header,
                 "resumo",
-                "PDF sem texto extraível (provavelmente digitalizado) — extração pelo resumo.",
+                "PDF sem texto selecionável (documento digitalizado) — extração por metadados e resumo.",
             )
 
-        return f"{header}\n{context}", "pdf", ""
+        full_context = f"{header}\n==================== CONTEÚDO INTEGRAL DO ARTIGO (PDF) ====================\n{context_body}"
+        return full_context, "pdf", ""
 
     @staticmethod
     def _build_prompt(context_text: str, questions_list_text: str, source_kind: str) -> str:
         base_note = (
-            "O texto abaixo é o conteúdo integral do estudo, com marcações de página "
-            "no formato [[p. N]]. Use essas marcações para indicar onde encontrou cada dado."
+            "Você tem acesso aos METADADOS OFICIAIS, ao RESUMO e ao CONTEÚDO INTEGRAL DO ARTIGO (PDF) "
+            "com marcações de página [[p. N]]. Utilize todas essas fontes para localizar as evidências."
             if source_kind == "pdf"
-            else "O texto abaixo contém apenas os metadados e o resumo do estudo — "
-            "o texto completo não está disponível. Não infira o que não está escrito."
+            else "O documento não possui PDF integral vinculado; você tem acesso aos METADADOS COMPLETOS "
+            "e ao RESUMO DO ESTUDO (ABSTRACT). Extraia os dados dessas seções."
         )
 
-        return f"""Você é um pesquisador acadêmico conduzindo a fase de Extração de Dados \
-(Triagem 2) de uma Revisão Sistemática.
+        return f"""Você é um pesquisador acadêmico especialista encarregado da Extração Estruturada de Dados (Triagem 2) de uma Revisão Sistemática.
 {base_note}
 
-==================== TEXTO DO ESTUDO ====================
 {context_text}
 
-==================== PERGUNTAS DE EXTRAÇÃO ====================
+==================== MATRIZ DE PERGUNTAS DE EXTRAÇÃO ====================
 {questions_list_text}
 
-==================== REGRAS DE EXTRAÇÃO ====================
-1. ANCORAGEM ESTRITA: responda apenas com o que está escrito no texto. Se a \
-informação não estiver presente, responda exatamente 'Não informado no texto'.
-2. EVIDÊNCIA OBRIGATÓRIA: para cada resposta com conteúdo, transcreva em \
-"evidencia" um trecho literal e curto (até 300 caracteres) que sustente a \
-resposta, e informe em "pagina" o número da página correspondente \
-(use as marcações [[p. N]]); deixe "" quando não houver.
-3. SÍNTESE PRECISA: seja objetivo e preserve números, unidades, recortes \
-temporais/territoriais e nomes de métodos exatamente como aparecem.
-4. NÃO INVENTE: nunca complete dados por conhecimento externo ao texto.
-5. FORMATO: responda OBRIGATORIAMENTE em JSON puro, sem texto fora do JSON:
+==================== DIRETRIZES DE EXTRAÇÃO ACADÊMICA ====================
+1. ACESSO INTEGRAL: Consulte todas as seções fornecidas — Metadados (autores, ano, instituição, tipo), Resumo e Texto Completo (Introdução, Metodologia, Resultados, Discussão, Conclusão).
+2. SÍNTESE PRECISA E DIRETA: Formule respostas objetivas, acadêmicas e substanciais. Reconheça sinônimos metodológicos, recortes geográficos/territoriais, tamanhos amostrais, variáveis e achados empíricos que respondam ao que foi perguntado.
+3. EVIDÊNCIA ANCORADA: Para cada resposta com conteúdo encontrado, transcreva em "evidencia" um trecho literal curto (até 300 caracteres) que comprove a resposta, e indique em "pagina" a página de onde o trecho foi retirado (ex: "p. 4" ou "Resumo" ou "Metadados"). Deixe "" apenas se não houver dados.
+4. AUSÊNCIA REAL DE DADOS: Apenas declare "Não informado no documento" se a informação absolutamente não puder ser identificada nem nos metadados, nem no resumo e nem no texto do artigo.
+5. FORMATO OBRIGATÓRIO (JSON PURO):
 {{
   "respostas": [
     {{
       "question_id": "ID_DA_PERGUNTA",
-      "answer": "Resposta sintetizada e ancorada no texto...",
-      "evidencia": "Trecho literal do estudo que sustenta a resposta",
-      "pagina": "12"
+      "answer": "Resposta sintetizada e ancorada no documento...",
+      "evidencia": "Trecho literal do estudo comprovando a resposta",
+      "pagina": "4"
     }}
   ]
 }}

@@ -233,20 +233,23 @@ def update_paper_extraction_answers(
 async def extract_answers_with_ai(
     project_id: str,
     paper_id: str,
+    question_id: Optional[str] = Query(None, description="ID opcional para extrair apenas uma pergunta específica"),
     db: Session = Depends(get_db),
 ):
-    """Executa a extração automática das respostas do artigo usando IA e o texto do PDF/Resumo."""
+    """Executa a extração automática das respostas do artigo (todas ou uma específica) usando IA."""
     settings = db.query(AISettingsModel).first()
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
-            detail="Os recursos de IA estão desativados nas Configurações (Modo 100% Manual).",
+            detail="Os recursos de Assistência estão desativados nas Configurações (Modo Manual).",
         )
     try:
-        answers = await extraction_service.extract_answers_with_ai(db, project_id, paper_id)
+        answers = await extraction_service.extract_answers_with_ai(
+            db, project_id, paper_id, question_id=question_id
+        )
         return {"status": "success", "answers": answers}
     except Exception as e:
-        logger.error(f"[ExtractionAPI] Erro ao extrair com IA: {e}")
+        logger.error(f"[ExtractionAPI] Erro ao extrair com assistência: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

@@ -367,8 +367,9 @@ class APIClient {
     })
   }
 
-  async extractAnswersWithAI(projectId: string, paperId: string): Promise<any> {
-    return this.request<any>(`/projects/${projectId}/papers/${paperId}/extraction/ai`, {
+  async extractAnswersWithAI(projectId: string, paperId: string, questionId?: string): Promise<any> {
+    const query = questionId ? `?question_id=${encodeURIComponent(questionId)}` : ''
+    return this.request<any>(`/projects/${projectId}/papers/${paperId}/extraction/ai${query}`, {
       method: 'POST',
     })
   }
@@ -387,6 +388,13 @@ class APIClient {
       `/projects/${projectId}/papers/${paperId}/extraction/pdf/acquire`,
       { method: 'POST' }
     )
+  }
+
+  async downloadPaperPDF(
+    projectId: string,
+    paperId: string
+  ): Promise<import('@/types/api').PdfAcquisitionResult> {
+    return this.acquirePaperPDF(projectId, paperId)
   }
 
   async getPaperPdfStatus(
