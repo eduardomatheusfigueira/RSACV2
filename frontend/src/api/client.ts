@@ -262,8 +262,57 @@ class APIClient {
     })
   }
 
+  async cancelHarvest(projectId: string): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/harvest/cancel`, {
+      method: 'POST',
+    })
+  }
+
+  async getHarvestStatus(projectId: string): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/harvest/status`)
+  }
+
   async listHarvestRuns(projectId: string): Promise<HarvestRunListResponse> {
     return this.request<HarvestRunListResponse>(`/projects/${projectId}/harvest/runs`)
+  }
+
+  // ── Deduplication & Reports ───────────────────────────────────────
+
+  async deduplicateProject(projectId: string): Promise<{ status: string; data: import('@/types/api').DeduplicationReport }> {
+    return this.request<{ status: string; data: import('@/types/api').DeduplicationReport }>(
+      `/projects/${projectId}/deduplicate`,
+      { method: 'POST' }
+    )
+  }
+
+  async getDeduplicationReport(projectId: string): Promise<import('@/types/api').DeduplicationReport> {
+    return this.request<import('@/types/api').DeduplicationReport>(`/projects/${projectId}/deduplicate/report`)
+  }
+
+  getDeduplicationDownloadUrl(projectId: string): string {
+    return `${this.baseUrl}/projects/${projectId}/deduplicate/download`
+  }
+
+  // ── Source Credentials ────────────────────────────────────────────
+
+  async getSourceCredentials(): Promise<import('@/types/api').SourceCredential[]> {
+    return this.request<import('@/types/api').SourceCredential[]>('/settings/sources')
+  }
+
+  async updateSourceCredential(
+    sourceName: string,
+    data: import('@/types/api').SourceCredentialUpdate
+  ): Promise<import('@/types/api').SourceCredential> {
+    return this.request<import('@/types/api').SourceCredential>(`/settings/sources/${sourceName}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteSourceCredential(sourceName: string): Promise<any> {
+    return this.request<any>(`/settings/sources/${sourceName}`, {
+      method: 'DELETE',
+    })
   }
 
   // ── AI ────────────────────────────────────────────────────────────

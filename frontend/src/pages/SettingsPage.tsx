@@ -270,6 +270,15 @@ export function SettingsPage(): JSX.Element {
   const [temperature, setTemperature] = useState(0.2)
   const [maxTokens, setMaxTokens] = useState(4096)
 
+  // Scientific Sources Credentials State
+  const [sourceCreds, setSourceCreds] = useState<import('@/types/api').SourceCredential[]>([])
+  const [scopusKey, setScopusKey] = useState('')
+  const [scopusInstToken, setScopusInstToken] = useState('')
+  const [pubmedKey, setPubmedKey] = useState('')
+  const [openalexEmail, setOpenalexEmail] = useState('')
+  const [savingSourceCreds, setSavingSourceCreds] = useState(false)
+  const [sourceSaveSuccess, setSourceSaveSuccess] = useState(false)
+
   useEffect(() => {
     loadSettings()
   }, [])
@@ -277,7 +286,11 @@ export function SettingsPage(): JSX.Element {
   const loadSettings = async () => {
     try {
       setLoading(true)
-      const data = await api.getAISettings()
+      const [data, creds] = await Promise.all([
+        api.getAISettings(),
+        api.getSourceCredentials().catch(() => []),
+      ])
+
       setIsAiActive(data.ai_enabled !== false)
       setAiEnabled(data.ai_enabled !== false)
       setProvider(data.provider)
@@ -290,10 +303,45 @@ export function SettingsPage(): JSX.Element {
       setEndpoint(data.endpoint || (data.provider === 'qwen' ? QWEN_REGIONS[0].id : 'http://localhost:11434/v1'))
       setTemperature(data.temperature)
       setMaxTokens(data.max_tokens)
+      setSourceCreds(creds || [])
     } catch (err) {
-      console.error('Erro ao carregar configurações de IA:', err)
+      console.error('Erro ao carregar configurações:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSaveSourceCredentials = async () => {
+    try {
+      setSavingSourceCreds(true)
+      if (scopusKey || scopusInstToken) {
+        await api.updateSourceCredential('Scopus', {
+          api_key: scopusKey || undefined,
+          inst_token: scopusInstToken || undefined,
+        })
+      }
+      if (pubmedKey) {
+        await api.updateSourceCredential('PubMed', {
+          api_key: pubmedKey,
+        })
+      }
+      if (openalexEmail) {
+        await api.updateSourceCredential('OpenAlex', {
+          api_key: openalexEmail,
+        })
+      }
+      const updatedCreds = await api.getSourceCredentials()
+      setSourceCreds(updatedCreds)
+      setScopusKey('')
+      setScopusInstToken('')
+      setPubmedKey('')
+      setOpenalexEmail('')
+      setSourceSaveSuccess(true)
+      setTimeout(() => setSourceSaveSuccess(false), 3000)
+    } catch (err: any) {
+      console.error('Erro ao salvar credenciais das fontes:', err)
+    } finally {
+      setSavingSourceCreds(false)
     }
   }
 
@@ -740,6 +788,101 @@ export function SettingsPage(): JSX.Element {
                 <option value={8192}>8.192 tokens</option>
                 <option value={16384}>16.384 tokens (Para Extração Extensa)</option>
               </select>
+            </div>
+          </div>
+
+          {/* Scientific Sources Credentials Card */}
+          <div className="settings-card" style={{ marginTop: 'var(--space-4)' }}>
+            <div className="card-section-title">
+              <Globe size={20} className="icon-accent" />
+              <h2>Credenciais de Bases Científicas</h2>
+            </div>
+            <p className="section-help">
+              Configure chaves de API e tokens para desbloquear bases restritas (Scopus) ou acelerar taxas de requisição (PubMed, OpenAlex). As chaves são salvas com segurança no banco local.
+            </p>
+
+            <div className="form-group" style={{ marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label><strong>Scopus (Elsevier)</strong> — API Key</label>
+                {sourceCreds.find((c) => c.source_name === 'SCOPUS')?.has_api_key && (
+                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                    Configurada ({sourceCreds.find((c) => c.source_name === 'SCOPUS')?.key_preview})
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                placeholder="Cole sua Elsevier API Key..."
+                value={scopusKey}
+                onChange={(e) => setScopusKey(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label><strong>Scopus</strong> — Institutional Token (Opcional)</label>
+                {sourceCreds.find((c) => c.source_name === 'SCOPUS')?.has_inst_token && (
+                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                    Token Ativo ({sourceCreds.find((c) => c.source_name === 'SCOPUS')?.inst_token_preview})
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                placeholder="Cole seu Institutional Token (se sua universidade fornecer)..."
+                value={scopusInstToken}
+                onChange={(e) => setScopusInstToken(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label><strong>PubMed (NCBI)</strong> — API Key (Opcional)</label>
+                {sourceCreds.find((c) => c.source_name === 'PUBMED')?.has_api_key && (
+                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                    Configurada ({sourceCreds.find((c) => c.source_name === 'PUBMED')?.key_preview})
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                placeholder="Cole sua NCBI API Key (aumenta limite de 3 para 10 req/s)..."
+                value={pubmedKey}
+                onChange={(e) => setPubmedKey(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label><strong>OpenAlex</strong> — E-mail para Polite Pool (Opcional)</label>
+                {sourceCreds.find((c) => c.source_name === 'OPENALEX')?.has_api_key && (
+                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                    Configurado ({sourceCreds.find((c) => c.source_name === 'OPENALEX')?.key_preview})
+                  </span>
+                )}
+              </div>
+              <input
+                type="email"
+                placeholder="seu.email@universidade.edu.br"
+                value={openalexEmail}
+                onChange={(e) => setOpenalexEmail(e.target.value)}
+              />
+            </div>
+
+            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleSaveSourceCredentials}
+                disabled={savingSourceCreds || (!scopusKey && !scopusInstToken && !pubmedKey && !openalexEmail)}
+              >
+                {savingSourceCreds ? 'Salvando...' : 'Salvar Credenciais de Bases'}
+              </button>
+              {sourceSaveSuccess && (
+                <span className="save-indicator success" style={{ fontSize: '12px' }}>
+                  <CheckCircle2 size={14} /> Salvo!
+                </span>
+              )}
             </div>
           </div>
         </div>

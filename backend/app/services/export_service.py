@@ -14,9 +14,11 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.models import (
+    CriterionModel,
     ExtractionAnswerModel,
     ExtractionQuestionModel,
     HarvestRunModel,
+    PaperCriterionModel,
     PaperModel,
     ProjectModel,
     ProtocolModel,
@@ -43,20 +45,29 @@ class ExportService:
         excluded_papers = [p for p in all_papers if p.decision == "Excluído"]
         pending_papers = [p for p in all_papers if p.decision == "Pendente"]
 
+        # Mapa de critérios para lookup rápido
+        criteria_by_id = {c.id: c for c in protocol.criteria} if protocol and protocol.criteria else {}
+
         # ── Aba 1: Artigos Incluídos ───────────────────────────────────
         inc_data = []
         for p in included_papers:
             sources_str = ", ".join(s.source_name for s in p.sources) if p.sources else ""
+            evals = db.query(PaperCriterionModel).filter(PaperCriterionModel.paper_id == p.id, PaperCriterionModel.value == True).all()
+            inc_crits = [criteria_by_id[e.criterion_id].text for e in evals if e.criterion_id in criteria_by_id and not criteria_by_id[e.criterion_id].is_exclusion]
+
             inc_data.append({
                 "ID": p.id,
                 "Título": p.title,
                 "Autores": p.authors,
+                "Orientador(a)": p.advisor or "",
                 "Ano": p.year,
                 "DOI": p.doi or "",
+                "Periódico / Revista": p.journal or "",
                 "Bases de Dados": sources_str,
                 "Tipo de Pesquisa": p.research_type,
                 "Instituição": p.institution,
                 "URL / Link": p.download_url,
+                "Critérios de Inclusão Atendidos": "; ".join(inc_crits),
                 "Resumo (Abstract)": p.abstract,
                 "Observações": p.observations,
             })
@@ -87,6 +98,9 @@ class ExportService:
         exc_data = []
         for p in excluded_papers:
             sources_str = ", ".join(s.source_name for s in p.sources) if p.sources else ""
+            evals = db.query(PaperCriterionModel).filter(PaperCriterionModel.paper_id == p.id, PaperCriterionModel.value == True).all()
+            exc_crits = [criteria_by_id[e.criterion_id].text for e in evals if e.criterion_id in criteria_by_id and criteria_by_id[e.criterion_id].is_exclusion]
+
             exc_data.append({
                 "ID": p.id,
                 "Título": p.title,
@@ -94,9 +108,11 @@ class ExportService:
                 "Ano": p.year,
                 "DOI": p.doi or "",
                 "Bases de Dados": sources_str,
+                "Critérios de Exclusão Identificados": "; ".join(exc_crits),
                 "Motivo / Observações": p.observations,
             })
         df_excluded = pd.DataFrame(exc_data)
+
 
         # ── Aba 4: Métricas PRISMA ─────────────────────────────────────
         runs = db.query(HarvestRunModel).filter(HarvestRunModel.project_id == project_id).all()

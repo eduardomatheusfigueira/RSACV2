@@ -7,7 +7,7 @@
 import { create } from 'zustand'
 
 export type LogLevel = 'info' | 'success' | 'warn' | 'error' | 'debug'
-export type LogSource = 'API' | 'WebSocket' | 'IA' | 'Sistema' | 'Coleta' | 'Triagem' | 'Extração' | 'Exportação' | 'Protocolo'
+export type LogSource = 'API' | 'WebSocket' | 'IA' | 'Sistema' | 'Coleta' | 'Triagem' | 'Extração' | 'Exportação' | 'Protocolo' | 'Deduplicação'
 
 export interface LogEntry {
   id: string
@@ -63,7 +63,7 @@ export const useLogStore = create<LogState>((set) => ({
   info: (source, message, detail) =>
     set((state) => ({
       entries: [
-        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'info', source, message, detail },
+        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'info' as LogLevel, source, message, detail },
         ...state.entries,
       ].slice(0, 500),
     })),
@@ -71,7 +71,7 @@ export const useLogStore = create<LogState>((set) => ({
   success: (source, message, detail, duration) =>
     set((state) => ({
       entries: [
-        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'success', source, message, detail, duration },
+        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'success' as LogLevel, source, message, detail, duration },
         ...state.entries,
       ].slice(0, 500),
     })),
@@ -79,7 +79,7 @@ export const useLogStore = create<LogState>((set) => ({
   warn: (source, message, detail) =>
     set((state) => ({
       entries: [
-        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'warn', source, message, detail },
+        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'warn' as LogLevel, source, message, detail },
         ...state.entries,
       ].slice(0, 500),
     })),
@@ -87,7 +87,7 @@ export const useLogStore = create<LogState>((set) => ({
   error: (source, message, detail) =>
     set((state) => ({
       entries: [
-        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'error', source, message, detail },
+        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'error' as LogLevel, source, message, detail },
         ...state.entries,
       ].slice(0, 500),
     })),
@@ -95,7 +95,7 @@ export const useLogStore = create<LogState>((set) => ({
   debug: (source, message, detail) =>
     set((state) => ({
       entries: [
-        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'debug', source, message, detail },
+        { id: `log-${++idCounter}-${Date.now()}`, timestamp: new Date(), level: 'debug' as LogLevel, source, message, detail },
         ...state.entries,
       ].slice(0, 500),
     })),

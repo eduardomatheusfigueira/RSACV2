@@ -480,3 +480,373 @@
   color: var(--color-text-tertiary);
   gap: var(--space-3);
 }
+
+/* Mini Criteria Badge in Left Scroll List */
+.badge-criteria-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  color: var(--olive-leaf);
+  background: var(--color-included-bg);
+  border: 1px solid var(--color-included);
+  border-radius: var(--radius-xs);
+  padding: 1px 5px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   CRITERIA EVALUATION SECTION (Neo-Retro Interactive Assessment)
+   ───────────────────────────────────────────────────────────────────── */
+
+.criteria-evaluation-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.criteria-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+}
+
+.criteria-section-header h3 {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.criteria-section-desc {
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+  line-height: var(--leading-normal);
+}
+
+.criteria-section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.btn-criteria-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-raised);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-criteria-action:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.btn-criteria-action:active {
+  box-shadow: var(--shadow-neo-pressed);
+  transform: translateY(1px);
+}
+
+.btn-criteria-action.text-muted {
+  color: var(--color-text-tertiary);
+}
+
+/* Criteria Stats Summary Bar */
+.criteria-stats-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.criteria-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+.criteria-stat-badge strong {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+}
+
+.criteria-stat-badge.inc-badge.all-met {
+  background: var(--color-included-bg);
+  border-color: var(--color-included);
+  color: var(--color-included);
+  box-shadow: 0 0 0 1px rgba(96, 108, 56, 0.2);
+}
+
+.criteria-stat-badge.exc-badge.has-exclusion {
+  background: var(--color-excluded-bg);
+  border-color: var(--color-excluded);
+  color: var(--color-excluded);
+  box-shadow: 0 0 0 1px rgba(188, 71, 73, 0.2);
+}
+
+/* Recommendation Assistant Banner */
+.criteria-alert-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 8px 12px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  font-size: 0.75rem;
+}
+
+.criteria-alert-banner.alert-exclude {
+  background: var(--color-excluded-bg);
+  border-color: var(--color-excluded);
+  color: var(--color-excluded);
+}
+
+.criteria-alert-banner.alert-include {
+  background: var(--color-included-bg);
+  border-color: var(--color-included);
+  color: var(--color-included);
+}
+
+.criteria-alert-banner .alert-text {
+  line-height: var(--leading-normal);
+}
+
+.btn-quick-decision {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.btn-quick-exclude {
+  background: var(--color-error);
+  color: #ffffff;
+  border-color: var(--black-forest);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.btn-quick-exclude:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-quick-include {
+  background: var(--olive-leaf);
+  color: #ffffff;
+  border-color: var(--black-forest);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.btn-quick-include:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Criteria Grid Layout (2 Columns) */
+.criteria-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 900px) {
+  .criteria-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.criteria-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  padding: var(--space-2);
+}
+
+.col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 6px;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.col-tag {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inc-tag {
+  color: var(--olive-leaf);
+}
+
+.exc-tag {
+  color: var(--color-error);
+}
+
+.col-count {
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-tertiary);
+}
+
+.no-criteria-hint {
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding: 8px 4px;
+}
+
+/* Criteria Checkbox List */
+.criteria-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.criterion-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.criterion-card:hover {
+  border-color: var(--color-accent);
+  background: var(--color-bg-elevated);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.criterion-card.inc-card.checked {
+  background: var(--color-included-bg);
+  border-color: var(--color-included);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.criterion-card.inc-card.checked .criterion-text {
+  color: var(--black-forest);
+  font-weight: var(--weight-medium);
+}
+
+.criterion-card.exc-card.checked {
+  background: var(--color-excluded-bg);
+  border-color: var(--color-excluded);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.criterion-card.exc-card.checked .criterion-text {
+  color: var(--color-error);
+  font-weight: var(--weight-medium);
+}
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-text-tertiary);
+  transition: color var(--transition-fast);
+}
+
+.inc-card.checked .custom-checkbox {
+  color: var(--olive-leaf);
+}
+
+.exc-card.checked .custom-checkbox {
+  color: var(--color-error);
+}
+
+.criterion-text {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+}
+
+/* Empty Protocol Criteria Card */
+.no-protocol-criteria-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-secondary);
+}
+
+.no-crit-info {
+  flex: 1;
+  font-size: 0.75rem;
+}
+
+.no-crit-info strong {
+  display: block;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+}
+
+.no-crit-info p {
+  color: var(--color-text-tertiary);
+  font-size: 0.6875rem;
+}
+
+/* Screen reader utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

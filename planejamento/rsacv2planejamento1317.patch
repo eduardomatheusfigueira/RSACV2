@@ -1,0 +1,2749 @@
+From 49cc41985ae149044e2c4196d89b2dc3bd222781 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 16 Aug 2026 16:49:13 +0000
+Subject: [PATCH] =?UTF-8?q?docs(planejamento):=20diagn=C3=B3stico=20e=20pl?=
+ =?UTF-8?q?ano=20de=20migra=C3=A7=C3=A3o=20da=20coleta=20V1=20=E2=86=92=20?=
+ =?UTF-8?q?V2?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Adiciona a série 13-17 de planejamento, focada em trazer para a V2 a
+capacidade de coleta que funciona bem na V1 (BDTD, SciELO, OpenAlex,
+PubMed, Scopus).
+
+13_DIAGNOSTICO_COLETA_V2 — análise estática com evidência em arquivo:linha
+dos defeitos que quebram a coleta na V2, agrupados por severidade:
+
+  P0  beautifulsoup4 e pandas importados mas não declarados em pyproject
+  P0  on_progress definido e nunca passado ao coletor (painel fica estático);
+      contrato síncrono incompatível com o callback async
+  P0  deduplicação O(N²) com commit por registro, executada de forma síncrona
+      dentro do event loop — derruba o WebSocket em coletas longas
+  P0  chaves de API nunca chegam à fábrica: Scopus retorna zero em silêncio
+  P0  BDTD grava `summary` (lista do VuFind) direto no campo abstract
+  P1  OpenAlex pagina por offset (teto de 10.000) em vez de cursor
+  P1  PubMed limitado a 500 registros, sem retstart
+  P1  Scopus sempre sem resumo (view=STANDARD, abstract fixo em "")
+  P1  BDTD sem raspagem de detalhes: perde orientador e instituição de defesa
+  P1  nenhum filtro de busca (ano, idioma, tipo) é expressável na V2
+  P2  verify=False no cliente BDTD; SciELO sem retry; NameError latente em
+      total_for_desc nos cinco coletores
+
+14_ESPECIFICACAO_COLETA — contrato-alvo (HarvestQuery, HarvesterCapabilities,
+RawPaperRecord ampliado), vocabulário canônico de tipos de documento e
+especificação por fonte, incorporando o conhecimento operacional da V1:
+regra do WAF da BDTD (máx. 2 filter[]), cursor paging, Abstract Retrieval
+do Scopus, backoff de 15s em 429.
+
+15_PLANO_EXECUCAO — 6 fases (~21-25 dias) com critérios de aceite, mapa de
+arquivos, migrações e riscos. Registra as dependências de ordem: corrigir o
+escopo de total_for_desc precede ligar o progresso.
+
+16_TESTES_VALIDACAO — 4 camadas (unidade sobre fixtures, contrato de
+requisição, canário contra fontes reais, paridade V1↔V2), testes de carga e
+script de diagnóstico. app/harvesters/ está hoje com 0% de cobertura.
+
+17_GUIA_DE_USO — o produto do ponto de vista do pesquisador, com o estado
+atual de cada etapa do fluxo.
+
+Nota: a análise é estática. O ambiente de elaboração tem rede restrita a
+registries de pacote, então nenhuma chamada real às bases foi executada; os
+pontos que exigem confirmação empírica estão marcados [A VALIDAR] em §13.8.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012EhY75G47PN8V4ieBztPHZ
+---
+ planejamento/00_INDICE.md                |  19 +
+ planejamento/13_DIAGNOSTICO_COLETA_V2.md | 560 ++++++++++++++++++
+ planejamento/14_ESPECIFICACAO_COLETA.md  | 688 +++++++++++++++++++++++
+ planejamento/15_PLANO_EXECUCAO.md        | 588 +++++++++++++++++++
+ planejamento/16_TESTES_VALIDACAO.md      | 449 +++++++++++++++
+ planejamento/17_GUIA_DE_USO.md           | 332 +++++++++++
+ 6 files changed, 2636 insertions(+)
+ create mode 100644 planejamento/13_DIAGNOSTICO_COLETA_V2.md
+ create mode 100644 planejamento/14_ESPECIFICACAO_COLETA.md
+ create mode 100644 planejamento/15_PLANO_EXECUCAO.md
+ create mode 100644 planejamento/16_TESTES_VALIDACAO.md
+ create mode 100644 planejamento/17_GUIA_DE_USO.md
+
+diff --git a/planejamento/00_INDICE.md b/planejamento/00_INDICE.md
+index 7afa4c8..518f18c 100644
+--- a/planejamento/00_INDICE.md
++++ b/planejamento/00_INDICE.md
+@@ -24,6 +24,25 @@
+ 
+ ---
+ 
++## Migração RSAC V1 → V2 — Correção da Camada de Coleta
++
++> Série elaborada após o diagnóstico da coleta da V2 em produção. Parte da
++> constatação de que a V1 coleta bem (BDTD, SciELO, OpenAlex, PubMed, Scopus) e
++> a V2 não, e define como trazer essa capacidade para a arquitetura da V2.
++
++| # | Documento | Descrição |
++|---|-----------|-----------|
++| 13 | [Diagnóstico da Coleta na V2](./13_DIAGNOSTICO_COLETA_V2.md) | 🔴 Análise com evidência em `arquivo:linha` de por que a coleta falha; comparativo V1 × V2 por fonte |
++| 14 | [Especificação da Coleta](./14_ESPECIFICACAO_COLETA.md) | Contrato-alvo dos coletores, capacidades por fonte, filtros, credenciais |
++| 15 | [Plano de Execução](./15_PLANO_EXECUCAO.md) | 6 fases com tarefas, critérios de aceite, mapa de arquivos e riscos |
++| 16 | [Testes e Validação](./16_TESTES_VALIDACAO.md) | 4 camadas de teste, paridade V1↔V2, carga e diagnóstico rápido |
++| 17 | [Guia de Uso](./17_GUIA_DE_USO.md) | O que o produto deve ser, do ponto de vista do pesquisador |
++
++**Ordem de leitura sugerida:** 13 → 17 → 14 → 15 → 16
++*(o 17 antes do 14 dá o contexto de produto para as decisões técnicas)*
++
++---
++
+ ## Referência Bibliográfica Base
+ 
+ - **Adam D. Scott** — *JavaScript Everywhere: Building Cross-Platform Applications with GraphQL, React, React Native, and Electron* (O'Reilly Media, 2020)
+diff --git a/planejamento/13_DIAGNOSTICO_COLETA_V2.md b/planejamento/13_DIAGNOSTICO_COLETA_V2.md
+new file mode 100644
+index 0000000..d9c5ea3
+--- /dev/null
++++ b/planejamento/13_DIAGNOSTICO_COLETA_V2.md
+@@ -0,0 +1,560 @@
++# 13 — Diagnóstico Técnico da Coleta na V2
++
++> **Objetivo deste documento:** explicar, com evidência em código, por que a coleta
++> da RSAC V2 falha ou entrega menos que a RSAC V1, e por que o OpenAlex é a única
++> fonte que "parece funcionar".
++>
++> Todas as afirmações abaixo apontam para `arquivo:linha`. Nada aqui é hipótese
++> não verificada — quando algo não pôde ser confirmado por execução real, está
++> marcado como **[A VALIDAR]**.
++
++---
++
++## 13.1 Resumo executivo
++
++A V2 não tem um problema de coleta. Tem **cinco problemas independentes** que se
++somam, e três deles atingem todas as fontes ao mesmo tempo:
++
++| # | Problema | Fontes afetadas | Efeito percebido pelo usuário |
++|---|----------|-----------------|-------------------------------|
++| 1 | Dependências não declaradas (`beautifulsoup4`, `pandas`) | SciELO, Exportação | Backend não sobe / SciELO não importa |
++| 2 | Progresso nunca chega ao WebSocket | Todas | "Travou", painel parado |
++| 3 | Deduplicação O(N²) com `commit` por registro, síncrona dentro do event loop | Todas | Fica cada vez mais lento; WebSocket cai |
++| 4 | Chaves de API nunca chegam aos coletores | PubMed, Scopus | Scopus retorna zero, silenciosamente |
++| 5 | Paginação/parsing incorretos por fonte | BDTD, SciELO, PubMed, Scopus, OpenAlex | Poucos registros, sem resumo, sem orientador |
++
++**Por que o OpenAlex "funciona":** é a única fonte cujo caminho feliz não depende
++de nenhum dos cinco. Ela é JSON puro (não precisa de `bs4`), não tem WAF, não
++precisa de chave de API, e o parser da V2 está correto. Ela também é rápida o
++suficiente para que o gargalo de deduplicação só apareça em coletas grandes.
++**Mas ela também está quebrada** — apenas de forma silenciosa: a paginação por
++offset limita a coleta a 10.000 registros por descritor (§13.6).
++
++O ponto central: **a V1 não é "mais simples" que a V2 — ela é mais completa.**
++O coletor BDTD da V1 tem 1.325 linhas; o da V2 tem 228. A diferença não é
++verbosidade, é comportamento ausente. O quadro comparativo está em §13.9.
++
++---
++
++## 13.2 P0 — Bloqueadores (a coleta não pode funcionar de forma confiável)
++
++### P0-1 · `beautifulsoup4` e `pandas` não estão declarados
++
++`backend/app/harvesters/scielo.py:15` importa `bs4`; `backend/app/services/export_service.py`
++importa `pandas`. Nenhum dos dois aparece em `backend/pyproject.toml`.
++
++A cadeia de importação é fatal:
++
++```
++api/v1/router.py → api/v1/harvest.py → services/harvesting_service.py
++                 → harvesters/factory.py → harvesters/scielo.py → bs4  ❌
++```
++
++Se `bs4` não estiver instalado, **a API inteira não sobe** — não é só o SciELO
++que falha. Se hoje funciona na máquina do autor, é porque `bs4` entrou no
++ambiente por instalação manual ou transitiva. Em máquina limpa (e no instalador
++Electron empacotado) isso quebra.
++
++`pandas` tem impacto menor e localizado: o endpoint de exportação retorna 500.
++
++> **Correção:** adicionar `beautifulsoup4>=4.12`, `lxml>=5.0` e `pandas>=2.2` às
++> dependências. `lxml` porque `html.parser` é notoriamente tolerante demais com
++> o HTML do SciELO e produz parsing inconsistente em páginas malformadas.
++
++### P0-2 · O progresso nunca sai do backend
++
++`backend/app/services/harvesting_service.py:116` define `on_progress_callback`.
++`backend/app/services/harvesting_service.py:135-138` chama o coletor **sem passá-lo**:
++
++```python
++async for raw_record in harvester.harvest(
++    descriptors=descriptors,
++    max_records_per_descriptor=max_records_per_descriptor,
++):     # ← on_progress ausente
++```
++
++Consequência direta: a mensagem `harvest_progress` **nunca é emitida**. O painel
++"Execução em Tempo Real" (`frontend/src/pages/HarvestPage.tsx:131`) só reage a
++`paper_harvested`. Enquanto o coletor está paginando, buscando, sofrendo retry ou
++esperando o WAF liberar, a interface fica **estática e silenciosa** — indistinguível
++de um travamento. Esse é, provavelmente, o sintoma que mais fez a V2 parecer quebrada.
++
++Há um segundo defeito acoplado: `on_progress_callback` é `async def`, mas o
++contrato em `backend/app/harvesters/base.py:53` declara
++`Callable[[HarvestProgress], None]` — síncrono. Os coletores chamam
++`on_progress(...)` sem `await` (ex.: `harvesters/bdtd.py:120`). Se o callback
++fosse passado como está, cada chamada criaria uma corrotina nunca aguardada:
++nenhuma mensagem enviada e um `RuntimeWarning` por página.
++
++> **Correção:** o contrato precisa ser explicitamente assíncrono
++> (`Callable[[HarvestProgress], Awaitable[None]]`) e todas as chamadas nos
++> coletores precisam de `await`. Corrigir só a passagem do parâmetro **não
++> resolve** — introduz o segundo bug.
++
++### P0-3 · Deduplicação O(N²), com commit por registro, bloqueando o event loop
++
++Três defeitos no mesmo caminho quente.
++
++**(a) Varredura completa por registro.** `backend/app/services/dedup_service.py:87-91`
++carrega **todos** os papers do projeto a cada novo registro:
++
++```python
++candidates = (
++    db.query(PaperModel.id, PaperModel.title_normalized, PaperModel.year)
++    .filter(PaperModel.project_id == project_id)
++    .all()
++)
++```
++
++E em seguida roda `fuzz.token_sort_ratio` contra cada candidato
++(`dedup_service.py:93-96`). Para *N* registros coletados, isso é *N²/2*
++comparações de string. Com o volume real de uso do autor — os
++`bdtd_config.json` e `scielo_config.json` da V1 trazem **140 descritores** com
++`"limit": null` (ilimitado) — *N* facilmente passa de 20.000. Isso são
++~200 milhões de comparações fuzzy, além de 20.000 varreduras completas da tabela.
++
++**(b) Um `commit` por registro.** `dedup_service.py:152` e `dedup_service.py:183`
++dão `db.commit()` a cada paper. Em SQLite sem WAL, cada commit é um `fsync`.
++A V1 fazia o oposto — `insert_batch` com `executemany` e um único commit por
++página, exatamente para evitar isso, e o código da V1 diz isso em voz alta:
++"evita fsync a cada registro, aumentando a velocidade em até 100x"
++(`bdtd_harvester/bdtd_harvester.py:704`). O comentário da V1 é a documentação
++do erro cometido na V2.
++
++Vale registrar: a V1 **também** habilita WAL explicitamente no SciELO
++(`scielo_harvester/scielo_harvester.py:182`). A V2 não configura WAL em lugar nenhum.
++
++**(c) Bloqueio do event loop.** `harvesting_service.py:140` chama
++`self.dedup_service.process_record(db, ...)` — código SQLAlchemy **síncrono** —
++de dentro de uma corrotina. Como a coleta roda via `BackgroundTasks`
++(`api/v1/harvest.py:58`), ela compartilha o event loop do servidor. Cada chamada
++de dedup congela o loop inteiro: o `ping/pong` do WebSocket
++(`api/v1/harvest.py:136-140`) não é atendido, a conexão expira e o navegador
++perde o canal. Aí nem o `paper_harvested` chega mais — a interface morre de vez.
++
++Os três se reforçam: quanto mais o projeto cresce, mais tempo cada dedup leva,
++mais tempo o loop fica travado, mais rápido o WebSocket cai.
++
++### P0-4 · Chaves de API nunca chegam aos coletores
++
++`harvesting_service.py:114`:
++
++```python
++harvester = HarvesterFactory.get_harvester(source_name)
++```
++
++A fábrica aceita `pubmed_api_key` e `scopus_api_key` (`harvesters/factory.py:20-23`),
++mas ninguém os fornece. Resultado:
++
++- **Scopus retorna zero, em silêncio.** `harvesters/scopus.py:34-36` faz
++  `if not self.api_key: return` com log em nível `info`. Sem chave, o gerador
++  encerra imediatamente; a run é marcada `completed` com 0 registros. Do ponto
++  de vista do usuário, "o Scopus não achou nada" — não "o Scopus não foi configurado".
++  (A UI já lista Scopus com `enabled: False` em `api/v1/harvest.py:125`, mas
++  `HarvestPage.tsx:251-270` ignora esse campo e permite selecionar mesmo assim.)
++- **PubMed fica no limite anônimo do NCBI** (3 req/s contra 10 req/s com chave),
++  o que dispara HTTP 429 em coletas de 140 descritores.
++
++Não existe, hoje, nenhum lugar no modelo de dados onde essas chaves possam ser
++guardadas: `AISettingsModel` (`infrastructure/persistence/models.py:273`) só
++cobre provedores de IA. Não há tabela nem configuração para credenciais de bases.
++
++### P0-5 · BDTD: o resumo é uma lista, tratada como string
++
++`backend/app/harvesters/bdtd.py:197`:
++
++```python
++abstract=rec.get("summary", "") or rec.get("description", "") or "",
++```
++
++Na API VuFind, `summary` é **uma lista de strings**, não uma string. A V1 sabe
++disso e faz o join (`bdtd_harvester/bdtd_harvester.py:923-924`):
++
++```python
++summaries: List[str] = record.get('summary', [])
++description: str = " ".join([s.strip() for s in summaries if s]).strip()
++```
++
++Na V2, o campo `abstract` do `RawPaperRecord` recebe um objeto `list`. Como
++`RawPaperRecord` é uma `dataclass` sem validação (`harvesters/base.py:16`), nada
++reclama. A lista segue até `PaperModel.abstract`, que é `Text` — o SQLAlchemy
++grava a representação Python (`"['texto do resumo']"`) ou levanta erro de bind,
++dependendo do driver. **[A VALIDAR]** qual dos dois ocorre no SQLite instalado.
++
++De qualquer forma o efeito é o mesmo e é grave: **os resumos da BDTD chegam
++corrompidos à triagem por IA**, que é justamente a etapa que depende deles.
++
++---
++
++## 13.3 P1 — Perda de cobertura e de qualidade de metadados
++
++### P1-1 · BDTD sem raspagem de detalhes: perde orientador, instituição e tipo
++
++Este é o maior salto de qualidade da V1 que a V2 não portou.
++
++A V1 faz, para cada registro, uma segunda requisição à página pública do VuFind
++(`bdtd_harvester/bdtd_harvester.py:577` — `scrape_record_details`), extrai as
++metatags Dublin Core e as tabelas HTML de detalhe, e daí obtém:
++
++| Campo | Função na V1 | Existe na V2? |
++|---|---|---|
++| Orientador(a) | `bdtd_harvester.py:945-949` + `clean_advisor_name:153` | ❌ |
++| Instituição de defesa | `get_source_info:626` | ❌ (usa `institutions` cru da API) |
++| Tipo de pesquisa traduzido | `translate_format:559` (Tese / Dissertação / Artigo) | ❌ (usa `formats[0]` cru) |
++| Link de acesso real | `extract_url:546` + fallbacks `:964-969` | Parcial |
++| Correção resumo↔orientador trocados | `process_record_fields:195` | ❌ |
++
++Essa última merece destaque: a V1 detecta quando a BDTD devolve o nome do
++orientador dentro do campo de resumo (acontece com frequência em registros de
++certos repositórios), limpa o resumo e move o nome para o campo certo. Sem isso,
++a V2 alimenta a triagem por IA com "Orientador: Fulano de Tal" no lugar do resumo.
++
++A V1 também limpa nomes: remove anos de nascimento/morte
++(`clean_creator_name:133`), descarta links Lattes/ORCID e nomes de instituições
++que vazam para o campo de orientador (`clean_advisor_name:169-180`). A V2 aplica
++apenas a limpeza de anos, e só em autores (`harvesters/bdtd.py:71`).
++
++### P1-2 · BDTD: página de 20 em vez de 100, ordenada por relevância
++
++`harvesters/bdtd.py:117` fixa `page_size = 20`. A V1 usa 100
++(`bdtd_harvester.py:763`). Para o mesmo volume, a V2 faz **5× mais requisições**
++contra um servidor que já é conhecido por aplicar rate limit agressivo — o que
++aumenta a chance de 429 na mesma proporção.
++
++`harvesters/bdtd.py:134` usa `sort: "relevance"`; a V1 usa `year`
++(`bdtd_harvester.py:775`). Para revisão sistemática, ordenação por relevância
++é ativamente ruim: torna o resultado dependente do ranking interno do Solr e,
++combinada com limite por descritor, produz recortes não reprodutíveis. Uma
++revisão sistemática precisa ser **determinística**.
++
++### P1-3 · BDTD: a regra do WAF (máximo 2 filtros) não foi portada
++
++A V1 documenta uma restrição real e não óbvia do servidor
++(`bdtd_harvester.py:72-80`): o WAF da BDTD devolve **HTTP 429 quando a requisição
++tem 3 ou mais parâmetros `filter[]`**. A V1 contorna com `sanitize_bdtd_filters`
++(`:83`): manda no máximo 2 filtros à API e aplica o filtro de idioma **localmente**,
++depois de receber os registros (`:835-844`).
++
++Isso é conhecimento operacional caro, obtido por tentativa e erro. A V2 não tem
++nem os filtros nem a regra — hoje o problema está latente porque a V2 não envia
++filtro nenhum, mas ele reaparece no instante em que os filtros forem implementados.
++
++### P1-4 · OpenAlex: teto silencioso de 10.000 registros por descritor
++
++Esta é a razão pela qual "o OpenAlex está funcionando" é enganoso.
++
++`harvesters/openalex.py:71-76` pagina por offset (`page` + `per-page`). A API do
++OpenAlex limita a paginação por offset a **10.000 resultados**; além disso é
++preciso usar *cursor paging*. A V1 usa cursor desde sempre
++(`openalex_harvester/openalex_harvester.py:512-515`):
++
++```python
++params = {"per_page": PAGE_SIZE, "cursor": "*"}
++```
++
++Além do teto, há duas diferenças de qualidade de busca:
++
++| Aspecto | V1 | V2 |
++|---|---|---|
++| Paginação | cursor (`:515`) | offset, teto 10k (`openalex.py:74`) |
++| Campo de busca | `filter=title_and_abstract.search:` (`:523`) | `search=` genérico (`openalex.py:72`) |
++| Página | 50 (`:514`) | 25 (`openalex.py:57`) |
++| Polite pool | `mailto` no User-Agent (`:450`) + `api_key` (`:485`) | só `mailto` em query string |
++| Filtros | ano, `is_oa`, tipo de fonte, repositório, editora (`:248-268`) | nenhum |
++
++O `search=` genérico do OpenAlex procura em título, resumo **e texto completo
++indexado**, o que traz muito mais ruído que o `title_and_abstract.search` da V1.
++Para uma revisão sistemática, isso muda materialmente o conjunto recuperado —
++e explica por que os resultados da V2 podem parecer "menos precisos" mesmo
++quando a fonte tecnicamente responde.
++
++### P1-5 · PubMed: sem paginação, teto de 500
++
++`harvesters/pubmed.py:44`:
++
++```python
++retmax = 500 if limit == float("inf") else min(int(limit), 500)
++```
++
++Quando o usuário pede "ilimitado", a V2 entrega **no máximo 500 PMIDs por
++descritor** — e não há `retstart`, então não existe segunda página. A V1 usa
++`retmax: 10000` (`pubmed_harvester.py:319`), 20× mais.
++
++A V1 ainda faz duas coisas que a V2 não faz:
++
++- **Pula PMIDs já coletados** antes de gastar requisição de `efetch`
++  (`pubmed_harvester.py:_process_keyword`, via `db.record_exists`). Com 140
++  descritores que se sobrepõem muito, isso corta a maior parte do tráfego.
++- **Preserva os rótulos das seções do resumo** (`BACKGROUND:`, `METHODS:` …) —
++  `pubmed_harvester.py:430-434` monta `"RÓTULO: texto"`. A V2 concatena os
++  `AbstractText` sem rótulo (`pubmed.py:116-120`), perdendo a estrutura que a
++  IA de triagem usa para localizar método e resultado.
++
++Lote de `efetch`: V2 usa 25 (`pubmed.py:79`), V1 usa 100 — 4× mais requisições.
++
++### P1-6 · Scopus: sem resumo, portanto sem triagem possível
++
++`harvesters/scopus.py:103` grava `abstract=""` — literalmente sempre vazio.
++Isso ocorre porque `view=STANDARD` (`scopus.py:65`) não retorna `dc:description`.
++
++A V1 resolve em duas frentes: usa `view: "COMPLETE"` por padrão
++(`config_app/core/config_schemas.py:68`) e, quando o resumo mesmo assim não vem,
++faz uma chamada dedicada à **Abstract Retrieval API**
++(`scopus_harvester/scopus_harvester.py:173` — `fetch_abstract_retrieval`, com
++`view=META_ABS`), tratando inclusive o caso em que `dc:description` chega como
++dicionário `{"$": "..."}` em vez de string (`:193`).
++
++A V1 também suporta `insttoken` (`scopus_harvester.py:391`), necessário para
++entitlement institucional — sem ele, muitas contas não têm acesso ao `COMPLETE`.
++
++Consequência prática: **todo paper vindo do Scopus na V2 chega à triagem sem
++resumo.** A IA só vê o título. Como a triagem é o coração do produto, isso torna
++a fonte inútil mesmo se a chave for configurada.
++
++### P1-7 · Não existe nenhum filtro de busca em lugar nenhum
++
++Nem `ProtocolUpdate` (`backend/app/schemas/protocol.py:46-59`) nem
++`HarvestStartRequest` (`backend/app/schemas/harvest.py:11-19`) têm campos para
++recorte de busca. A V2 só sabe pedir "tudo".
++
++A V1 tem, por fonte (`config_app/core/config_schemas.py`):
++
++| Fonte | Filtros disponíveis na V1 |
++|---|---|
++| BDTD | `format`, `institution`, `publishDate` (inclui faixa `[1970 TO 2023]`), `language` (multi), `search_type`, `sort_order` |
++| SciELO | `search_field` |
++| OpenAlex | `publication_year` (faixa), `language`, `type`, `is_oa`, IDs de repositório/editora/tipo de fonte |
++| Scopus | `view`, `insttoken` |
++| PubMed | `api_key`, `delay` dedicado |
++
++O `bdtd_config.json` real do autor usa `"publishDate": "[1970 TO 2023]"` e
++`"language": "Português, Inglês, Espanhol"`. **Esse recorte simplesmente não é
++expressável na V2.** Não é um detalhe: sem recorte temporal e de idioma, uma
++coleta de 140 descritores na BDTD traz um volume que inviabiliza a triagem.
++
++---
++
++## 13.4 P2 — Robustez, segurança e operação
++
++### P2-1 · Verificação TLS desligada na BDTD
++
++`harvesters/bdtd.py:108` usa `verify=False`. Isso desabilita a validação de
++certificado — todo o tráfego BDTD fica exposto a interceptação, e o `httpx`
++passa a emitir avisos a cada requisição. A V1 **não** faz isso; usa
++`requests.Session` com verificação padrão (`bdtd_harvester.py:779`).
++
++Se o motivo foi um erro de cadeia de certificados do IBICT, a solução correta é
++apontar um bundle de CA (`verify="/caminho/ca.pem"`), nunca desligar a verificação.
++
++### P2-2 · SciELO sem retry: um 500 mata o descritor inteiro
++
++`harvesters/scielo.py:171-173` desiste na primeira resposta não-200:
++
++```python
++if res.status_code != 200:
++    logger.warning(...)
++    break
++```
++
++A V1 monta uma estratégia de retry na camada de transporte
++(`scielo_harvester.py:341-349`): `total=5`, `backoff_factor=1.5`,
++`status_forcelist=[429, 500, 502, 503, 504]`. O `search.scielo.org` devolve 500
++e 503 intermitentes com frequência sob carga — sem retry, cada oscilação
++momentânea descarta silenciosamente o restante das páginas daquele descritor.
++Com 140 descritores, a coleta fica cheia de buracos invisíveis.
++
++A BDTD da V2 tem retry (`bdtd.py:141-157`), mas com um defeito: o laço interno
++percorre `BASE_URLS` e, quando a resposta é não-200 e não-429, **não faz nada** —
++não loga, não espera, apenas segue para a próxima URL. Falhas 403/404 ficam mudas.
++
++### P2-3 · `total_for_desc` fora de escopo — `NameError` latente
++
++Em todos os cinco coletores, `total_for_desc` é inicializado **dentro** do laço
++`for desc in descriptors` mas referenciado **fora** dele, no bloco final de
++progresso:
++
++| Arquivo | Inicialização | Uso fora do escopo |
++|---|---|---|
++| `harvesters/bdtd.py` | :115 | :225 |
++| `harvesters/scielo.py` | :147 | :214 |
++| `harvesters/openalex.py` | :56 | :153 |
++| `harvesters/pubmed.py` | :43 | :178 |
++| `harvesters/scopus.py` | :46 | :134 |
++
++Se `descriptors` vier vazia — ou se todos forem string em branco, caso em que o
++`continue` roda antes da atribuição — a linha final levanta `NameError`.
++
++Hoje isso está **latente** porque o bloco está protegido por `if on_progress:` e
++`on_progress` nunca é passado (P0-2). **Corrigir o P0-2 sem corrigir este item
++transforma um bug silencioso em crash.** A ordem importa.
++
++### P2-4 · Sem deduplicação intra-execução
++
++A V1 mantém `seen_record_ids` durante a execução (`bdtd_harvester.py:873, 912-914`)
++e pula o registro antes de gastar a requisição de scraping de detalhes. Com 140
++descritores altamente sobrepostos — veja os `bdtd_config.json`, onde
++`"movimento sanitarista" AND "crítica" AND "Brasil"` e
++`"reforma sanitária" AND "crítica" AND "Brasil"` retornam muitos dos mesmos
++trabalhos — a sobreposição é a norma, não a exceção.
++
++A V2 manda **todo** registro repetido para o caminho caro de deduplicação
++(P0-3), inclusive os que ela poderia descartar por `source_id` a custo zero.
++
++### P2-5 · Coleta não pode ser cancelada, retomada, nem sobrevive a reinício
++
++`api/v1/harvest.py:58` usa `BackgroundTasks`. Isso significa:
++
++- **Sem cancelamento.** Não há endpoint de "parar". Iniciada uma coleta de 140
++  descritores ilimitados, a única saída é matar o processo.
++- **Sem retomada.** Reiniciou o backend, perdeu tudo o que estava em andamento.
++- **Runs fantasma.** `HarvestRunModel.status` fica `"running"` para sempre se o
++  processo cair (`models.py:245`). Nada reconcilia isso na subida.
++- **Sem isolamento.** A tarefa divide o event loop do servidor da API (ver P0-3c).
++
++A V1, sendo CLI, resolvia isso de outro jeito: o SQLite com `UPSERT`
++(`bdtd_harvester.py:711-725`) tornava toda execução idempotente. Rodar de novo
++retomava naturalmente, sem duplicar. A V2 perdeu essa propriedade sem substituí-la.
++
++### P2-6 · Chaves de API versionadas no repositório da V1
++
++`scopus_harvester/scopus_config.json` contém uma chave Elsevier em texto claro;
++`openalex_harvester/openalex_config.json` contém uma chave OpenAlex. Ambos estão
++commitados no repositório RSAC.
++
++> **Ação imediata, independente da migração:** revogar e reemitir as duas chaves
++> no portal do provedor, e remover os valores do histórico. A migração para a V2
++> não deve replicar esse padrão — ver §14.7 sobre armazenamento de credenciais.
++
++O `scopus_config.json` também traz caminhos absolutos de `OneDrive` corporativo,
++o que confirma o ponto de §13.6: a V1 é operada como ferramenta pessoal.
++
++---
++
++## 13.5 Como os defeitos se combinam no uso real
++
++O `bdtd_config.json` do autor descreve o caso de uso verdadeiro: **140 descritores
++booleanos de 3 termos, sem limite, em múltiplas bases.** Rastreando essa carga
++pela V2:
++
++1. Usuário seleciona BDTD + SciELO + OpenAlex, "Ilimitado", e clica em iniciar.
++2. As fontes rodam **em sequência**, não em paralelo (`harvesting_service.py:101`)
++   — apesar da UI prometer "Execução concorrente" (`HarvestPage.tsx:2`) e
++   "bases consultadas simultaneamente" (`HarvestPage.tsx:247`).
++3. BDTD começa. Páginas de 20 (P1-2), sem filtro de ano nem idioma (P1-7).
++   Nenhum evento de progresso aparece (P0-2). **A tela fica parada.**
++4. Cada registro passa pela dedup O(N²) com `fsync` (P0-3). Aos poucos milhares,
++   cada inserção leva centenas de milissegundos.
++5. O event loop trava; o `ping/pong` do WebSocket expira; o canal cai. **A tela
++   fica parada de vez** — e agora nem os contadores sobem.
++6. Os resumos da BDTD chegam corrompidos (P0-5). Os orientadores não chegam (P1-1).
++7. SciELO entra. O primeiro HTTP 500 transitório encerra o descritor sem aviso (P2-2).
++8. OpenAlex entra. Funciona — mas trunca em 10.000 por descritor e busca em
++   texto completo em vez de título+resumo (P1-4).
++9. Se o Scopus estiver marcado, ele registra `completed` com 0 registros (P0-4).
++
++A percepção "o OpenAlex até está funcionando, o resto não" é **exatamente o que
++esse encadeamento produz**. Não é impressão — é o comportamento esperado do
++código atual.
++
++---
++
++## 13.6 O que a V1 acerta e precisa ser preservado
++
++Vale nomear explicitamente, porque o risco de uma reescrita é jogar fora o
++conhecimento operacional junto com o código:
++
++1. **Regra do WAF da BDTD** (máx. 2 `filter[]`, idioma filtrado localmente) —
++   `bdtd_harvester.py:72-130`. Conhecimento não documentado em lugar nenhum.
++2. **Sanitização de descritor para o Lucene da BDTD** — remoção de aspas e
++   normalização NFKD para ASCII (`bdtd_harvester.py:809-810`). A V2 portou isso
++   corretamente (`harvesters/bdtd.py:26-33`); **manter**.
++3. **Aquecimento de sessão no SciELO** — GET inicial para obter cookies antes de
++   buscar (`scielo_harvester.py:354`). A V2 portou (`harvesters/scielo.py:135-137`);
++   **manter**.
++4. **Gravação em lote com UPSERT** — idempotência e velocidade
++   (`bdtd_harvester.py:701-735`).
++5. **Cursor paging no OpenAlex e no Scopus** — único jeito de passar dos 10k.
++6. **Abstract Retrieval do Scopus** — `scopus_harvester.py:173`.
++7. **Limpeza de campos** — `clean_creator_name`, `clean_advisor_name`,
++   `process_record_fields`, `translate_format`, `get_source_info`.
++8. **Backoff de 15s mínimo em HTTP 429** — `bdtd_harvester.py:858-860`. O backoff
++   genérico da V2 (`bdtd.py:152`, `5.0 * attempt`) é curto demais para o WAF da BDTD.
++
++Também vale dizer o que a V1 **não** tem e a V2 acerta em ter: modelo de projeto,
++protocolo PRISMA-ScR, deduplicação entre fontes, triagem por IA, exportação
++estruturada e uma interface. A V1 é uma coleção de cinco scripts CLI independentes,
++cada um com seu SQLite e seu Excel; unificar os resultados é trabalho manual.
++**A arquitetura da V2 é a direção certa** — o que falta é a profundidade da V1
++dentro dela.
++
++---
++
++## 13.7 Divergências entre o que a interface promete e o que o backend faz
++
++Registradas aqui porque afetam a confiança do usuário mesmo depois de a coleta
++funcionar:
++
++| Promessa na UI | Realidade | Evidência |
++|---|---|---|
++| "Execução concorrente de harvesters" | Sequencial | `HarvestPage.tsx:2` vs `harvesting_service.py:101` |
++| "bases consultadas simultaneamente" | Sequencial | `HarvestPage.tsx:247` |
++| "deduplicação de 3 passes" | Existe, mas O(N²) | `HarvestPage.tsx:216`, `dedup_service.py:63-107` |
++| Scopus selecionável | `enabled: false` é ignorado pela UI | `harvest.py:125` vs `HarvestPage.tsx:251` |
++| `msg.paper_id` no log de sucesso | Backend nunca envia esse campo | `HarvestPage.tsx:151` vs `harvesting_service.py:147-159` |
++| Painel "em tempo real" | Sem eventos de progresso | `HarvestPage.tsx:131` vs P0-2 |
++
++O último item de `paper_id` é menor mas sintomático: o log mostra `ID: N/A` em
++toda linha porque o backend nunca inclui o campo no broadcast.
++
++---
++
++## 13.8 Itens marcados **[A VALIDAR]**
++
++O ambiente onde esta análise foi feita tem rede restrita a registries de pacote
++(`bdtd.ibict.br` é bloqueado por política do proxy), então **nenhuma chamada real
++às bases foi executada.** Toda a análise acima é estática e baseada em código e
++configuração. Os pontos abaixo precisam de confirmação empírica na máquina do
++autor — os scripts para isso estão em `16_TESTES_VALIDACAO.md`:
++
++1. Comportamento exato do SQLAlchemy ao gravar `list` em coluna `Text` (P0-5):
++   coerção para string ou erro de bind.
++2. Se o WAF da BDTD ainda aplica o limite de 2 `filter[]` (regra da V1 pode ter
++   mudado do lado do servidor).
++3. Se `search.scielo.org` mantém o parâmetro `output=site` e a estrutura
++   `div.item` / `#TotalHits` usada pelo parser — scraping é frágil por natureza.
++4. Se a conta Elsevier do autor tem entitlement para `view=COMPLETE` sem `insttoken`.
++5. Taxa real de 429 da BDTD com página de 100 versus 20.
++6. Se `bs4` está presente no ambiente atual do autor por acaso (explicaria a V2
++   subir hoje apesar do P0-1).
++
++---
++
++## 13.9 Quadro comparativo consolidado
++
++| Capacidade | RSAC V1 | RSAC V2 | Doc de destino |
++|---|---|---|---|
++| BDTD — página | 100 | 20 | §14.3 |
++| BDTD — ordenação | `year` | `relevance` | §14.3 |
++| BDTD — filtros | 4 + regra WAF | nenhum | §14.3 |
++| BDTD — detalhes (orientador/instituição) | sim | não | §14.3 |
++| BDTD — resumo | join de lista | lista crua ❌ | §14.3 |
++| SciELO — retry | 5 tentativas, backoff | nenhum | §14.4 |
++| SciELO — campo de busca | configurável | fixo | §14.4 |
++| OpenAlex — paginação | cursor | offset (teto 10k) | §14.5 |
++| OpenAlex — campo | `title_and_abstract` | `search` genérico | §14.5 |
++| OpenAlex — filtros | 6 | nenhum | §14.5 |
++| PubMed — teto | 10.000 | 500 | §14.6 |
++| PubMed — rótulos do resumo | preservados | perdidos | §14.6 |
++| PubMed — pula já coletados | sim | não | §14.6 |
++| Scopus — resumo | COMPLETE + Abstract API | sempre vazio ❌ | §14.7 |
++| Scopus — insttoken | sim | não | §14.7 |
++| Persistência | lote + UPSERT | 1 commit/registro | §15.4 |
++| Dedup entre fontes | ❌ (só intra-fonte) | ✅ mas O(N²) | §15.4 |
++| Cancelar / retomar | idempotente por UPSERT | nenhum | §15.5 |
++| Progresso ao vivo | log de console | quebrado | §15.5 |
++| Protocolo / triagem / exportação | ❌ | ✅ | — |
++
++---
++
++**Próximo documento:** [`14_ESPECIFICACAO_COLETA.md`](./14_ESPECIFICACAO_COLETA.md) —
++o contrato-alvo de coleta e a especificação por fonte.
+diff --git a/planejamento/14_ESPECIFICACAO_COLETA.md b/planejamento/14_ESPECIFICACAO_COLETA.md
+new file mode 100644
+index 0000000..8c1fd98
+--- /dev/null
++++ b/planejamento/14_ESPECIFICACAO_COLETA.md
+@@ -0,0 +1,688 @@
++# 14 — Especificação Técnica da Camada de Coleta (alvo V2)
++
++> **Objetivo:** definir o contrato que todo coletor da V2 deve cumprir e a
++> especificação exata de cada fonte, incorporando o conhecimento operacional
++> validado da V1.
++>
++> Este documento é normativo: `13_DIAGNOSTICO_COLETA_V2.md` diz o que está
++> errado, este diz o que deve passar a existir, e
++> `15_PLANO_EXECUCAO.md` diz em que ordem construir.
++
++---
++
++## 14.1 Princípios de projeto
++
++Cinco princípios que resolvem, na raiz, as classes de defeito do documento 13.
++
++**1. Reprodutibilidade acima de tudo.**
++Uma revisão sistemática precisa ser auditável: dado o mesmo protocolo, a mesma
++data e a mesma base, a coleta deve retornar o mesmo conjunto. Isso proíbe
++ordenação por relevância e exige que toda execução registre a query literal
++enviada a cada fonte. Sem isso, o método não é publicável.
++
++**2. A fonte declara o que sabe fazer.**
++Nem toda base suporta todo filtro. Em vez de espalhar `if source == "BDTD"` pelo
++serviço, cada coletor publica suas `HarvesterCapabilities`. A UI usa isso para
++desabilitar controles; o orquestrador usa para decidir o que filtrar localmente.
++
++**3. Degradar, nunca desistir em silêncio.**
++Filtro não suportado nativamente vira pós-filtro local. Fonte sem credencial vira
++erro **visível** na run, não `completed` com zero. Falha transitória vira retry.
++Falha permanente vira `HarvestRunModel.error_message` legível em português.
++
++**4. Coletar é I/O; persistir é lote.**
++Coletores só produzem registros e nunca tocam o banco. A persistência acontece em
++lotes, fora do event loop. Essa separação é o que torna possível testar coletor
++com fixture de HTTP e testar persistência sem rede.
++
++**5. Toda execução é retomável.**
++Chave natural estável por fonte (`source_name` + `source_id`) e `UPSERT`. Rodar
++duas vezes converge para o mesmo estado — a propriedade que a V1 tinha de graça
++e a V2 perdeu.
++
++---
++
++## 14.2 O contrato
++
++### 14.2.1 `HarvestQuery` — entrada única e explícita
++
++Substitui os três parâmetros soltos de hoje (`descriptors`,
++`max_records_per_descriptor`, `on_progress`).
++
++```python
++# backend/app/harvesters/base.py
++
++@dataclass(frozen=True)
++class HarvestQuery:
++    """Recorte de busca, resolvido a partir do protocolo + overrides da execução."""
++
++    descriptors: list[str]
++
++    # Recorte
++    year_start: int | None = None
++    year_end: int | None = None
++    languages: list[str] = field(default_factory=list)      # ISO 639-1: pt, en, es
++    document_types: list[str] = field(default_factory=list) # ver 14.2.4
++    institutions: list[str] = field(default_factory=list)
++    open_access_only: bool = False
++
++    # Volume e ritmo
++    max_records_per_descriptor: int | None = None  # None = ilimitado
++    page_size: int | None = None                   # None = padrão da fonte
++    delay: float | None = None                     # None = padrão da fonte
++
++    # Enriquecimento (custa uma requisição extra por registro)
++    fetch_details: bool = True
++
++    # Reprodutibilidade
++    executed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
++```
++
++> `frozen=True` é deliberado: nenhum coletor pode alterar o recorte durante a
++> execução. O que foi pedido é o que fica registrado na run.
++
++### 14.2.2 `HarvesterCapabilities` — o que a fonte suporta nativamente
++
++```python
++@dataclass(frozen=True)
++class HarvesterCapabilities:
++    supports_year_range: bool = False
++    supports_language: bool = False
++    supports_document_type: bool = False
++    supports_institution: bool = False
++    supports_open_access: bool = False
++    supports_boolean_query: bool = True
++    max_native_filters: int | None = None   # BDTD = 2 (regra do WAF)
++    requires_api_key: bool = False
++    default_page_size: int = 25
++    max_page_size: int = 100
++    default_delay: float = 1.0
++```
++
++O orquestrador aplica a regra: **filtro pedido e não suportado nativamente vira
++pós-filtro local**, e o fato é registrado na run (`filters_applied_locally`),
++para que o relatório PRISMA descreva o método honestamente.
++
++`max_native_filters` é a generalização direta de `sanitize_bdtd_filters`
++(`bdtd_harvester.py:83`): quando o número de filtros nativos excede o teto, os
++excedentes descem para pós-filtro local em vez de serem descartados — melhoria
++sobre a V1, que os descartava com aviso (`bdtd_harvester.py:121-128`).
++
++### 14.2.3 `RawPaperRecord` — campos ampliados
++
++Adições sobre o modelo atual (`harvesters/base.py:16`), para não perder o que a
++V1 extrai:
++
++```python
++@dataclass
++class RawPaperRecord:
++    title: str
++    authors: str = ""
++    year: str = ""
++    abstract: str = ""
++    doi: str | None = None
++    source_name: str = ""
++    source_id: str = ""
++    download_url: str = ""
++    research_type: str = ""
++    institution: str = ""
++
++    # ── Novos ──────────────────────────────────────────────────
++    advisor: str = ""              # BDTD: orientador (P1-1)
++    journal: str = ""              # separado de `institution`
++    language: str = ""             # ISO 639-1, para pós-filtro
++    keywords: str = ""             # assuntos/descritores da fonte
++    matched_descriptor: str = ""   # qual descritor recuperou este registro
++    extra_metadata: dict[str, str] = field(default_factory=dict)
++
++    def __post_init__(self) -> None:
++        """Coerção defensiva: nenhuma fonte entrega list onde se espera str."""
++        for f in ("title", "authors", "abstract", "institution", "journal"):
++            v = getattr(self, f)
++            if isinstance(v, (list, tuple)):
++                setattr(self, f, " ".join(str(x).strip() for x in v if x).strip())
++            elif v is None:
++                setattr(self, f, "")
++```
++
++O `__post_init__` é a rede de segurança contra a classe inteira de defeitos do
++P0-5 (`summary` da BDTD chegando como lista). Não substitui a correção no parser
++— **corrija o parser também** — mas garante que o erro nunca volte a atravessar
++até o banco em silêncio.
++
++`matched_descriptor` é requisito de auditoria PRISMA: é preciso saber qual termo
++de busca recuperou cada estudo. A V1 já guardava isso (`keyword_query`,
++`scielo_harvester.py:430`); a V2 perdeu.
++
++`institution` e `journal` são coisas diferentes e hoje estão fundidos: em
++`harvesters/scielo.py:103` o nome do periódico é gravado no campo de instituição.
++Isso corrompe a exportação, que espera "Universidade / Editora / Revista" com
++semântica clara (`scielo_harvester.py:501`).
++
++### 14.2.4 Vocabulário canônico de tipos de documento
++
++Cada base usa nomenclatura própria. A normalização é obrigatória, senão o filtro
++por tipo não funciona entre fontes e a exportação fica ilegível — é o papel que
++`translate_format` (`bdtd_harvester.py:559`) e `translate_publication_type`
++cumpriam na V1, agora unificado num único enum.
++
++| Canônico | BDTD (VuFind) | OpenAlex | PubMed | Scopus | SciELO |
++|---|---|---|---|---|---|
++| `TESE` | `doctoralThesis` | `dissertation` | — | — | — |
++| `DISSERTACAO` | `masterThesis` | `dissertation` | — | — | — |
++| `ARTIGO` | `article` | `article` | `Journal Article` | `Article` | `Artigo` |
++| `REVISAO` | — | `review` | `Review` | `Review` | — |
++| `CAPITULO` | `bookPart` | `book-chapter` | — | `Chapter` | — |
++| `LIVRO` | `book` | `book` | — | `Book` | — |
++| `ANAIS` | — | `proceedings-article` | — | `Conference Paper` | — |
++| `PREPRINT` | — | `preprint` | `Preprint` | — | `Preprint` |
++| `OUTRO` | *(fallback)* | *(fallback)* | *(fallback)* | *(fallback)* | *(fallback)* |
++
++Implementar em `backend/app/domain/enums.py`, com `to_canonical(source, raw)` e
++`to_native(source, canonical)` — o segundo é necessário para montar o filtro
++nativo de cada base.
++
++### 14.2.5 A interface
++
++```python
++class BaseHarvester(ABC):
++    source_name: ClassVar[str]
++    capabilities: ClassVar[HarvesterCapabilities]
++
++    @abstractmethod
++    async def harvest(
++        self,
++        query: HarvestQuery,
++        on_progress: Callable[[HarvestProgress], Awaitable[None]] | None = None,
++    ) -> AsyncGenerator[RawPaperRecord, None]:
++        ...
++```
++
++Três mudanças obrigatórias em relação a hoje:
++
++1. `on_progress` é **`Awaitable`** e todo `on_progress(...)` vira
++   `await on_progress(...)` (corrige P0-2, segunda metade).
++2. Contadores agregados (`total_for_desc`) inicializam **antes** do laço de
++   descritores (corrige P2-3 — e isso precisa entrar **junto** com a correção do
++   P0-2, nunca depois).
++3. Nenhum coletor recebe `Session` do banco. Coletor não persiste.
++
++### 14.2.6 `HarvestProgress` — eventos com granularidade útil
++
++```python
++@dataclass
++class HarvestProgress:
++    source_name: str
++    phase: Literal["starting", "searching", "fetching_details", "done", "error"]
++    current_descriptor: str = ""
++    descriptor_index: int = 0
++    descriptor_total: int = 0
++    page: int = 0
++    records_this_descriptor: int = 0
++    records_total: int = 0
++    estimated_total: int | None = None   # resultCount / meta.count / TotalHits
++    retry_attempt: int = 0
++    message: str = ""
++    error: str | None = None
++```
++
++`descriptor_index/descriptor_total` é o que permite uma barra de progresso real
++("descritor 37 de 140"). Com 140 descritores e coleta ilimitada, saber que existe
++avanço é a diferença entre esperar e reiniciar o app. `estimated_total` já é lido
++por todas as fontes hoje, mas descartado — a BDTD lê `resultCount`
++(`bdtd.py:212`), o SciELO lê `#TotalHits` e apenas loga (`scielo.py:183-189`),
++o OpenAlex lê `meta.count` (`openalex.py:136-137`).
++
++**Regra de emissão:** progresso a cada página, **nunca por registro**. O
++`paper_harvested` por registro de hoje (`harvesting_service.py:147`) é uma
++mensagem WebSocket para cada paper — com 20.000 papers são 20.000 mensagens.
++Substituir por lote agregado a cada N registros ou T segundos (§15.5).
++
++---
++
++## 14.3 Especificação — BDTD (IBICT / VuFind)
++
++**Fonte da verdade da V1:** `bdtd_harvester/bdtd_harvester.py`
++
++### Endpoint e sessão
++
++| Item | Valor |
++|---|---|
++| Busca | `GET https://bdtd.ibict.br/vufind/api/v1/search` |
++| Espelho | `https://oasisbr.ibict.br/vufind/api/v1/search` |
++| Detalhe (HTML) | `GET https://bdtd.ibict.br/vufind/Record/{record_id}` |
++| Cookie obrigatório | `OasisbrVerify=verified_human` |
++| User-Agent | navegador realista |
++| **TLS** | **`verify` habilitado** (corrige P2-1) |
++
++### Parâmetros
++
++```python
++params = {
++    "lookfor": sanitize_bdtd_keyword(descriptor),
++    "type": "AllFields",       # ou Title, Author, Subject, Advisor
++    "sort": "year",            # NUNCA relevance (§14.1, princípio 1)
++    "page": page,
++    "limit": 100,              # padrão V1; 20 é 5x mais requisições
++    "field[]": REQUEST_FIELDS,
++}
++```
++
++`REQUEST_FIELDS` = `id, title, authors, subjects, languages, formats, urls,
++summary, publicationDates, institutions`.
++
++### Sanitização do descritor — **preservar exatamente**
++
++`harvesters/bdtd.py:26-33` já está correto e replica `bdtd_harvester.py:809-810`:
++remove aspas simples e duplas, normaliza NFKD para ASCII. O Lucene da BDTD
++degrada muito com acentos e busca por proximidade. **Não "melhorar" isso** sem
++medir — é um comportamento aprendido em produção.
++
++### Filtros e a regra do WAF
++
++O servidor rejeita com **HTTP 429** requisições com **3 ou mais `filter[]`**
++(`bdtd_harvester.py:72-80`). A regra:
++
++| Filtro | Nativo | Formato Solr |
++|---|---|---|
++| Ano | ✅ | `publishDate:[1970 TO 2023]` |
++| Tipo | ✅ | `format:doctoralThesis` |
++| Instituição | ✅ | `institution:USP` |
++| Idioma | ⚠️ **local** | pós-filtro sobre `languages` do registro |
++
++Idioma **sempre** desce para pós-filtro local, mesmo com folga no orçamento de
++filtros — foi a decisão da V1 (`bdtd_harvester.py:107-110`) e ela reduz a
++superfície de 429. Se ainda restarem mais de 2 filtros nativos, os excedentes
++(na ordem ano → tipo → instituição) também descem para local.
++
++```python
++capabilities = HarvesterCapabilities(
++    supports_year_range=True,
++    supports_document_type=True,
++    supports_institution=True,
++    supports_language=False,      # forçado a pós-filtro local
++    max_native_filters=2,
++    default_page_size=100, max_page_size=100,
++    default_delay=2.5,
++)
++```
++
++### Retry e rate limit
++
++- 5 tentativas, backoff exponencial fator 2,0 sobre o `delay` base.
++- **HTTP 429 → espera mínima de 15 s** (`bdtd_harvester.py:858-860`). O
++  `5.0 * attempt` atual (`bdtd.py:152`) é curto demais para o WAF.
++- Alternar entre `bdtd.ibict.br` e `oasisbr.ibict.br` só depois de esgotar o
++  retry na primária — não a cada tentativa como hoje (`bdtd.py:142`), que
++  mascara a origem da falha.
++- Toda resposta não-200 é **logada com status e corpo truncado** (corrige o
++  ramo mudo de P2-2).
++
++### Enriquecimento por raspagem (`fetch_details=True`)
++
++Portar `scrape_record_details` (`bdtd_harvester.py:577`): metatags Dublin Core
++do `<head>` mais os pares `<th>/<td>` das tabelas de detalhe. Daí derivar:
++
++| Campo alvo | Origem | Função da V1 a portar |
++|---|---|---|
++| `advisor` | `Orientador(a):` → fallback `dc.contributor.none.fl_str_mv` | `clean_advisor_name:153` |
++| `institution` | `instname_str` / `Instituição de defesa:` / … | `get_source_info:626` |
++| `research_type` | `format` do detalhe → fallback `formats[0]` | `translate_format:559` |
++| `authors` | `authors` da API | `clean_creator_name:133` |
++| `download_url` | `urls[0]` → `Link de acesso:` → `url` → URL do registro | `extract_url:546` + `:964-969` |
++| `abstract` + `advisor` | correção de campos trocados | `process_record_fields:195` |
++
++**Custo:** uma requisição HTTP extra por registro, com pausa de cortesia de 1 s
++(`bdtd_harvester.py:934`). Numa coleta de 5.000 registros são ~85 minutos só de
++raspagem. Por isso `fetch_details` é opcional e exposto na UI como
++*"Coleta rápida (sem orientador e instituição de defesa)"*.
++
++**Otimização que a V1 não tem:** raspar detalhes **apenas** de registros que
++sobreviveram à deduplicação intra-execução, e com concorrência limitada
++(`asyncio.Semaphore(4)`) em vez de sequencial. Isso corta a maior parte do custo
++com os 140 descritores sobrepostos do caso real.
++
++### Parsing — correções obrigatórias
++
++```python
++# ❌ hoje (bdtd.py:197) — summary é list
++abstract=rec.get("summary", "") or ...
++
++# ✅ alvo (paridade com bdtd_harvester.py:923-924)
++summaries = rec.get("summary") or []
++abstract = " ".join(s.strip() for s in summaries if s).strip()
++```
++
++Deduplicação intra-execução por `record_id` antes de qualquer trabalho caro
++(`seen_record_ids`, `bdtd_harvester.py:873`) — corrige P2-4.
++
++---
++
++## 14.4 Especificação — SciELO
++
++**Fonte da verdade da V1:** `scielo_harvester/scielo_harvester.py`
++
++| Item | Valor |
++|---|---|
++| Busca | `GET https://search.scielo.org/` |
++| Página | 15 (fixo pelo portal) |
++| Paginação | `from` = offset **começando em 1**, `count` = 15 |
++| Parâmetros | `q`, `lang=pt`, `count`, `from`, `output=site`, `where` (opcional) |
++| Aquecimento | GET na raiz antes de buscar — **manter** (`scielo.py:135`) |
++
++⚠️ SciELO é a única fonte por **raspagem de HTML**, portanto a mais frágil.
++Qualquer mudança de layout do portal quebra o parser em silêncio. Mitigação em
++§16.4 (teste canário).
++
++### Retry — a correção mais importante desta fonte
++
++Portar a estratégia da V1 (`scielo_harvester.py:341-349`) para `httpx`:
++
++```python
++transport = httpx.AsyncHTTPTransport(retries=3)
++RETRY_STATUS = {429, 500, 502, 503, 504}
++# backoff 1.5 ** tentativa, até 5 tentativas
++```
++
++`httpx.AsyncHTTPTransport(retries=)` só cobre erros de **conexão**, não status
++HTTP. O retry por status precisa ser um laço explícito no coletor — não basta
++configurar o transporte. Isso corrige P2-2, o defeito que silenciosamente
++esburaca a coleta do SciELO.
++
++### Filtros
++
++O portal expõe pouco de forma estável. Postura conservadora:
++
++```python
++capabilities = HarvesterCapabilities(
++    supports_year_range=False,     # pós-filtro local sobre `year`
++    supports_language=False,       # pós-filtro local
++    supports_document_type=False,  # pós-filtro (Artigo vs Preprint)
++    default_page_size=15, max_page_size=15,
++    default_delay=2.5,
++)
++```
++
++Tudo local. Com `estimated_total` vindo de `#TotalHits`, dá para avisar o usuário
++quando o pós-filtro descarta a maior parte do recuperado.
++
++### Parsing
++
++`parse_scielo_item` (`harvesters/scielo.py:29`) é uma porta fiel de
++`parse_item` (`scielo_harvester.py:236`) e está **correta**. Ajustes:
++
++1. `journal` no campo `journal`, **não** em `institution` (§14.2.3).
++2. Usar `RE_TOTAL_HITS` (`scielo.py:25`), hoje declarada e nunca usada, como
++   fallback quando `#TotalHits` não existir — a V1 faz isso
++   (`scielo_harvester.py:393-396`).
++3. Preencher `matched_descriptor` (equivalente a `keyword_query` da V1).
++4. `doi`: hoje cai para `doi_text` cru quando a regex não casa
++   (`scielo.py:91`). Preferir `None` a gravar lixo no campo de DOI — DOI sujo
++   contamina o passo 1 da deduplicação.
++
++---
++
++## 14.5 Especificação — OpenAlex
++
++**Fonte da verdade da V1:** `openalex_harvester/openalex_harvester.py`
++
++Esta é a fonte que "funciona" e que, mesmo assim, precisa de três correções
++estruturais.
++
++### Paginação — cursor, obrigatoriamente
++
++```python
++# ❌ hoje (openalex.py:71-76): teto de 10.000
++params = {"search": desc, "per-page": 25, "page": page, "mailto": mail}
++
++# ✅ alvo (paridade com openalex_harvester.py:512-515)
++params = {"per_page": 50, "cursor": cursor}   # cursor inicial "*"
++# a cada resposta: cursor = data["meta"]["next_cursor"]; parar quando None
++```
++
++### Query — título e resumo, não texto completo
++
++```python
++filter_parts = [f"title_and_abstract.search:{descriptor}"]
++```
++
++`search=` genérico busca em texto completo indexado e traz ruído
++desproporcional. Para revisão sistemática, o recorte título+resumo é o padrão
++metodológico — e é o que a V1 usa (`openalex_harvester.py:523`).
++
++### Filtros nativos (todos suportados)
++
++| Filtro | Expressão |
++|---|---|
++| Faixa de anos | `publication_year:1970-2023` |
++| A partir de | `publication_year:>=2015` |
++| Idioma (multi) | `language:pt\|en\|es` |
++| Tipo | `type:article` |
++| Acesso aberto | `is_oa:true` |
++
++Todos concatenados por vírgula em `filter=` (`openalex_harvester.py:526-534`).
++
++```python
++capabilities = HarvesterCapabilities(
++    supports_year_range=True, supports_language=True,
++    supports_document_type=True, supports_open_access=True,
++    default_page_size=50, max_page_size=200, default_delay=0.3,
++)
++```
++
++### Polite pool
++
++`mailto` no **User-Agent** (`openalex_harvester.py:450`), não só na query string,
++e `api_key` quando houver (`:485`). Sem isso, o OpenAlex despriorizará requisições
++em volume alto.
++
++### Parsing
++
++`_reconstruct_abstract` (`openalex.py:28`) está correta — mantém. Ajustes:
++
++1. `title` pode ser `None` no OpenAlex; `openalex.py:118` faz
++   `work.get("title", "").strip()`, que levanta `AttributeError` quando a chave
++   existe com valor `None`. A V1 protege com
++   `work.get("title") or work.get("display_name") or ""`
++   (`openalex_harvester.py:~580`). **Corrigir.**
++2. `source_id`: normalizar removendo o prefixo de URL (`W2741809807`, não
++   `https://openalex.org/W2741809807`) — `openalex_harvester.py:~576`.
++3. `language` do trabalho para o campo novo.
++4. Separar `journal` (`primary_location.source.display_name`) de `institution`
++   (afiliação do primeiro autor) — hoje o nome do periódico vai para
++   `institution` (`openalex.py:115`).
++
++---
++
++## 14.6 Especificação — PubMed (NCBI E-utilities)
++
++**Fonte da verdade da V1:** `pubmed_harvester/pubmed_harvester.py`
++
++> Nota de escopo: `.agents/AGENTS.md` registra que o domínio-alvo do produto é
++> Ciências Sociais Aplicadas e Desenvolvimento Regional, **não** saúde. O PubMed
++> é secundário aqui — deve funcionar corretamente, mas não é prioridade de
++> validação. Ver §15.2.
++
++| Item | Valor |
++|---|---|
++| Busca | `esearch.fcgi` — `db=pubmed`, `retmode=json`, `retmax=10000` |
++| Detalhe | `efetch.fcgi` — `retmode=xml`, lotes de **100** PMIDs |
++| Ritmo | 0,35 s sem chave; 0,15 s com chave |
++| Chave | `api_key` → 10 req/s |
++
++Correções sobre a V2:
++
++1. **`retmax=10000`** e paginação por `retstart` quando o total exceder — hoje
++   trava em 500 (`pubmed.py:44`).
++2. **Lote de 100** no `efetch` (V2 usa 25 — `pubmed.py:79`).
++3. **Preservar rótulos das seções do resumo**: `AbstractText` tem atributo
++   `Label` (`BACKGROUND`, `METHODS`, `RESULTS`, `CONCLUSIONS`). A V1 monta
++   `"RÓTULO: texto"` (`pubmed_harvester.py:430-434`); a V2 descarta
++   (`pubmed.py:116-120`). A triagem por IA usa essa estrutura.
++4. **Pular PMIDs já coletados** antes do `efetch` (§13.3, P1-5).
++5. Filtros nativos por sintaxe de query, não por parâmetro:
++   `("2015"[PDAT] : "2023"[PDAT])`, `AND english[LANG]`, `AND Review[PT]`.
++
++```python
++capabilities = HarvesterCapabilities(
++    supports_year_range=True, supports_language=True, supports_document_type=True,
++    requires_api_key=False,   # opcional, mas fortemente recomendada
++    default_page_size=100, max_page_size=10000, default_delay=0.35,
++)
++```
++
++---
++
++## 14.7 Especificação — Scopus (Elsevier)
++
++**Fonte da verdade da V1:** `scopus_harvester/scopus_harvester.py`
++
++| Item | Valor |
++|---|---|
++| Busca | `GET https://api.elsevier.com/content/search/scopus` |
++| Resumo | `GET https://api.elsevier.com/content/abstract/eid/{eid}?view=META_ABS` |
++| Cabeçalhos | `X-ELS-APIKey`, `X-ELS-Insttoken` (opcional) |
++| View | **`COMPLETE`** (V2 usa `STANDARD`) |
++| Paginação | cursor (`cursor=*`), offset como fallback |
++
++### O problema do resumo — correção crítica
++
++`scopus.py:103` grava `abstract=""` sempre. Solução em dois níveis, como na V1:
++
++1. `view=COMPLETE` retorna `dc:description` na própria busca.
++2. Quando ainda vier vazio, chamar a **Abstract Retrieval API** por EID
++   (`scopus_harvester.py:173`), tratando `dc:description` que chega ora como
++   `str`, ora como `{"$": "..."}` (`:193`).
++
++Sem resumo, o Scopus é inútil para triagem — o produto inteiro depende disso.
++
++### Credenciais e falha visível
++
++```python
++capabilities = HarvesterCapabilities(
++    supports_year_range=True, supports_document_type=True, supports_open_access=True,
++    requires_api_key=True,
++    default_page_size=25, max_page_size=200, default_delay=1.0,
++)
++```
++
++Sem chave, o coletor deve **levantar `MissingCredentialsError`**, não retornar
++vazio (`scopus.py:34-36`). O orquestrador marca a run como `failed` com
++`error_message` acionável: *"Scopus requer chave de API. Configure em
++Configurações → Bases de Dados."* Corrige o "zero silencioso" do P0-4.
++
++Filtros nativos: `PUBYEAR > 2014 AND PUBYEAR < 2024`, `AND DOCTYPE(ar)`,
++`AND OPENACCESS(1)`, dentro da própria string de query.
++
++### Armazenamento de credenciais
++
++Hoje não há onde guardá-las (§13.2, P0-4). Proposta — nova tabela, em vez de
++esticar `AISettingsModel`:
++
++```python
++class SourceCredentialModel(Base):
++    __tablename__ = "source_credentials"
++    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
++    source_name: Mapped[str] = mapped_column(String(50), unique=True)   # SCOPUS, PUBMED, OPENALEX
++    api_key_encrypted: Mapped[str] = mapped_column(Text, default="")
++    extra_encrypted: Mapped[str] = mapped_column(Text, default="{}")    # insttoken, mailto
++    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
++```
++
++Regras não negociáveis, dado o precedente de chaves versionadas da V1 (P2-6):
++
++- Criptografia em repouso com a mesma estratégia já usada em
++  `AISettingsModel.api_keys_encrypted`.
++- A API **nunca** devolve a chave; devolve `has_key: bool` e os 4 últimos dígitos.
++- Nenhuma chave em log, nem em `error_message` de run.
++- Nenhum arquivo de exemplo com chave real — e as duas chaves atualmente
++  versionadas na V1 devem ser **revogadas hoje**, sem esperar a migração.
++
++---
++
++## 14.8 Resolução do recorte de busca (protocolo → query)
++
++Hoje o protocolo só guarda descritores (`schemas/protocol.py:50`). O recorte
++precisa virar parte do protocolo — é decisão metodológica registrável, não
++parâmetro de execução.
++
++### Novo bloco em `ProtocolModel`
++
++```python
++search_filters: Mapped[str] = mapped_column(Text, default="{}")  # JSON
++```
++
++```jsonc
++{
++  "year_start": 1970,
++  "year_end": 2023,
++  "languages": ["pt", "en", "es"],
++  "document_types": ["TESE", "DISSERTACAO", "ARTIGO"],
++  "institutions": [],
++  "open_access_only": false
++}
++```
++
++Esse é exatamente o recorte do `bdtd_config.json` real do autor
++(`publishDate: "[1970 TO 2023]"`, `language: "Português, Inglês, Espanhol"`),
++agora expressável na V2 e aplicável a **todas** as fontes de uma vez — ganho
++sobre a V1, onde o mesmo recorte precisava ser repetido em cinco arquivos JSON.
++
++### Precedência
++
++`HarvestStartRequest` pode sobrescrever por execução (para testes-piloto), mas o
++padrão vem do protocolo:
++
++```
++HarvestQuery = protocolo.search_filters ← sobrescrito por → HarvestStartRequest
++```
++
++A run grava o `HarvestQuery` **efetivo** serializado, não o do protocolo — o
++protocolo muda ao longo do projeto e a run precisa registrar o que de fato rodou.
++
++### Sobre a regra dos pares de descritores
++
++`.agents/AGENTS.md` estabelece: máximo 2 termos por par, máximo 5 pares por
++idioma. Mas os configs reais da V1 usam **3 termos** e **140 descritores**
++(`"movimento sanitarista" AND "crítica" AND "Brasil"`).
++
++Essa tensão precisa de decisão explícita — ela muda o dimensionamento de todo o
++resto (140 descritores × ilimitado é uma ordem de grandeza distinta de 15 × 500):
++
++- **A regra é limite duro da BDTD?** Então a V2 deve validar e recusar strings
++  com 3+ termos, e o autor precisa ajustar seus configs.
++- **A regra é orientação para a IA que *sugere* descritores?** Então a validação
++  não se aplica a descritores escritos à mão, e o campo aceita o que o usuário
++  digitar.
++
++A leitura do texto do `AGENTS.md` ("Ao sugerir, elaborar ou configurar…") aponta
++para a **segunda** — é guia de geração, não invariante de sistema. A recomendação
++deste plano é: **avisar, não bloquear** — a UI mostra alerta em descritores com
++3+ termos, explicando o risco de sobrecarga do VuFind, e permite prosseguir.
++⚠️ **Confirmar com o autor antes da Fase 1** (§15.3), pois é premissa de escala.
++
++---
++
++## 14.9 Matriz consolidada de capacidades
++
++| | BDTD | SciELO | OpenAlex | PubMed | Scopus |
++|---|:---:|:---:|:---:|:---:|:---:|
++| Faixa de anos | ✅ nativo | 🔄 local | ✅ nativo | ✅ query | ✅ query |
++| Idioma | 🔄 local (WAF) | 🔄 local | ✅ nativo | ✅ query | 🔄 local |
++| Tipo de documento | ✅ nativo | 🔄 local | ✅ nativo | ✅ query | ✅ query |
++| Instituição | ✅ nativo | ❌ | 🔄 local | ❌ | 🔄 local |
++| Acesso aberto | ❌ | ❌ | ✅ nativo | ❌ | ✅ query |
++| Máx. filtros nativos | **2** | — | ilimitado | ilimitado | ilimitado |
++| Paginação | offset | offset | **cursor** | retstart | **cursor** |
++| Página padrão | 100 | 15 | 50 | 100 | 25 |
++| Requer chave | não | não | opcional | opcional | **sim** |
++| Resumo na busca | ✅ | ✅ | ✅ | ✅ | ⚠️ 2ª chamada |
++| Requisição extra/registro | ⚠️ detalhes | não | não | não | ⚠️ resumo |
++| Delay padrão | 2,5 s | 2,5 s | 0,3 s | 0,35 s | 1,0 s |
++
++✅ nativo · 🔄 pós-filtro local · ❌ não suportado · ⚠️ custo extra
++
++---
++
++**Próximo documento:** [`15_PLANO_EXECUCAO.md`](./15_PLANO_EXECUCAO.md) — fases,
++tarefas e critérios de aceite.
+diff --git a/planejamento/15_PLANO_EXECUCAO.md b/planejamento/15_PLANO_EXECUCAO.md
+new file mode 100644
+index 0000000..d33991b
+--- /dev/null
++++ b/planejamento/15_PLANO_EXECUCAO.md
+@@ -0,0 +1,588 @@
++# 15 — Plano de Execução do Desenvolvimento
++
++> **Objetivo:** transformar o diagnóstico (doc 13) e a especificação (doc 14) em
++> uma sequência executável de trabalho, com critérios de aceite verificáveis.
++>
++> Cada fase entrega valor observável e é independentemente reversível. A ordem
++> **não é negociável** em dois pontos, marcados com ⛔ — há dependências onde
++> inverter a ordem transforma bug silencioso em crash.
++
++---
++
++## 15.1 Estratégia
++
++**Refatorar por dentro, não reescrever.** A arquitetura da V2 (FastAPI + camadas
+++ ORM + Electron) está certa; o que falta é profundidade de comportamento. Cada
++fase troca o miolo de um componente mantendo a fronteira, para que a aplicação
++continue subindo entre fases.
++
++**A V1 é o oráculo.** Ela roda em produção há tempo suficiente para que seu
++comportamento seja a especificação de fato. Onde V1 e V2 divergem, **V1 vence
++por padrão** — desvios exigem justificativa escrita. A Fase 6 mede isso
++numericamente.
++
++**Validação primeiro, funcionalidade depois.** A Fase 0 existe para que qualquer
++afirmação sobre "funciona" passe a ser verificável. Sem isso, cada correção
++posterior é fé.
++
++### Sequência
++
++```
++Fase 0 ─ Estabilização e observabilidade         (~1 dia)   ⛔ bloqueia tudo
++   │
++Fase 1 ─ Contrato de coleta e filtros ponta a ponta (~4 dias)
++   │
++   ├── Fase 2 ─ Coletores em paridade com a V1   (~7 dias)  ← maior esforço
++   │
++   └── Fase 3 ─ Execução: jobs, cancelamento, progresso (~4 dias)
++              │
++        Fase 4 ─ Deduplicação e persistência escaláveis (~3 dias)
++              │
++        Fase 5 ─ Enriquecimento (detalhes BDTD, resumo Scopus) (~3 dias)
++              │
++        Fase 6 ─ Validação de paridade e fechamento PRISMA (~3 dias)
++```
++
++Fases 2 e 3 são paralelizáveis: tocam arquivos disjuntos (`harvesters/` vs
++`services/` + `api/`), acopladas apenas pelo contrato congelado na Fase 1.
++
++**Estimativa total: 21–25 dias úteis** para uma pessoa. Com Fases 2 e 3 em
++paralelo, ~17 dias.
++
++---
++
++## 15.2 Escopo: dentro, fora, e por quê
++
++**Dentro:**
++- Correção completa de BDTD, SciELO e OpenAlex (as três fontes do caso de uso real)
++- Contrato de coleta, filtros ponta a ponta, credenciais de fontes
++- Execução de jobs com cancelamento, retomada e progresso real
++- Deduplicação escalável e persistência em lote
++- Suíte de validação de paridade V1↔V2
++
++**Fora (registrado, não esquecido):**
++- **PubMed em profundidade** — `.agents/AGENTS.md` define o domínio como Ciências
++  Sociais Aplicadas, não saúde. Recebe as correções estruturais da Fase 2
++  (paginação, rótulos de resumo) mas **não** entra na validação de paridade da
++  Fase 6. Custo-benefício ruim para o uso real.
++- **Migração de dados da V1** — os SQLite da V1 (`2_bdtd_metadata.db` etc.) não
++  são importados. Se o autor quiser aproveitar coletas anteriores, isso é um
++  épico próprio (mapear 5 esquemas distintos para o modelo unificado). **Decidir
++  na Fase 1** se entra no escopo.
++- **Novas bases** (Web of Science, Dimensions, CAPES) — só depois da paridade.
++- **Redesenho da triagem por IA** — funciona; melhorias são backlog separado.
++
++---
++
++## 15.3 Decisões que precisam do autor antes da Fase 1
++
++Três premissas mudam o dimensionamento do trabalho. Nenhuma bloqueia a Fase 0.
++
++| # | Questão | Impacto se não decidida |
++|---|---|---|
++| 1 | **Descritores: par obrigatório ou orientação?** (§14.8) | 140 descritores × ilimitado vs 15 × 500 é uma ordem de grandeza no dimensionamento das Fases 3 e 4 |
++| 2 | **Importar dados das coletas V1?** | Épico adicional de ~4 dias |
++| 3 | **Scopus e PubMed continuam no produto?** | Se sim, Fase 2 cresce ~3 dias e credenciais viram P0 |
++
++Recomendação deste plano, caso a decisão não venha a tempo: (1) avisar sem
++bloquear; (2) não importar; (3) manter ambos, mas fora da validação de paridade.
++
++---
++
++## Fase 0 — Estabilização e observabilidade ⛔
++
++**Duração:** ~1 dia · **Objetivo:** a aplicação sobe em máquina limpa e é possível
++observar o que a coleta faz.
++
++Nada aqui muda comportamento de coleta. É o piso para tudo o que vem depois.
++
++### Tarefas
++
++**0.1 · Declarar as dependências ausentes** — corrige P0-1
++
++```toml
++# backend/pyproject.toml
++"beautifulsoup4>=4.12.0",
++"lxml>=5.3.0",
++"pandas>=2.2.0",
++```
++
++`lxml` porque `html.parser` é tolerante demais com o HTML do SciELO e produz
++parsing inconsistente em páginas malformadas. Trocar
++`BeautifulSoup(res.text, "html.parser")` por `"lxml"` em `harvesters/scielo.py:175`.
++
++**0.2 · Restabelecer a verificação TLS** — corrige P2-1
++
++Remover `verify=False` de `harvesters/bdtd.py:108`. Se a cadeia do IBICT
++realmente falhar, apontar um bundle de CA explícito — **nunca** desligar.
++Registrar o resultado, é insumo do doc 16.
++
++**0.3 · Corrigir o escopo de `total_for_desc`** — corrige P2-3 ⛔
++
++Mover a inicialização para **antes** do laço de descritores nos cinco coletores
++(`bdtd.py:115`, `scielo.py:147`, `openalex.py:56`, `pubmed.py:43`,
++`scopus.py:46`).
++
++> ⛔ **Precede obrigatoriamente 0.4.** Hoje o `NameError` está escondido atrás de
++> `if on_progress:` com `on_progress` sempre `None`. Ligar o progresso antes de
++> corrigir o escopo transforma um bug latente em crash de produção.
++
++**0.4 · Ligar o progresso ponta a ponta** — corrige P0-2
++
++Três mudanças que precisam entrar **juntas**:
++
++1. `base.py:53` → `Callable[[HarvestProgress], Awaitable[None]] | None`
++2. Todo `on_progress(...)` nos coletores → `await on_progress(...)`
++3. `harvesting_service.py:135` → passar `on_progress=on_progress_callback`
++
++**0.5 · Reconciliar runs fantasma na subida** — parte de P2-5
++
++No `lifespan` de `app/main.py`: todo `HarvestRunModel` com `status == "running"`
++vira `failed` com `error_message = "Interrompida por reinício do servidor."`
++Sem isso, a UI mostra coletas eternamente "em execução".
++
++**0.6 · Log estruturado da coleta**
++
++Handler dedicado gravando em `settings.data_dir / "logs" / "harvest-{date}.log"`,
++com nível ajustável. A V1 fazia isso por fonte (`setup_logging`,
++`bdtd_harvester.py:30`) e foi o que permitiu diagnosticar problemas em produção.
++Hoje a V2 loga para stdout, que no Electron empacotado **não vai para lugar nenhum**.
++
++**0.7 · Corrigir o `enabled` ignorado na UI**
++
++`HarvestPage.tsx:251-270` deve desabilitar visualmente fontes com
++`enabled: false` e explicar o motivo ("requer chave de API").
++
++### Critérios de aceite
++
++- [ ] `pip install -e .` em venv limpo → `uvicorn app.main:app` sobe sem erro
++- [ ] `python -c "from app.harvesters.factory import HarvesterFactory"` funciona
++- [ ] Nenhum `verify=False` no código (`grep -rn "verify=False" backend/`)
++- [ ] Coleta com `descriptors=[]` e `descriptors=["  "]` não levanta `NameError`
++- [ ] `harvest_progress` chega ao navegador (visível no DevTools → Network → WS)
++- [ ] Arquivo de log criado em `data_dir/logs/`
++- [ ] Backend reiniciado no meio de uma coleta → run aparece como `failed`
++
++---
++
++## Fase 1 — Contrato de coleta e filtros ponta a ponta
++
++**Duração:** ~4 dias · **Objetivo:** o recorte de busca do autor
++(`1970–2023`, `pt/en/es`, teses+dissertações) passa a ser expressável e chega
++até os coletores.
++
++Esta fase congela o contrato do qual as Fases 2 e 3 dependem. **Terminar antes
++de paralelizar.**
++
++### Tarefas
++
++**1.1 · Contrato** (`backend/app/harvesters/base.py`) — §14.2
++
++`HarvestQuery`, `HarvesterCapabilities`, `RawPaperRecord` ampliado com
++`__post_init__` defensivo, `HarvestProgress` com fases.
++
++**1.2 · Vocabulário canônico** (`backend/app/domain/enums.py`) — §14.2.4
++
++`DocumentType` + `to_canonical(source, raw)` + `to_native(source, canonical)`.
++Tabelas de mapeamento como dados, não `if/elif` — a V1 usava cadeias de `elif`
++(`translate_format`, `bdtd_harvester.py:559`) e isso não escala para 5 fontes.
++
++**1.3 · Persistir o recorte no protocolo** — §14.8
++
++- `ProtocolModel.search_filters` (Text/JSON) + migração Alembic
++- `ProtocolUpdate` / `ProtocolResponse` com `search_filters`
++- Resolução: protocolo → sobrescrito por `HarvestStartRequest`
++
++**1.4 · Credenciais de fontes** — §14.7, corrige P0-4
++
++- `SourceCredentialModel` + migração
++- `GET/PUT /api/v1/settings/sources` — resposta **nunca** inclui a chave, só
++  `has_key` e 4 últimos dígitos
++- `HarvesterFactory` passa a receber as credenciais resolvidas
++- `MissingCredentialsError` em `domain/exceptions.py`
++
++**1.5 · Registro em vez de `if/elif`** (`harvesters/factory.py`)
++
++```python
++_REGISTRY: dict[str, type[BaseHarvester]] = {}
++
++def register(cls): _REGISTRY[cls.source_name.upper()] = cls; return cls
++```
++
++`GET /harvest/sources` passa a derivar de `capabilities` em vez da lista
++hardcoded (`api/v1/harvest.py:96-127`), que hoje já diverge da fábrica.
++
++**1.6 · UI de filtros**
++
++- `ProtocolPage`: bloco "Recorte da Busca" (anos, idiomas, tipos, acesso aberto)
++- `HarvestPage`: resumo do recorte vigente + aviso de pós-filtro local, dirigido
++  por `capabilities` — o usuário precisa ver que "idioma na BDTD é filtrado
++  depois de baixar"
++- `SettingsPage`: chaves de API por base
++- Aviso (não bloqueio) em descritores com 3+ termos — pendente da decisão §15.3
++
++### Critérios de aceite
++
++- [ ] Recorte salvo no protocolo sobrevive a reinício do backend
++- [ ] `HarvestQuery` construído a partir do protocolo, com override por execução
++- [ ] `GET /settings/sources` nunca devolve a chave em claro (teste automatizado)
++- [ ] Chave do Scopus persiste e é lida pela fábrica
++- [ ] UI desabilita filtros não suportados e explica o porquê
++- [ ] `HarvestRunModel` grava o `HarvestQuery` efetivo serializado
++
++---
++
++## Fase 2 — Coletores em paridade com a V1
++
++**Duração:** ~7 dias · **Objetivo:** cada coletor recupera o mesmo volume e a
++mesma qualidade de metadados que o script V1 equivalente.
++
++Maior fase e o coração do problema. Ordem por impacto no uso real.
++
++### 2.1 · BDTD (~2,5 dias) — §14.3
++
++| Correção | Refs |
++|---|---|
++| `summary` list → join | P0-5 · `bdtd.py:197` vs `bdtd_harvester.py:923` |
++| Página 20 → 100 | P1-2 · `bdtd.py:117` |
++| `sort` relevance → year | P1-2 · `bdtd.py:134` |
++| Filtros + regra WAF (máx 2) | P1-3 · portar `sanitize_bdtd_filters:83` |
++| Pós-filtro local de idioma | `bdtd_harvester.py:835-844` |
++| Backoff de 15 s em 429 | P2-2 · `bdtd_harvester.py:858-860` |
++| Espelho só após esgotar retry | P2-2 · `bdtd.py:142` |
++| Logar respostas não-200 | P2-2 (ramo mudo) |
++| Dedup intra-execução por `record_id` | P2-4 · `bdtd_harvester.py:873` |
++| `matched_descriptor` | §14.2.3 |
++
++Raspagem de detalhes fica na **Fase 5** (é opcional e cara).
++
++### 2.2 · SciELO (~1,5 dia) — §14.4
++
++| Correção | Refs |
++|---|---|
++| **Retry por status** (429/5xx, backoff 1.5, 5 tentativas) | P2-2 · `scielo_harvester.py:341-349` |
++| `journal` fora de `institution` | §14.2.3 · `scielo.py:103` |
++| `RE_TOTAL_HITS` como fallback | `scielo.py:25` (morta) vs `scielo_harvester.py:393` |
++| DOI inválido → `None`, não texto cru | `scielo.py:91` |
++| Pós-filtros locais (ano, idioma, tipo) | §14.4 |
++| `matched_descriptor` | §14.2.3 |
++
++⚠️ Único coletor por raspagem. Fixtures de HTML são obrigatórias (doc 16).
++
++### 2.3 · OpenAlex (~1,5 dia) — §14.5
++
++Sim, mesmo "funcionando".
++
++| Correção | Refs |
++|---|---|
++| **Cursor paging** (remove teto de 10k) | P1-4 · `openalex.py:74` vs `openalex_harvester.py:515` |
++| `title_and_abstract.search` | P1-4 · `openalex.py:72` |
++| Página 25 → 50 | `openalex.py:57` |
++| `title` `None` → `AttributeError` | `openalex.py:118` |
++| `source_id` sem prefixo de URL | §14.5 |
++| Filtros nativos (ano, idioma, tipo, OA) | P1-7 |
++| `mailto` no User-Agent + `api_key` | `openalex_harvester.py:450, 485` |
++| `journal` fora de `institution` | `openalex.py:115` |
++
++### 2.4 · PubMed (~1 dia) — §14.6
++
++`retmax=10000` + `retstart`; lote 25 → 100; rótulos do resumo preservados; pular
++PMIDs já coletados; filtros por sintaxe de query.
++
++### 2.5 · Scopus (~1 dia) — §14.7
++
++`view=COMPLETE`; **Abstract Retrieval** quando o resumo vier vazio (P1-6);
++cursor paging; `insttoken`; `MissingCredentialsError` em vez de retorno vazio
++(P0-4).
++
++### Critérios de aceite
++
++- [ ] Para cada fonte, mesmo descritor e recorte da V1 → contagem dentro de **±5%**
++- [ ] BDTD: 100% dos registros com resumo em `str` (nunca `list`)
++- [ ] BDTD: 3 filtros pedidos → no máximo 2 `filter[]` na URL (asserção sobre a requisição)
++- [ ] SciELO: HTTP 500 injetado → retry, sem perder o descritor
++- [ ] OpenAlex: descritor com >10.000 resultados → passa dos 10.000
++- [ ] Scopus: >90% dos registros com resumo não vazio
++- [ ] Scopus sem chave → run `failed` com mensagem acionável, não `completed` 0
++- [ ] Todo registro tem `matched_descriptor` preenchido
++
++---
++
++## Fase 3 — Execução: jobs, cancelamento e progresso
++
++**Duração:** ~4 dias · **Objetivo:** coleta longa é observável, cancelável e não
++derruba o servidor. Corrige P0-3(c) e P2-5.
++
++### 3.1 · Tirar a coleta do event loop da API
++
++`BackgroundTasks` (`api/v1/harvest.py:58`) compartilha o loop do servidor. Duas
++opções:
++
++| | A — `asyncio.Task` + executor | B — processo separado |
++|---|---|---|
++| Esforço | ~1 dia | ~3 dias |
++| Cancelamento | `task.cancel()` | sinal IPC |
++| Sobrevive a reload | não | sim |
++| Complexidade Electron | nenhuma | `python-manager.ts` precisa gerenciar 2 processos |
++
++**Recomendação: A.** O produto é desktop mono-usuário; um `asyncio.Task`
++gerenciado com todo I/O de banco em `run_in_executor` resolve o bloqueio sem o
++custo operacional de B. Reavaliar só se surgir necessidade multiusuário.
++
++```python
++class HarvestJobManager:
++    _jobs: dict[str, asyncio.Task]
++    async def start(self, run_id, coro) -> None
++    async def cancel(self, run_id) -> bool
++    def is_running(self, project_id) -> bool
++```
++
++### 3.2 · Endpoints de controle
++
++- `POST /projects/{id}/harvest/cancel` → `status="cancelled"`
++- `GET /projects/{id}/harvest/status` → estado atual (a UI não pode depender só
++  do WebSocket, que pode cair)
++- Recusar coleta concorrente no mesmo projeto (evita corrida na dedup)
++
++### 3.3 · Fontes em paralelo, com limite
++
++A UI já promete simultaneidade (`HarvestPage.tsx:2, 247`); o backend roda em
++série (`harvesting_service.py:101`). Alinhar:
++
++```python
++sem = asyncio.Semaphore(3)   # 3 fontes simultâneas
++await asyncio.gather(*(run_source(s) for s in sources))
++```
++
++Limite por fonte também — o `delay` de cada `capabilities` continua valendo
++dentro de cada coletor. Falha de uma fonte **não** aborta as outras
++(`return_exceptions=True`).
++
++### 3.4 · Progresso em lote
++
++Substituir o broadcast por registro (`harvesting_service.py:147-159`):
++
++- `harvest_progress` a cada página
++- `harvest_batch` a cada 25 registros **ou** 2 s, o que vier primeiro
++- Amostra dos últimos 5 títulos, não todos — o feed da UI já trunca em 500
++  (`HarvestPage.tsx:148`)
++- Incluir `paper_id`, que a UI já espera e nunca recebe (`HarvestPage.tsx:151`)
++
++Com 20.000 papers, isso troca 20.000 mensagens por ~800.
++
++### 3.5 · Retomada
++
++`HarvestRunModel` ganha `checkpoint` (JSON: descritor atual, página/cursor).
++Coleta cancelada ou interrompida pode ser retomada do último descritor concluído.
++
++### Critérios de aceite
++
++- [ ] Coleta de 140 descritores → API continua respondendo (`GET /projects` < 200 ms)
++- [ ] Cancelar interrompe em < 5 s e marca `cancelled`
++- [ ] 3 fontes rodam simultaneamente (verificável no log)
++- [ ] Falha em uma fonte não impede as demais
++- [ ] WebSocket sobrevive a 30 min de coleta sem desconectar
++- [ ] Retomada continua do checkpoint, sem reprocessar descritores concluídos
++
++---
++
++## Fase 4 — Deduplicação e persistência escaláveis
++
++**Duração:** ~3 dias · **Objetivo:** eliminar o O(N²). Corrige P0-3(a) e (b).
++
++### 4.1 · Bloqueio por chave (blocking key)
++
++O passo 3 hoje compara contra **todos** os papers (`dedup_service.py:87-91`).
++Substituir por candidatos filtrados:
++
++```python
++# coluna nova, indexada: primeiras 4 palavras do título normalizado
++blocking_key: Mapped[str] = mapped_column(String(120), index=True)
++```
++
++Candidatos = mesmo `blocking_key` **ou** (mesmo ano **e** primeiro token igual).
++Reduz de *N* para tipicamente < 20 comparações fuzzy por registro. Custo: um
++índice e uma migração que recalcula a coluna para papers existentes.
++
++### 4.2 · Índices e caminho rápido
++
++- Índice único `(project_id, source_name, source_id)` em `paper_sources` →
++  descarte O(1) de registro já visto da mesma fonte
++- Índice `(project_id, doi)` — hoje `ix_papers_doi` não inclui `project_id`
++  (`models.py:122`), então o passo 1 varre entre projetos
++- Índice `(project_id, title_normalized)` pelo mesmo motivo (`models.py:123`)
++
++### 4.3 · Persistência em lote
++
++Espelhar `insert_batch` da V1 (`bdtd_harvester.py:701`): acumular 100 registros e
++gravar em uma transação. Um `commit` por lote, não por registro
++(`dedup_service.py:152, 183`).
++
++### 4.4 · WAL no SQLite
++
++`PRAGMA journal_mode=WAL` na inicialização — a V1 faz
++(`scielo_harvester.py:182`), a V2 não faz em lugar nenhum. Permite leitura
++concorrente durante a escrita da coleta (a UI consegue listar papers enquanto
++coleta roda).
++
++### 4.5 · Tirar o banco do event loop
++
++Todo o bloco de dedup+persistência via
++`await loop.run_in_executor(pool, persist_batch, ...)`, com uma `Session` por
++lote. Fecha o P0-3(c) junto com a Fase 3.
++
++### Critérios de aceite
++
++- [ ] 20.000 registros processados em **< 10 min** (hoje: horas — medir antes)
++- [ ] Tempo por lote **constante** ao longo da coleta (não cresce com *N*)
++- [ ] Taxa de detecção de duplicatas **igual** à do algoritmo atual sobre o mesmo
++      conjunto (o bloqueio não pode perder duplicata — teste com conjunto rotulado)
++- [ ] `EXPLAIN QUERY PLAN` mostra uso de índice em todas as consultas de dedup
++- [ ] Event loop nunca bloqueado > 100 ms (medir com `asyncio` debug mode)
++
++---
++
++## Fase 5 — Enriquecimento de metadados
++
++**Duração:** ~3 dias · **Objetivo:** recuperar a qualidade de metadados da V1
++que a V2 nunca teve. Corrige P1-1 e P1-6.
++
++### 5.1 · Raspagem de detalhes da BDTD (~2 dias) — §14.3
++
++Portar `scrape_record_details` (`bdtd_harvester.py:577`) e as funções de limpeza:
++`clean_advisor_name:153`, `clean_creator_name:133`, `process_record_fields:195`,
++`get_source_info:626`, `translate_format:559`.
++
++Melhorias sobre a V1:
++
++- Raspar **só** o que sobreviveu à dedup intra-execução
++- `asyncio.Semaphore(4)` em vez de sequencial (V1 é serial com 1 s de pausa)
++- Cache por `record_id` no disco, para retomada sem re-raspar
++- Flag `fetch_details` na UI: *"Coleta rápida (sem orientador e instituição)"*
++
++`advisor` precisa aparecer em `PaperModel`, na exportação e na UI — não adianta
++coletar e não mostrar.
++
++### 5.2 · Resumo do Scopus (~1 dia) — §14.7
++
++`view=COMPLETE`; quando `dc:description` vier vazio, chamar Abstract Retrieval
++por EID (`scopus_harvester.py:173`), tratando o caso `{"$": "..."}` (`:193`).
++
++### Critérios de aceite
++
++- [ ] >90% dos registros BDTD com `advisor` preenchido (quando existe na fonte)
++- [ ] >95% com `institution` = instituição de defesa (não "BDTD/IBICT" genérico)
++- [ ] `research_type` no vocabulário canônico, nunca `masterThesis` cru
++- [ ] Zero casos de "Orientador: …" dentro do campo de resumo
++- [ ] `fetch_details=False` → coleta ao menos 5× mais rápida
++- [ ] Scopus: >90% com resumo
++
++---
++
++## Fase 6 — Validação de paridade e fechamento
++
++**Duração:** ~3 dias · **Objetivo:** provar numericamente que a V2 ≥ V1.
++
++### 6.1 · Suíte de paridade
++
++Detalhada em `16_TESTES_VALIDACAO.md`. Para um conjunto fixo de descritores e
++recorte, roda V1 e V2 contra a mesma base e compara volume, cobertura de campos
++e sobreposição de identificadores.
++
++**Critério de aprovação:** para BDTD, SciELO e OpenAlex —
++volume dentro de ±5%, sobreposição de IDs ≥ 95%, e cobertura de campo
++(resumo, autores, ano, DOI) **maior ou igual** à da V1.
++
++### 6.2 · Fluxo PRISMA correto
++
++`export_service.get_prisma_flow_data` precisa refletir a nova realidade:
++identificados por base, duplicatas removidas, excluídos por filtro **local**
++(hoje não existe esse número), triados, incluídos.
++
++Registros removidos por pós-filtro local **não** são "excluídos na triagem" — são
++"não elegíveis por critério de recorte". Confundir os dois invalida o diagrama.
++
++### 6.3 · Documentação
++
++Atualizar `README.md` e `00_INDICE.md`; escrever `17_GUIA_DE_USO.md` (já entregue
++neste pacote); registrar em `08_PIPELINE_DADOS.md` o pipeline real.
++
++### Critérios de aceite
++
++- [ ] Paridade aprovada nas 3 fontes prioritárias
++- [ ] Diagrama PRISMA bate com a contagem do banco
++- [ ] Exportação Excel com todas as abas, incluindo `advisor` e `matched_descriptor`
++- [ ] Ciclo completo em máquina limpa: criar projeto → protocolo → coletar →
++      triar → extrair → exportar
++
++---
++
++## 15.4 Mapa de arquivos por fase
++
++| Arquivo | F0 | F1 | F2 | F3 | F4 | F5 |
++|---|:--:|:--:|:--:|:--:|:--:|:--:|
++| `backend/pyproject.toml` | ✏️ | | | | | |
++| `app/harvesters/base.py` | ✏️ | 🔨 | | | | |
++| `app/harvesters/factory.py` | | 🔨 | | | | |
++| `app/harvesters/bdtd.py` | ✏️ | | 🔨 | | | ✏️ |
++| `app/harvesters/scielo.py` | ✏️ | | 🔨 | | | |
++| `app/harvesters/openalex.py` | ✏️ | | 🔨 | | | |
++| `app/harvesters/pubmed.py` | ✏️ | | ✏️ | | | |
++| `app/harvesters/scopus.py` | ✏️ | | ✏️ | | | ✏️ |
++| `app/services/harvesting_service.py` | ✏️ | ✏️ | | 🔨 | ✏️ | |
++| `app/services/dedup_service.py` | | | | | 🔨 | |
++| `app/services/export_service.py` | | | | | | ✏️ |
++| `app/api/v1/harvest.py` | ✏️ | ✏️ | | 🔨 | | |
++| `app/api/v1/protocols.py` | | ✏️ | | | | |
++| `app/schemas/harvest.py` | | 🔨 | | | | |
++| `app/schemas/protocol.py` | | ✏️ | | | | |
++| `app/domain/enums.py` | | 🔨 | | | | |
++| `app/infrastructure/persistence/models.py` | | ✏️ | | ✏️ | ✏️ | ✏️ |
++| `app/config.py` | ✏️ | | | | | |
++| `app/main.py` | ✏️ | | | | ✏️ | |
++| `frontend/…/HarvestPage.tsx` | ✏️ | ✏️ | | ✏️ | | ✏️ |
++| `frontend/…/ProtocolPage.tsx` | | 🔨 | | | | |
++| `frontend/…/SettingsPage.tsx` | | ✏️ | | | | |
++| `frontend/src/types/api.ts` | | ✏️ | | ✏️ | | |
++
++🔨 reescrita substancial · ✏️ alteração pontual
++
++**Migrações Alembic:** F1 (`search_filters`, `source_credentials`),
++F3 (`checkpoint`), F4 (`blocking_key` + índices), F5 (`advisor`,
++`matched_descriptor`, `journal`, `language`).
++
++Hoje o projeto declara `alembic` mas não tem diretório de migrações — a Fase 1
++precisa inicializar (`alembic init`) e criar a baseline do esquema atual **antes**
++da primeira migração real.
++
++---
++
++## 15.5 Riscos
++
++| Risco | P | Impacto | Mitigação |
++|---|:--:|:--:|---|
++| SciELO muda o HTML e quebra o parser | Alta | Alto | Fixtures + teste canário semanal (§16.4); parser tolerante com log de campo faltante |
++| WAF da BDTD endurece (limites diferentes dos da V1) | Média | Alto | Limites em `capabilities`, ajustáveis sem deploy; medir na Fase 0 |
++| Bloqueio da dedup perde duplicata real | Média | Alto | Conjunto rotulado; comparar contra o algoritmo atual antes de trocar |
++| Sem entitlement para `view=COMPLETE` no Scopus | Média | Médio | Fallback para Abstract Retrieval; se falhar, degradar com aviso explícito |
++| Volume real (140 desc. × ilimitado) inviável mesmo otimizado | Média | Alto | Medir cedo na Fase 4; se necessário, coleta incremental por descritor com retomada |
++| Paridade não atingida por mudança do lado da fonte | Baixa | Médio | Rodar V1 no mesmo dia da V2 na Fase 6 — comparar contra V1 de hoje, não contra números históricos |
++| Chaves versionadas na V1 já comprometidas | **Alta** | Alto | **Revogar hoje**, independente do plano (P2-6) |
++
++---
++
++## 15.6 O que muda para o usuário, fase a fase
++
++| Depois de | O autor passa a conseguir |
++|---|---|
++| **F0** | Ver que a coleta está progredindo, em vez de tela parada |
++| **F1** | Definir "1970–2023, pt/en/es, teses e dissertações" uma vez, valendo para todas as bases |
++| **F2** | Confiar que BDTD, SciELO e OpenAlex trazem o mesmo que os scripts da V1 |
++| **F3** | Rodar 140 descritores sem travar o app; cancelar e retomar |
++| **F4** | Coletas grandes que terminam em minutos, não horas |
++| **F5** | Orientador e instituição de defesa de volta; Scopus com resumo |
++| **F6** | Publicar a revisão com diagrama PRISMA correto e auditável |
++
++---
++
++**Próximo documento:** [`16_TESTES_VALIDACAO.md`](./16_TESTES_VALIDACAO.md)
+diff --git a/planejamento/16_TESTES_VALIDACAO.md b/planejamento/16_TESTES_VALIDACAO.md
+new file mode 100644
+index 0000000..aa0728b
+--- /dev/null
++++ b/planejamento/16_TESTES_VALIDACAO.md
+@@ -0,0 +1,449 @@
++# 16 — Testes e Protocolo de Validação da Coleta
++
++> **Objetivo:** tornar verificável cada afirmação de "está funcionando".
++>
++> A V2 chegou ao estado do doc 13 porque não havia teste algum de coleta:
++> `backend/tests/` cobre entidades, dedup, triagem e endpoints, mas **nenhum
++> teste toca `app/harvesters/`**. Cinco coletores, ~700 linhas, zero cobertura.
++> Foi por isso que o `summary`-como-lista (P0-5) e o `on_progress` desconectado
++> (P0-2) atravessaram até produção.
++
++---
++
++## 16.1 Estratégia em quatro camadas
++
++| Camada | O que valida | Rede? | Quando roda |
++|---|---|:---:|---|
++| **1. Unidade** | Parsing e limpeza sobre fixtures salvas | não | Todo commit |
++| **2. Contrato** | Requisições montadas corretamente (URL, params, headers) | não | Todo commit |
++| **3. Canário** | A fonte real ainda responde no formato esperado | **sim** | Semanal + antes de release |
++| **4. Paridade** | V2 recupera o mesmo que V1 | **sim** | Fim de fase, manual |
++
++A separação importa: **1 e 2 nunca podem depender de rede.** Bases científicas
++caem, mudam layout e aplicam rate limit — se o CI depender delas, a suíte vira
++ruído e as pessoas param de olhar. As camadas 3 e 4 usam rede e **falham de
++forma informativa**, não bloqueante.
++
++> ⚠️ **Contexto de elaboração deste plano:** o ambiente onde esta análise foi
++> feita tem rede restrita a registries de pacote (`bdtd.ibict.br` retorna 403 no
++> proxy), então **nenhuma chamada real às bases foi executada**. Tudo em 13 e 14
++> é análise estática de código. As camadas 3 e 4 abaixo existem justamente para
++> confirmar empiricamente, na máquina do autor, os pontos listados em §13.8.
++
++---
++
++## 16.2 Camada 1 — Testes de unidade sobre fixtures
++
++### Capturar as fixtures (uma vez, com rede)
++
++`backend/tests/fixtures/harvesters/capture.py` — grava respostas reais em disco
++para servirem de base a todos os testes offline:
++
++```python
++"""Captura respostas reais das bases. Rodar manualmente, com rede."""
++import json, pathlib, httpx
++
++OUT = pathlib.Path(__file__).parent
++UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0"
++
++def capture_bdtd():
++    r = httpx.get(
++        "https://bdtd.ibict.br/vufind/api/v1/search",
++        params={"lookfor": "desenvolvimento regional", "type": "AllFields",
++                "sort": "year", "page": 1, "limit": 100,
++                "field[]": ["id", "title", "authors", "subjects", "languages",
++                            "formats", "urls", "summary", "publicationDates",
++                            "institutions"]},
++        headers={"User-Agent": UA, "Cookie": "OasisbrVerify=verified_human"},
++        timeout=60,
++    )
++    (OUT / "bdtd_search.json").write_text(r.text, encoding="utf-8")
++
++    # Página de detalhe, para os testes de raspagem da Fase 5
++    rid = r.json()["records"][0]["id"]
++    d = httpx.get(f"https://bdtd.ibict.br/vufind/Record/{rid}",
++                  headers={"User-Agent": UA, "Cookie": "OasisbrVerify=verified_human"},
++                  timeout=60)
++    (OUT / "bdtd_record_detail.html").write_text(d.text, encoding="utf-8")
++
++def capture_scielo():
++    r = httpx.get("https://search.scielo.org/",
++                  params={"q": "desenvolvimento regional", "lang": "pt",
++                          "count": "15", "from": "1", "output": "site"},
++                  headers={"User-Agent": UA}, timeout=60, follow_redirects=True)
++    (OUT / "scielo_search.html").write_text(r.text, encoding="utf-8")
++
++def capture_openalex():
++    r = httpx.get("https://api.openalex.org/works",
++                  params={"filter": "title_and_abstract.search:regional development",
++                          "per_page": 50, "cursor": "*"},
++                  headers={"User-Agent": "mailto:seu@email"}, timeout=60)
++    (OUT / "openalex_works.json").write_text(r.text, encoding="utf-8")
++
++if __name__ == "__main__":
++    capture_bdtd(); capture_scielo(); capture_openalex()
++    print("Fixtures salvas em", OUT)
++```
++
++> **Versionar as fixtures.** São a memória do formato de cada fonte. Quando o
++> canário (camada 3) acusar mudança, o diff contra a fixture mostra exatamente
++> o que mudou.
++
++### Testes que teriam pegado os bugs de hoje
++
++`backend/tests/test_harvesters/test_bdtd_parsing.py`:
++
++```python
++def test_resumo_e_string_nunca_lista(bdtd_fixture):
++    """Regressão do P0-5: VuFind devolve `summary` como lista."""
++    records = list(parse_bdtd_records(bdtd_fixture))
++    for r in records:
++        assert isinstance(r.abstract, str), f"abstract virou {type(r.abstract)}"
++        assert not r.abstract.startswith("["), "lista serializada como string"
++
++def test_resumo_preserva_conteudo(bdtd_fixture):
++    raw = bdtd_fixture["records"][0]
++    esperado = " ".join(s.strip() for s in (raw.get("summary") or []) if s).strip()
++    assert parse_bdtd_record(raw).abstract == esperado
++
++def test_dedup_intra_execucao_por_record_id(bdtd_fixture):
++    """Regressão do P2-4."""
++    dobrado = {"records": bdtd_fixture["records"] * 2, "resultCount": 200}
++    assert len({r.source_id for r in parse_bdtd_records(dobrado)}) == \
++           len(list(parse_bdtd_records(dobrado)))
++```
++
++`backend/tests/test_harvesters/test_contract.py` — vale para os cinco:
++
++```python
++@pytest.mark.parametrize("cls", ALL_HARVESTERS)
++async def test_descritores_vazios_nao_quebram(cls):
++    """Regressão do P2-3: NameError com lista vazia ou em branco."""
++    eventos = []
++    async def spy(p): eventos.append(p)
++
++    for descs in ([], ["   "], ["", None]):
++        h = cls()
++        async for _ in h.harvest(HarvestQuery(descriptors=descs), on_progress=spy):
++            pass
++    assert any(e.phase == "done" for e in eventos)
++
++@pytest.mark.parametrize("cls", ALL_HARVESTERS)
++async def test_progresso_e_awaitable(cls):
++    """Regressão do P0-2: callback async precisa ser aguardado."""
++    chamadas = []
++    async def spy(p): chamadas.append(p)
++    h = cls()
++    async for _ in h.harvest(QUERY_MINIMA, on_progress=spy):
++        break
++    assert chamadas, "on_progress nunca foi chamado"
++    assert all(isinstance(c, HarvestProgress) for c in chamadas)
++
++@pytest.mark.parametrize("cls", ALL_HARVESTERS)
++def test_record_coage_lista_para_string(cls):
++    """Rede de segurança do __post_init__ (§14.2.3)."""
++    r = RawPaperRecord(title="t", abstract=["a", "b"])   # type: ignore[arg-type]
++    assert r.abstract == "a b"
++```
++
++---
++
++## 16.3 Camada 2 — Testes de contrato de requisição
++
++Interceptam a requisição com `httpx.MockTransport` e afirmam sobre o que **seria**
++enviado. É a camada que protege as regras operacionais herdadas da V1 — as que
++ninguém lembra de manter porque não são visíveis no resultado.
++
++```python
++async def test_bdtd_respeita_limite_de_2_filtros_do_waf():
++    """Regressão do P1-3. O WAF devolve 429 com 3+ filter[]."""
++    capturadas = []
++    def handler(req):
++        capturadas.append(req)
++        return httpx.Response(200, json={"records": [], "resultCount": 0})
++
++    h = BDTDHarvester(transport=httpx.MockTransport(handler))
++    q = HarvestQuery(descriptors=["teste"], year_start=1970, year_end=2023,
++                     document_types=["TESE"], institutions=["USP"],
++                     languages=["pt", "en"])
++    async for _ in h.harvest(q):
++        pass
++
++    filtros = capturadas[0].url.params.get_list("filter[]")
++    assert len(filtros) <= 2, f"WAF será acionado: {filtros}"
++    assert not any("language" in f for f in filtros), "idioma deve ser pós-filtro local"
++
++async def test_bdtd_ordena_por_ano_nunca_relevancia():
++    """Reprodutibilidade (§14.1, princípio 1)."""
++    ...
++    assert capturadas[0].url.params["sort"] == "year"
++
++async def test_openalex_usa_cursor_nao_offset():
++    """Regressão do P1-4: offset trava em 10.000."""
++    ...
++    assert "cursor" in capturadas[0].url.params
++    assert "page" not in capturadas[0].url.params
++
++async def test_openalex_busca_titulo_e_resumo():
++    assert "title_and_abstract.search:" in capturadas[0].url.params["filter"]
++
++async def test_scielo_repete_apos_500():
++    """Regressão do P2-2: um 5xx transitório não pode matar o descritor."""
++    n = 0
++    def handler(req):
++        nonlocal n; n += 1
++        return httpx.Response(500) if n == 1 else httpx.Response(200, html=PAGINA_FIXTURE)
++    ...
++    assert n >= 2, "não houve retry"
++    assert registros, "descritor foi perdido após um 500 transitório"
++
++async def test_scopus_sem_chave_levanta_erro_visivel():
++    """Regressão do P0-4: hoje retorna vazio em silêncio."""
++    with pytest.raises(MissingCredentialsError):
++        async for _ in ScopusHarvester(api_key=None).harvest(QUERY_MINIMA):
++            pass
++
++async def test_nenhum_cliente_desabilita_tls():
++    """Regressão do P2-1."""
++    import subprocess
++    out = subprocess.run(["grep", "-rn", "verify=False", "backend/app/"],
++                         capture_output=True, text=True).stdout
++    assert not out.strip(), f"TLS desabilitado em:\n{out}"
++```
++
++---
++
++## 16.4 Camada 3 — Canários contra as fontes reais
++
++Confirmam que o **formato** da fonte não mudou. Marcados para não rodar no CI
++padrão.
++
++```python
++pytestmark = [pytest.mark.canary, pytest.mark.skipif(
++    not os.getenv("RSAC_CANARY"), reason="requer rede; RSAC_CANARY=1")]
++
++async def test_bdtd_estrutura_intacta():
++    dados = await buscar_bdtd_real("desenvolvimento regional", limit=5)
++    assert "records" in dados and "resultCount" in dados
++    r = dados["records"][0]
++    for campo in ("id", "title", "authors", "publicationDates"):
++        assert campo in r
++    if "summary" in r:
++        assert isinstance(r["summary"], list), \
++            "BDTD mudou o tipo de `summary` — revisar §14.3"
++
++async def test_scielo_seletores_html_intactos():
++    """O mais frágil de todos: raspagem de HTML."""
++    soup = await buscar_scielo_real("desenvolvimento regional")
++    itens = soup.find_all(class_="item")
++    assert itens, "seletor `.item` sumiu — parser do SciELO quebrou"
++    primeiro = itens[0]
++    for classe in ("title", "authors", "source"):
++        assert primeiro.find(class_=classe), f"seletor `.{classe}` sumiu"
++    assert soup.find(id="TotalHits"), "#TotalHits sumiu — usar RE_TOTAL_HITS"
++
++async def test_bdtd_limite_de_filtros_do_waf_ainda_vale():
++    """Confirma empiricamente §13.8 item 2."""
++    r = await bdtd_cru(filtros=["format:doctoralThesis",
++                                "institution:USP",
++                                "publishDate:[2020 TO 2023]"])
++    if r.status_code != 429:
++        pytest.fail("WAF não bloqueou 3 filtros — regra da V1 pode ter mudado; "
++                    "reavaliar max_native_filters em §14.3")
++```
++
++Rodar semanalmente. Falha de canário **não** quebra o build — abre issue.
++
++---
++
++## 16.5 Camada 4 — Paridade V1 ↔ V2
++
++O critério de aceite final da Fase 6. Roda os dois sistemas contra a mesma base,
++**no mesmo dia** — comparar contra números históricos é inválido, porque as bases
++crescem.
++
++### Conjunto de referência
++
++Derivado dos configs reais do autor, reduzido para caber numa execução:
++
++```jsonc
++{
++  "descritores": [
++    "\"desenvolvimento regional\" AND \"políticas públicas\"",
++    "\"arranjos produtivos locais\" AND \"inovação\"",
++    "\"governança territorial\" AND \"sustentabilidade\"",
++    "\"planejamento urbano\" AND \"participação social\"",
++    "\"regional development\" AND \"public policy\""
++  ],
++  "recorte": {
++    "year_start": 2010, "year_end": 2023,
++    "languages": ["pt", "en", "es"],
++    "document_types": ["TESE", "DISSERTACAO", "ARTIGO"]
++  },
++  "limite_por_descritor": 200
++}
++```
++
++Limite de 200 para a execução caber em minutos. A validação de volume ilimitado
++é separada (§16.6).
++
++### Script comparador
++
++`backend/scripts/validar_paridade.py`:
++
++```python
++"""
++Roda V1 e V2 sobre o mesmo conjunto e emite relatório comparativo.
++
++    python scripts/validar_paridade.py --fonte BDTD --v1-db ../RSAC/2_bdtd_metadata.db
++"""
++
++def comparar(v1_registros, v2_registros, fonte) -> dict:
++    ids1 = {r["record_id"] for r in v1_registros}
++    ids2 = {r.source_id for r in v2_registros}
++    inter = ids1 & ids2
++
++    def cobertura(regs, campo):
++        if not regs: return 0.0
++        return sum(1 for r in regs if str(_get(r, campo) or "").strip()) / len(regs)
++
++    return {
++        "fonte": fonte,
++        "v1_total": len(ids1),
++        "v2_total": len(ids2),
++        "delta_pct": (len(ids2) - len(ids1)) / len(ids1) * 100 if ids1 else 0,
++        "sobreposicao_pct": len(inter) / len(ids1) * 100 if ids1 else 0,
++        "so_na_v1": len(ids1 - ids2),      # ⚠️ o número que mais importa
++        "so_na_v2": len(ids2 - ids1),
++        "cobertura": {
++            campo: {"v1": cobertura(v1_registros, campo),
++                    "v2": cobertura(v2_registros, campo)}
++            for campo in ("abstract", "authors", "year", "doi", "advisor", "institution")
++        },
++    }
++```
++
++### Limiares de aprovação
++
++| Métrica | Limiar | Por quê |
++|---|---|---|
++| `delta_pct` | −5% a +50% | V2 pode achar **mais** (cursor no OpenAlex remove o teto de 10k); achar menos é regressão |
++| `sobreposicao_pct` | ≥ 95% | O que a V1 acha, a V2 tem de achar |
++| `so_na_v1` | ≤ 5% do total da V1 | Métrica mais importante: registros perdidos |
++| cobertura de `abstract` | ≥ V1 | P0-5 e P1-6 |
++| cobertura de `authors`, `year` | ≥ V1 | — |
++| cobertura de `advisor` (BDTD) | ≥ 90% da V1 | P1-1, após Fase 5 |
++| cobertura de `institution` (BDTD) | ≥ 90% da V1 | P1-1, após Fase 5 |
++
++**Fontes obrigatórias:** BDTD, SciELO, OpenAlex. PubMed e Scopus ficam de fora
++por decisão de escopo (§15.2).
++
++---
++
++## 16.6 Testes de carga e escala
++
++Validam as Fases 3 e 4 sob o volume real do autor (140 descritores × ilimitado).
++
++```python
++@pytest.mark.slow
++async def test_dedup_tempo_constante():
++    """Regressão do P0-3(a): hoje o custo cresce com N."""
++    tempos = []
++    for bloco in range(10):                     # 10 blocos de 1.000
++        t0 = time.perf_counter()
++        await persistir_lote(gerar_registros(1000, offset=bloco * 1000))
++        tempos.append(time.perf_counter() - t0)
++
++    # Sem regressão quadrática: o último bloco não pode custar
++    # muito mais que o primeiro.
++    assert tempos[-1] < tempos[0] * 2, f"crescimento não-linear: {tempos}"
++
++@pytest.mark.slow
++async def test_event_loop_nao_bloqueia():
++    """Regressão do P0-3(c): dedup síncrona congelava o WebSocket."""
++    atrasos = []
++    async def sonda():
++        while True:
++            t0 = time.perf_counter(); await asyncio.sleep(0.05)
++            atrasos.append(time.perf_counter() - t0 - 0.05)
++
++    t = asyncio.create_task(sonda())
++    await coletar_com_mock(n_registros=5000)
++    t.cancel()
++    assert max(atrasos) < 0.1, f"loop bloqueado por {max(atrasos):.2f}s"
++
++@pytest.mark.slow
++async def test_cancelamento_responde_em_5s():
++    job = await iniciar_coleta(descritores=CEM_DESCRITORES)
++    await asyncio.sleep(10)
++    t0 = time.perf_counter()
++    await cancelar(job.run_id)
++    assert time.perf_counter() - t0 < 5.0
++    assert (await obter_run(job.run_id)).status == "cancelled"
++```
++
++**Marco de desempenho da Fase 4:** 20.000 registros persistidos e deduplicados em
++**menos de 10 minutos**. Medir o número de hoje **antes** de otimizar — sem a
++linha de base, não há como provar melhoria.
++
++---
++
++## 16.7 Script de diagnóstico rápido
++
++`backend/scripts/diagnostico_fontes.py` — verifica em ~30 s se as cinco fontes
++estão acessíveis e respondendo no formato esperado. Primeira coisa a rodar quando
++o autor disser "parou de funcionar".
++
++```python
++"""
++    python scripts/diagnostico_fontes.py
++
++    BDTD ....... OK    HTTP 200   1.240ms   resultCount=3847   summary=list ✓
++    SciELO ..... OK    HTTP 200     890ms   itens=15           #TotalHits ✓
++    OpenAlex ... OK    HTTP 200     310ms   count=12903        next_cursor ✓
++    PubMed ..... OK    HTTP 200     450ms   idlist=500
++    Scopus ..... AVISO           sem chave de API configurada
++"""
++
++VERIFICACOES = [
++    ("BDTD",     checar_bdtd),      # + tipo de `summary`
++    ("SciELO",   checar_scielo),    # + seletores .item / #TotalHits
++    ("OpenAlex", checar_openalex),  # + presença de next_cursor
++    ("PubMed",   checar_pubmed),
++    ("Scopus",   checar_scopus),    # + entitlement de view=COMPLETE
++]
++```
++
++Cada verificação reporta: status HTTP, latência, contagem e **a asserção
++estrutural específica daquela fonte** — é o que distingue "a fonte está fora do ar"
++de "a fonte mudou de formato", dois problemas com soluções opostas.
++
++---
++
++## 16.8 Metas de cobertura
++
++| Módulo | Hoje | Meta |
++|---|:--:|:--:|
++| `app/harvesters/` | **0%** | **85%** |
++| `app/services/dedup_service.py` | parcial | 90% |
++| `app/services/harvesting_service.py` | 0% | 75% |
++| `app/domain/enums.py` (mapeamentos) | — | 100% |
++
++O 0% em `harvesters/` é a causa-raiz organizacional do doc 13. Nenhum PR que
++toque `app/harvesters/` deve ser aceito sem teste.
++
++### Integração contínua
++
++```yaml
++# .github/workflows/ci.yml
++- run: pytest -m "not canary and not slow" --cov=app --cov-fail-under=80
++- run: ruff check . && mypy app/
++- run: python scripts/checar_deps.py     # imports × pyproject (regressão do P0-1)
++```
++
++`checar_deps.py` percorre os imports de terceiros do backend e confere contra as
++dependências declaradas. Teria pegado `bs4` e `pandas` no dia em que entraram.
++
++---
++
++**Próximo documento:** [`17_GUIA_DE_USO.md`](./17_GUIA_DE_USO.md)
+diff --git a/planejamento/17_GUIA_DE_USO.md b/planejamento/17_GUIA_DE_USO.md
+new file mode 100644
+index 0000000..65efbaf
+--- /dev/null
++++ b/planejamento/17_GUIA_DE_USO.md
+@@ -0,0 +1,332 @@
++# 17 — Guia de Uso: o que o RSAC V2 deve ser
++
++> **Objetivo:** descrever o produto do ponto de vista de quem faz a revisão.
++> Serve como referência de intenção — quando uma decisão técnica for ambígua,
++> a pergunta é "o que ajuda o pesquisador a concluir a revisão?".
++>
++> ⚠️ Este documento descreve o **estado-alvo**, depois de executado
++> `15_PLANO_EXECUCAO.md`. As seções marcadas 🚧 ainda não funcionam assim.
++
++---
++
++## 17.1 O que o RSAC é
++
++Uma aplicação **desktop, offline-first, mono-usuário** que conduz uma revisão
++sistemática ou de escopo do começo ao fim: do protocolo à planilha final e ao
++diagrama PRISMA.
++
++O que ele resolve é um problema concreto e chato: uma revisão séria exige buscar
++em várias bases, com o mesmo recorte, registrar tudo o que foi feito, eliminar
++duplicatas entre bases, triar centenas ou milhares de resumos contra critérios
++declarados, e depois provar cada número. Feito à mão, isso consome semanas e
++produz planilhas que ninguém consegue auditar depois.
++
++**A V1 automatizou a coleta.** Cinco scripts Python, um por base, cada um com seu
++JSON de configuração, seu SQLite e seu Excel. Funciona bem — mas unificar os
++cinco resultados, triar e montar o PRISMA continua sendo trabalho manual.
++
++**A V2 automatiza a revisão inteira.** Mesma qualidade de coleta, mas dentro de
++um projeto único, com deduplicação entre bases, triagem assistida por IA,
++extração de dados e exportação pronta para publicação.
++
++### Princípios do produto
++
++1. **O pesquisador decide, a IA sugere.** Toda decisão de inclusão/exclusão é
++   revisável e atribuível. A IA acelera a triagem; não a substitui.
++2. **Tudo é auditável.** Qual descritor recuperou cada estudo, qual critério
++   excluiu, quem decidiu, quando. O `AuditLogModel` existe para isso.
++3. **Reprodutível.** Mesmo protocolo, mesma data, mesma base → mesmo conjunto.
++   É por isso que a coleta ordena por ano e nunca por relevância (§14.1).
++4. **Offline-first.** Os dados ficam na máquina. Só coleta e IA precisam de rede.
++5. **Honesto sobre limites.** Se um filtro foi aplicado localmente e não na base,
++   o relatório diz isso. Um método descrito errado invalida a publicação.
++
++### Quem usa
++
++Pesquisador de **Ciências Sociais Aplicadas e Desenvolvimento Regional**
++(`.agents/AGENTS.md`): políticas públicas territoriais, arranjos produtivos
++locais, governança regional, planejamento urbano. Fluente no método, **não**
++programador. Nunca deve precisar editar JSON, abrir terminal ou ler log.
++
++Isso tem consequência direta de design: **erro técnico precisa virar mensagem
++acionável.** "Scopus requer chave de API. Configure em Configurações → Bases de
++Dados." é aceitável; `HTTP 401 Unauthorized` não é.
++
++---
++
++## 17.2 O fluxo completo
++
++```
++1. Projeto  →  2. Protocolo  →  3. Coleta  →  4. Triagem  →  5. Extração  →  6. Exportação
++                     ↑                            │
++                     └──── refinar e recoletar ───┘
++```
++
++O ciclo de volta é normal e esperado: a primeira coleta quase sempre revela que
++os descritores estão amplos ou estreitos demais. O app precisa tornar esse
++refinamento barato — e a coleta idempotente (§14.1) é o que permite recoletar sem
++duplicar.
++
++---
++
++## 17.3 Etapa 1 — Projeto
++
++**Tela:** `ProjectsPage`
++
++Um projeto é uma revisão. Título, descrição, metodologia (PRISMA-P, PRISMA-ScR).
++Cada projeto tem seu protocolo, seu corpus e seus resultados, isolados dos demais.
++
++Vale ter vários projetos simultâneos — típico de quem toca mais de uma frente.
++
++---
++
++## 17.4 Etapa 2 — Protocolo
++
++**Tela:** `ProtocolPage` · **A etapa mais importante do produto.**
++
++O protocolo é o que torna a revisão *sistemática*. Definido **antes** de coletar,
++registrado, e qualquer alteração posterior fica datada.
++
++### Objetivo e PICO
++
++Pergunta de pesquisa e o enquadramento (População, Intervenção, Comparação,
++Resultado — adaptado às Sociais Aplicadas). Alimenta os prompts da IA de triagem.
++
++### Descritores de busca
++
++Termos por idioma. Exemplo do domínio-alvo:
++
++```
++Português:  "desenvolvimento regional" AND "políticas públicas"
++            "arranjos produtivos locais" AND "inovação"
++            "governança territorial" AND "sustentabilidade"
++Inglês:     "regional development" AND "public policy"
++            "local productive arrangements" AND "innovation"
++Espanhol:   "desarrollo regional" AND "políticas públicas"
++```
++
++`.agents/AGENTS.md` orienta: pares de 2 termos, até 5 pares por idioma. A razão
++é prática — o motor VuFind da BDTD degrada com strings booleanas longas.
++
++⚠️ Os configs reais da V1 usam **3 termos e 140 descritores**. Essa divergência
++está registrada em §14.8 e **precisa de decisão do autor**. A postura recomendada
++é a UI **avisar** sobre descritores com 3+ termos sem bloquear.
++
++O botão de assistência por IA sugere descritores a partir do objetivo e do PICO,
++seguindo as regras do `AGENTS.md` — mas quem aprova é o pesquisador.
++
++### 🚧 Recorte da busca — a lacuna mais sentida hoje
++
++O bloco que **falta** na V2 e existe na V1 (§14.8):
++
++| Campo | Exemplo |
++|---|---|
++| Período | 1970 – 2023 |
++| Idiomas | Português, Inglês, Espanhol |
++| Tipos | Tese, Dissertação, Artigo |
++| Instituições | *(vazio = todas)* |
++| Apenas acesso aberto | não |
++
++Definido **uma vez**, aplicado a **todas** as bases. Na V1, o mesmo recorte
++precisava ser repetido em cinco arquivos JSON — e um esquecimento em um deles
++corrompia silenciosamente a revisão.
++
++A tela deve deixar claro, por base, quando o filtro será aplicado **depois** de
++baixar (pós-filtro local), porque isso muda o tempo de coleta. Exemplo:
++*"Idioma na BDTD é filtrado após o download (limitação do servidor). A coleta
++baixa mais registros do que o resultado final."*
++
++### Critérios de inclusão e exclusão
++
++Cada critério é uma pergunta binária avaliada contra cada estudo:
++
++- *Inclusão:* "O estudo trata de desenvolvimento regional em contexto brasileiro?"
++- *Exclusão:* "O estudo é anterior a 2010?"
++
++A IA responde a cada critério individualmente e justifica. É isso que torna a
++triagem auditável — não existe "excluído" sem motivo registrado.
++
++### Perguntas de extração
++
++O que se quer extrair dos estudos incluídos: "Qual o recorte territorial?",
++"Qual metodologia foi empregada?", "Quais indicadores foram usados?".
++
++### Seções do manuscrito
++
++Os 22 itens do PRISMA-ScR, preenchíveis com apoio da IA. Vão para a exportação
++final.
++
++---
++
++## 17.5 Etapa 3 — Coleta
++
++**Tela:** `HarvestPage` · **A etapa que hoje não funciona (doc 13).**
++
++### Como deve ser
++
++1. **Escolher as bases.** BDTD, SciELO, OpenAlex, PubMed, Scopus. Bases que
++   exigem chave aparecem desabilitadas até serem configuradas — nunca
++   selecionáveis para depois retornar zero em silêncio.
++
++2. **Conferir o recorte.** Resumo do que vem do protocolo, com aviso claro sobre
++   pós-filtros locais.
++
++3. **Escolher o volume.** *Ilimitado* é o padrão do uso real e precisa funcionar
++   de verdade — hoje o PubMed trava em 500 e o OpenAlex em 10.000 (§13.3).
++
++4. **Modo rápido (opcional).** Sem raspagem de detalhes: mais rápido, mas sem
++   orientador nem instituição de defesa na BDTD. O app deve dizer exatamente o
++   que se perde.
++
++5. **Iniciar.** E a partir daí, **ver o que está acontecendo**:
++
++```
++[BDTD]     descritor 37/140  ·  página 12  ·  2.847 recuperados  ·  1.903 novos
++[SciELO]   descritor 12/140  ·  página  3  ·    412 recuperados  ·    380 novos
++[OpenAlex] concluído         ·                5.201 recuperados  ·  4.115 novos
++```
++
++Progresso por descritor, por página, com contadores. Em coletas de horas, o
++usuário precisa saber que **há** avanço. Hoje a tela fica estática (P0-2) — é o
++sintoma que mais fez a V2 parecer quebrada.
++
++6. **Poder cancelar.** E retomar depois de onde parou.
++
++7. **Recoletar sem medo.** Rodar de novo não duplica: registros já conhecidos são
++   reconhecidos e apenas atualizados.
++
++### Deduplicação
++
++Rodando durante a coleta, em três passos: DOI exato → título normalizado →
++similaridade fuzzy com verificação de ano. Um estudo encontrado na BDTD e no
++OpenAlex vira **um** paper com **duas** fontes registradas — e o `PaperSourceModel`
++guarda em quais bases apareceu, número que o PRISMA exige.
++
++### O que fica registrado em cada execução
++
++- Descritores e recorte efetivamente usados (não os do protocolo hoje — os de
++  quando rodou)
++- Registros recuperados, novos e duplicados, por base
++- Filtros aplicados localmente em vez de nativamente
++- Erros por base, em português
++
++---
++
++## 17.6 Etapa 4 — Triagem
++
++**Tela:** `ScreeningPage`
++
++Cada estudo é avaliado contra os critérios do protocolo — a partir de título,
++resumo e metadados.
++
++**É por isso que a qualidade dos metadados importa tanto.** Um resumo corrompido
++(P0-5, BDTD) ou vazio (P1-6, Scopus) faz a IA decidir só pelo título. A triagem
++é o gargalo do produto, e ela é tão boa quanto o que a coleta entregou.
++
++### Como deve funcionar
++
++- **Triagem em lote por IA**, com concorrência controlada e progresso visível
++- **Por critério, com justificativa** — não um veredito opaco
++- **Confiança declarada**; casos de baixa confiança sobem para revisão manual
++- **Revisão humana** sempre disponível: incluir, excluir, marcar para discussão
++- **Toda alteração vira log de auditoria** com origem (`manual` ou `ai`)
++
++O pesquisador deve conseguir varrer 2.000 estudos triados pela IA revisando com
++atenção os ~200 duvidosos — não revisando os 2.000.
++
++---
++
++## 17.7 Etapa 5 — Extração
++
++**Tela:** `ExtractionPage`
++
++Para os estudos incluídos, responder às perguntas de extração. A IA lê o PDF
++(quando disponível) ou o resumo e propõe respostas; o pesquisador valida.
++
++Aqui o texto completo importa: o `pdf_service` extrai texto via PyMuPDF e o
++`download_url` correto (coletado na Etapa 3) é o que permite chegar ao PDF.
++Mais um caso em que a qualidade da coleta se propaga adiante.
++
++---
++
++## 17.8 Etapa 6 — Exportação
++
++**Tela:** `ExportPage`
++
++- **Excel** com abas: estudos incluídos, excluídos com motivo, extração, métricas
++  PRISMA. Deve incluir `advisor` e `matched_descriptor`, hoje ausentes.
++- **BibTeX** dos incluídos, para o gerenciador de referências.
++- **Diagrama PRISMA 2020** com números que batem com o banco.
++
++⚠️ O diagrama precisa distinguir **excluído na triagem** de **não elegível por
++recorte** (removido por pós-filtro local). Confundir os dois descreve o método
++errado — e isso reprova em revisão por pares.
++
++---
++
++## 17.9 Configurações
++
++**Tela:** `SettingsPage`
++
++- **IA:** provedor (Gemini, OpenAI-compatível, local), modelo, chaves, temperatura
++- **🚧 Bases de dados:** chaves de API por base (§14.7). Não existe hoje — é a
++  razão pela qual o Scopus retorna zero em silêncio (P0-4).
++- **Aparência:** 13 temas de cor
++- **Armazenamento:** onde ficam banco e PDFs
++
++Regra firme: **nenhuma chave é devolvida pela API em texto claro.** A tela mostra
++"configurada · ••••1234" e permite substituir. Isso vem de uma lição concreta —
++a V1 tem duas chaves de API versionadas no repositório (P2-6), que devem ser
++revogadas independentemente desta migração.
++
++---
++
++## 17.10 Cenário completo
++
++*Pesquisadora estudando arranjos produtivos locais no Sul do Brasil.*
++
++1. Cria o projeto **"APLs e Desenvolvimento Regional no Sul do Brasil"**, PRISMA-ScR.
++2. Preenche objetivo e PICO. Pede sugestões à IA, ajusta, aprova 12 descritores
++   em três idiomas.
++3. Define o recorte: **2010–2024**, `pt/en/es`, teses + dissertações + artigos.
++4. Cadastra 4 critérios de inclusão e 3 de exclusão.
++5. Seleciona **BDTD + SciELO + OpenAlex**, ilimitado, com detalhes. Inicia.
++6. Acompanha o progresso; almoça; volta. **8.400 recuperados, 5.100 únicos.**
++7. Dispara a triagem por IA. 4.200 excluídos com justificativa, 900 incluídos.
++8. Revisa os 340 de baixa confiança. Reverte 60 exclusões.
++9. Baixa PDFs dos incluídos; extrai as respostas com apoio da IA.
++10. Exporta Excel + BibTeX + PRISMA. Escreve o artigo com os números prontos.
++
++**Nada nesse cenário exige terminal, JSON ou log.** É esse o padrão.
++
++Na V1, os passos 5–6 seriam: editar três JSON à mão com o mesmo recorte repetido,
++rodar três scripts, obter três SQLite e três Excel — e começar aí o trabalho
++manual de unificar. Os passos 7–10 não existiriam.
++
++---
++
++## 17.11 Onde a V2 está hoje
++
++| Etapa | Estado |
++|---|---|
++| 1 · Projeto | ✅ funciona |
++| 2 · Protocolo | ⚠️ funciona, **sem recorte de busca** (§14.8) |
++| 3 · Coleta | ❌ **quebrada** — doc 13 |
++| 4 · Triagem | ⚠️ funciona, prejudicada por metadados ruins |
++| 5 · Extração | ⚠️ funciona, prejudicada por `download_url` incompleto |
++| 6 · Exportação | ⚠️ funciona; `pandas` não declarado (P0-1); PRISMA incompleto |
++| Configurações | ⚠️ IA sim; **bases não** (P0-4) |
++
++A etapa 3 é a que trava tudo. É por isso que `15_PLANO_EXECUCAO.md` concentra
++seis fases nela — e por isso a percepção "a V1 funciona e a V2 não" está correta
++mesmo com a V2 tendo, no papel, muito mais recurso.
++
++**O objetivo final não é empatar com a V1. É que a V1 deixe de ser necessária.**
++
++---
++
++**Documentos relacionados:**
++[`13_DIAGNOSTICO_COLETA_V2.md`](./13_DIAGNOSTICO_COLETA_V2.md) ·
++[`14_ESPECIFICACAO_COLETA.md`](./14_ESPECIFICACAO_COLETA.md) ·
++[`15_PLANO_EXECUCAO.md`](./15_PLANO_EXECUCAO.md) ·
++[`16_TESTES_VALIDACAO.md`](./16_TESTES_VALIDACAO.md)
+-- 
+2.43.0
+

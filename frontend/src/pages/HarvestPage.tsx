@@ -1,35 +1,33 @@
 /**
  * RSAC V2 — Harvest Page (Coleta Automatizada Multibase)
  * Execução concorrente de harvesters (BDTD, SciELO, OpenAlex, PubMed, Scopus)
- * com monitoramento em tempo real via WebSockets e deduplicação de 3 passes.
+ * com monitoramento em tempo real via WebSockets, deduplicação de 3 passes e cancelamento.
  */
 
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  Download,
   Play,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  AlertCircle,
-  Database,
-  Search,
   ArrowLeft,
   RefreshCw,
-  Layers,
-  Sparkles,
-  ExternalLink,
   Sliders,
   Radio,
   FileCheck,
   FileX,
   History,
+  AlertCircle,
+  Database,
+  Search,
+  StopCircle,
+  Key,
+  Filter,
+  Layers,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
-import type { HarvestRun, HarvestSourceInfo, Protocol, Project } from '@/types/api'
+import type { DeduplicationReport, HarvestRun, HarvestSourceInfo, Protocol } from '@/types/api'
+import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
 import './HarvestPage.css'
 
 interface LiveFeedItem {
@@ -51,9 +49,15 @@ export function HarvestPage(): JSX.Element {
   const [selectedSources, setSelectedSources] = useState<string[]>(['BDTD', 'SciELO', 'OpenAlex'])
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   const [maxRecords, setMaxRecords] = useState<number>(0)
+  const [fetchDetails, setFetchDetails] = useState<boolean>(true)
   const [harvestRuns, setHarvestRuns] = useState<HarvestRun[]>([])
   const [loading, setLoading] = useState(true)
   const [isHarvesting, setIsHarvesting] = useState(false)
+
+  // Deduplication Report State
+  const [isDeduplicating, setIsDeduplicating] = useState(false)
+  const [dedupReport, setDedupReport] = useState<DeduplicationReport | null>(null)
+  const [isDedupModalOpen, setIsDedupModalOpen] = useState(false)
 
   // Live WebSocket State
   const [liveStatus, setLiveStatus] = useState<string>('Pronto para iniciar coleta.')
@@ -67,6 +71,7 @@ export function HarvestPage(): JSX.Element {
     if (id) {
       loadData(id)
       initWebSocket(id)
+      checkInitialStatus(id)
     }
 
     return () => {
@@ -75,6 +80,18 @@ export function HarvestPage(): JSX.Element {
       }
     }
   }, [id])
+
+  const checkInitialStatus = async (projectId: string) => {
+    try {
+      const statusRes = await api.getHarvestStatus(projectId)
+      if (statusRes?.status === 'running') {
+        setIsHarvesting(true)
+        setLiveStatus('Coleta em andamento em segundo plano...')
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const loadData = async (projectId: string) => {
     try {
@@ -93,6 +110,12 @@ export function HarvestPage(): JSX.Element {
       setSources(srcRes.sources)
       setProtocol(protoRes)
       setHarvestRuns(runsRes.items)
+
+      // Selecionar apenas fontes habilitadas por padrão
+      const enabledIds = srcRes.sources
+        .filter((s) => s.enabled && ['BDTD', 'SciELO', 'OpenAlex'].includes(s.id))
+        .map((s) => s.id)
+      setSelectedSources(enabledIds.length > 0 ? enabledIds : ['BDTD', 'SciELO', 'OpenAlex'])
     } catch (err) {
       console.error('Erro ao carregar dados de coleta:', err)
     } finally {
@@ -114,7 +137,7 @@ export function HarvestPage(): JSX.Element {
         try {
           const msg = JSON.parse(event.data)
           handleWebSocketMessage(msg)
-        } catch (e) {
+        } catch {
           // ignore non-json
         }
       }
@@ -129,7 +152,8 @@ export function HarvestPage(): JSX.Element {
 
   const handleWebSocketMessage = (msg: any) => {
     if (msg.type === 'harvest_progress') {
-      setLiveStatus(`[${msg.source}] Buscando: "${msg.descriptor}" (Página ${msg.page})`)
+      const phaseLabel = msg.phase === 'scraping_details' ? 'Raspando orientadores' : 'Coletando'
+      setLiveStatus(`[${msg.source}] ${phaseLabel}: "${msg.descriptor}" (Pág ${msg.page})`)
       setIsHarvesting(true)
       info('Coleta', `[${msg.source}] Consultando página ${msg.page} para "${msg.descriptor}"`)
     } else if (msg.type === 'paper_harvested') {
@@ -137,39 +161,64 @@ export function HarvestPage(): JSX.Element {
       setLiveNew(msg.total_new)
       setLiveDuplicate(msg.total_duplicate)
 
-      const feedItem: LiveFeedItem = {
-        id: Math.random().toString(36).substring(2, 9),
-        source: msg.source,
-        title: msg.title,
-        isNew: msg.is_new,
-        timestamp: new Date().toLocaleTimeString('pt-BR'),
+      if (msg.recent_items && Array.isArray(msg.recent_items)) {
+        const newFeedItems = msg.recent_items.map((item: any) => ({
+          id: item.paper_id || Math.random().toString(36).substring(2, 9),
+          source: msg.source,
+          title: item.title,
+          isNew: item.is_new,
+          timestamp: new Date().toLocaleTimeString('pt-BR'),
+        }))
+        setLiveFeed((prev) => [...newFeedItems, ...prev.slice(0, 480)])
+      } else if (msg.title) {
+        const feedItem: LiveFeedItem = {
+          id: Math.random().toString(36).substring(2, 9),
+          source: msg.source,
+          title: msg.title,
+          isNew: msg.is_new,
+          timestamp: new Date().toLocaleTimeString('pt-BR'),
+        }
+        setLiveFeed((prev) => [feedItem, ...prev.slice(0, 499)])
       }
 
-      setLiveFeed((prev) => [feedItem, ...prev.slice(0, 499)])
-
       if (msg.is_new) {
-        success('Coleta', `[${msg.source}] Estudo novo inserido`, `Título: ${msg.title}\nID: ${msg.paper_id || 'N/A'}`)
+        success('Coleta', `[${msg.source}] Estudo novo inserido`)
       } else {
-        warn('Coleta', `[${msg.source}] Duplicata detectada e unificada`, `Título: ${msg.title}`)
+        warn('Coleta', `[${msg.source}] Duplicata unificada`)
       }
     } else if (msg.type === 'harvest_source_completed') {
       setLiveStatus(`Fonte ${msg.source} concluída (${msg.records_new} novos, ${msg.records_duplicate} duplicados).`)
-      info('Coleta', `Fonte [${msg.source}] finalizada`, `Novos inseridos: ${msg.records_new} | Duplicatas unificadas: ${msg.records_duplicate}`)
+      info('Coleta', `Fonte [${msg.source}] finalizada`, `Novos: ${msg.records_new} | Duplicatas: ${msg.records_duplicate}`)
+    } else if (msg.type === 'harvest_source_failed') {
+      setLiveStatus(`Erro na fonte ${msg.source}: ${msg.error}`)
+      error('Coleta', `Fonte [${msg.source}] falhou: ${msg.error}`)
     } else if (msg.type === 'harvest_all_completed') {
       setIsHarvesting(false)
       setLiveStatus('Coleta multibase finalizada com sucesso!')
-      success('Coleta', 'Busca federada e desduplicação concluídas com sucesso!', `Total recuperado: ${liveFound} | Novos: ${liveNew} | Duplicatas: ${liveDuplicate}`)
+      success('Coleta', 'Busca federada concluída!', `Total: ${liveFound} | Novos: ${liveNew} | Duplicatas: ${liveDuplicate}`)
+      if (id) {
+        api.listHarvestRuns(id).then((res) => setHarvestRuns(res.items))
+      }
+    } else if (msg.type === 'harvest_cancelled') {
+      setIsHarvesting(false)
+      setLiveStatus('Coleta cancelada pelo usuário.')
+      warn('Coleta', 'Execução de coleta cancelada.')
       if (id) {
         api.listHarvestRuns(id).then((res) => setHarvestRuns(res.items))
       }
     }
   }
 
-  const toggleSource = (sourceId: string) => {
-    if (selectedSources.includes(sourceId)) {
-      setSelectedSources(selectedSources.filter((s) => s !== sourceId))
+  const toggleSource = (source: HarvestSourceInfo) => {
+    if (!source.enabled) {
+      navigate('/settings')
+      return
+    }
+
+    if (selectedSources.includes(source.id)) {
+      setSelectedSources(selectedSources.filter((s) => s !== source.id))
     } else {
-      setSelectedSources([...selectedSources, sourceId])
+      setSelectedSources([...selectedSources, source.id])
     }
   }
 
@@ -182,16 +231,47 @@ export function HarvestPage(): JSX.Element {
       setLiveNew(0)
       setLiveDuplicate(0)
       setLiveFeed([])
-      setLiveStatus('Disparando coletores...')
+      setLiveStatus('Disparando coletores concorrentes...')
 
       await api.startHarvest(id, {
         sources: selectedSources,
-        max_records_per_descriptor: maxRecords,
+        max_records_per_descriptor: maxRecords > 0 ? maxRecords : null,
+        fetch_details: fetchDetails,
       })
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao iniciar coleta:', err)
       setIsHarvesting(false)
-      setLiveStatus('Erro ao iniciar coleta.')
+      setLiveStatus(`Erro: ${err.message || 'Falha ao iniciar'}`)
+    }
+  }
+
+  const handleCancelHarvest = async () => {
+    if (!id) return
+    try {
+      setLiveStatus('Cancelando coleta...')
+      await api.cancelHarvest(id)
+    } catch (err: any) {
+      console.error('Erro ao cancelar coleta:', err)
+    }
+  }
+
+  const handleDeduplicate = async () => {
+    if (!id) return
+    try {
+      setIsDeduplicating(true)
+      info('Deduplicação', 'Executando consolidação e deduplicação de 3 passes...')
+      const res = await api.deduplicateProject(id)
+      setDedupReport(res.data)
+      setIsDedupModalOpen(true)
+      success(
+        'Deduplicação',
+        `Deduplicação concluída com sucesso!`,
+        `Únicos: ${res.data.total_unique} | Duplicatas Excluídas: ${res.data.total_duplicates} (${res.data.dup_rate}%)`
+      )
+    } catch (err: any) {
+      error('Deduplicação', 'Falha ao executar deduplicação', err.message)
+    } finally {
+      setIsDeduplicating(false)
     }
   }
 
@@ -203,6 +283,8 @@ export function HarvestPage(): JSX.Element {
     }
   }
 
+  const filters = protocol?.search_filters || {}
+
   return (
     <div className="harvest-page animate-fade-in">
       {/* Page Header */}
@@ -213,27 +295,50 @@ export function HarvestPage(): JSX.Element {
           </button>
           <h1 className="page-title">Coleta Multibase de Artigos</h1>
           <p className="page-subtitle">
-            Projeto: <strong>{activeProject?.title}</strong> — Coleta automatizada com deduplicação de 3 passes
+            Projeto: <strong>{activeProject?.title}</strong> — Coleta concorrente com deduplicação de 3 passes
           </p>
         </div>
-        <button
-          className="btn-primary"
-          onClick={handleStartHarvest}
-          disabled={isHarvesting || selectedSources.length === 0 || allDescriptors.length === 0}
-        >
-          {isHarvesting ? (
-            <>
-              <RefreshCw size={18} className="animate-spin" /> Coletando...
-            </>
-          ) : (
-            <>
-              <Play size={18} /> Iniciar Coleta Multibase
-            </>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {isHarvesting && (
+            <button className="btn-secondary text-danger" onClick={handleCancelHarvest} style={{ borderColor: 'var(--color-danger, #ef4444)' }}>
+              <StopCircle size={18} /> Cancelar Coleta
+            </button>
           )}
-        </button>
+          <button
+            className="btn-secondary btn-dedup"
+            onClick={handleDeduplicate}
+            disabled={isDeduplicating || isHarvesting}
+            title="Executa a desduplicação e gera o relatório consolidado"
+          >
+            {isDeduplicating ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" /> Deduplicando...
+              </>
+            ) : (
+              <>
+                <Layers size={18} /> Deduplicar & Relatório
+              </>
+            )}
+          </button>
+          <button
+            className="btn-primary"
+            onClick={handleStartHarvest}
+            disabled={isHarvesting || selectedSources.length === 0 || allDescriptors.length === 0}
+          >
+            {isHarvesting ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" /> Coletando...
+              </>
+            ) : (
+              <>
+                <Play size={18} /> Iniciar Coleta Multibase
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Main Grid: Config on Left, Live Progress & History on Right */}
+      {/* Main Grid */}
       <div className="harvest-grid">
         {/* Left Column: Source Selection & Parameters */}
         <div className="harvest-config-col">
@@ -244,25 +349,36 @@ export function HarvestPage(): JSX.Element {
               <h2>1. Seleção de Bases de Dados</h2>
             </div>
             <p className="card-desc-text">
-              Selecione as bases que serão consultadas simultaneamente.
+              Selecione as bases que serão consultadas em paralelo.
             </p>
 
             <div className="sources-list">
               {sources.map((src) => {
                 const isSelected = selectedSources.includes(src.id)
+                const isDisabled = !src.enabled
+
                 return (
                   <div
                     key={src.id}
-                    className={`source-card-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => toggleSource(src.id)}
+                    className={`source-card-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
+                    onClick={() => toggleSource(src)}
+                    style={{ opacity: isDisabled ? 0.65 : 1 }}
                   >
                     <input
                       type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSource(src.id)}
+                      checked={isSelected && !isDisabled}
+                      disabled={isDisabled}
+                      onChange={() => toggleSource(src)}
                     />
-                    <div className="source-info">
-                      <span className="source-title">{src.name}</span>
+                    <div className="source-info" style={{ width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="source-title">{src.name}</span>
+                        {isDisabled && (
+                          <span className="status-badge failed" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                            <Key size={11} /> Requer Chave
+                          </span>
+                        )}
+                      </div>
                       <span className="source-desc">{src.description}</span>
                     </div>
                   </div>
@@ -296,13 +412,44 @@ export function HarvestPage(): JSX.Element {
             )}
           </div>
 
-          {/* Limit Config */}
+          {/* Active Search Filters Summary */}
+          <div className="harvest-card">
+            <div className="card-header-icon">
+              <Filter size={20} className="icon-accent" />
+              <h2>3. Recorte Vigente do Protocolo</h2>
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              <p>
+                <strong>Período:</strong>{' '}
+                {filters.year_start || filters.year_end
+                  ? `${filters.year_start || 'Início'} a ${filters.year_end || 'Atual'}`
+                  : 'Todos os anos'}
+              </p>
+              <p>
+                <strong>Idiomas:</strong>{' '}
+                {filters.languages && filters.languages.length > 0
+                  ? filters.languages.join(', ')
+                  : 'Todos'}
+              </p>
+              <p>
+                <strong>Tipos:</strong>{' '}
+                {filters.document_types && filters.document_types.length > 0
+                  ? filters.document_types.join(', ')
+                  : 'Todos os tipos'}
+              </p>
+              <p style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                * Filtros não suportados nativamente pela base são aplicados como pós-filtro local sem perda de registros.
+              </p>
+            </div>
+          </div>
+
+          {/* Limit and Details Config */}
           <div className="harvest-card">
             <div className="card-header-icon">
               <Sliders size={20} className="icon-accent" />
-              <h2>3. Limite por Descritor</h2>
+              <h2>4. Ritmo e Enriquecimento</h2>
             </div>
-            <div className="limit-selector">
+            <div className="limit-selector" style={{ marginBottom: '12px' }}>
               <label>Limite de registros por descritor:</label>
               <select
                 value={maxRecords}
@@ -317,6 +464,16 @@ export function HarvestPage(): JSX.Element {
                 <option value={1000}>1.000 artigos por descritor</option>
               </select>
             </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={fetchDetails}
+                onChange={(e) => setFetchDetails(e.target.checked)}
+                disabled={isHarvesting}
+              />
+              <span>Enriquecer metadados (obter orientador, instituição de defesa e resumos completos)</span>
+            </label>
           </div>
         </div>
 
@@ -412,6 +569,8 @@ export function HarvestPage(): JSX.Element {
                               ? 'Concluído'
                               : run.status === 'running'
                               ? 'Em execução'
+                              : run.status === 'cancelled'
+                              ? 'Cancelado'
                               : 'Falha'}
                           </span>
                         </td>
@@ -432,6 +591,14 @@ export function HarvestPage(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {/* Deduplication Report Modal */}
+      <DeduplicationReportModal
+        report={dedupReport}
+        isOpen={isDedupModalOpen}
+        onClose={() => setIsDedupModalOpen(false)}
+        projectId={id}
+      />
     </div>
   )
 }

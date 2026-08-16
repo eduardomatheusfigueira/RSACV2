@@ -4,7 +4,7 @@
  * com leitor de resumos e avaliação de critérios em tempo real.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   CheckCircle2,
@@ -27,23 +27,37 @@ import {
   Sliders,
   Check,
   Percent,
+  Layers,
+  CheckSquare,
+  Square,
+  CheckCheck,
+  RotateCcw,
+  ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
-import type { Paper, Decision, Protocol } from '@/types/api'
+import type { DeduplicationReport, Paper, Decision, Protocol } from '@/types/api'
+import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
 import './ScreeningPage.css'
 
-export function ScreeningPage(): JSX.Element {
+export function ScreeningPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { activeProject, setActiveProject, aiEnabled } = useSettingsStore()
   const { info, success, warn, error } = useLogStore()
 
   const [papers, setPapers] = useState<Paper[]>([])
+
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
+
+  // Deduplication Report State
+  const [dedupReport, setDedupReport] = useState<DeduplicationReport | null>(null)
+  const [isDedupModalOpen, setIsDedupModalOpen] = useState(false)
+  const [isDeduplicating, setIsDeduplicating] = useState(false)
 
   // Filters & Pagination
   const [decisionFilter, setDecisionFilter] = useState<string>('')
@@ -181,9 +195,13 @@ export function ScreeningPage(): JSX.Element {
       setTotalPages(res.total_pages)
       setTotalCount(res.total)
 
-      if (res.items.length > 0 && !selectedPaper) {
-        setSelectedPaper(res.items[0])
-      } else if (res.items.length === 0) {
+      if (res.items.length > 0) {
+        setSelectedPaper((prev) => {
+          if (!prev) return res.items[0]
+          const existing = res.items.find((p) => p.id === prev.id)
+          return existing || res.items[0]
+        })
+      } else {
         setSelectedPaper(null)
       }
     } catch (err) {
@@ -197,10 +215,37 @@ export function ScreeningPage(): JSX.Element {
     if (!id) return
     try {
       const updated = await api.updatePaper(id, paperId, { decision })
-      setPapers(papers.map((p) => (p.id === paperId ? updated : p)))
 
-      if (selectedPaper?.id === paperId) {
-        setSelectedPaper(updated)
+      if (decisionFilter !== '' && decision !== decisionFilter) {
+        // Se o filtro atual estiver ativo (ex: Pendente, Incluído, Excluído) e a nova decisão for diferente,
+        // remove o artigo imediatamente da lista filtrada e avança para o próximo
+        const currentIndex = papers.findIndex((p) => p.id === paperId)
+        const newPapers = papers.filter((p) => p.id !== paperId)
+        setPapers(newPapers)
+        setTotalCount((prev) => Math.max(0, prev - 1))
+
+        if (selectedPaper?.id === paperId) {
+          if (newPapers.length > 0) {
+            const nextIndex = Math.min(currentIndex >= 0 ? currentIndex : 0, newPapers.length - 1)
+            setSelectedPaper(newPapers[nextIndex])
+          } else {
+            setSelectedPaper(null)
+          }
+          setAiLastResult(null)
+        }
+
+        // Se a página atual esvaziou e estávamos em uma página posterior, volta uma página
+        if (newPapers.length === 0 && page > 1) {
+          setPage((prev) => Math.max(1, prev - 1))
+        } else if (newPapers.length === 0) {
+          // Se esvaziou na página 1, recarrega para verificar se há mais itens pendentes no banco
+          loadPapers(id)
+        }
+      } else {
+        setPapers(papers.map((p) => (p.id === paperId ? updated : p)))
+        if (selectedPaper?.id === paperId) {
+          setSelectedPaper(updated)
+        }
       }
 
       const logLvl = decision === 'Incluído' ? 'success' : decision === 'Excluído' ? 'warn' : 'info'
@@ -222,7 +267,7 @@ export function ScreeningPage(): JSX.Element {
       const res = await api.screenSinglePaperAI(id, selectedPaper.id)
       setAiLastResult(res)
 
-      success('IA', `Parecer IA: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.reasoning}\nCritérios atendidos: ${res.criteria_met.join(', ') || 'Nenhum'}`)
+      success('IA', `Parecer IA: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.justification || (res as any).reasoning}\nCritérios atendidos: ${(res as any).criteria_met?.join(', ') || 'Nenhum'}`)
 
       // Atualizar paper com os dados gerados
       const updatedPaper = await api.getPaper(id, selectedPaper.id)
@@ -258,6 +303,111 @@ export function ScreeningPage(): JSX.Element {
     }
   }
 
+  const inclusionCriteria = useMemo(() => {
+    return (protocol?.criteria || []).filter((c) => !c.is_exclusion)
+  }, [protocol])
+
+  const exclusionCriteria = useMemo(() => {
+    return (protocol?.criteria || []).filter((c) => c.is_exclusion)
+  }, [protocol])
+
+  const incMetCount = useMemo(() => {
+    if (!selectedPaper || !selectedPaper.criteria_evaluations) return 0
+    return inclusionCriteria.filter((c) => c.id && selectedPaper.criteria_evaluations?.[c.id]).length
+  }, [inclusionCriteria, selectedPaper])
+
+  const excMetCount = useMemo(() => {
+    if (!selectedPaper || !selectedPaper.criteria_evaluations) return 0
+    return exclusionCriteria.filter((c) => c.id && selectedPaper.criteria_evaluations?.[c.id]).length
+  }, [exclusionCriteria, selectedPaper])
+
+  const handleToggleCriterion = async (criterionId: string) => {
+    if (!id || !selectedPaper) return
+    const currentVal = !!selectedPaper.criteria_evaluations?.[criterionId]
+    const nextVal = !currentVal
+
+    const updatedEvals = {
+      ...(selectedPaper.criteria_evaluations || {}),
+      [criterionId]: nextVal,
+    }
+    const updatedPaper = {
+      ...selectedPaper,
+      criteria_evaluations: updatedEvals,
+    }
+
+    // Optimistic UI update
+    setSelectedPaper(updatedPaper)
+    setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updatedPaper : p)))
+
+    try {
+      const res = await api.updatePaper(id, selectedPaper.id, {
+        criteria_evaluations: { [criterionId]: nextVal },
+      })
+      setSelectedPaper(res)
+      setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? res : p)))
+    } catch (err: any) {
+      error('Triagem', 'Erro ao salvar avaliação do critério', err.message)
+      setSelectedPaper(selectedPaper)
+    }
+  }
+
+  const handleCheckAllInclusion = async () => {
+    if (!id || !selectedPaper || !protocol) return
+    if (inclusionCriteria.length === 0) return
+
+    const updates: Record<string, boolean> = {}
+    inclusionCriteria.forEach((c) => {
+      if (c.id) updates[c.id] = true
+    })
+
+    const updatedEvals = {
+      ...(selectedPaper.criteria_evaluations || {}),
+      ...updates,
+    }
+    const updatedPaper = { ...selectedPaper, criteria_evaluations: updatedEvals }
+    setSelectedPaper(updatedPaper)
+    setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updatedPaper : p)))
+
+    try {
+      const res = await api.updatePaper(id, selectedPaper.id, {
+        criteria_evaluations: updates,
+      })
+      setSelectedPaper(res)
+      setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? res : p)))
+      success('Triagem', 'Todos os critérios de inclusão foram marcados como atendidos.')
+    } catch (err: any) {
+      error('Triagem', 'Erro ao marcar critérios de inclusão', err.message)
+    }
+  }
+
+  const handleClearCriteria = async () => {
+    if (!id || !selectedPaper || !protocol) return
+    const updates: Record<string, boolean> = {}
+    protocol.criteria.forEach((c) => {
+      if (c.id) updates[c.id] = false
+    })
+
+    const updatedEvals = {
+      ...(selectedPaper.criteria_evaluations || {}),
+      ...updates,
+    }
+    const updatedPaper = { ...selectedPaper, criteria_evaluations: updatedEvals }
+    setSelectedPaper(updatedPaper)
+    setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updatedPaper : p)))
+
+    try {
+      const res = await api.updatePaper(id, selectedPaper.id, {
+        criteria_evaluations: updates,
+      })
+      setSelectedPaper(res)
+      setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? res : p)))
+      info('Triagem', 'Marcações de critérios limpas para este estudo.')
+    } catch (err: any) {
+      error('Triagem', 'Erro ao limpar critérios', err.message)
+    }
+  }
+
+
   const handleObservationsChange = async (obs: string) => {
     if (!id || !selectedPaper) return
     try {
@@ -270,6 +420,7 @@ export function ScreeningPage(): JSX.Element {
       console.error('Erro ao atualizar observações:', err)
     }
   }
+
 
   const handleAddManualPaper = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -297,6 +448,27 @@ export function ScreeningPage(): JSX.Element {
     }
   }
 
+  const handleOpenDedupReport = async () => {
+    if (!id) return
+    try {
+      setIsDeduplicating(true)
+      // Tenta obter o relatório mais recente; se não existir, executa deduplicação
+      try {
+        const report = await api.getDeduplicationReport(id)
+        setDedupReport(report)
+        setIsDedupModalOpen(true)
+      } catch {
+        const res = await api.deduplicateProject(id)
+        setDedupReport(res.data)
+        setIsDedupModalOpen(true)
+      }
+    } catch (err: any) {
+      error('Deduplicação', 'Falha ao carregar relatório de deduplicação', err.message)
+    } finally {
+      setIsDeduplicating(false)
+    }
+  }
+
   return (
     <div className="screening-page animate-fade-in">
       {/* Top Header */}
@@ -311,6 +483,19 @@ export function ScreeningPage(): JSX.Element {
           </p>
         </div>
         <div className="header-actions">
+          <button
+            className="btn-secondary btn-dedup"
+            onClick={handleOpenDedupReport}
+            disabled={isDeduplicating}
+            title="Visualiza o relatório consolidado de deduplicação das fontes"
+          >
+            {isDeduplicating ? (
+              <RefreshCw size={16} className="animate-spin" />
+            ) : (
+              <Layers size={16} className="icon-accent" />
+            )}
+            Relatório de Deduplicação
+          </button>
           {aiEnabled && (
             <button className="btn-secondary" onClick={() => setIsBatchModalOpen(true)}>
               <Zap size={16} className="icon-accent" /> Triagem em Lote com IA
@@ -421,8 +606,14 @@ export function ScreeningPage(): JSX.Element {
                           <Sparkles size={11} /> {Math.round(paper.ai_confidence * 100)}%
                         </span>
                       )}
+                      {paper.criteria_evaluations && Object.values(paper.criteria_evaluations).some(Boolean) && (
+                        <span className="badge-criteria-mini" title="Critérios avaliados para este estudo">
+                          <CheckCircle2 size={11} /> Critérios
+                        </span>
+                      )}
                       {paper.year && <span className="item-year">{paper.year}</span>}
                     </div>
+
                     <h4 className="item-title">{paper.title}</h4>
                     {paper.authors && <p className="item-authors">{paper.authors}</p>}
                   </div>
@@ -568,23 +759,208 @@ export function ScreeningPage(): JSX.Element {
                   </div>
                 </div>
 
-                {/* Criteria Reference Guide from Protocol */}
-                {protocol && protocol.criteria.length > 0 && (
-                  <div className="inspector-section">
-                    <h3>Critérios do Protocolo para Avaliação</h3>
-                    <div className="protocol-reference-criteria">
-                      {protocol.criteria.map((c, idx) => (
-                        <div
-                          key={idx}
-                          className={`ref-crit ${c.is_exclusion ? 'exc' : 'inc'}`}
-                        >
-                          {c.is_exclusion ? <XCircle size={14} /> : <CheckCircle2 size={14} />}
-                          <span>{c.text}</span>
-                        </div>
-                      ))}
+                {/* Criteria Evaluation Section with Interactive Checkboxes */}
+                <div className="inspector-section criteria-evaluation-section">
+                  <div className="criteria-section-header">
+                    <div className="header-left">
+                      <h3>Avaliação de Critérios de Elegibilidade</h3>
+                      <p className="criteria-section-desc">
+                        Marque os critérios atendidos pelo estudo para registrar a justificativa formal da decisão.
+                      </p>
                     </div>
+
+                    {protocol && protocol.criteria && protocol.criteria.length > 0 && (
+                      <div className="criteria-section-actions">
+                        {inclusionCriteria.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn-criteria-action"
+                            onClick={handleCheckAllInclusion}
+                            title="Marcar todos os critérios de inclusão como atendidos"
+                          >
+                            <CheckCheck size={14} /> Marcar Inclusões
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-criteria-action text-muted"
+                          onClick={handleClearCriteria}
+                          title="Desmarcar todas as avaliações deste estudo"
+                        >
+                          <RotateCcw size={13} /> Limpar
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {protocol && protocol.criteria && protocol.criteria.length > 0 ? (
+                    <>
+                      {/* Summary Badges */}
+                      <div className="criteria-stats-summary">
+                        <div
+                          className={`criteria-stat-badge inc-badge ${
+                            incMetCount === inclusionCriteria.length && inclusionCriteria.length > 0
+                              ? 'all-met'
+                              : ''
+                          }`}
+                        >
+                          <CheckCircle2 size={14} />
+                          <span>
+                            Inclusão: <strong>{incMetCount} / {inclusionCriteria.length}</strong> atendidos
+                          </span>
+                        </div>
+
+                        <div
+                          className={`criteria-stat-badge exc-badge ${
+                            excMetCount > 0 ? 'has-exclusion' : 'none'
+                          }`}
+                        >
+                          {excMetCount > 0 ? <AlertCircle size={14} /> : <ShieldCheck size={14} />}
+                          <span>
+                            Exclusão: <strong>{excMetCount}</strong>{' '}
+                            {excMetCount === 1 ? 'identificado' : 'identificados'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Smart Recommendation Helper Banner */}
+                      {excMetCount > 0 ? (
+                        <div className="criteria-alert-banner alert-exclude animate-fade-in">
+                          <div className="alert-text">
+                            <strong>Atenção:</strong> {excMetCount} critério(s) de exclusão identificado(s). Registro de exclusão fundamentado.
+                          </div>
+                          {selectedPaper.decision !== 'Excluído' && (
+                            <button
+                              type="button"
+                              className="btn-quick-decision btn-quick-exclude"
+                              onClick={() => handleDecision(selectedPaper.id, 'Excluído')}
+                            >
+                              <XCircle size={14} /> Excluir Estudo
+                            </button>
+                          )}
+                        </div>
+                      ) : incMetCount === inclusionCriteria.length && inclusionCriteria.length > 0 ? (
+                        <div className="criteria-alert-banner alert-include animate-fade-in">
+                          <div className="alert-text">
+                            <strong>Elegível:</strong> Todos os {inclusionCriteria.length} critérios de inclusão foram atendidos e nenhuma exclusão identificada.
+                          </div>
+                          {selectedPaper.decision !== 'Incluído' && (
+                            <button
+                              type="button"
+                              className="btn-quick-decision btn-quick-include"
+                              onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
+                            >
+                              <CheckCircle2 size={14} /> Incluir Estudo
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
+
+                      {/* Criteria Split Grid: Inclusion & Exclusion */}
+                      <div className="criteria-grid-layout">
+                        {/* Inclusion Criteria Column */}
+                        <div className="criteria-col inc-col">
+                          <div className="col-header">
+                            <span className="col-tag inc-tag">Critérios de Inclusão</span>
+                            <span className="col-count">
+                              {incMetCount}/{inclusionCriteria.length}
+                            </span>
+                          </div>
+
+                          {inclusionCriteria.length === 0 ? (
+                            <p className="no-criteria-hint">Nenhum critério de inclusão cadastrado.</p>
+                          ) : (
+                            <div className="criteria-checkbox-list">
+                              {inclusionCriteria.map((c) => {
+                                const isChecked = !!(
+                                  c.id && selectedPaper.criteria_evaluations?.[c.id]
+                                )
+                                return (
+                                  <label
+                                    key={c.id || c.text}
+                                    className={`criterion-card inc-card ${
+                                      isChecked ? 'checked' : ''
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="sr-only"
+                                      checked={isChecked}
+                                      onChange={() => c.id && handleToggleCriterion(c.id)}
+                                    />
+                                    <div className="custom-checkbox inc-checkbox">
+                                      {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
+                                    </div>
+                                    <span className="criterion-text">{c.text}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Exclusion Criteria Column */}
+                        <div className="criteria-col exc-col">
+                          <div className="col-header">
+                            <span className="col-tag exc-tag">Critérios de Exclusão</span>
+                            <span className="col-count">
+                              {excMetCount}/{exclusionCriteria.length}
+                            </span>
+                          </div>
+
+                          {exclusionCriteria.length === 0 ? (
+                            <p className="no-criteria-hint">Nenhum critério de exclusão cadastrado.</p>
+                          ) : (
+                            <div className="criteria-checkbox-list">
+                              {exclusionCriteria.map((c) => {
+                                const isChecked = !!(
+                                  c.id && selectedPaper.criteria_evaluations?.[c.id]
+                                )
+                                return (
+                                  <label
+                                    key={c.id || c.text}
+                                    className={`criterion-card exc-card ${
+                                      isChecked ? 'checked' : ''
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="sr-only"
+                                      checked={isChecked}
+                                      onChange={() => c.id && handleToggleCriterion(c.id)}
+                                    />
+                                    <div className="custom-checkbox exc-checkbox">
+                                      {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
+                                    </div>
+                                    <span className="criterion-text">{c.text}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="no-protocol-criteria-card">
+                      <AlertCircle size={24} />
+                      <div className="no-crit-info">
+                        <strong>Nenhum critério de elegibilidade cadastrado no protocolo</strong>
+                        <p>
+                          Defina critérios de inclusão e exclusão no protocolo para registrá-los durante a triagem.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-secondary small"
+                        onClick={() => navigate(`/projects/${id}/protocol`)}
+                      >
+                        Configurar Protocolo
+                      </button>
+                    </div>
+                  )}
+                </div>
+
 
                 {/* Notes & Observations */}
                 <div className="inspector-section">
@@ -777,6 +1153,14 @@ export function ScreeningPage(): JSX.Element {
           </div>
         </div>
       )}
+
+      {/* Deduplication Report Modal */}
+      <DeduplicationReportModal
+        report={dedupReport}
+        isOpen={isDedupModalOpen}
+        onClose={() => setIsDedupModalOpen(false)}
+        projectId={id}
+      />
     </div>
   )
 }

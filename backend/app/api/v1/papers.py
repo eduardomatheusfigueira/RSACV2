@@ -7,7 +7,7 @@ import logging
 import math
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import or_
 
 from app.api.deps import get_db
@@ -37,6 +37,10 @@ def _normalize_title(title: str) -> str:
 
 def _serialize_paper(paper: PaperModel) -> PaperResponse:
     sources = [s.source_name for s in paper.sources] if paper.sources else []
+    criteria_evaluations = {
+        c.criterion_id: c.value
+        for c in paper.criteria_evaluations
+    } if paper.criteria_evaluations else {}
     return PaperResponse(
         id=paper.id,
         project_id=paper.project_id,
@@ -55,6 +59,7 @@ def _serialize_paper(paper: PaperModel) -> PaperResponse:
         pdf_path=paper.pdf_path,
         pdf_text_extracted=paper.pdf_text_extracted,
         sources=sources,
+        criteria_evaluations=criteria_evaluations,
         created_at=paper.created_at,
         updated_at=paper.updated_at,
     )
@@ -68,10 +73,21 @@ def list_papers(
     decision: Optional[str] = Query(None, description="Filtrar por decisão: Pendente, Incluído, Excluído"),
     search: Optional[str] = Query(None, description="Busca textual em título, autores ou abstract"),
     source: Optional[str] = Query(None, description="Filtrar por base fonte"),
+    include_duplicates: bool = Query(False, description="Se deve incluir registros marcados como duplicatas"),
     db: Session = Depends(get_db),
 ):
     """Lista artigos de um projeto com filtros e paginação."""
-    query = db.query(PaperModel).filter(PaperModel.project_id == project_id)
+    query = (
+        db.query(PaperModel)
+        .options(
+            selectinload(PaperModel.sources),
+            selectinload(PaperModel.criteria_evaluations),
+        )
+        .filter(PaperModel.project_id == project_id)
+    )
+
+    if not include_duplicates:
+        query = query.filter(or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)))
 
     if decision:
         query = query.filter(PaperModel.decision == decision)
@@ -137,8 +153,21 @@ def create_paper(
     for s in data.sources:
         db.add(PaperSourceModel(paper_id=paper.id, source_name=s))
 
+    if data.criteria_evaluations:
+        for crit_id, val in data.criteria_evaluations.items():
+            db.add(PaperCriterionModel(paper_id=paper.id, criterion_id=crit_id, value=val))
+
     db.commit()
-    db.refresh(paper)
+    db.expire(paper)
+    paper = (
+        db.query(PaperModel)
+        .options(
+            selectinload(PaperModel.sources),
+            selectinload(PaperModel.criteria_evaluations),
+        )
+        .filter(PaperModel.project_id == project_id, PaperModel.id == paper.id)
+        .first()
+    )
     return _serialize_paper(paper)
 
 
@@ -151,6 +180,10 @@ def get_paper(
     """Obtém detalhes de um artigo específico."""
     paper = (
         db.query(PaperModel)
+        .options(
+            selectinload(PaperModel.sources),
+            selectinload(PaperModel.criteria_evaluations),
+        )
         .filter(PaperModel.project_id == project_id, PaperModel.id == paper_id)
         .first()
     )
@@ -169,6 +202,10 @@ def update_paper(
     """Atualiza decisão, observações e critérios de triagem do artigo."""
     paper = (
         db.query(PaperModel)
+        .options(
+            selectinload(PaperModel.sources),
+            selectinload(PaperModel.criteria_evaluations),
+        )
         .filter(PaperModel.project_id == project_id, PaperModel.id == paper_id)
         .first()
     )
@@ -214,5 +251,15 @@ def update_paper(
                 )
 
     db.commit()
-    db.refresh(paper)
+    db.expire(paper)
+    paper = (
+        db.query(PaperModel)
+        .options(
+            selectinload(PaperModel.sources),
+            selectinload(PaperModel.criteria_evaluations),
+        )
+        .filter(PaperModel.project_id == project_id, PaperModel.id == paper_id)
+        .first()
+    )
     return _serialize_paper(paper)
+

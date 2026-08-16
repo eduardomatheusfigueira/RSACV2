@@ -21,6 +21,7 @@ class PaperBase(BaseModel):
     decision: Decision = Decision.PENDING
     observations: str = ""
     ai_confidence: Optional[float] = None
+    criteria_evaluations: Dict[str, bool] = Field(default_factory=dict)
 
 
 class PaperCreate(PaperBase):

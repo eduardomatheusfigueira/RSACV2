@@ -168,9 +168,12 @@ def get_project_stats(
         raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
 
     from app.infrastructure.persistence.models import PaperModel
-    from sqlalchemy import func
+    from sqlalchemy import func, or_
 
-    papers = db.query(PaperModel).filter(PaperModel.project_id == project_id)
+    papers = db.query(PaperModel).filter(
+        PaperModel.project_id == project_id,
+        or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)),
+    )
     total = papers.count()
     included = papers.filter(PaperModel.decision == "Incluído").count()
     excluded = papers.filter(PaperModel.decision == "Excluído").count()

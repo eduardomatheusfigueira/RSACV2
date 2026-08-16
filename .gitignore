@@ -59,6 +59,8 @@ dist-electron/
 release/
 .npm/
 .eslintcache
+electron.vite.config.*.mjs
+*.timestamp-*.mjs
 
 # ── Electron & Packaging ────────────────────────────────────────────
 *.exe

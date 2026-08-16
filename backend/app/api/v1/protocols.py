@@ -40,6 +40,11 @@ def _serialize_protocol(protocol: ProtocolModel) -> ProtocolResponse:
         descriptors = {}
 
     try:
+        filters = json.loads(protocol.search_filters) if protocol.search_filters else {}
+    except Exception:
+        filters = {}
+
+    try:
         sections = json.loads(protocol.manuscript_sections) if protocol.manuscript_sections else {}
     except Exception:
         sections = {}
@@ -50,6 +55,7 @@ def _serialize_protocol(protocol: ProtocolModel) -> ProtocolResponse:
         objective=protocol.objective or "",
         pico_framework=pico,
         search_descriptors=descriptors,
+        search_filters=filters,
         manuscript_sections=sections,
         created_at=protocol.created_at,
         updated_at=protocol.updated_at,
@@ -82,7 +88,7 @@ def update_protocol(
     data: ProtocolUpdate,
     db: Session = Depends(get_db),
 ):
-    """Atualiza o protocolo, critérios, seções do manuscrito e questões de extração."""
+    """Atualiza o protocolo, critérios, seções do manuscrito, filtros e questões de extração."""
     protocol = db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).first()
     if not protocol:
         project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
@@ -102,7 +108,6 @@ def update_protocol(
         protocol.manuscript_sections = json.dumps(data.manuscript_sections, ensure_ascii=False)
 
     if data.search_descriptors is not None:
-        # Validar regras de descritores (formulação em pares recomendada para BDTD/VuFind)
         for lang, pairs in data.search_descriptors.items():
             for pair in pairs:
                 terms = [t.strip() for t in pair.split(" AND ") if t.strip()]
@@ -111,8 +116,10 @@ def update_protocol(
                         status_code=400,
                         detail=f"A expressão '{pair}' contém mais de 2 termos combinados. Formule no máximo em pares ('termo_1' AND 'termo_2') para compatibilidade BDTD.",
                     )
-
         protocol.search_descriptors = json.dumps(data.search_descriptors, ensure_ascii=False)
+
+    if data.search_filters is not None:
+        protocol.search_filters = json.dumps(data.search_filters, ensure_ascii=False)
 
     # Atualizar critérios se fornecidos
     if data.criteria is not None:

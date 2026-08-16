@@ -69,6 +69,13 @@ export function ProtocolPage(): JSX.Element {
     en: [''],
     es: [''],
   })
+  const [searchFilters, setSearchFilters] = useState<import('@/types/api').SearchFilters>({
+    year_start: null,
+    year_end: null,
+    languages: ['pt', 'en', 'es'],
+    document_types: ['Tese', 'Dissertação', 'Artigo de Periódico'],
+    open_access_only: false,
+  })
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [questions, setQuestions] = useState<ExtractionQuestion[]>([])
 
@@ -166,6 +173,16 @@ export function ProtocolPage(): JSX.Element {
         es: proto.search_descriptors?.es?.length ? proto.search_descriptors.es : [''],
       })
 
+      if (proto.search_filters) {
+        setSearchFilters({
+          year_start: proto.search_filters.year_start ?? null,
+          year_end: proto.search_filters.year_end ?? null,
+          languages: proto.search_filters.languages ?? ['pt', 'en', 'es'],
+          document_types: proto.search_filters.document_types ?? ['Tese', 'Dissertação', 'Artigo de Periódico'],
+          open_access_only: proto.search_filters.open_access_only ?? false,
+        })
+      }
+
       setCriteria(proto.criteria || [])
       setQuestions((proto.extraction_questions || []).map((q) => ({ ...q, text: q.text || (q as any).question || '' })))
 
@@ -173,8 +190,9 @@ export function ProtocolPage(): JSX.Element {
         setManuscript((prev) => ({
           ...prev,
           ...proto.manuscript_sections,
-          manuscript_title: proto.manuscript_sections.manuscript_title || proj?.title || '',
+          manuscript_title: proto.manuscript_sections?.manuscript_title || proj?.title || '',
         }))
+
       } else {
         setManuscript((prev) => ({
           ...prev,
@@ -348,6 +366,7 @@ export function ProtocolPage(): JSX.Element {
         objective,
         pico_framework: pico,
         search_descriptors: cleanDescriptors,
+        search_filters: searchFilters,
         manuscript_sections: manuscript,
         criteria: cleanCriteria,
         extraction_questions: cleanQuestions,
@@ -415,7 +434,8 @@ ${manuscript.selection_process || 'Não preenchido.'}
 ${manuscript.data_charting_process || 'Não preenchido.'}
 
 ### Variáveis e Questionário de Mapeamento
-${questions.map((q, i) => `${i + 1}. ${q.question}`).join('\n') || 'Nenhuma pergunta cadastrada'}
+${questions.map((q, i) => `${i + 1}. ${q.text || (q as any).question || ''}`).join('\n') || 'Nenhuma pergunta cadastrada'}
+
 
 ### Avaliação Crítica da Evidência (Opcional)
 ${manuscript.critical_appraisal || 'Dispensada / Não realizada para esta revisão de escopo.'}
@@ -1509,6 +1529,100 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
               >
                 <Plus size={14} /> Adicionar Par de Descritores ({descriptors[activeLangTab].length})
               </button>
+            </div>
+          </div>
+
+          {/* Filtros e Recorte de Busca Federada */}
+          <div className="protocol-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">Filtros Federados</span>
+              <span className="item-section-tag">MÉTODOS / RECORTES DE BUSCA</span>
+            </div>
+            <div className="card-section-title">
+              <Filter size={20} className="icon-accent" />
+              <h2>Recorte e Filtros Globais da Coleta</h2>
+            </div>
+            <p className="section-help">
+              Defina os limites de anos, idiomas e tipos documentais para a coleta multibase. Fontes com suporte nativo aplicarão os filtros na API; as demais aplicarão pós-filtro rigoroso localmente.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+                  Ano Inicial:
+                </label>
+                <input
+                  type="number"
+                  placeholder="Ex: 2015 (ou vazio para todos)"
+                  className="protocol-input-large"
+                  value={searchFilters.year_start ?? ''}
+                  onChange={(e) =>
+                    setSearchFilters({
+                      ...searchFilters,
+                      year_start: e.target.value ? parseInt(e.target.value, 10) : null,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+                  Ano Final:
+                </label>
+                <input
+                  type="number"
+                  placeholder="Ex: 2026 (ou vazio para atual)"
+                  className="protocol-input-large"
+                  value={searchFilters.year_end ?? ''}
+                  onChange={(e) =>
+                    setSearchFilters({
+                      ...searchFilters,
+                      year_end: e.target.value ? parseInt(e.target.value, 10) : null,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+                Tipos de Documento Permitidos:
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {['Tese', 'Dissertação', 'Artigo de Periódico', 'Livro', 'Capítulo de Livro', 'Preprint', 'Trabalho em Anais/Conferência'].map(
+                  (docType) => {
+                    const isChecked = searchFilters.document_types?.includes(docType)
+                    return (
+                      <label
+                        key={docType}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          background: isChecked ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-secondary)',
+                          border: `1px solid ${isChecked ? 'var(--color-primary)' : 'var(--border-color)'}`,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {
+                            const cur = searchFilters.document_types || []
+                            const next = cur.includes(docType)
+                              ? cur.filter((t) => t !== docType)
+                              : [...cur, docType]
+                            setSearchFilters({ ...searchFilters, document_types: next })
+                          }}
+                        />
+                        {docType}
+                      </label>
+                    )
+                  }
+                )}
+              </div>
             </div>
           </div>
 

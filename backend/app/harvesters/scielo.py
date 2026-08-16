@@ -4,18 +4,28 @@
 """
 RSAC V2 — SciELO Harvester.
 Coletor assíncrono para a base Scientific Electronic Library Online (SciELO)
-utilizando raspagem resiliente de HTML (BeautifulSoup), emulando navegador e
-aquecimento de sessão (padrão comprovado do RSAC original).
+utilizando raspagem resiliente de HTML (lxml), emulação de navegador, aquecimento
+de sessão, retries exponenciais para tolerância a HTTP 500/503/429 e pós-filtros locais.
 """
 
 import asyncio
 import logging
 import re
-from typing import AsyncGenerator, Callable, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any, Dict, List, Optional
 from bs4 import BeautifulSoup, Tag
 import httpx
 
-from app.harvesters.base import BaseHarvester, HarvestProgress, RawPaperRecord
+from app.domain.enums import to_canonical_doc_type
+from app.harvesters.base import (
+    BaseHarvester,
+    HarvesterCapabilities,
+    HarvestProgress,
+    HarvestQuery,
+    ProgressCallback,
+    RawPaperRecord,
+)
+from app.harvesters.factory import register_harvester
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +36,7 @@ RE_TOTAL_HITS: re.Pattern = re.compile(r"de\s+(\d[\d.]*)\s")
 RE_DOI: re.Pattern = re.compile(r"(10\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
 
 
-def parse_scielo_item(item_tag: Tag) -> RawPaperRecord:
+def parse_scielo_item(item_tag: Tag, descriptor: str = "") -> RawPaperRecord:
     """Extrai e higieniza os metadados de uma tag HTML <div class='item'> do SciELO."""
     # 1. ID único
     item_id = item_tag.get("id", "")
@@ -51,9 +61,9 @@ def parse_scielo_item(item_tag: Tag) -> RawPaperRecord:
         author_links = authors_div.find_all("a")
         authors_str = "; ".join(a.text.strip() for a in author_links if a.text.strip())
 
-    # 5. Periódico / Revista
-    source_div = item_tag.find(class_="source")
+    # 5. Periódico / Revista (separado de Instituição)
     journal_str = ""
+    source_div = item_tag.find(class_="source")
     if source_div:
         source_link = source_div.find("a")
         journal_str = source_link.text.strip() if source_link else ""
@@ -70,8 +80,9 @@ def parse_scielo_item(item_tag: Tag) -> RawPaperRecord:
                 year_str = m2.group(1)
                 break
 
-    # 7. Tipo de Pesquisa
-    research_type = "Preprint" if "preprint" in item_id.lower() else "Artigo de Periódico"
+    # 7. Tipo de Pesquisa Canônico
+    raw_type = "Preprint" if "preprint" in item_id.lower() else "Artigo de Periódico"
+    canonical_type = to_canonical_doc_type("SciELO", raw_type)
 
     # 8. Resumo
     abstract_divs = item_tag.find_all(class_="abstract")
@@ -88,7 +99,7 @@ def parse_scielo_item(item_tag: Tag) -> RawPaperRecord:
     doi_span = item_tag.find(class_="DOIResults")
     doi_text = doi_span.text.strip() if doi_span else ""
     doi_match = RE_DOI.search(doi_text)
-    doi_clean = doi_match.group(1) if doi_match else (doi_text or None)
+    doi_clean = doi_match.group(1).strip() if doi_match else (doi_text if (doi_text and "10." in doi_text) else None)
 
     return RawPaperRecord(
         title=title_str,
@@ -99,16 +110,31 @@ def parse_scielo_item(item_tag: Tag) -> RawPaperRecord:
         source_name="SciELO",
         source_id=item_id,
         download_url=article_url,
-        research_type=research_type,
-        institution=journal_str or "SciELO",
+        research_type=canonical_type,
+        journal=journal_str,
+        institution="SciELO",
+        matched_descriptor=descriptor,
     )
 
 
+@register_harvester("SCIELO")
 class SciELOHarvester(BaseHarvester):
-    """Coletor para SciELO com scraping de HTML via BeautifulSoup."""
+    """Coletor para SciELO com scraping de HTML via BeautifulSoup/lxml e retry inteligente."""
+
+    capabilities = HarvesterCapabilities(
+        supports_year_range=False,  # Pós-filtro local
+        supports_language=False,  # Pós-filtro local
+        supports_document_type=False,
+        supports_institution=False,
+        supports_open_access=True,
+        supports_boolean_query=True,
+        default_page_size=15,
+        max_page_size=50,
+        default_delay=1.0,
+    )
 
     SEARCH_URL = "https://search.scielo.org/"
-    PAGE_SIZE = 15
+    RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 
     def __init__(self, timeout: float = 35.0):
         super().__init__(source_name="SciELO", timeout=timeout)
@@ -125,11 +151,26 @@ class SciELOHarvester(BaseHarvester):
 
     async def harvest(
         self,
-        descriptors: List[str],
-        on_progress: Optional[Callable[[HarvestProgress], None]] = None,
+        query: HarvestQuery | List[str],
+        on_progress: Optional[ProgressCallback] = None,
         max_records_per_descriptor: Optional[int] = None,
     ) -> AsyncGenerator[RawPaperRecord, None]:
-        limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
+        # Normalizar HarvestQuery
+        if isinstance(query, HarvestQuery):
+            descriptors = query.descriptors
+            limit = query.max_records_per_descriptor or float("inf")
+            page_size = query.page_size or self.capabilities.default_page_size
+            year_start = query.year_start
+            year_end = query.year_end
+        else:
+            descriptors = query
+            limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
+            page_size = self.capabilities.default_page_size
+            year_start = None
+            year_end = None
+
+        total_overall = 0
+
         async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True, headers=self.headers) as client:
             # 1. Warm-up da sessão HTTP para adquirir cookies de sessão
             try:
@@ -147,71 +188,112 @@ class SciELOHarvester(BaseHarvester):
                 total_for_desc = 0
 
                 while total_for_desc < limit:
-                    offset = (page - 1) * self.PAGE_SIZE + 1
+                    offset = (page - 1) * page_size + 1
                     if on_progress:
-                        on_progress(
+                        await on_progress(
                             HarvestProgress(
                                 source_name=self.source_name,
                                 current_descriptor=desc_clean,
                                 page=page,
-                                total_found_so_far=total_for_desc,
+                                total_found_so_far=total_overall,
+                                phase="harvesting",
                             )
                         )
 
-                    try:
-                        params = {
-                            "q": desc_clean,
-                            "lang": "pt",
-                            "count": str(self.PAGE_SIZE),
-                            "from": str(offset),
-                            "output": "site",
-                        }
+                    params: Dict[str, str] = {
+                        "q": desc_clean,
+                        "lang": "pt",
+                        "count": str(page_size),
+                        "from": str(offset),
+                        "output": "site",
+                    }
 
-                        res = await client.get(self.SEARCH_URL, params=params)
-                        if res.status_code != 200:
-                            logger.warning(f"[SciELO] HTTP {res.status_code} para '{desc_clean}' na pág {page}")
-                            break
+                    # Estratégia de retry exponencial para resiliência a oscilações do SciELO
+                    res = None
+                    for attempt in range(1, 6):
+                        try:
+                            res = await client.get(self.SEARCH_URL, params=params)
+                            if res.status_code == 200:
+                                break
+                            elif res.status_code in self.RETRY_STATUS_CODES:
+                                backoff = 1.5 ** attempt
+                                logger.warning(
+                                    f"[SciELO] HTTP {res.status_code} na pág {page} (tentativa {attempt}/5). "
+                                    f"Aguardando {backoff:.1f}s..."
+                                )
+                                await asyncio.sleep(backoff)
+                            else:
+                                logger.warning(f"[SciELO] HTTP {res.status_code} para '{desc_clean}' na pág {page}")
+                                break
+                        except Exception as e:
+                            backoff = 1.5 ** attempt
+                            logger.warning(f"[SciELO] Erro de rede na pág {page} (tentativa {attempt}/5): {e}")
+                            await asyncio.sleep(backoff)
 
-                        soup = BeautifulSoup(res.text, "html.parser")
-                        items = soup.find_all(class_="item")
-                        if not items:
-                            logger.info(f"[SciELO] Fim dos registros para '{desc_clean}' na pág {page}")
-                            break
-
-                        # Extrair total de resultados na pág 1
-                        if page == 1:
-                            total_hits_elem = soup.find(id="TotalHits")
-                            if total_hits_elem:
-                                try:
-                                    num_found = int(total_hits_elem.text.strip().replace(".", ""))
-                                    logger.info(f"[SciELO] Total encontrado para '{desc_clean}': {num_found}")
-                                except Exception:
-                                    pass
-
-                        for item in items:
-                            paper = parse_scielo_item(item)
-                            if paper.title:
-                                yield paper
-                                total_for_desc += 1
-                                if total_for_desc >= limit:
-                                    break
-
-                        if len(items) < self.PAGE_SIZE:
-                            break
-
-                        page += 1
-                        await asyncio.sleep(1.0)
-                    except Exception as e:
-                        logger.error(f"[SciELO] Erro na requisição para '{desc_clean}' (pág {page}): {e}")
+                    if not res or res.status_code != 200:
+                        logger.error(f"[SciELO] Falha definitiva para '{desc_clean}' na pág {page}")
                         break
 
+                    soup = BeautifulSoup(res.text, "lxml")
+                    items = soup.find_all(class_="item")
+                    if not items:
+                        logger.info(f"[SciELO] Fim dos registros para '{desc_clean}' na pág {page}")
+                        break
+
+                    # Extrair total de resultados na pág 1 (com fallback para regex)
+                    if page == 1:
+                        num_found = 0
+                        total_hits_elem = soup.find(id="TotalHits")
+                        if total_hits_elem:
+                            try:
+                                num_found = int(total_hits_elem.text.strip().replace(".", ""))
+                            except Exception:
+                                pass
+                        if not num_found:
+                            m = RE_TOTAL_HITS.search(soup.get_text())
+                            if m:
+                                try:
+                                    num_found = int(m.group(1).replace(".", ""))
+                                except Exception:
+                                    pass
+                        if num_found:
+                            logger.info(f"[SciELO] Total encontrado para '{desc_clean}': {num_found}")
+
+                    for item in items:
+                        paper = parse_scielo_item(item, descriptor=desc_clean)
+
+                        # Pós-filtro local de anos
+                        if year_start or year_end:
+                            try:
+                                y_int = int(paper.year[:4])
+                                if year_start and y_int < year_start:
+                                    continue
+                                if year_end and y_int > year_end:
+                                    continue
+                            except ValueError:
+                                pass
+
+                        if paper.title:
+                            yield paper
+                            total_for_desc += 1
+                            total_overall += 1
+                            if total_for_desc >= limit:
+                                break
+
+                    if len(items) < page_size:
+                        break
+
+                    page += 1
+                    await asyncio.sleep(self.capabilities.default_delay)
+
             if on_progress:
-                on_progress(
+                await on_progress(
                     HarvestProgress(
                         source_name=self.source_name,
                         current_descriptor="",
                         page=1,
-                        total_found_so_far=total_for_desc,
+                        total_found_so_far=total_overall,
+                        phase="completed",
                         is_complete=True,
                     )
                 )

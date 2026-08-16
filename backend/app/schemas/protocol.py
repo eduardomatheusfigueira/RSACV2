@@ -4,7 +4,7 @@
 """RSAC V2 — Schemas de Protocolo, Critérios e Seções do Manuscrito (PRISMA-ScR)."""
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
@@ -51,6 +51,10 @@ class ProtocolUpdate(BaseModel):
         default_factory=dict,
         description="Pares de busca por idioma (máx 5 pares por idioma, máx 2 termos por par)",
     )
+    search_filters: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Filtros de recorte de busca: anos (year_start, year_end), idiomas, tipos documentais, acesso aberto",
+    )
     manuscript_sections: Optional[Dict[str, str]] = Field(
         default_factory=dict,
         description="Seções completas do manuscrito/protocolo (PRISMA-ScR 22 itens)",
@@ -66,6 +70,7 @@ class ProtocolResponse(BaseModel):
     objective: str
     pico_framework: Dict[str, str]
     search_descriptors: Dict[str, List[str]]
+    search_filters: Dict[str, Any] = Field(default_factory=dict)
     manuscript_sections: Dict[str, str] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime

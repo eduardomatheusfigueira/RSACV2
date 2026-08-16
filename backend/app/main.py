@@ -3,25 +3,37 @@
 
 """
 RSAC V2 — FastAPI Application Factory.
-Ponto de entrada do backend — cria e configura a aplicação FastAPI.
+Ponto de entrada do backend — cria e configura a aplicação FastAPI,
+logging estruturado em arquivo e reconciliação de jobs no ciclo de vida (lifespan).
 """
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.config import settings
-from app.database import create_tables
+from app.database import SessionLocal, create_tables
+from app.infrastructure.persistence.models import HarvestRunModel
 
-# ── Logging ───────────────────────────────────────────────────────────
+# ── Logging Estruturado (Console + Arquivo) ───────────────────────────
+
+log_dir = Path(settings.data_dir) / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "harvest.log"
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
     format="%(asctime)s │ %(levelname)-8s │ %(name)s │ %(message)s",
     datefmt="%H:%M:%S",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(log_file, encoding="utf-8"),
+    ],
 )
 logger = logging.getLogger("rsac")
 
@@ -34,7 +46,30 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info(f"RSAC Backend v{settings.app_version} iniciando...")
     logger.info(f"Banco de dados: {settings.effective_database_url}")
+    logger.info(f"Arquivo de log: {log_file}")
     create_tables()
+
+    # Reconciliar execuções pendentes interrompidas por queda/reinício do processo
+    try:
+        db = SessionLocal()
+        interrupted_runs = (
+            db.query(HarvestRunModel)
+            .filter(HarvestRunModel.status == "running")
+            .all()
+        )
+        if interrupted_runs:
+            logger.warning(
+                f"[Lifespan] Reconciliando {len(interrupted_runs)} coleta(s) que ficaram com status 'running'."
+            )
+            for run in interrupted_runs:
+                run.status = "failed"
+                run.error_message = "Interrompida por reinício do servidor."
+                run.completed_at = datetime.now(timezone.utc)
+            db.commit()
+        db.close()
+    except Exception as e:
+        logger.error(f"[Lifespan] Erro ao reconciliar execuções de coleta: {e}")
+
     logger.info("Backend pronto para receber requisições.")
     yield
     # Shutdown

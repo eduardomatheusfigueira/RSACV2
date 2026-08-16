@@ -25,6 +25,17 @@ export type AIProvider = 'gemini' | 'qwen' | 'local'
 
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 
+export type CanonicalDocumentType =
+  | 'Tese'
+  | 'Dissertação'
+  | 'Artigo de Periódico'
+  | 'Livro'
+  | 'Capítulo de Livro'
+  | 'Preprint'
+  | 'Trabalho em Anais/Conferência'
+  | 'Relatório Técnico'
+  | 'Outro'
+
 // ── Project ───────────────────────────────────────────────────────────
 
 export interface Project {
@@ -70,12 +81,21 @@ export interface ExtractionQuestion {
   order: number
 }
 
+export interface SearchFilters {
+  year_start?: number | null
+  year_end?: number | null
+  languages?: string[]
+  document_types?: string[]
+  open_access_only?: boolean
+}
+
 export interface Protocol {
   id: string
   project_id: string
   objective: string
   pico_framework: Record<string, string>
   search_descriptors: Record<string, string[]>
+  search_filters?: SearchFilters
   manuscript_sections?: Record<string, string>
   created_at: string
   updated_at: string
@@ -87,6 +107,7 @@ export interface ProtocolUpdate {
   objective?: string
   pico_framework?: Record<string, string>
   search_descriptors?: Record<string, string[]>
+  search_filters?: SearchFilters
   manuscript_sections?: Record<string, string>
   criteria?: Criterion[]
   extraction_questions?: ExtractionQuestion[]
@@ -100,31 +121,37 @@ export interface Paper {
   title: string
   title_normalized: string
   authors: string
+  advisor?: string
   year: string
   source?: string
   sources?: string[]
   research_type: string
   institution: string
+  journal?: string
   abstract: string
   download_url: string
   doi: string | null
   decision: Decision
   observations: string
   ai_confidence: number | null
+  criteria_evaluations?: Record<string, boolean>
   pdf_path: string | null
   pdf_text_extracted: boolean
   created_at: string
   updated_at: string
 }
 
+
 export interface PaperCreate {
   title: string
   authors?: string
+  advisor?: string
   year?: string
   doi?: string
   abstract?: string
   research_type?: string
   institution?: string
+  journal?: string
   download_url?: string
   decision?: Decision
   observations?: string
@@ -150,8 +177,13 @@ export interface PaperListResponse {
 
 export interface HarvestStartRequest {
   sources: string[]
-  max_records_per_descriptor?: number
+  max_records_per_descriptor?: number | null
   custom_descriptors?: string[]
+  year_start?: number | null
+  year_end?: number | null
+  languages?: string[]
+  document_types?: string[]
+  fetch_details?: boolean
 }
 
 export interface HarvestRun {
@@ -159,6 +191,7 @@ export interface HarvestRun {
   project_id: string
   source_name: string
   descriptors_used: string[]
+  query_parameters?: Record<string, unknown>
   started_at: string
   completed_at: string | null
   records_found: number
@@ -178,6 +211,69 @@ export interface HarvestSourceInfo {
   name: string
   description: string
   enabled: boolean
+  requires_api_key?: boolean
+  has_api_key?: boolean
+  supports_year_range?: boolean
+  supports_language?: boolean
+  supports_document_type?: boolean
+  supports_institution?: boolean
+  supports_open_access?: boolean
+  supports_boolean_query?: boolean
+  max_native_filters?: number | null
+  default_page_size?: number
+}
+
+// ── Source Credentials ────────────────────────────────────────────────
+
+export interface SourceCredential {
+  source_name: string
+  has_api_key: boolean
+  key_preview: string
+  has_inst_token: boolean
+  inst_token_preview: string
+  custom_endpoint?: string | null
+  updated_at?: string | null
+}
+
+export interface SourceCredentialUpdate {
+  api_key?: string
+  inst_token?: string
+  custom_endpoint?: string | null
+}
+
+export interface ExtractionResponse {
+  paper_id: string
+  has_pdf: boolean
+  pdf_path: string | null
+  answers: Array<{
+    id: string
+    question_id: string
+    answer: string
+    ai_generated: boolean
+  }>
+}
+
+
+// ── Deduplication Report ──────────────────────────────────────────────
+
+export interface DeduplicationReport {
+  id: string
+  project_id: string
+  total_raw: number
+  total_unique: number
+  total_duplicates: number
+  dup_rate: number
+  sources_breakdown: Record<string, number>
+  duplicates_list: Array<{
+    titulo: string
+    autores: string
+    ano: string
+    fontes: string[]
+    primary_id: string
+    duplicate_id: string
+  }>
+  report_text: string
+  created_at: string
 }
 
 // ── AI ────────────────────────────────────────────────────────────────

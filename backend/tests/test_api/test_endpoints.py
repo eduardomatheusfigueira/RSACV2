@@ -133,13 +133,30 @@ async def test_project_crud(async_client):
     assert paper_res.status_code == 201
     paper_id = paper_res.json()["id"]
 
-    # Patch decision to 'Incluído'
+    # Patch decision to 'Incluído' and criteria evaluations
+    crit_1_id = proto["criteria"][0]["id"]
+    crit_2_id = proto["criteria"][1]["id"]
     patch_res = await async_client.patch(
         f"/api/v1/projects/{project_id}/papers/{paper_id}",
-        json={"decision": "Incluído", "observations": "Artigo relevante."},
+        json={
+            "decision": "Incluído",
+            "observations": "Artigo relevante.",
+            "criteria_evaluations": {
+                crit_1_id: True,
+                crit_2_id: False,
+            },
+        },
     )
     assert patch_res.status_code == 200
-    assert patch_res.json()["decision"] == "Incluído"
+    patched_paper = patch_res.json()
+    assert patched_paper["decision"] == "Incluído"
+    assert patched_paper["criteria_evaluations"][crit_1_id] is True
+    assert patched_paper["criteria_evaluations"][crit_2_id] is False
+
+    # Get paper by ID
+    get_res = await async_client.get(f"/api/v1/projects/{project_id}/papers/{paper_id}")
+    assert get_res.status_code == 200
+    assert get_res.json()["criteria_evaluations"][crit_1_id] is True
 
     # 6. Check Stats
     stats_res = await async_client.get(f"/api/v1/projects/{project_id}/stats")
@@ -148,6 +165,7 @@ async def test_project_crud(async_client):
     assert stats["total_papers"] == 1
     assert stats["included_papers"] == 1
     assert stats["pending_papers"] == 0
+
 
 
 @pytest.mark.anyio

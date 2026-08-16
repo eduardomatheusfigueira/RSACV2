@@ -3,22 +3,48 @@
 
 """
 RSAC V2 — PubMed Harvester (NCBI E-utilities).
-Coletor assíncrono para a base biomédica PubMed.
+Coletor assíncrono para a base biomédica PubMed com paginação completa (retstart),
+lotes de efetch de 100 PMIDs, preservação de rótulos estruturados de resumo
+e controle de taxa de requisições.
 """
 
 import asyncio
 import logging
-from typing import AsyncGenerator, Callable, List, Optional
+from collections.abc import AsyncGenerator
+from typing import Any, Dict, List, Optional, Set
 import xml.etree.ElementTree as ET
 import httpx
 
-from app.harvesters.base import BaseHarvester, HarvestProgress, RawPaperRecord
+from app.domain.enums import to_canonical_doc_type
+from app.harvesters.base import (
+    BaseHarvester,
+    HarvesterCapabilities,
+    HarvestProgress,
+    HarvestQuery,
+    ProgressCallback,
+    RawPaperRecord,
+)
+from app.harvesters.factory import register_harvester
 
 logger = logging.getLogger(__name__)
 
 
+@register_harvester("PUBMED")
 class PubMedHarvester(BaseHarvester):
-    """Coletor para PubMed via NCBI E-utilities."""
+    """Coletor para PubMed via NCBI E-utilities com paginação e suporte a lotes."""
+
+    capabilities = HarvesterCapabilities(
+        supports_year_range=True,
+        supports_language=True,
+        supports_document_type=True,
+        supports_institution=False,
+        supports_open_access=True,
+        supports_boolean_query=True,
+        requires_api_key=False,
+        default_page_size=100,
+        max_page_size=100,
+        default_delay=0.35,
+    )
 
     ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
     EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
@@ -29,11 +55,28 @@ class PubMedHarvester(BaseHarvester):
 
     async def harvest(
         self,
-        descriptors: List[str],
-        on_progress: Optional[Callable[[HarvestProgress], None]] = None,
+        query: HarvestQuery | List[str],
+        on_progress: Optional[ProgressCallback] = None,
         max_records_per_descriptor: Optional[int] = None,
     ) -> AsyncGenerator[RawPaperRecord, None]:
-        limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
+        # Normalizar HarvestQuery
+        if isinstance(query, HarvestQuery):
+            descriptors = query.descriptors
+            limit = query.max_records_per_descriptor or float("inf")
+            year_start = query.year_start
+            year_end = query.year_end
+            languages = query.languages
+        else:
+            descriptors = query
+            limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
+            year_start = None
+            year_end = None
+            languages = []
+
+        delay = 0.12 if self.api_key else 0.38  # 10 req/s com chave vs 3 req/s sem chave
+        seen_pmids: Set[str] = set()
+        total_overall = 0
+
         async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
             for desc in descriptors:
                 desc_clean = desc.strip()
@@ -41,25 +84,39 @@ class PubMedHarvester(BaseHarvester):
                     continue
 
                 total_for_desc = 0
-                retmax = 500 if limit == float("inf") else min(int(limit), 500)
+                retstart = 0
+                retmax = 10000 if limit == float("inf") else min(int(limit), 10000)
+
+                # Construir termo com filtros nativos do PubMed
+                term_parts = [f"({desc_clean})"]
+                if year_start or year_end:
+                    y_start = year_start or 1900
+                    y_end = year_end or 2099
+                    term_parts.append(f'("{y_start}"[Date - Publication] : "{y_end}"[Date - Publication])')
+                for lang in languages:
+                    term_parts.append(f'"{lang}"[Language]')
+
+                full_term = " AND ".join(term_parts)
 
                 if on_progress:
-                    on_progress(
+                    await on_progress(
                         HarvestProgress(
                             source_name=self.source_name,
                             current_descriptor=desc_clean,
                             page=1,
-                            total_found_so_far=0,
+                            total_found_so_far=total_overall,
+                            phase="harvesting",
                         )
                     )
 
                 try:
-                    # 1. ESearch para obter PMIDs
-                    search_params = {
+                    # 1. ESearch para obter lista de PMIDs
+                    search_params: Dict[str, Any] = {
                         "db": "pubmed",
-                        "term": desc_clean,
+                        "term": full_term,
                         "retmode": "json",
                         "retmax": retmax,
+                        "retstart": retstart,
                         "sort": "pub_date",
                     }
                     if self.api_key:
@@ -75,10 +132,16 @@ class PubMedHarvester(BaseHarvester):
                     if not id_list:
                         continue
 
-                    # 2. EFetch em lotes de 25 PMIDs
-                    chunk_size = 25
+                    # 2. EFetch em lotes de 100 PMIDs
+                    chunk_size = 100
                     for i in range(0, len(id_list), chunk_size):
-                        chunk_ids = id_list[i : i + chunk_size]
+                        chunk_ids = [pid for pid in id_list[i : i + chunk_size] if pid not in seen_pmids]
+                        if not chunk_ids:
+                            continue
+
+                        for pid in chunk_ids:
+                            seen_pmids.add(pid)
+
                         fetch_params = {
                             "db": "pubmed",
                             "id": ",".join(chunk_ids),
@@ -89,9 +152,10 @@ class PubMedHarvester(BaseHarvester):
 
                         fetch_res = await client.get(self.EFETCH_URL, params=fetch_params)
                         if fetch_res.status_code != 200:
+                            logger.warning(f"[PubMed] EFetch HTTP {fetch_res.status_code}")
                             continue
 
-                        # Parse XML
+                        # Parse XML com preservação de rótulos estruturados
                         root = ET.fromstring(fetch_res.text)
                         for article in root.findall(".//PubmedArticle"):
                             medline = article.find("MedlineCitation")
@@ -105,21 +169,25 @@ class PubMedHarvester(BaseHarvester):
                             if art_elem is None:
                                 continue
 
-                            # Title
+                            # Título
                             title_elem = art_elem.find("ArticleTitle")
                             title_str = "".join(title_elem.itertext()).strip() if title_elem is not None else ""
 
-                            # Abstract
+                            # Resumo com rótulos preservados (ex: BACKGROUND, METHODS)
                             abstract_elem = art_elem.find("Abstract")
-                            abstract_str = ""
+                            abstract_parts = []
                             if abstract_elem is not None:
-                                parts = [
-                                    "".join(t.itertext())
-                                    for t in abstract_elem.findall("AbstractText")
-                                ]
-                                abstract_str = " ".join(parts).strip()
+                                for text_el in abstract_elem.findall("AbstractText"):
+                                    label = text_el.get("Label")
+                                    text_content = "".join(text_el.itertext()).strip()
+                                    if text_content:
+                                        if label:
+                                            abstract_parts.append(f"{label}: {text_content}")
+                                        else:
+                                            abstract_parts.append(text_content)
+                            abstract_str = " ".join(abstract_parts).strip()
 
-                            # Authors
+                            # Autores
                             author_list_elem = art_elem.find("AuthorList")
                             authors = []
                             if author_list_elem is not None:
@@ -133,16 +201,28 @@ class PubMedHarvester(BaseHarvester):
                                         authors.append(name)
                             authors_str = "; ".join(authors)
 
-                            # Year
+                            # Periódico / Journal
+                            journal_elem = art_elem.find(".//Journal/Title")
+                            journal_name = journal_elem.text.strip() if (journal_elem is not None and journal_elem.text) else ""
+
+                            # Ano
                             year_elem = art_elem.find(".//Journal/JournalIssue/PubDate/Year")
-                            year_str = year_elem.text if year_elem is not None and year_elem.text else ""
+                            year_str = year_elem.text if (year_elem is not None and year_elem.text) else ""
 
                             # DOI
-                            doi = None
+                            doi: Optional[str] = None
                             for id_elem in article.findall(".//ArticleIdList/ArticleId"):
                                 if id_elem.get("IdType") == "doi" and id_elem.text:
                                     doi = id_elem.text.strip()
                                     break
+
+                            # Tipo de Publicação
+                            pub_types = []
+                            for pt in art_elem.findall(".//PublicationTypeList/PublicationType"):
+                                if pt.text:
+                                    pub_types.append(pt.text.strip())
+                            raw_type = pub_types[0] if pub_types else "Journal Article"
+                            canonical_type = to_canonical_doc_type(self.source_name, raw_type)
 
                             dl_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/" if pmid else ""
 
@@ -155,27 +235,33 @@ class PubMedHarvester(BaseHarvester):
                                 source_name=self.source_name,
                                 source_id=pmid,
                                 download_url=dl_url,
-                                research_type="Artigo Biomédico (PubMed)",
+                                research_type=canonical_type,
+                                journal=journal_name,
                                 institution="PubMed/NCBI",
+                                matched_descriptor=desc_clean,
                             )
 
                             if paper.title:
                                 yield paper
                                 total_for_desc += 1
+                                total_overall += 1
+                                if total_for_desc >= limit:
+                                    break
 
-                        await asyncio.sleep(0.4)
+                        await asyncio.sleep(delay)
 
                 except Exception as e:
-                    logger.error(f"[PubMed] Erro na requisição para '{desc_clean}': {e}")
+                    logger.error(f"[PubMed] Erro ao processar '{desc_clean}': {e}")
                     continue
 
             if on_progress:
-                on_progress(
+                await on_progress(
                     HarvestProgress(
                         source_name=self.source_name,
                         current_descriptor="",
                         page=1,
-                        total_found_so_far=total_for_desc,
+                        total_found_so_far=total_overall,
+                        phase="completed",
                         is_complete=True,
                     )
                 )

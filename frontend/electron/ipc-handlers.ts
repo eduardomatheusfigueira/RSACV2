@@ -55,8 +55,9 @@ export function registerIpcHandlers(): void {
     const { BrowserWindow } = require('electron')
     const windows = BrowserWindow.getAllWindows()
     const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-    windows.forEach((win) => {
+    windows.forEach((win: any) => {
       win.webContents.send('theme:changed', theme)
     })
+
   })
 }

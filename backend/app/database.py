@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 engine = create_engine(
     settings.effective_database_url,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False, "timeout": 30},
     echo=settings.debug,
     pool_pre_ping=True,
 )

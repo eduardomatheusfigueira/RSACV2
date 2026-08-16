@@ -3,7 +3,7 @@
 
 """
 RSAC V2 — Modelos ORM (SQLAlchemy 2.x).
-Mapeamento objeto-relacional para todas as tabelas do banco de dados.
+Mapeamento objeto-relacional para todas as tabelas do banco de dados SQLite.
 """
 
 import uuid
@@ -77,6 +77,7 @@ class ProtocolModel(Base):
     objective: Mapped[str] = mapped_column(Text, default="")
     pico_framework: Mapped[str] = mapped_column(Text, default="{}")  # JSON string
     search_descriptors: Mapped[str] = mapped_column(Text, default="{}")  # JSON string
+    search_filters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para recorte temporal, idiomas, etc.
     manuscript_sections: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para todas as seções do PRISMA-ScR
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
@@ -121,24 +122,32 @@ class PaperModel(Base):
         Index("ix_papers_project_decision", "project_id", "decision"),
         Index("ix_papers_doi", "doi"),
         Index("ix_papers_title_normalized", "title_normalized"),
+        Index("ix_papers_project_doi", "project_id", "doi"),
+        Index("ix_papers_project_title_norm", "project_id", "title_normalized"),
+        Index("ix_papers_project_blocking_key", "project_id", "blocking_key"),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"))
     title: Mapped[str] = mapped_column(Text, nullable=False)
     title_normalized: Mapped[str] = mapped_column(Text, default="")
+    blocking_key: Mapped[str] = mapped_column(String(120), default="", index=True)
     authors: Mapped[str] = mapped_column(Text, default="")
+    advisor: Mapped[str] = mapped_column(Text, default="")
     year: Mapped[str] = mapped_column(String(10), default="")
     doi: Mapped[str | None] = mapped_column(String(200), nullable=True)
     abstract: Mapped[str] = mapped_column(Text, default="")
     research_type: Mapped[str] = mapped_column(String(100), default="")
     institution: Mapped[str] = mapped_column(Text, default="")
+    journal: Mapped[str] = mapped_column(Text, default="")
     download_url: Mapped[str] = mapped_column(Text, default="")
     decision: Mapped[str] = mapped_column(String(20), default="Pendente")
     observations: Mapped[str] = mapped_column(Text, default="")
     ai_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     pdf_path: Mapped[str | None] = mapped_column(Text, nullable=True)
     pdf_text_extracted: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_duplicate: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    merged_into_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -164,6 +173,9 @@ class PaperModel(Base):
 
 class PaperSourceModel(Base):
     __tablename__ = "paper_sources"
+    __table_args__ = (
+        Index("ix_paper_sources_unique", "paper_id", "source_name", "source_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id"))
@@ -237,6 +249,8 @@ class HarvestRunModel(Base):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"))
     source_name: Mapped[str] = mapped_column(String(50), nullable=False)
     descriptors_used: Mapped[str] = mapped_column(Text, default="[]")  # JSON string
+    query_parameters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string (HarvestQuery snapshot)
+    checkpoint: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para retomada
     started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     records_found: Mapped[int] = mapped_column(Integer, default=0)
@@ -267,6 +281,21 @@ class AuditLogModel(Base):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Configurações de Fontes / Credenciais de Coleta (Scopus, PubMed, etc.)
+# ─────────────────────────────────────────────────────────────────────
+
+class SourceCredentialModel(Base):
+    __tablename__ = "source_credentials"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    source_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    api_key: Mapped[str] = mapped_column(Text, default="")
+    inst_token: Mapped[str] = mapped_column(Text, default="")
+    custom_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Configurações de IA (persistidas)
 # ─────────────────────────────────────────────────────────────────────
 
@@ -282,3 +311,26 @@ class AISettingsModel(Base):
     temperature: Mapped[float] = mapped_column(Float, default=0.2)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Relatórios de Deduplicação (Persistidos por Projeto)
+# ─────────────────────────────────────────────────────────────────────
+
+class DeduplicationReportModel(Base):
+    __tablename__ = "deduplication_reports"
+    __table_args__ = (Index("ix_dedup_reports_project", "project_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    total_raw: Mapped[int] = mapped_column(Integer, default=0)
+    total_unique: Mapped[int] = mapped_column(Integer, default=0)
+    total_duplicates: Mapped[int] = mapped_column(Integer, default=0)
+    sources_breakdown: Mapped[str] = mapped_column(Text, default="{}")  # JSON
+    duplicates_list: Mapped[str] = mapped_column(Text, default="[]")  # JSON
+    report_text: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    # Relationships
+    project: Mapped["ProjectModel"] = relationship()
+
