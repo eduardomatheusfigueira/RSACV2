@@ -386,6 +386,10 @@ class APIClient {
     })
   }
 
+  async getExtractionSummary(projectId: string): Promise<import('@/types/api').ExtractionSummaryResponse> {
+    return this.request<import('@/types/api').ExtractionSummaryResponse>(`/projects/${projectId}/extraction/summary`)
+  }
+
   // ── Export ────────────────────────────────────────────────────────
 
   async getPrismaFlow(projectId: string): Promise<PrismaFlowData> {

@@ -935,3 +935,467 @@
   justify-content: flex-end;
   gap: var(--space-3);
 }
+
+/* ── Agrupamento Temporal Metodológico (A Priori vs A Posteriori) ── */
+.studio-tabs-container {
+  margin-bottom: var(--space-6);
+  width: 100%;
+}
+
+.studio-tabs-bar-grouped {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .studio-tabs-bar-grouped {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tabs-group {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-neo-raised);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tabs-group.a-priori-group {
+  border-left: 3px solid var(--color-info);
+}
+
+.tabs-group.a-posteriori-group {
+  border-left: 3px solid var(--color-accent);
+}
+
+.tabs-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.group-tag {
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+}
+
+.group-tag.a-priori {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border: 1px solid var(--color-info);
+}
+
+.group-tag.a-posteriori {
+  background: var(--color-warning-bg);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+
+.tabs-group-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tabs-group-buttons .studio-tab {
+  flex: 1 1 auto;
+  min-width: 120px;
+}
+
+/* Phase Indicator Banners */
+.phase-indicator-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-5);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.phase-indicator-banner.a-priori-banner {
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info);
+  color: var(--color-text-primary);
+}
+
+.phase-indicator-banner.a-posteriori-banner {
+  background: rgba(188, 108, 37, 0.08);
+  border: 1px solid var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.phase-badge {
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.phase-badge.a-priori {
+  background: var(--color-info);
+  color: #ffffff;
+}
+
+.phase-badge.a-posteriori {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+/* Painel de Rastreabilidade de Evidências */
+.evidence-traceability-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.traceability-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.traceability-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.btn-toggle-matrix {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent);
+  background: none;
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-xs);
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-toggle-matrix:hover {
+  background: var(--color-bg-primary);
+}
+
+.traceability-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+@media (max-width: 768px) {
+  .traceability-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.trace-stat-item {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-neo-sunken);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trace-stat-item.highlight-inc {
+  border-color: var(--color-included);
+}
+
+.trace-stat-item.highlight-ext {
+  border-color: var(--color-accent);
+}
+
+.trace-stat-label {
+  font-size: 0.625rem;
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+}
+
+.trace-stat-val {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.trace-stat-sub {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  font-weight: var(--weight-normal);
+}
+
+/* Alertas de Fluxo Metodológico */
+.methodological-flow-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-xs);
+  margin-top: var(--space-2);
+}
+
+.methodological-flow-alert .alert-icon {
+  color: var(--color-warning);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.flow-alert-body strong {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-warning-text, #92400e);
+}
+
+.flow-alert-body p {
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  margin: var(--space-1) 0 var(--space-3) 0;
+  line-height: var(--leading-normal);
+}
+
+.flow-alert-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.btn-flow-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  padding: 4px 8px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-flow-nav:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.btn-flow-nav.primary {
+  background: var(--color-accent);
+  color: #ffffff;
+  border-color: var(--color-accent);
+}
+
+.btn-flow-nav.primary:hover {
+  opacity: 0.9;
+}
+
+.methodological-flow-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-included-bg);
+  border: 1px solid var(--color-included);
+  border-radius: var(--radius-xs);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.methodological-flow-success .success-icon {
+  color: var(--color-included);
+  flex-shrink: 0;
+}
+
+.flow-success-body {
+  flex: 1;
+}
+
+.flow-success-body strong {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-included);
+}
+
+.flow-success-body p {
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  margin: 2px 0 0 0;
+}
+
+.btn-compile-evidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  background: var(--color-accent);
+  color: #ffffff;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-raised);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-compile-evidence:hover {
+  box-shadow: var(--shadow-neo-pressed);
+  transform: translateY(1px);
+}
+
+/* Matriz de Respostas Extraídas Drawer */
+.evidence-matrix-drawer {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+.evidence-matrix-drawer h4 {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.matrix-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.matrix-question-item {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.matrix-q-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.matrix-q-header strong {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+}
+
+.badge-answered {
+  font-size: 0.5625rem;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  padding: 1px 6px;
+  background: var(--color-included-bg);
+  color: var(--color-included);
+  border: 1px solid var(--color-included);
+  border-radius: var(--radius-xs);
+}
+
+.matrix-answers-sublist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.matrix-answer-row {
+  padding: var(--space-2);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle, var(--color-border));
+  border-radius: var(--radius-xs);
+  font-size: var(--text-xs);
+}
+
+.ans-paper-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+
+.ans-paper-title {
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.ans-paper-year {
+  font-size: 0.6875rem;
+  color: var(--color-text-tertiary);
+}
+
+.ans-text {
+  font-style: italic;
+  color: var(--color-text-secondary);
+  line-height: var(--leading-relaxed);
+  margin: 0;
+}
+
+.no-answers-note {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  margin: 0;
+}
+
+/* Checklist Phase Grouping */
+.checklist-phase-group {
+  margin-bottom: var(--space-4);
+}
+
+.checklist-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.checklist-group-header .group-count {
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-secondary);
+}
+

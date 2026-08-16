@@ -13,6 +13,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
+  Bookmark,
   Download,
   Upload,
   FileCheck,
@@ -378,6 +380,26 @@ export function ExtractionPage(): JSX.Element {
                     ))}
                   </div>
                 )}
+
+                {/* Banner de Avanço para a Fase A Posteriori */}
+                <div className="extraction-next-phase-card">
+                  <div className="next-phase-content">
+                    <Bookmark size={20} className="icon-accent" />
+                    <div>
+                      <strong>Pronto para Redigir a Síntese e Discussão?</strong>
+                      <p>
+                        Após extrair os dados dos estudos incluídos, você está habilitado a preencher a <strong>Fase A Posteriori</strong> (Síntese dos Resultados, Limitações, Conclusões e Resumo Final) no Estúdio de Redação.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => navigate(`/projects/${id}/protocol`)}
+                  >
+                    Avançar para Síntese & Discussão (A Posteriori) <ArrowRight size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           ) : (

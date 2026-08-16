@@ -345,6 +345,36 @@ export interface FieldAssistResponse {
   provider: string
 }
 
+// ── Extraction Summary & Evidence Matrix ──────────────────────────────
+
+export interface ExtractionAnswerSummaryItem {
+  paper_id: string
+  paper_title: string
+  authors: string
+  year: string
+  answer: string
+  ai_generated: boolean
+}
+
+export interface ExtractionQuestionSummary {
+  question_id: string
+  question_text: string
+  order: number
+  total_answered: number
+  answers: ExtractionAnswerSummaryItem[]
+}
+
+export interface ExtractionSummaryResponse {
+  project_id: string
+  total_screened: number
+  total_included: number
+  total_excluded: number
+  total_pending: number
+  total_extracted: number
+  extraction_progress_percent: number
+  questions_matrix: ExtractionQuestionSummary[]
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────
 
 export interface ProjectStats {

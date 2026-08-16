@@ -8,7 +8,10 @@ from fastapi import APIRouter
 from app.api.v1.ai import router as ai_router
 from app.api.v1.deduplication import router as deduplication_router
 from app.api.v1.export import router as export_router
-from app.api.v1.extraction import router as extraction_router
+from app.api.v1.extraction import (
+    project_extraction_router,
+    router as extraction_router,
+)
 from app.api.v1.harvest import router as harvest_router
 from app.api.v1.papers import router as papers_router
 from app.api.v1.projects import router as projects_router
@@ -41,4 +44,5 @@ api_router.include_router(settings_router)
 api_router.include_router(ai_router)
 api_router.include_router(screening_ai_router)
 api_router.include_router(extraction_router)
+api_router.include_router(project_extraction_router)
 api_router.include_router(export_router)

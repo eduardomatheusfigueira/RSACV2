@@ -35,11 +35,11 @@ const mainNav: NavItem[] = [
 ]
 
 const projectNav: NavItem[] = [
-  { id: 'protocol', label: 'Protocolo', icon: <BookOpen size={20} />, path: '/projects/:id/protocol', requiresProject: true },
+  { id: 'protocol', label: 'Protocolo (A Priori)', icon: <BookOpen size={20} />, path: '/projects/:id/protocol', requiresProject: true },
   { id: 'harvest', label: 'Coleta', icon: <Download size={20} />, path: '/projects/:id/harvest', requiresProject: true },
   { id: 'screening', label: 'Triagem', icon: <CheckSquare size={20} />, path: '/projects/:id/screening', requiresProject: true },
   { id: 'extraction', label: 'Extração', icon: <FileText size={20} />, path: '/projects/:id/extraction', requiresProject: true },
-  { id: 'export', label: 'Exportar', icon: <FileDown size={20} />, path: '/projects/:id/export', requiresProject: true },
+  { id: 'export', label: 'Síntese & Exportar (A Posteriori)', icon: <FileDown size={20} />, path: '/projects/:id/export', requiresProject: true },
 ]
 
 const bottomNav: NavItem[] = [

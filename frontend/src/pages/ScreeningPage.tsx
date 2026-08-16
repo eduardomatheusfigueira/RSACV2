@@ -1,7 +1,11 @@
 /**
  * RSAC V2 — Screening Page (Triagem 1)
- * Triagem manual e assistida por IA (individual e em lote)
- * com leitor de resumos e avaliação de critérios em tempo real.
+ *
+ * Novo Layout Metodológico Otimizado para Leitura e Avaliação:
+ * 1. Fila Horizontal de Estudos (no topo): com filtros de status, busca rápida e paginação.
+ * 2. Área de Trabalho Lado a Lado (Two-Column Workspace):
+ *    - Coluna da Esquerda: Metadados, Ações de Decisão, Análise por IA e Resumo Completo (Abstract).
+ *    - Coluna da Direita: Avaliação de Critérios de Inclusão/Exclusão (Checklists interativos) e Observações do Revisor.
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
@@ -15,6 +19,9 @@ import {
   ExternalLink,
   BookOpen,
   ArrowLeft,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   AlertCircle,
   Calendar,
@@ -49,7 +56,6 @@ export function ScreeningPage(): React.JSX.Element {
   const { info, success, warn, error } = useLogStore()
 
   const [papers, setPapers] = useState<Paper[]>([])
-
   const [protocol, setProtocol] = useState<Protocol | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
@@ -73,6 +79,9 @@ export function ScreeningPage(): React.JSX.Element {
     excluded: 0,
     pending: 0,
   })
+
+  // Horizontal Queue Scroll Ref
+  const queueScrollRef = useRef<HTMLDivElement | null>(null)
 
   // AI Single Screening State
   const [isAiScreeningSingle, setIsAiScreeningSingle] = useState(false)
@@ -217,8 +226,7 @@ export function ScreeningPage(): React.JSX.Element {
       const updated = await api.updatePaper(id, paperId, { decision })
 
       if (decisionFilter !== '' && decision !== decisionFilter) {
-        // Se o filtro atual estiver ativo (ex: Pendente, Incluído, Excluído) e a nova decisão for diferente,
-        // remove o artigo imediatamente da lista filtrada e avança para o próximo
+        // Se o filtro atual estiver ativo e a nova decisão for diferente, remove da lista filtrada e avança
         const currentIndex = papers.findIndex((p) => p.id === paperId)
         const newPapers = papers.filter((p) => p.id !== paperId)
         setPapers(newPapers)
@@ -234,11 +242,9 @@ export function ScreeningPage(): React.JSX.Element {
           setAiLastResult(null)
         }
 
-        // Se a página atual esvaziou e estávamos em uma página posterior, volta uma página
         if (newPapers.length === 0 && page > 1) {
           setPage((prev) => Math.max(1, prev - 1))
         } else if (newPapers.length === 0) {
-          // Se esvaziou na página 1, recarrega para verificar se há mais itens pendentes no banco
           loadPapers(id)
         }
       } else {
@@ -257,6 +263,68 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
+  const handleSelectNextPaper = () => {
+    if (!selectedPaper || papers.length === 0) return
+    const currentIndex = papers.findIndex((p) => p.id === selectedPaper.id)
+    if (currentIndex < papers.length - 1) {
+      setSelectedPaper(papers[currentIndex + 1])
+      setAiLastResult(null)
+    } else if (page < totalPages) {
+      setPage(page + 1)
+    }
+  }
+
+  const handleSelectPrevPaper = () => {
+    if (!selectedPaper || papers.length === 0) return
+    const currentIndex = papers.findIndex((p) => p.id === selectedPaper.id)
+    if (currentIndex > 0) {
+      setSelectedPaper(papers[currentIndex - 1])
+      setAiLastResult(null)
+    } else if (page > 1) {
+      setPage(page - 1)
+    }
+  }
+
+  const scrollQueue = (direction: 'left' | 'right') => {
+    if (!queueScrollRef.current) return
+    const offset = direction === 'left' ? -350 : 350
+    queueScrollRef.current.scrollBy({ left: offset, behavior: 'smooth' })
+  }
+
+  // Keyboard Shortcuts (Arrow keys for navigation, I for Include, E for Exclude, P for Pending)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName || '').toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        handleSelectNextPaper()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        handleSelectPrevPaper()
+      } else if (e.key === 'i' || e.key === 'I') {
+        if (selectedPaper) {
+          e.preventDefault()
+          handleDecision(selectedPaper.id, 'Incluído')
+        }
+      } else if (e.key === 'e' || e.key === 'E') {
+        if (selectedPaper) {
+          e.preventDefault()
+          handleDecision(selectedPaper.id, 'Excluído')
+        }
+      } else if (e.key === 'p' || e.key === 'P') {
+        if (selectedPaper) {
+          e.preventDefault()
+          handleDecision(selectedPaper.id, 'Pendente')
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedPaper, papers, page, totalPages])
+
   const handleSingleAIScreening = async () => {
     if (!id || !selectedPaper) return
     try {
@@ -269,7 +337,6 @@ export function ScreeningPage(): React.JSX.Element {
 
       success('IA', `Parecer IA: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.justification || (res as any).reasoning}\nCritérios atendidos: ${(res as any).criteria_met?.join(', ') || 'Nenhum'}`)
 
-      // Atualizar paper com os dados gerados
       const updatedPaper = await api.getPaper(id, selectedPaper.id)
       setSelectedPaper(updatedPaper)
       setPapers(papers.map((p) => (p.id === selectedPaper.id ? updatedPaper : p)))
@@ -407,7 +474,6 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
-
   const handleObservationsChange = async (obs: string) => {
     if (!id || !selectedPaper) return
     try {
@@ -420,7 +486,6 @@ export function ScreeningPage(): React.JSX.Element {
       console.error('Erro ao atualizar observações:', err)
     }
   }
-
 
   const handleAddManualPaper = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -448,53 +513,44 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
-  const handleOpenDedupReport = async () => {
+  const handleOpenDedupModal = async () => {
     if (!id) return
     try {
       setIsDeduplicating(true)
-      // Tenta obter o relatório mais recente; se não existir, executa deduplicação
-      try {
-        const report = await api.getDeduplicationReport(id)
-        setDedupReport(report)
-        setIsDedupModalOpen(true)
-      } catch {
-        const res = await api.deduplicateProject(id)
-        setDedupReport(res.data)
-        setIsDedupModalOpen(true)
-      }
-    } catch (err: any) {
-      error('Deduplicação', 'Falha ao carregar relatório de deduplicação', err.message)
+      const report = await api.getDeduplicationReport(id)
+      setDedupReport(report)
+      setIsDedupModalOpen(true)
+    } catch (err) {
+      console.error('Erro ao carregar relatório de deduplicação:', err)
     } finally {
       setIsDeduplicating(false)
     }
   }
 
+  const selectedIndex = papers.findIndex((p) => p.id === selectedPaper?.id)
+
   return (
     <div className="screening-page animate-fade-in">
-      {/* Top Header */}
+      {/* Header */}
       <div className="page-header">
         <div>
           <button className="btn-back" onClick={() => navigate('/projects')}>
             <ArrowLeft size={16} /> Voltar para Projetos
           </button>
-          <h1 className="page-title">Triagem de Estudos (Fase 1)</h1>
+          <h1 className="page-title">Triagem de Estudos (Triagem 1)</h1>
           <p className="page-subtitle">
-            Avaliação de títulos e resumos com assistência de IA e guardrails de zero alucinação
+            Projeto: <strong>{activeProject?.title}</strong> — Avaliação rápida de título, resumo e critérios de inclusão/exclusão
           </p>
         </div>
         <div className="header-actions">
           <button
-            className="btn-secondary btn-dedup"
-            onClick={handleOpenDedupReport}
+            className="btn-secondary"
+            onClick={handleOpenDedupModal}
             disabled={isDeduplicating}
-            title="Visualiza o relatório consolidado de deduplicação das fontes"
+            title="Verificar e auditar registros duplicados"
           >
-            {isDeduplicating ? (
-              <RefreshCw size={16} className="animate-spin" />
-            ) : (
-              <Layers size={16} className="icon-accent" />
-            )}
-            Relatório de Deduplicação
+            <Layers size={16} className="icon-accent" />
+            {isDeduplicating ? 'Auditando...' : 'Auditoria de Duplicatas'}
           </button>
           {aiEnabled && (
             <button className="btn-secondary" onClick={() => setIsBatchModalOpen(true)}>
@@ -507,65 +563,67 @@ export function ScreeningPage(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Stats Counter Bar */}
-      <div className="screening-counters">
-        <button
-          className={`counter-btn ${decisionFilter === '' ? 'active' : ''}`}
-          onClick={() => {
-            setDecisionFilter('')
-            setPage(1)
-          }}
-        >
-          <span className="count-label">Todos</span>
-          <span className="count-num">{stats.total}</span>
-        </button>
+      {/* ═══════════════════════════════════════════════════════════════════
+          FILA HORIZONTAL DE TRABALHOS (ACIMA)
+          Controles de busca, contadores de status, paginação e faixa de cards
+      ═══════════════════════════════════════════════════════════════════ */}
+      <div className="screening-queue-container">
+        {/* Top Control Bar of the Queue */}
+        <div className="queue-controls-bar">
+          <div className="queue-filter-buttons">
+            <button
+              className={`counter-btn ${decisionFilter === '' ? 'active' : ''}`}
+              onClick={() => {
+                setDecisionFilter('')
+                setPage(1)
+              }}
+            >
+              <span className="count-label">Todos</span>
+              <span className="count-num">{stats.total}</span>
+            </button>
 
-        <button
-          className={`counter-btn pending ${decisionFilter === 'Pendente' ? 'active' : ''}`}
-          onClick={() => {
-            setDecisionFilter('Pendente')
-            setPage(1)
-          }}
-        >
-          <Clock size={16} />
-          <span className="count-label">Pendentes</span>
-          <span className="count-num">{stats.pending}</span>
-        </button>
+            <button
+              className={`counter-btn pending ${decisionFilter === 'Pendente' ? 'active' : ''}`}
+              onClick={() => {
+                setDecisionFilter('Pendente')
+                setPage(1)
+              }}
+            >
+              <Clock size={14} />
+              <span className="count-label">Pendentes</span>
+              <span className="count-num">{stats.pending}</span>
+            </button>
 
-        <button
-          className={`counter-btn included ${decisionFilter === 'Incluído' ? 'active' : ''}`}
-          onClick={() => {
-            setDecisionFilter('Incluído')
-            setPage(1)
-          }}
-        >
-          <CheckCircle2 size={16} />
-          <span className="count-label">Incluídos</span>
-          <span className="count-num">{stats.included}</span>
-        </button>
+            <button
+              className={`counter-btn included ${decisionFilter === 'Incluído' ? 'active' : ''}`}
+              onClick={() => {
+                setDecisionFilter('Incluído')
+                setPage(1)
+              }}
+            >
+              <CheckCircle2 size={14} />
+              <span className="count-label">Incluídos</span>
+              <span className="count-num">{stats.included}</span>
+            </button>
 
-        <button
-          className={`counter-btn excluded ${decisionFilter === 'Excluído' ? 'active' : ''}`}
-          onClick={() => {
-            setDecisionFilter('Excluído')
-            setPage(1)
-          }}
-        >
-          <XCircle size={16} />
-          <span className="count-label">Excluídos</span>
-          <span className="count-num">{stats.excluded}</span>
-        </button>
-      </div>
+            <button
+              className={`counter-btn excluded ${decisionFilter === 'Excluído' ? 'active' : ''}`}
+              onClick={() => {
+                setDecisionFilter('Excluído')
+                setPage(1)
+              }}
+            >
+              <XCircle size={14} />
+              <span className="count-label">Excluídos</span>
+              <span className="count-num">{stats.excluded}</span>
+            </button>
+          </div>
 
-      {/* Main Split Layout: List Left, Details Right */}
-      <div className="screening-layout">
-        {/* Left: Papers List */}
-        <div className="screening-list-col">
-          <div className="list-search-box">
-            <Search size={16} className="search-icon" />
+          <div className="queue-search-input-wrapper">
+            <Search size={14} className="search-icon" />
             <input
               type="text"
-              placeholder="Buscar em título, autor, resumo..."
+              placeholder="Filtrar por título, autor, resumo..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value)
@@ -574,105 +632,137 @@ export function ScreeningPage(): React.JSX.Element {
             />
           </div>
 
-          {loading ? (
-            <div className="loading-state-small">
-              <div className="loading-spinner animate-spin" />
-              <span>Carregando estudos...</span>
-            </div>
-          ) : papers.length === 0 ? (
-            <div className="empty-papers-box">
-              <FileText size={32} />
-              <p>Nenhum estudo encontrado para os filtros atuais.</p>
-            </div>
-          ) : (
-            <div className="papers-scroll-list">
-              {papers.map((paper) => {
+          <div className="queue-pagination-inline">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+              className="btn-pagination-nav"
+              title="Página Anterior"
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <span className="pagination-text">
+              Pág <strong>{page}</strong> de {totalPages} ({totalCount} estudos)
+            </span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+              className="btn-pagination-nav"
+              title="Próxima Página"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Horizontal Strip with Chevron Scroll Buttons */}
+        <div className="queue-strip-wrapper">
+          <button
+            type="button"
+            className="btn-queue-scroll left"
+            onClick={() => scrollQueue('left')}
+            title="Rolar fila para a esquerda"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div className="horizontal-papers-strip" ref={queueScrollRef}>
+            {loading ? (
+              <div className="queue-loading-state">
+                <div className="loading-spinner animate-spin" />
+                <span>Carregando fila de estudos...</span>
+              </div>
+            ) : papers.length === 0 ? (
+              <div className="queue-empty-state">
+                <FileText size={18} />
+                <span>Nenhum estudo encontrado para os filtros atuais.</span>
+              </div>
+            ) : (
+              papers.map((paper, idx) => {
                 const isSelected = selectedPaper?.id === paper.id
                 return (
                   <div
                     key={paper.id}
-                    className={`paper-list-item ${isSelected ? 'selected' : ''} dec-${paper.decision.toLowerCase()}`}
+                    className={`queue-paper-card ${isSelected ? 'selected' : ''} dec-${paper.decision.toLowerCase()}`}
                     onClick={() => {
                       setSelectedPaper(paper)
                       setAiLastResult(null)
                     }}
+                    title={paper.title}
                   >
-                    <div className="item-meta">
+                    <div className="queue-card-meta">
                       <span className={`badge-decision badge-${paper.decision.toLowerCase()}`}>
                         {paper.decision}
                       </span>
                       {paper.ai_confidence !== null && (
                         <span className="badge-ai-conf" title="Confiança da IA">
-                          <Sparkles size={11} /> {Math.round(paper.ai_confidence * 100)}%
+                          <Sparkles size={10} /> {Math.round(paper.ai_confidence * 100)}%
                         </span>
                       )}
-                      {paper.criteria_evaluations && Object.values(paper.criteria_evaluations).some(Boolean) && (
-                        <span className="badge-criteria-mini" title="Critérios avaliados para este estudo">
-                          <CheckCircle2 size={11} /> Critérios
-                        </span>
-                      )}
-                      {paper.year && <span className="item-year">{paper.year}</span>}
+                      {paper.year && <span className="queue-card-year">{paper.year}</span>}
                     </div>
-
-                    <h4 className="item-title">{paper.title}</h4>
-                    {paper.authors && <p className="item-authors">{paper.authors}</p>}
+                    <h4 className="queue-card-title">{paper.title}</h4>
+                    {paper.authors && (
+                      <p className="queue-card-authors">{paper.authors}</p>
+                    )}
                   </div>
                 )
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="pagination-bar">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-                className="btn-secondary small"
-              >
-                Anterior
-              </button>
-              <span>
-                Pág {page} de {totalPages}
-              </span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
-                className="btn-secondary small"
-              >
-                Próxima
-              </button>
-            </div>
-          )}
+          <button
+            type="button"
+            className="btn-queue-scroll right"
+            onClick={() => scrollQueue('right')}
+            title="Rolar fila para a direita"
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
+      </div>
 
-        {/* Right: Paper Details & Decision Inspector */}
-        <div className="screening-detail-col">
-          {selectedPaper ? (
-            <div className="paper-inspector animate-fade-in">
-              {/* Decision Actions Header */}
-              <div className="inspector-actions-bar">
-                <div className="decision-buttons">
-                  <button
-                    className={`btn-dec include ${selectedPaper.decision === 'Incluído' ? 'active' : ''}`}
-                    onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
-                  >
-                    <CheckCircle2 size={16} /> Incluir
-                  </button>
-                  <button
-                    className={`btn-dec exclude ${selectedPaper.decision === 'Excluído' ? 'active' : ''}`}
-                    onClick={() => handleDecision(selectedPaper.id, 'Excluído')}
-                  >
-                    <XCircle size={16} /> Excluir
-                  </button>
-                  <button
-                    className={`btn-dec pending ${selectedPaper.decision === 'Pendente' ? 'active' : ''}`}
-                    onClick={() => handleDecision(selectedPaper.id, 'Pendente')}
-                  >
-                    <Clock size={16} /> Deixar Pendente
-                  </button>
-                </div>
+      {/* ═══════════════════════════════════════════════════════════════════
+          ÁREA DE TRABALHO PRINCIPAL LADO A LADO (TWO-COLUMN WORKSPACE)
+          Coluna 1: Texto e Metadados do Estudo | Coluna 2: Critérios e Observações
+      ═══════════════════════════════════════════════════════════════════ */}
+      {selectedPaper ? (
+        <div className="screening-workbench-grid animate-fade-in">
+          {/* ── COLUNA DA ESQUERDA: TEXTO, METADADOS & AÇÕES ────────────── */}
+          <div className="study-reading-pane">
+            {/* Action Bar with Quick Decision & Navigation */}
+            <div className="study-actions-toolbar">
+              <div className="decision-buttons-group">
+                <button
+                  className={`btn-dec include ${selectedPaper.decision === 'Incluído' ? 'active' : ''}`}
+                  onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
+                  title="Incluir estudo na revisão (Atalho: tecla 'I')"
+                >
+                  <CheckCircle2 size={16} />
+                  <span>Incluir</span>
+                  <span className="key-hint">I</span>
+                </button>
+                <button
+                  className={`btn-dec exclude ${selectedPaper.decision === 'Excluído' ? 'active' : ''}`}
+                  onClick={() => handleDecision(selectedPaper.id, 'Excluído')}
+                  title="Excluir estudo da revisão (Atalho: tecla 'E')"
+                >
+                  <XCircle size={16} />
+                  <span>Excluir</span>
+                  <span className="key-hint">E</span>
+                </button>
+                <button
+                  className={`btn-dec pending ${selectedPaper.decision === 'Pendente' ? 'active' : ''}`}
+                  onClick={() => handleDecision(selectedPaper.id, 'Pendente')}
+                  title="Manter como Pendente (Atalho: tecla 'P')"
+                >
+                  <Clock size={16} />
+                  <span>Pendente</span>
+                  <span className="key-hint">P</span>
+                </button>
+              </div>
 
+              <div className="toolbar-secondary-actions">
                 {aiEnabled && (
                   <button
                     className="btn-ai-triage"
@@ -682,308 +772,329 @@ export function ScreeningPage(): React.JSX.Element {
                   >
                     {isAiScreeningSingle ? (
                       <>
-                        <RefreshCw size={15} className="animate-spin" /> Analisando...
+                        <RefreshCw size={14} className="animate-spin" /> Analisando...
                       </>
                     ) : (
                       <>
-                        <Sparkles size={15} /> Triar com IA
+                        <Sparkles size={14} /> Triar com IA
                       </>
                     )}
                   </button>
                 )}
-              </div>
 
-              {/* Title & Metadata */}
-              <div className="inspector-content">
-                <h2 className="inspector-title">{selectedPaper.title}</h2>
-
-                <div className="inspector-metadata-grid">
-                  {selectedPaper.authors && (
-                    <div className="meta-item">
-                      <User size={15} />
-                      <span>{selectedPaper.authors}</span>
-                    </div>
-                  )}
-                  {selectedPaper.year && (
-                    <div className="meta-item">
-                      <Calendar size={15} />
-                      <span>Ano: {selectedPaper.year}</span>
-                    </div>
-                  )}
-                  {selectedPaper.institution && (
-                    <div className="meta-item">
-                      <Building size={15} />
-                      <span>{selectedPaper.institution}</span>
-                    </div>
-                  )}
-                  {selectedPaper.doi && (
-                    <div className="meta-item">
-                      <ExternalLink size={15} />
-                      <a
-                        href={`https://doi.org/${selectedPaper.doi}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        DOI: {selectedPaper.doi}
-                      </a>
-                    </div>
-                  )}
+                <div className="study-nav-arrows">
+                  <button
+                    type="button"
+                    className="btn-study-step"
+                    onClick={handleSelectPrevPaper}
+                    title="Estudo Anterior (Atalho: Seta Esquerda)"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="study-counter-label">
+                    {selectedIndex >= 0 ? selectedIndex + 1 : 1} / {papers.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-study-step"
+                    onClick={handleSelectNextPaper}
+                    title="Próximo Estudo (Atalho: Seta Direita)"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
+              </div>
+            </div>
 
-                {/* AI Screening Live Callout */}
-                {aiLastResult && (
-                  <div className="ai-result-callout animate-fade-in">
-                    <div className="ai-callout-header">
-                      <div className="ai-tag">
-                        <Sparkles size={14} /> Análise IA ({aiLastResult.model_used})
-                      </div>
-                      <span className="ai-confidence">
-                        Confiança: {Math.round(aiLastResult.confidence * 100)}%
-                      </span>
-                    </div>
-                    <p className="ai-justification">{aiLastResult.justification}</p>
+            {/* Reading Content */}
+            <div className="study-reading-content">
+              <h2 className="study-title">{selectedPaper.title}</h2>
+
+              <div className="study-meta-grid">
+                {selectedPaper.authors && (
+                  <div className="meta-pill">
+                    <User size={13} className="icon-accent" />
+                    <span>{selectedPaper.authors}</span>
                   </div>
                 )}
+                {selectedPaper.year && (
+                  <div className="meta-pill">
+                    <Calendar size={13} className="icon-accent" />
+                    <span>Ano: <strong>{selectedPaper.year}</strong></span>
+                  </div>
+                )}
+                {selectedPaper.institution && (
+                  <div className="meta-pill">
+                    <Building size={13} className="icon-accent" />
+                    <span>{selectedPaper.institution}</span>
+                  </div>
+                )}
+                {selectedPaper.doi && (
+                  <div className="meta-pill">
+                    <ExternalLink size={13} className="icon-accent" />
+                    <a
+                      href={`https://doi.org/${selectedPaper.doi}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      DOI: {selectedPaper.doi}
+                    </a>
+                  </div>
+                )}
+              </div>
 
-                {/* Abstract Section */}
-                <div className="inspector-section">
-                  <h3>Resumo (Abstract)</h3>
-                  <div className="abstract-box">
-                    {selectedPaper.abstract ? (
-                      <p>{selectedPaper.abstract}</p>
-                    ) : (
-                      <p className="no-abstract">
-                        Resumo não disponível nos metadados coletados.
-                      </p>
-                    )}
+              {/* AI Screening Live Callout */}
+              {aiLastResult && (
+                <div className="ai-result-callout animate-fade-in">
+                  <div className="ai-callout-header">
+                    <div className="ai-tag">
+                      <Sparkles size={14} /> Parecer da IA ({aiLastResult.model_used})
+                    </div>
+                    <span className="ai-confidence">
+                      Confiança: {Math.round(aiLastResult.confidence * 100)}%
+                    </span>
+                  </div>
+                  <p className="ai-justification">{aiLastResult.justification}</p>
+                </div>
+              )}
+
+              {/* Abstract Reading Box */}
+              <div className="study-abstract-container">
+                <div className="abstract-header-row">
+                  <FileText size={16} className="icon-accent" />
+                  <h3>Resumo do Estudo (Abstract)</h3>
+                </div>
+                <div className="abstract-reading-card">
+                  {selectedPaper.abstract ? (
+                    <p className="abstract-text">{selectedPaper.abstract}</p>
+                  ) : (
+                    <div className="empty-abstract-state">
+                      <AlertCircle size={24} />
+                      <p>Resumo não disponível nos metadados coletados deste registro.</p>
+                      {selectedPaper.doi && (
+                        <a
+                          href={`https://doi.org/${selectedPaper.doi}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary small"
+                        >
+                          <ExternalLink size={13} /> Consultar via DOI
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── COLUNA DA DIREITA: CRITÉRIOS DE ELEGIBILIDADE & OBSERVAÇÕES ── */}
+          <div className="criteria-evaluation-pane">
+            <div className="criteria-pane-header">
+              <div className="criteria-pane-title">
+                <CheckSquare size={18} className="icon-accent" />
+                <h3>Critérios de Elegibilidade</h3>
+              </div>
+
+              {protocol && protocol.criteria && protocol.criteria.length > 0 && (
+                <div className="criteria-actions-top">
+                  {inclusionCriteria.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-criteria-action"
+                      onClick={handleCheckAllInclusion}
+                      title="Marcar todos os critérios de inclusão como atendidos"
+                    >
+                      <CheckCheck size={13} /> Marcar Inclusões
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="btn-criteria-action text-muted"
+                    onClick={handleClearCriteria}
+                    title="Desmarcar todas as avaliações deste estudo"
+                  >
+                    <RotateCcw size={12} /> Limpar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Criteria Badges & Smart Recommendations */}
+            {protocol && protocol.criteria && protocol.criteria.length > 0 ? (
+              <div className="criteria-pane-body">
+                <div className="criteria-summary-badges">
+                  <div
+                    className={`criteria-stat-badge inc-badge ${
+                      incMetCount === inclusionCriteria.length && inclusionCriteria.length > 0
+                        ? 'all-met'
+                        : ''
+                    }`}
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>
+                      Inclusão: <strong>{incMetCount} / {inclusionCriteria.length}</strong> atendidos
+                    </span>
+                  </div>
+
+                  <div
+                    className={`criteria-stat-badge exc-badge ${
+                      excMetCount > 0 ? 'has-exclusion' : 'none'
+                    }`}
+                  >
+                    {excMetCount > 0 ? <AlertCircle size={14} /> : <ShieldCheck size={14} />}
+                    <span>
+                      Exclusão: <strong>{excMetCount}</strong>{' '}
+                      {excMetCount === 1 ? 'identificado' : 'identificados'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Criteria Evaluation Section with Interactive Checkboxes */}
-                <div className="inspector-section criteria-evaluation-section">
-                  <div className="criteria-section-header">
-                    <div className="header-left">
-                      <h3>Avaliação de Critérios de Elegibilidade</h3>
-                      <p className="criteria-section-desc">
-                        Marque os critérios atendidos pelo estudo para registrar a justificativa formal da decisão.
-                      </p>
+                {/* Smart Recommendation Helper Banner */}
+                {excMetCount > 0 ? (
+                  <div className="criteria-alert-banner alert-exclude animate-fade-in">
+                    <div className="alert-text">
+                      <strong>Atenção:</strong> {excMetCount} critério(s) de exclusão identificado(s). Registro de exclusão fundamentado.
                     </div>
-
-                    {protocol && protocol.criteria && protocol.criteria.length > 0 && (
-                      <div className="criteria-section-actions">
-                        {inclusionCriteria.length > 0 && (
-                          <button
-                            type="button"
-                            className="btn-criteria-action"
-                            onClick={handleCheckAllInclusion}
-                            title="Marcar todos os critérios de inclusão como atendidos"
-                          >
-                            <CheckCheck size={14} /> Marcar Inclusões
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn-criteria-action text-muted"
-                          onClick={handleClearCriteria}
-                          title="Desmarcar todas as avaliações deste estudo"
-                        >
-                          <RotateCcw size={13} /> Limpar
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {protocol && protocol.criteria && protocol.criteria.length > 0 ? (
-                    <>
-                      {/* Summary Badges */}
-                      <div className="criteria-stats-summary">
-                        <div
-                          className={`criteria-stat-badge inc-badge ${
-                            incMetCount === inclusionCriteria.length && inclusionCriteria.length > 0
-                              ? 'all-met'
-                              : ''
-                          }`}
-                        >
-                          <CheckCircle2 size={14} />
-                          <span>
-                            Inclusão: <strong>{incMetCount} / {inclusionCriteria.length}</strong> atendidos
-                          </span>
-                        </div>
-
-                        <div
-                          className={`criteria-stat-badge exc-badge ${
-                            excMetCount > 0 ? 'has-exclusion' : 'none'
-                          }`}
-                        >
-                          {excMetCount > 0 ? <AlertCircle size={14} /> : <ShieldCheck size={14} />}
-                          <span>
-                            Exclusão: <strong>{excMetCount}</strong>{' '}
-                            {excMetCount === 1 ? 'identificado' : 'identificados'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Smart Recommendation Helper Banner */}
-                      {excMetCount > 0 ? (
-                        <div className="criteria-alert-banner alert-exclude animate-fade-in">
-                          <div className="alert-text">
-                            <strong>Atenção:</strong> {excMetCount} critério(s) de exclusão identificado(s). Registro de exclusão fundamentado.
-                          </div>
-                          {selectedPaper.decision !== 'Excluído' && (
-                            <button
-                              type="button"
-                              className="btn-quick-decision btn-quick-exclude"
-                              onClick={() => handleDecision(selectedPaper.id, 'Excluído')}
-                            >
-                              <XCircle size={14} /> Excluir Estudo
-                            </button>
-                          )}
-                        </div>
-                      ) : incMetCount === inclusionCriteria.length && inclusionCriteria.length > 0 ? (
-                        <div className="criteria-alert-banner alert-include animate-fade-in">
-                          <div className="alert-text">
-                            <strong>Elegível:</strong> Todos os {inclusionCriteria.length} critérios de inclusão foram atendidos e nenhuma exclusão identificada.
-                          </div>
-                          {selectedPaper.decision !== 'Incluído' && (
-                            <button
-                              type="button"
-                              className="btn-quick-decision btn-quick-include"
-                              onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
-                            >
-                              <CheckCircle2 size={14} /> Incluir Estudo
-                            </button>
-                          )}
-                        </div>
-                      ) : null}
-
-                      {/* Criteria Split Grid: Inclusion & Exclusion */}
-                      <div className="criteria-grid-layout">
-                        {/* Inclusion Criteria Column */}
-                        <div className="criteria-col inc-col">
-                          <div className="col-header">
-                            <span className="col-tag inc-tag">Critérios de Inclusão</span>
-                            <span className="col-count">
-                              {incMetCount}/{inclusionCriteria.length}
-                            </span>
-                          </div>
-
-                          {inclusionCriteria.length === 0 ? (
-                            <p className="no-criteria-hint">Nenhum critério de inclusão cadastrado.</p>
-                          ) : (
-                            <div className="criteria-checkbox-list">
-                              {inclusionCriteria.map((c) => {
-                                const isChecked = !!(
-                                  c.id && selectedPaper.criteria_evaluations?.[c.id]
-                                )
-                                return (
-                                  <label
-                                    key={c.id || c.text}
-                                    className={`criterion-card inc-card ${
-                                      isChecked ? 'checked' : ''
-                                    }`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      className="sr-only"
-                                      checked={isChecked}
-                                      onChange={() => c.id && handleToggleCriterion(c.id)}
-                                    />
-                                    <div className="custom-checkbox inc-checkbox">
-                                      {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
-                                    </div>
-                                    <span className="criterion-text">{c.text}</span>
-                                  </label>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Exclusion Criteria Column */}
-                        <div className="criteria-col exc-col">
-                          <div className="col-header">
-                            <span className="col-tag exc-tag">Critérios de Exclusão</span>
-                            <span className="col-count">
-                              {excMetCount}/{exclusionCriteria.length}
-                            </span>
-                          </div>
-
-                          {exclusionCriteria.length === 0 ? (
-                            <p className="no-criteria-hint">Nenhum critério de exclusão cadastrado.</p>
-                          ) : (
-                            <div className="criteria-checkbox-list">
-                              {exclusionCriteria.map((c) => {
-                                const isChecked = !!(
-                                  c.id && selectedPaper.criteria_evaluations?.[c.id]
-                                )
-                                return (
-                                  <label
-                                    key={c.id || c.text}
-                                    className={`criterion-card exc-card ${
-                                      isChecked ? 'checked' : ''
-                                    }`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      className="sr-only"
-                                      checked={isChecked}
-                                      onChange={() => c.id && handleToggleCriterion(c.id)}
-                                    />
-                                    <div className="custom-checkbox exc-checkbox">
-                                      {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
-                                    </div>
-                                    <span className="criterion-text">{c.text}</span>
-                                  </label>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="no-protocol-criteria-card">
-                      <AlertCircle size={24} />
-                      <div className="no-crit-info">
-                        <strong>Nenhum critério de elegibilidade cadastrado no protocolo</strong>
-                        <p>
-                          Defina critérios de inclusão e exclusão no protocolo para registrá-los durante a triagem.
-                        </p>
-                      </div>
+                    {selectedPaper.decision !== 'Excluído' && (
                       <button
                         type="button"
-                        className="btn-secondary small"
-                        onClick={() => navigate(`/projects/${id}/protocol`)}
+                        className="btn-quick-decision btn-quick-exclude"
+                        onClick={() => handleDecision(selectedPaper.id, 'Excluído')}
                       >
-                        Configurar Protocolo
+                        <XCircle size={13} /> Excluir Estudo
                       </button>
+                    )}
+                  </div>
+                ) : incMetCount === inclusionCriteria.length && inclusionCriteria.length > 0 ? (
+                  <div className="criteria-alert-banner alert-include animate-fade-in">
+                    <div className="alert-text">
+                      <strong>Elegível:</strong> Todos os {inclusionCriteria.length} critérios de inclusão foram atendidos e nenhuma exclusão identificada.
+                    </div>
+                    {selectedPaper.decision !== 'Incluído' && (
+                      <button
+                        type="button"
+                        className="btn-quick-decision btn-quick-include"
+                        onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
+                      >
+                        <CheckCircle2 size={13} /> Incluir Estudo
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* Inclusion Criteria Checklist */}
+                <div className="criteria-group inc-group">
+                  <div className="group-header">
+                    <span className="group-label inc">Critérios de Inclusão</span>
+                    <span className="group-score">{incMetCount} / {inclusionCriteria.length}</span>
+                  </div>
+
+                  {inclusionCriteria.length === 0 ? (
+                    <p className="no-crit-hint">Nenhum critério de inclusão cadastrado no protocolo.</p>
+                  ) : (
+                    <div className="criteria-list">
+                      {inclusionCriteria.map((c) => {
+                        const isChecked = !!(c.id && selectedPaper.criteria_evaluations?.[c.id])
+                        return (
+                          <label
+                            key={c.id || c.text}
+                            className={`criterion-card inc-card ${isChecked ? 'checked' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={isChecked}
+                              onChange={() => c.id && handleToggleCriterion(c.id)}
+                            />
+                            <div className="custom-checkbox inc-checkbox">
+                              {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
+                            </div>
+                            <span className="criterion-text">{c.text}</span>
+                          </label>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
 
+                {/* Exclusion Criteria Checklist */}
+                <div className="criteria-group exc-group">
+                  <div className="group-header">
+                    <span className="group-label exc">Critérios de Exclusão</span>
+                    <span className="group-score">{excMetCount} / {exclusionCriteria.length}</span>
+                  </div>
 
-                {/* Notes & Observations */}
-                <div className="inspector-section">
-                  <h3>Observações do Revisor</h3>
+                  {exclusionCriteria.length === 0 ? (
+                    <p className="no-crit-hint">Nenhum critério de exclusão cadastrado no protocolo.</p>
+                  ) : (
+                    <div className="criteria-list">
+                      {exclusionCriteria.map((c) => {
+                        const isChecked = !!(c.id && selectedPaper.criteria_evaluations?.[c.id])
+                        return (
+                          <label
+                            key={c.id || c.text}
+                            className={`criterion-card exc-card ${isChecked ? 'checked' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={isChecked}
+                              onChange={() => c.id && handleToggleCriterion(c.id)}
+                            />
+                            <div className="custom-checkbox exc-checkbox">
+                              {isChecked ? <CheckSquare size={16} /> : <Square size={16} />}
+                            </div>
+                            <span className="criterion-text">{c.text}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Reviewer Notes & Justifications */}
+                <div className="reviewer-notes-box">
+                  <div className="notes-header">
+                    <FileText size={14} className="icon-accent" />
+                    <h4>Observações & Justificativas do Revisor</h4>
+                  </div>
                   <textarea
                     rows={4}
-                    className="inspector-textarea"
-                    placeholder="Anote justificativas para inclusão/exclusão, dúvidas sobre o método ou observações..."
+                    className="reviewer-textarea"
+                    placeholder="Anote justificativas para inclusão/exclusão, dúvidas sobre o método ou observações contextuais deste estudo..."
                     value={selectedPaper.observations || ''}
                     onChange={(e) => handleObservationsChange(e.target.value)}
                   />
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="no-selection-box">
-              <BookOpen size={48} strokeWidth={1} />
-              <h3>Nenhum estudo selecionado</h3>
-              <p>Selecione um artigo na lista à esquerda para revisar detalhes e tomar decisão.</p>
-            </div>
-          )}
+            ) : (
+              <div className="no-protocol-criteria-card">
+                <AlertCircle size={24} />
+                <div className="no-crit-info">
+                  <strong>Nenhum critério de elegibilidade cadastrado no protocolo</strong>
+                  <p>
+                    Defina critérios de inclusão e exclusão no protocolo para registrá-los durante a triagem.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary small"
+                  onClick={() => navigate(`/projects/${id}/protocol`)}
+                >
+                  Configurar Protocolo
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="no-selection-workbench">
+          <BookOpen size={48} strokeWidth={1} />
+          <h3>Nenhum estudo selecionado</h3>
+          <p>Selecione um artigo na fila horizontal acima para revisar os detalhes e marcar os critérios.</p>
+        </div>
+      )}
 
       {/* Batch AI Screening Modal */}
       {isBatchModalOpen && (

@@ -216,3 +216,38 @@
   border-color: var(--color-accent);
   box-shadow: var(--shadow-neo-sunken), 0 0 0 2px rgba(188, 108, 37, 0.15);
 }
+
+.extraction-next-phase-card {
+  margin-top: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.next-phase-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.next-phase-content strong {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.next-phase-content p {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  line-height: var(--leading-normal);
+}
+

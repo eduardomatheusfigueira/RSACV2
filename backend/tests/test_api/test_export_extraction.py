@@ -67,3 +67,16 @@ async def test_extraction_and_export_flow(async_client, db_session):
     excel_res = await async_client.get(f"/api/v1/projects/{proj.id}/export/excel")
     assert excel_res.status_code == 200
     assert len(excel_res.content) > 1000  # Conteúdo binário da planilha
+
+    # 7. Testar endpoint de resumo de extração (Fase A Posteriori)
+    summary_res = await async_client.get(f"/api/v1/projects/{proj.id}/extraction/summary")
+    assert summary_res.status_code == 200
+    sum_data = summary_res.json()
+    assert sum_data["total_screened"] == 1
+    assert sum_data["total_included"] == 1
+    assert sum_data["total_extracted"] == 1
+    assert sum_data["extraction_progress_percent"] == 100.0
+    assert len(sum_data["questions_matrix"]) == 1
+    assert sum_data["questions_matrix"][0]["total_answered"] == 1
+    assert sum_data["questions_matrix"][0]["answers"][0]["paper_title"] == "Deep Learning in Healthcare"
+

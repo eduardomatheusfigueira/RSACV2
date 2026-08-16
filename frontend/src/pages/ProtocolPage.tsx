@@ -1,11 +1,18 @@
 /**
  * RSAC V2 — Protocol Page & Complete Manuscript Drafting Studio (PRISMA-ScR & PRISMA 2020)
  * Especializado em Ciências Sociais Aplicadas & Desenvolvimento Regional.
- * Redação integral de todos os 22 itens do artigo/protocolo:
- * Título, Resumo Estruturado, Justificativa, Objetivos (PCC/PICO), Registro, Critérios,
- * Fontes, Descritores em Pares (VuFind/BDTD), Seleção & Calibração, Data Charting,
- * Perguntas de Mapeamento, Avaliação Crítica, Síntese, Limitações, Conclusões e Financiamento.
- * Todos os campos contam com Guias Estruturados (?) e botão "Inserir Estrutura no Editor".
+ *
+ * Estrutura Metodológica com Separação Temporal Rigorosa:
+ * 1. FASE A PRIORI (Protocolo de Pesquisa & Planejamento Prévio à Coleta):
+ *    - Identificação & Registro (Itens 1, 5, 3)
+ *    - Questão de Pesquisa & Objetivos PCC/PICO (Item 4)
+ *    - Fontes de Informação, Descritores em Pares & Critérios de Elegibilidade (Itens 6, 7, 8)
+ *    - Processo de Seleção, Extração, Questionário de Mapeamento, Avaliação Crítica e Métodos de Síntese (Itens 9-13, 17)
+ *
+ * 2. FASE A POSTERIORI (Síntese dos Achados, Discussão & Manuscrito Final Pós-Extração):
+ *    - Síntese das Evidências Extraídas, Limitações Encontradas & Conclusões/Lacunas (Itens 14, 15, 16)
+ *    - Resumo Estruturado Final do Artigo Concluído & Título Definitivo (Itens 2, 1)
+ *    - Auditoria de Conformidade com o Checklist Oficial
  */
 
 import { useState, useEffect } from 'react'
@@ -29,13 +36,34 @@ import {
   Edit3,
   Bookmark,
   ShieldCheck,
+  BarChart3,
+  Database,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
-import type { Criterion, ExtractionQuestion, ProtocolSuggestions, Methodology } from '@/types/api'
+import type {
+  Criterion,
+  ExtractionQuestion,
+  ProtocolSuggestions,
+  Methodology,
+  ExtractionSummaryResponse,
+} from '@/types/api'
 import './ProtocolPage.css'
+
+export type StudioTab =
+  | 'ident_intro'
+  | 'objectives'
+  | 'search_eligibility'
+  | 'methods_extraction'
+  | 'synthesis_discussion'
+  | 'final_summary'
+  | 'checklist'
 
 export function ProtocolPage(): JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -48,15 +76,13 @@ export function ProtocolPage(): JSX.Element {
   const [errorMessage, setErrorMessage] = useState('')
   const [copiedNotification, setCopiedNotification] = useState(false)
 
-  // Active Tab for Manuscript Studio
-  const [activeStudioTab, setActiveStudioTab] = useState<
-    'overview' | 'intro' | 'search' | 'selection' | 'discussion' | 'checklist'
-  >('overview')
+  // Active Tab for Manuscript Studio (Chronological Stages)
+  const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('ident_intro')
 
   // Framework Mode (PICO vs PCC)
   const [frameworkType, setFrameworkType] = useState<'PICO' | 'PCC'>('PCC')
 
-  // Core Protocol State
+  // Core Protocol State (A Priori)
   const [objective, setObjective] = useState('')
   const [pico, setPico] = useState<Record<string, string>>({
     population: '',
@@ -96,6 +122,10 @@ export function ProtocolPage(): JSX.Element {
     conclusions: '',
     funding: '',
   })
+
+  // Live Extraction Summary (Rastreabilidade das Evidências Reais)
+  const [extractionSummary, setExtractionSummary] = useState<ExtractionSummaryResponse | null>(null)
+  const [showEvidenceMatrix, setShowEvidenceMatrix] = useState(false)
 
   // Checklist Checkbox State
   const [checkedScRItems, setCheckedScRItems] = useState<Record<number, boolean>>({})
@@ -158,7 +188,16 @@ export function ProtocolPage(): JSX.Element {
         setFrameworkType('PICO')
       }
 
-      const proto = await api.getProtocol(projectId)
+      // Carregar protocolo e resumo de extração em paralelo
+      const [proto, extSummary] = await Promise.all([
+        api.getProtocol(projectId),
+        api.getExtractionSummary(projectId).catch(() => null),
+      ])
+
+      if (extSummary) {
+        setExtractionSummary(extSummary)
+      }
+
       setObjective(proto.objective || '')
       setPico({
         population: proto.pico_framework?.population || '',
@@ -192,7 +231,6 @@ export function ProtocolPage(): JSX.Element {
           ...proto.manuscript_sections,
           manuscript_title: proto.manuscript_sections?.manuscript_title || proj?.title || '',
         }))
-
       } else {
         setManuscript((prev) => ({
           ...prev,
@@ -242,6 +280,23 @@ export function ProtocolPage(): JSX.Element {
       .filter(Boolean)
       .join('; ')
     if (qList && excludeFieldId !== 'questions') ctx['extraction_questions'] = qList
+
+    // Injeção de contexto factual das extrações para as seções a posteriori
+    if (extractionSummary) {
+      ctx['total_screened_papers'] = String(extractionSummary.total_screened)
+      ctx['total_included_papers'] = String(extractionSummary.total_included)
+      ctx['total_extracted_papers'] = String(extractionSummary.total_extracted)
+      ctx['extraction_progress'] = `${extractionSummary.extraction_progress_percent}%`
+      if (extractionSummary.questions_matrix?.length) {
+        const qSummary = extractionSummary.questions_matrix
+          .map(
+            (qm, i) =>
+              `Q${i + 1} (${qm.question_text}): ${qm.total_answered} respostas extraídas`
+          )
+          .join('; ')
+        ctx['extracted_evidence_overview'] = qSummary
+      }
+    }
 
     Object.entries(manuscript).forEach(([k, v]) => {
       if (v && v.trim() && k !== excludeFieldId) {
@@ -340,6 +395,30 @@ export function ProtocolPage(): JSX.Element {
     setQuestions(questions.filter((_, i) => i !== index))
   }
 
+  // ── Handlers de Compilação de Evidências Reais (A Posteriori) ──────
+
+  const handleCompileEvidenceIntoEditor = () => {
+    if (!extractionSummary || !extractionSummary.questions_matrix?.length) return
+    let compiled = `### Matriz de Evidências Extraídas (${extractionSummary.total_extracted} estudos com respostas extraídas)\n\n`
+    extractionSummary.questions_matrix.forEach((qm, idx) => {
+      compiled += `#### Variável / Pergunta ${idx + 1}: ${qm.question_text}\n`
+      if (qm.answers.length === 0) {
+        compiled += `- *Nenhuma resposta extraída cadastrada para esta variável até o momento.*\n\n`
+      } else {
+        qm.answers.forEach((ans) => {
+          compiled += `- **${ans.paper_title}** (${ans.authors || 'Sem autores'}, ${ans.year || 's/d'}):\n  "${ans.answer}"\n`
+        })
+        compiled += `\n`
+      }
+    })
+
+    if (manuscript.summary_evidence && !window.confirm('Inserir o compilado factual das respostas extraídas no campo de Síntese?')) return
+    const current = manuscript.summary_evidence ? `${compiled}\n\n### Síntese Narrativa dos Achados:\n${manuscript.summary_evidence}` : compiled
+    updateManuscriptField('summary_evidence', current)
+    setSaveSuccess(true)
+    setTimeout(() => setSaveSuccess(false), 2500)
+  }
+
   // ── Salvar Protocolo & Seções do Manuscrito ────────────────────────
 
   const handleSave = async () => {
@@ -436,7 +515,6 @@ ${manuscript.data_charting_process || 'Não preenchido.'}
 ### Variáveis e Questionário de Mapeamento
 ${questions.map((q, i) => `${i + 1}. ${q.text || (q as any).question || ''}`).join('\n') || 'Nenhuma pergunta cadastrada'}
 
-
 ### Avaliação Crítica da Evidência (Opcional)
 ${manuscript.critical_appraisal || 'Dispensada / Não realizada para esta revisão de escopo.'}
 
@@ -445,8 +523,8 @@ ${manuscript.synthesis_methods || 'Não preenchido.'}
 
 ---
 
-## 5. Discussão, Limitações e Conclusões
-### Síntese da Evidência
+## 5. Síntese dos Achados, Limitações e Conclusões (Fase A Posteriori)
+### Síntese da Evidência (Resultados)
 ${manuscript.summary_evidence || 'Não preenchido.'}
 
 ### Limitações do Estudo
@@ -544,6 +622,13 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
     )
   }
 
+  const aPrioriChecklistItems = currentProtocolDef.checklistItems.filter(
+    (item) => item.phase === 'a_priori' || !item.phase
+  )
+  const aPosterioriChecklistItems = currentProtocolDef.checklistItems.filter(
+    (item) => item.phase === 'a_posteriori'
+  )
+
   return (
     <div className="protocol-page animate-fade-in">
       {/* Header */}
@@ -624,74 +709,108 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
         </div>
       )}
 
-      {/* Studio Navigation Tabs (All 6 tabs visible simultaneously without horizontal scroll) */}
-      <div className="studio-tabs-bar">
-        <button
-          type="button"
-          className={`studio-tab ${activeStudioTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveStudioTab('overview')}
-          title="1. Título & Resumo Estruturado (Itens 1-2)"
-        >
-          <Edit3 size={13} className="tab-icon" />
-          <span className="tab-label">1. Título & Resumo</span>
-          <span className="tab-pill">1-2</span>
-        </button>
-        <button
-          type="button"
-          className={`studio-tab ${activeStudioTab === 'intro' ? 'active' : ''}`}
-          onClick={() => setActiveStudioTab('intro')}
-          title={`2. Justificativa & Objetivos (${frameworkType}) (Itens 3-4)`}
-        >
-          <BookOpen size={13} className="tab-icon" />
-          <span className="tab-label">2. Justificativa ({frameworkType})</span>
-          <span className="tab-pill">3-4</span>
-        </button>
-        <button
-          type="button"
-          className={`studio-tab ${activeStudioTab === 'search' ? 'active' : ''}`}
-          onClick={() => setActiveStudioTab('search')}
-          title="3. Fontes, Descritores & Elegibilidade (Itens 5-8)"
-        >
-          <Search size={13} className="tab-icon" />
-          <span className="tab-label">3. Fontes & Elegibilidade</span>
-          <span className="tab-pill">5-8</span>
-        </button>
-        <button
-          type="button"
-          className={`studio-tab ${activeStudioTab === 'selection' ? 'active' : ''}`}
-          onClick={() => setActiveStudioTab('selection')}
-          title="4. Seleção, Mapeamento & Síntese (Itens 9-14)"
-        >
-          <Filter size={13} className="tab-icon" />
-          <span className="tab-label">4. Seleção & Síntese</span>
-          <span className="tab-pill">9-14</span>
-        </button>
-        <button
-          type="button"
-          className={`studio-tab ${activeStudioTab === 'discussion' ? 'active' : ''}`}
-          onClick={() => setActiveStudioTab('discussion')}
-          title="5. Discussão, Limitações & Financiamento (Itens 24-27)"
-        >
-          <Bookmark size={13} className="tab-icon" />
-          <span className="tab-label">5. Discussão & Limitações</span>
-          <span className="tab-pill">24-27</span>
-        </button>
-        <button
-          type="button"
-          className={`studio-tab checklist-tab ${activeStudioTab === 'checklist' ? 'active' : ''}`}
-          onClick={() => setActiveStudioTab('checklist')}
-          title={`Auditoria de Conformidade ${currentProtocolDef.shortLabel}`}
-        >
-          <CheckSquare size={13} className="tab-icon" />
-          <span className="tab-label">Auditoria {currentProtocolDef.shortLabel}</span>
-          <span className="tab-pill-count">{currentProtocolDef.checklistItems.length}</span>
-        </button>
+      {/* Studio Navigation Tabs with Clear Temporal Phase Grouping */}
+      <div className="studio-tabs-container">
+        <div className="studio-tabs-bar-grouped">
+          {/* GRUPO A PRIORI: PROTOCOLO DE PESQUISA */}
+          <div className="tabs-group a-priori-group">
+            <div className="tabs-group-header">
+              <span className="group-tag a-priori">Fase A Priori (Protocolo / Planejamento)</span>
+            </div>
+            <div className="tabs-group-buttons">
+              <button
+                type="button"
+                className={`studio-tab ${activeStudioTab === 'ident_intro' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('ident_intro')}
+                title="1. Identificação, Registro & Justificativa (Itens 1, 5, 3)"
+              >
+                <Edit3 size={13} className="tab-icon" />
+                <span className="tab-label">1. Identificação & Justificativa</span>
+                <span className="tab-pill">1, 5, 3</span>
+              </button>
+              <button
+                type="button"
+                className={`studio-tab ${activeStudioTab === 'objectives' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('objectives')}
+                title={`2. Questão & Objetivos (${frameworkType}) (Item 4)`}
+              >
+                <BookOpen size={13} className="tab-icon" />
+                <span className="tab-label">2. Questão & Objetivos ({frameworkType})</span>
+                <span className="tab-pill">4</span>
+              </button>
+              <button
+                type="button"
+                className={`studio-tab ${activeStudioTab === 'search_eligibility' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('search_eligibility')}
+                title="3. Fontes, Descritores & Elegibilidade (Itens 6, 7, 8)"
+              >
+                <Search size={13} className="tab-icon" />
+                <span className="tab-label">3. Fontes & Elegibilidade</span>
+                <span className="tab-pill">6-8</span>
+              </button>
+              <button
+                type="button"
+                className={`studio-tab ${activeStudioTab === 'methods_extraction' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('methods_extraction')}
+                title="4. Seleção, Data Charting & Métodos de Síntese (Itens 9-13, 17)"
+              >
+                <Filter size={13} className="tab-icon" />
+                <span className="tab-label">4. Métodos & Extração</span>
+                <span className="tab-pill">9-13, 17</span>
+              </button>
+            </div>
+          </div>
+
+          {/* GRUPO A POSTERIORI: SÍNTESE & REDAÇÃO FINAL */}
+          <div className="tabs-group a-posteriori-group">
+            <div className="tabs-group-header">
+              <span className="group-tag a-posteriori">Fase A Posteriori (Pós-Extração / Síntese)</span>
+            </div>
+            <div className="tabs-group-buttons">
+              <button
+                type="button"
+                className={`studio-tab ${activeStudioTab === 'synthesis_discussion' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('synthesis_discussion')}
+                title="5. Síntese dos Achados, Limitações & Conclusões (Itens 14-16)"
+              >
+                <Bookmark size={13} className="tab-icon" />
+                <span className="tab-label">5. Síntese dos Achados & Discussão</span>
+                <span className="tab-pill">14-16</span>
+              </button>
+              <button
+                type="button"
+                className={`studio-tab ${activeStudioTab === 'final_summary' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('final_summary')}
+                title="6. Resumo Estruturado Final do Artigo Concluído (Item 2)"
+              >
+                <FileText size={13} className="tab-icon" />
+                <span className="tab-label">6. Resumo Estruturado Final</span>
+                <span className="tab-pill">2</span>
+              </button>
+              <button
+                type="button"
+                className={`studio-tab checklist-tab ${activeStudioTab === 'checklist' ? 'active' : ''}`}
+                onClick={() => setActiveStudioTab('checklist')}
+                title={`Auditoria de Conformidade ${currentProtocolDef.shortLabel}`}
+              >
+                <CheckSquare size={13} className="tab-icon" />
+                <span className="tab-label">Auditoria {currentProtocolDef.shortLabel}</span>
+                <span className="tab-pill-count">{currentProtocolDef.checklistItems.length}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* ── ABA 1: TÍTULO & RESUMO ESTRUTURADO ───────────────────────────── */}
-      {activeStudioTab === 'overview' && (
+      {/* ── ABA 1: IDENTIFICAÇÃO & JUSTIFICATIVA (A PRIORI) ──────────────── */}
+      {activeStudioTab === 'ident_intro' && (
         <div className="tab-pane animate-fade-in">
-          {/* Item 1: Título */}
+          <div className="phase-indicator-banner a-priori-banner">
+            <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
+            <p>
+              Defina o título preliminar do protocolo, registre seu planejamento e estabeleça a justificativa teórica <strong>antes</strong> de iniciar a busca nas bases de dados.
+            </p>
+          </div>
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 1 — Essencial</span>
@@ -769,132 +888,84 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             />
           </div>
 
-          {/* Item 2: Resumo Estruturado */}
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 2 — Essencial</span>
-              <span className="item-section-tag">RESUMO</span>
+              <span className="item-tag essential">Item 5 — Essencial</span>
+              <span className="item-section-tag">MÉTODOS / REGISTRO</span>
             </div>
             <div className="card-section-title-with-actions">
               <div className="card-section-title">
-                <FileText size={20} className="icon-accent" />
-                <h2>Resumo Estruturado do Artigo / Protocolo (Structured Summary)</h2>
+                <ShieldCheck size={20} className="icon-accent" />
+                <h2>Registro do Protocolo a Priori (Protocol & Registration)</h2>
               </div>
               <div className="card-header-actions">
                 <AIAssistButton
-                  fieldId="structured_summary"
-                  fieldLabel="Resumo Estruturado da Revisão"
-                  currentValue={manuscript.structured_summary}
-                  fieldGuidelines="Estruture o resumo com os tópicos recomendados: Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                  fieldId="protocol_registration"
+                  fieldLabel="Registro do Protocolo (OSF / Repositório)"
+                  currentValue={manuscript.protocol_registration}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori."
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('structured_summary')}
-                  onApply={(text) => updateManuscriptField('structured_summary', text)}
+                  projectContext={getFullProtocolContext('protocol_registration')}
+                  onApply={(text) => updateManuscriptField('protocol_registration', text)}
                 />
                 <button
                   type="button"
-                  className={`btn-help-toggle ${helpOpen.summary ? 'active' : ''}`}
-                  onClick={() => toggleHelp('summary')}
-                  title="Ver tópicos sugeridos e guia estruturado do resumo"
+                  className={`btn-help-toggle ${helpOpen.registration ? 'active' : ''}`}
+                  onClick={() => toggleHelp('registration')}
+                  title="Ver guia de registro do protocolo"
                 >
                   <HelpCircle size={16} />
-                  <span>Guia do Resumo (?)</span>
+                  <span>Guia de Registro (?)</span>
                 </button>
               </div>
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 2: Estruture o resumo com os tópicos recomendados (Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões).
+              Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: Open Science Framework - OSF, Figshare, Zenodo), identificador/DOI e data de submissão do protocolo.
             </p>
 
-            {helpOpen.summary && (
+            {helpOpen.registration && (
               <div className="structured-guide-box animate-fade-in">
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Resumo (PRISMA-ScR Item 2)</strong>
+                    <strong>Estrutura de Registro do Protocolo (PRISMA-ScR Item 5)</strong>
                   </div>
                   <button
                     type="button"
                     className="btn-insert-template"
                     onClick={() => {
-                      const template = `Contexto / Introdução:
-[Descreva o panorama socioeconômico, as dinâmicas territoriais e a relevância do desenvolvimento regional no tema abordado]
-
-Objetivo:
-[Defina a questão central e o objetivo do mapeamento conceitual com base no framework PCC]
-
-Critérios de Elegibilidade:
-[Atores sociais, políticas públicas/conceitos avaliados, contextos territoriais e tipos de estudo aceitos]
-
-Fontes de Informação:
-[Bases consultadas: BDTD, SciELO, Scopus, OpenAlex, literatura cinzenta institucional e data da busca]
-
-Métodos de Charting (Extração):
-[Extração em duplicata independente com formulário padronizado no RSAC V2]
-
-Resultados Esperados:
-[Mapeamento das abordagens metodológicas, instrumentos de política pública e principais lacunas identificadas]
-
-Conclusões:
-[Síntese das implicações para a formulação de políticas públicas e direções para pesquisas futuras]`
-
-                      if (manuscript.structured_summary && !window.confirm('Substituir resumo pelo modelo estruturado?')) return
-                      updateManuscriptField('structured_summary', template)
+                      const template = `O protocolo desta scoping review foi desenvolvido a priori em conformidade com as diretrizes PRISMA-P e PRISMA-ScR, registrado na plataforma Open Science Framework (OSF) sob o DOI: https://doi.org/10.17605/OSF.IO/XXXXX em DD/MM/AAAA.`
+                      if (manuscript.protocol_registration && !window.confirm('Substituir dados de registro pelo modelo?')) return
+                      updateManuscriptField('protocol_registration', template)
                     }}
                   >
-                    <Plus size={14} /> Inserir Estrutura no Editor
+                    <Plus size={14} /> Inserir Modelo no Editor
                   </button>
                 </div>
-
                 <div className="guide-grid">
                   <div className="guide-item">
-                    <span className="guide-tag">1. Contexto / Background</span>
-                    <p>Panorama do problema socioeconômico, institucional ou territorial abordado.</p>
+                    <span className="guide-tag">1. Plataforma Pública</span>
+                    <p>OSF (Open Science Framework), Figshare, Zenodo ou periódicos de protocolo acadêmico.</p>
                   </div>
                   <div className="guide-item">
-                    <span className="guide-tag">2. Objetivos / Objectives</span>
-                    <p>Questão norteadora e finalidade de mapear a extensão da literatura.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Critérios de Elegibilidade</span>
-                    <p>Atores, conceitos centrais, cenários territoriais e limites temporais/idiomáticos.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">4. Fontes de Informação</span>
-                    <p>Bases consultadas (BDTD, SciELO, etc.) e data da execução da busca.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">5. Métodos de Charting</span>
-                    <p>Extração dos dados em duplicata com instrumento padronizado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">6. Resultados Esperados</span>
-                    <p>Mapeamento das características e lacunas teóricas/empíricas identificadas.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">7. Conclusões</span>
-                    <p>Contribuições para o desenvolvimento regional e políticas públicas.</p>
+                    <span className="guide-tag">2. DOI / URL Permanente</span>
+                    <p>Link direto e identificador persistente para verificação e transparência científica.</p>
                   </div>
                 </div>
               </div>
             )}
 
-            <textarea
-              rows={9}
-              className="protocol-textarea"
-              placeholder="Digite ou cole aqui o resumo estruturado do seu artigo / protocolo..."
-              value={manuscript.structured_summary}
-              onChange={(e) => updateManuscriptField('structured_summary', e.target.value)}
+            <input
+              type="text"
+              className="protocol-input-large"
+              placeholder="Ex: Registrado no Open Science Framework (OSF) sob o identificador https://doi.org/10.17605/OSF.IO/XXXXX em 15/08/2026."
+              value={manuscript.protocol_registration}
+              onChange={(e) => updateManuscriptField('protocol_registration', e.target.value)}
             />
           </div>
-        </div>
-      )}
 
-      {/* ── ABA 2: JUSTIFICATIVA & OBJETIVOS (PCC / PICO) ───────────────── */}
-      {activeStudioTab === 'intro' && (
-        <div className="tab-pane animate-fade-in">
-          {/* Item 3: Justificativa */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 3 — Essencial</span>
@@ -991,8 +1062,18 @@ Relevância e Contribuição Esperada:
               onChange={(e) => updateManuscriptField('rationale', e.target.value)}
             />
           </div>
+        </div>
+      )}
 
-          {/* Item 4: Objetivos e PCC */}
+      {/* ── ABA 2: QUESTÃO & OBJETIVOS (A PRIORI) ───────────────────────── */}
+      {activeStudioTab === 'objectives' && (
+        <div className="tab-pane animate-fade-in">
+          <div className="phase-indicator-banner a-priori-banner">
+            <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
+            <p>
+              Estruture o objetivo geral e desmembre os conceitos orientadores no framework teórico ({frameworkType}) para guiar a busca sem ambiguidades.
+            </p>
+          </div>
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 4 — Essencial</span>
@@ -1221,89 +1302,129 @@ Relevância e Contribuição Esperada:
         </div>
       )}
 
-      {/* ── ABA 3: FONTES, DESCRITORES & ELEGIBILIDADE ─────────────────── */}
-      {activeStudioTab === 'search' && (
+      {/* ── ABA 3: FONTES & ELEGIBILIDADE (A PRIORI) ────────────────────── */}
+      {activeStudioTab === 'search_eligibility' && (
         <div className="tab-pane animate-fade-in">
-          {/* Item 5: Protocolo e Registro */}
+          <div className="phase-indicator-banner a-priori-banner">
+            <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
+            <p>
+              Estabeleça os critérios de inclusão/exclusão e as strings de busca em pares ("termo_1" AND "termo_2") compatíveis com a BDTD (VuFind) antes da coleta.
+            </p>
+          </div>
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 5 — Essencial</span>
-              <span className="item-section-tag">MÉTODOS / REGISTRO</span>
+              <span className="item-tag essential">Item 6 — Essencial</span>
+              <span className="item-section-tag">MÉTODOS / ELEGIBILIDADE</span>
             </div>
             <div className="card-section-title-with-actions">
               <div className="card-section-title">
-                <ShieldCheck size={20} className="icon-accent" />
-                <h2>Registro do Protocolo a Priori (Protocol & Registration)</h2>
+                <Filter size={20} className="icon-accent" />
+                <h2>Critérios de Elegibilidade (Eligibility Criteria)</h2>
               </div>
               <div className="card-header-actions">
                 <AIAssistButton
-                  fieldId="protocol_registration"
-                  fieldLabel="Registro do Protocolo (OSF / Repositório)"
-                  currentValue={manuscript.protocol_registration}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori."
+                  fieldId="criteria"
+                  fieldLabel="Critérios de Elegibilidade (Inclusão e Exclusão)"
+                  currentValue={criteria.map((c) => (c.is_exclusion ? 'EXC: ' : 'INC: ') + c.text).join('\n')}
+                  fieldGuidelines="Gere critérios de inclusão (prefixados com 'INC: ') e de exclusão (prefixados com 'EXC: '), um por linha, alinhados com o escopo temático em Ciências Sociais Aplicadas / Desenvolvimento Regional."
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('protocol_registration')}
-                  onApply={(text) => updateManuscriptField('protocol_registration', text)}
+                  projectContext={getFullProtocolContext('criteria')}
+                  onApply={(text) => {
+                    const lines = text
+                      .split('\n')
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                    const parsedCriteria = lines.map((l, idx) => {
+                      const isExc = l.toUpperCase().startsWith('EXC:')
+                      const cleanText = l.replace(/^(INC:|EXC:)\s*/i, '').trim()
+                      return {
+                        text: cleanText || l,
+                        is_exclusion: isExc,
+                        order: idx,
+                      }
+                    })
+                    if (parsedCriteria.length > 0) {
+                      setCriteria(parsedCriteria)
+                    }
+                  }}
                 />
                 <button
                   type="button"
-                  className={`btn-help-toggle ${helpOpen.registration ? 'active' : ''}`}
-                  onClick={() => toggleHelp('registration')}
-                  title="Ver guia de registro do protocolo"
+                  className={`btn-help-toggle ${helpOpen.criteria ? 'active' : ''}`}
+                  onClick={() => toggleHelp('criteria')}
+                  title="Ver guia de formulação dos critérios"
                 >
                   <HelpCircle size={16} />
-                  <span>Guia de Registro (?)</span>
+                  <span>Guia dos Critérios (?)</span>
                 </button>
               </div>
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: Open Science Framework - OSF, Figshare, Zenodo), identificador/DOI e data de submissão do protocolo.
+              Conforme PRISMA-ScR Item 6: Defina as regras de inclusão e exclusão com base na população/atores, conceitos avaliados, recortes territoriais, idiomas e períodos considerados.
             </p>
 
-            {helpOpen.registration && (
+            {helpOpen.criteria && (
               <div className="structured-guide-box animate-fade-in">
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Registro do Protocolo (PRISMA-ScR Item 5)</strong>
+                    <strong>Diretrizes de Critérios de Elegibilidade (PRISMA-ScR Item 6)</strong>
                   </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `O protocolo desta scoping review foi desenvolvido a priori em conformidade com as diretrizes PRISMA-P e PRISMA-ScR, registrado na plataforma Open Science Framework (OSF) sob o DOI: https://doi.org/10.17605/OSF.IO/XXXXX em DD/MM/AAAA.`
-                      if (manuscript.protocol_registration && !window.confirm('Substituir dados de registro pelo modelo?')) return
-                      updateManuscriptField('protocol_registration', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Modelo no Editor
-                  </button>
                 </div>
                 <div className="guide-grid">
                   <div className="guide-item">
-                    <span className="guide-tag">1. Plataforma Pública</span>
-                    <p>OSF (Open Science Framework), Figshare, Zenodo ou periódicos de protocolo acadêmico.</p>
+                    <span className="guide-tag">Critérios de Inclusão (INC)</span>
+                    <p>Estudos empíricos ou teóricos que analisem políticas públicas, arranjos produtivos ou governança regional no contexto delimitado.</p>
                   </div>
                   <div className="guide-item">
-                    <span className="guide-tag">2. DOI / URL Permanente</span>
-                    <p>Link direto e identificador persistente para verificação e transparência científica.</p>
+                    <span className="guide-tag">Critérios de Exclusão (EXC)</span>
+                    <p>Artigos de opinião sem dados, resumos simples de anais, trabalhos fora do escopo geográfico/temático ou duplicados.</p>
                   </div>
                 </div>
               </div>
             )}
 
-            <input
-              type="text"
-              className="protocol-input-large"
-              placeholder="Ex: Registrado no Open Science Framework (OSF) sob o identificador https://doi.org/10.17605/OSF.IO/XXXXX em 15/08/2026."
-              value={manuscript.protocol_registration}
-              onChange={(e) => updateManuscriptField('protocol_registration', e.target.value)}
-            />
+            <div className="criteria-list">
+              {criteria.map((crit, idx) => (
+                <div key={idx} className="criterion-card">
+                  <span className={`criterion-code ${crit.is_exclusion ? 'exclusion' : 'inclusion'}`}>
+                    {crit.is_exclusion ? `EXC-${idx + 1}` : `INC-${idx + 1}`}
+                  </span>
+                  <input
+                    type="text"
+                    className="criterion-desc-input"
+                    placeholder={
+                      crit.is_exclusion
+                        ? 'Ex: EXC: Estudos sem fundamentação empírica/documental, ensaios puramente opinativos ou sem foco no desenvolvimento territorial.'
+                        : 'Ex: INC: Estudos empíricos que avaliem arranjos produtivos locais, governança ou políticas públicas territoriais.'
+                    }
+                    value={crit.text}
+                    onChange={(e) => updateCriterion(idx, e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-icon danger"
+                    onClick={() => removeCriterion(idx)}
+                    title="Remover critério"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="add-criterion-form">
+              <button type="button" className="btn-secondary small" onClick={() => addCriterion(false)}>
+                <Plus size={14} /> Adicionar Critério de Inclusão (INC)
+              </button>
+              <button type="button" className="btn-secondary small" onClick={() => addCriterion(true)}>
+                <Plus size={14} /> Adicionar Critério de Exclusão (EXC)
+              </button>
+            </div>
           </div>
 
-          {/* Item 7: Fontes de Informação */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 7 — Essencial</span>
@@ -1401,7 +1522,6 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
             />
           </div>
 
-          {/* Item 8: Estratégia de Busca em Pares (VuFind/BDTD Compliance) */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 8 — Essencial</span>
@@ -1531,222 +1651,18 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
               </button>
             </div>
           </div>
-
-          {/* Filtros e Recorte de Busca Federada */}
-          <div className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Filtros Federados</span>
-              <span className="item-section-tag">MÉTODOS / RECORTES DE BUSCA</span>
-            </div>
-            <div className="card-section-title">
-              <Filter size={20} className="icon-accent" />
-              <h2>Recorte e Filtros Globais da Coleta</h2>
-            </div>
-            <p className="section-help">
-              Defina os limites de anos, idiomas e tipos documentais para a coleta multibase. Fontes com suporte nativo aplicarão os filtros na API; as demais aplicarão pós-filtro rigoroso localmente.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                  Ano Inicial:
-                </label>
-                <input
-                  type="number"
-                  placeholder="Ex: 2015 (ou vazio para todos)"
-                  className="protocol-input-large"
-                  value={searchFilters.year_start ?? ''}
-                  onChange={(e) =>
-                    setSearchFilters({
-                      ...searchFilters,
-                      year_start: e.target.value ? parseInt(e.target.value, 10) : null,
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                  Ano Final:
-                </label>
-                <input
-                  type="number"
-                  placeholder="Ex: 2026 (ou vazio para atual)"
-                  className="protocol-input-large"
-                  value={searchFilters.year_end ?? ''}
-                  onChange={(e) =>
-                    setSearchFilters({
-                      ...searchFilters,
-                      year_end: e.target.value ? parseInt(e.target.value, 10) : null,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
-                Tipos de Documento Permitidos:
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {['Tese', 'Dissertação', 'Artigo de Periódico', 'Livro', 'Capítulo de Livro', 'Preprint', 'Trabalho em Anais/Conferência'].map(
-                  (docType) => {
-                    const isChecked = searchFilters.document_types?.includes(docType)
-                    return (
-                      <label
-                        key={docType}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          background: isChecked ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-secondary)',
-                          border: `1px solid ${isChecked ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
-                            const cur = searchFilters.document_types || []
-                            const next = cur.includes(docType)
-                              ? cur.filter((t) => t !== docType)
-                              : [...cur, docType]
-                            setSearchFilters({ ...searchFilters, document_types: next })
-                          }}
-                        />
-                        {docType}
-                      </label>
-                    )
-                  }
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Item 6: Critérios de Elegibilidade */}
-          <div className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Item 6 — Essencial</span>
-              <span className="item-section-tag">MÉTODOS / ELEGIBILIDADE</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Filter size={20} className="icon-accent" />
-                <h2>Critérios de Elegibilidade (Eligibility Criteria)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="criteria"
-                  fieldLabel="Critérios de Elegibilidade (Inclusão e Exclusão)"
-                  currentValue={criteria.map((c) => (c.is_exclusion ? 'EXC: ' : 'INC: ') + c.text).join('\n')}
-                  fieldGuidelines="Gere critérios de inclusão (prefixados com 'INC: ') e de exclusão (prefixados com 'EXC: '), um por linha, alinhados com o escopo temático em Ciências Sociais Aplicadas / Desenvolvimento Regional."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('criteria')}
-                  onApply={(text) => {
-                    const lines = text
-                      .split('\n')
-                      .map((l) => l.trim())
-                      .filter(Boolean)
-                    const parsedCriteria = lines.map((l, idx) => {
-                      const isExc = l.toUpperCase().startsWith('EXC:')
-                      const cleanText = l.replace(/^(INC:|EXC:)\s*/i, '').trim()
-                      return {
-                        text: cleanText || l,
-                        is_exclusion: isExc,
-                        order: idx,
-                      }
-                    })
-                    if (parsedCriteria.length > 0) {
-                      setCriteria(parsedCriteria)
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.criteria ? 'active' : ''}`}
-                  onClick={() => toggleHelp('criteria')}
-                  title="Ver guia de formulação dos critérios"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia dos Critérios (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              Conforme PRISMA-ScR Item 6: Defina as regras de inclusão e exclusão com base na população/atores, conceitos avaliados, recortes territoriais, idiomas e períodos considerados.
-            </p>
-
-            {helpOpen.criteria && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Diretrizes de Critérios de Elegibilidade (PRISMA-ScR Item 6)</strong>
-                  </div>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">Critérios de Inclusão (INC)</span>
-                    <p>Estudos empíricos ou teóricos que analisem políticas públicas, arranjos produtivos ou governança regional no contexto delimitado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">Critérios de Exclusão (EXC)</span>
-                    <p>Artigos de opinião sem dados, resumos simples de anais, trabalhos fora do escopo geográfico/temático ou duplicados.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="criteria-list">
-              {criteria.map((crit, idx) => (
-                <div key={idx} className="criterion-card">
-                  <span className={`criterion-code ${crit.is_exclusion ? 'exclusion' : 'inclusion'}`}>
-                    {crit.is_exclusion ? `EXC-${idx + 1}` : `INC-${idx + 1}`}
-                  </span>
-                  <input
-                    type="text"
-                    className="criterion-desc-input"
-                    placeholder={
-                      crit.is_exclusion
-                        ? 'Ex: EXC: Estudos sem fundamentação empírica/documental, ensaios puramente opinativos ou sem foco no desenvolvimento territorial.'
-                        : 'Ex: INC: Estudos empíricos que avaliem arranjos produtivos locais, governança ou políticas públicas territoriais.'
-                    }
-                    value={crit.text}
-                    onChange={(e) => updateCriterion(idx, e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="btn-icon danger"
-                    onClick={() => removeCriterion(idx)}
-                    title="Remover critério"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="add-criterion-form">
-              <button type="button" className="btn-secondary small" onClick={() => addCriterion(false)}>
-                <Plus size={14} /> Adicionar Critério de Inclusão (INC)
-              </button>
-              <button type="button" className="btn-secondary small" onClick={() => addCriterion(true)}>
-                <Plus size={14} /> Adicionar Critério de Exclusão (EXC)
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* ── ABA 4: SELEÇÃO, MAPEAMENTO & SÍNTESE ───────────────────────── */}
-      {activeStudioTab === 'selection' && (
+      {/* ── ABA 4: MÉTODOS & EXTRAÇÃO (A PRIORI) ────────────────────────── */}
+      {activeStudioTab === 'methods_extraction' && (
         <div className="tab-pane animate-fade-in">
-          {/* Item 9: Processo de Seleção e Calibração */}
+          <div className="phase-indicator-banner a-priori-banner">
+            <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
+            <p>
+              Planeje os procedimentos de triagem, o questionário com as variáveis que serão extraídas de cada estudo incluído e os métodos previstos de síntese.
+            </p>
+          </div>
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 9 — Essencial</span>
@@ -1837,7 +1753,6 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
             />
           </div>
 
-          {/* Item 10: Processo de Data Charting */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 10 — Essencial</span>
@@ -1924,7 +1839,6 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
             />
           </div>
 
-          {/* Item 11: Perguntas de Mapeamento */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 11 — Essencial</span>
@@ -1994,7 +1908,6 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
             </div>
           </div>
 
-          {/* Item 12 (Opcional): Avaliação Crítica da Evidência */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag optional">Item 12 — Opcional</span>
@@ -2073,7 +1986,6 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
             />
           </div>
 
-          {/* Item 14: Síntese e Mapeamento dos Resultados */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 14 — Essencial</span>
@@ -2166,286 +2078,7 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
               onChange={(e) => updateManuscriptField('synthesis_methods', e.target.value)}
             />
           </div>
-        </div>
-      )}
 
-      {/* ── ABA 5: DISCUSSÃO, LIMITAÇÕES & FINANCIAMENTO ────────────────── */}
-      {activeStudioTab === 'discussion' && (
-        <div className="tab-pane animate-fade-in">
-          {/* Item 24: Síntese dos Achados */}
-          <div className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Item 24 — Essencial</span>
-              <span className="item-section-tag">DISCUSSÃO / RESULTADOS</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Bookmark size={20} className="icon-accent" />
-                <h2>Síntese Geral das Evidências (Summary of Evidence)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="summary_evidence"
-                  fieldLabel="Síntese Geral das Evidências"
-                  currentValue={manuscript.summary_evidence}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 24: Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('summary_evidence')}
-                  onApply={(text) => updateManuscriptField('summary_evidence', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.summaryEvidence ? 'active' : ''}`}
-                  onClick={() => toggleHelp('summaryEvidence')}
-                  title="Ver guia de síntese das evidências"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia dos Achados (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              Conforme PRISMA-ScR Item 24: Resuma os principais conceitos identificados, os temas dominantes e a relevância prática dos achados para formuladores de políticas públicas e pesquisadores.
-            </p>
-
-            {helpOpen.summaryEvidence && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura da Síntese de Evidências (PRISMA-ScR Item 24)</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Panorama das Evidências Mapeadas:
-A síntese dos estudos incluídos evidenciou a evolução das pesquisas sobre [Conceito Central / Desenvolvimento Regional], concentrada principalmente em...
-
-Temas Dominantes e Padrões Identificados:
-Observou-se predominância de abordagens voltadas para..., com relativa escassez de análises longitudinais sobre sustentabilidade institucional dos arranjos territoriais.
-
-Relevância Prática e Institucional:
-Os resultados oferecem um panorama estruturado para gestores públicos, formuladores de políticas e pesquisadores sobre as potencialidades e desafios do desenvolvimento regional.`
-
-                      if (manuscript.summary_evidence && !window.confirm('Substituir síntese de evidências pelo modelo?')) return
-                      updateManuscriptField('summary_evidence', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Panorama Geral</span>
-                    <p>Volume e amplitude das evidências encontradas na literatura.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Temas Dominantes</span>
-                    <p>Principais tendências teóricas ou territoriais mapeadas.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Relevância Prática</span>
-                    <p>Utilidade para planejamento governamental e desenvolvimento local.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <textarea
-              rows={5}
-              className="protocol-textarea"
-              placeholder="Ex: A presente revisão de escopo identificou um crescimento expressivo na produção acadêmica sobre governança em arranjos produtivos..."
-              value={manuscript.summary_evidence}
-              onChange={(e) => updateManuscriptField('summary_evidence', e.target.value)}
-            />
-          </div>
-
-          {/* Item 25: Limitações do Estudo */}
-          <div className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Item 25 — Essencial</span>
-              <span className="item-section-tag">DISCUSSÃO / LIMITAÇÕES</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <AlertTriangle size={20} className="icon-accent" />
-                <h2>Limitações da Revisão de Escopo (Limitations)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="limitations"
-                  fieldLabel="Limitações da Revisão"
-                  currentValue={manuscript.limitations}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados)."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('limitations')}
-                  onApply={(text) => updateManuscriptField('limitations', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.limitations ? 'active' : ''}`}
-                  onClick={() => toggleHelp('limitations')}
-                  title="Ver guia de limitações"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia das Limitações (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (ex: restrições de idioma, bases indexadas, ausência de busca manual de literatura cinzenta não publicada).
-            </p>
-
-            {helpOpen.limitations && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Limitações da Revisão (PRISMA-ScR Item 25)</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Limitações do Processo de Busca:
-A busca foi restrita a publicações em português, inglês e espanhol, o que pode ter desconsiderado estudos relevantes em outras línguas.
-
-Literatura Cinzenta e Documentos Institucionais:
-Embora teses e dissertações tenham sido consultadas na BDTD, relatórios técnicos municipais e documentos institucionais não indexados podem não ter sido integralmente capturados.
-
-Heterogeneidade dos Estudos Primários:
-A diversidade metodológica e conceitual na caracterização dos territórios limitou a comparabilidade direta entre determinadas realidades regionais.`
-
-                      if (manuscript.limitations && !window.confirm('Substituir limitações pelo modelo estruturado?')) return
-                      updateManuscriptField('limitations', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Limitações de Busca</span>
-                    <p>Filtros de idioma, bases consultadas e período considerado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Literatura Cinzenta</span>
-                    <p>Potencial não captura de relatórios governamentais não indexados.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Desvios do Protocolo</span>
-                    <p>Justifique qualquer ajuste metodológico feito durante a revisão.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <textarea
-              rows={4}
-              className="protocol-textarea"
-              placeholder="Ex: Como limitação deste estudo, destaca-se a inclusão restrita a artigos publicados em português, inglês e espanhol, além da potencial não captura de relatórios técnicos governamentais não indexados."
-              value={manuscript.limitations}
-              onChange={(e) => updateManuscriptField('limitations', e.target.value)}
-            />
-          </div>
-
-          {/* Item 26: Conclusões e Lacunas */}
-          <div className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Item 26 — Essencial</span>
-              <span className="item-section-tag">CONCLUSÕES</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <CheckCircle2 size={20} className="icon-accent" />
-                <h2>Conclusões e Lacunas de Conhecimento (Conclusions)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="conclusions"
-                  fieldLabel="Conclusões e Lacunas de Conhecimento"
-                  currentValue={manuscript.conclusions}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('conclusions')}
-                  onApply={(text) => updateManuscriptField('conclusions', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.conclusions ? 'active' : ''}`}
-                  onClick={() => toggleHelp('conclusions')}
-                  title="Ver guia de conclusões e lacunas"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia das Conclusões (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.
-            </p>
-
-            {helpOpen.conclusions && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Conclusões e Lacunas (PRISMA-ScR Item 26)</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Conclusão Geral:
-Esta scoping review sintetizou com rigor a produção científica sobre [Conceito Central / Desenvolvimento Regional], demonstrando que...
-
-Principais Lacunas Identificadas:
-Constatou-se escassez de pesquisas que avaliem a sustentabilidade financeira de longo prazo dos arranjos locais e a integração com políticas de inovação aberta.
-
-Recomendações para Estudos Futuros:
-Sugere-se que investigações futuras priorizem estudos longitudinais de governança territorial e análises comparadas entre diferentes recortes regionais.`
-
-                      if (manuscript.conclusions && !window.confirm('Substituir conclusões pelo modelo estruturado?')) return
-                      updateManuscriptField('conclusions', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Síntese Conclusiva</span>
-                    <p>Resposta direta aos objetivos e questão norteadora.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Lacunas Mapeadas</span>
-                    <p>O que ainda falta na literatura para avanço do conhecimento na área.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Próximos Passos</span>
-                    <p>Recomendações objetivas para futuras pesquisas e políticas públicas.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <textarea
-              rows={5}
-              className="protocol-textarea"
-              placeholder="Ex: Conclui-se que, embora haja vasta produção acadêmica sobre desenvolvimento territorial, verifica-se escassez de estudos com avaliação de impacto socioeconômico de longo prazo..."
-              value={manuscript.conclusions}
-              onChange={(e) => updateManuscriptField('conclusions', e.target.value)}
-            />
-          </div>
-
-          {/* Item 27: Financiamento e Conflitos */}
           <div className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 27 — Essencial</span>
@@ -2538,7 +2171,625 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
         </div>
       )}
 
-      {/* ── ABA 6: AUDITORIA E CHECKLIST DO PROTOCOLO ATIVO ─────────────────────── */}
+      {/* ── ABA 5: SÍNTESE DOS ACHADOS & DISCUSSÃO (A POSTERIORI) ─────────── */}
+      {activeStudioTab === 'synthesis_discussion' && (
+        <div className="tab-pane animate-fade-in">
+          <div className="phase-indicator-banner a-posteriori-banner">
+            <span className="phase-badge a-posteriori">Fase A Posteriori — Pós-Extração / Síntese dos Resultados</span>
+            <p>
+              Esta seção <strong>deve ser redigida após a execução da coleta, triagem e extração</strong> dos dados dos estudos incluídos, com base nas evidências empíricas reais consolidadas.
+            </p>
+          </div>
+
+          {/* Painel de Evidências Reais & Rastreabilidade */}
+          <div className="evidence-traceability-card">
+            <div className="traceability-header">
+              <div className="traceability-title">
+                <BarChart3 size={18} className="icon-accent" />
+                <strong>Rastreabilidade de Evidências do Estudo</strong>
+              </div>
+              {extractionSummary && extractionSummary.total_extracted > 0 && (
+                <button
+                  type="button"
+                  className="btn-toggle-matrix"
+                  onClick={() => setShowEvidenceMatrix(!showEvidenceMatrix)}
+                >
+                  {showEvidenceMatrix ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  {showEvidenceMatrix ? 'Ocultar Matriz de Respostas' : 'Ver Matriz de Respostas Extraídas'}
+                </button>
+              )}
+            </div>
+
+            <div className="traceability-stats-grid">
+              <div className="trace-stat-item">
+                <span className="trace-stat-label">Total Triados (Triagem 1)</span>
+                <span className="trace-stat-val">{extractionSummary?.total_screened ?? 0}</span>
+              </div>
+              <div className="trace-stat-item highlight-inc">
+                <span className="trace-stat-label">Estudos Incluídos</span>
+                <span className="trace-stat-val">{extractionSummary?.total_included ?? 0}</span>
+              </div>
+              <div className="trace-stat-item highlight-ext">
+                <span className="trace-stat-label">Com Extração Realizada</span>
+                <span className="trace-stat-val">
+                  {extractionSummary?.total_extracted ?? 0}
+                  <span className="trace-stat-sub">
+                    {' '}({extractionSummary?.extraction_progress_percent ?? 0}%)
+                  </span>
+                </span>
+              </div>
+              <div className="trace-stat-item">
+                <span className="trace-stat-label">Pendentes de Avaliação</span>
+                <span className="trace-stat-val">{extractionSummary?.total_pending ?? 0}</span>
+              </div>
+            </div>
+
+            {/* Alerta Metodológico caso não haja extrações */}
+            {(!extractionSummary || extractionSummary.total_extracted === 0) ? (
+              <div className="methodological-flow-alert animate-fade-in">
+                <AlertTriangle size={20} className="alert-icon" />
+                <div className="flow-alert-body">
+                  <strong>Aviso Metodológico de Fluxo:</strong>
+                  <p>
+                    Você ainda não possui estudos com dados extraídos cadastrados na etapa de Extração (Triagem 2). Redigir a Síntese dos Achados, Limitações e Conclusões antes de extrair os dados reais dos estudos pode gerar conclusões prematuras que precisarão ser reescritas.
+                  </p>
+                  <div className="flow-alert-actions">
+                    <button
+                      type="button"
+                      className="btn-flow-nav"
+                      onClick={() => navigate(`/projects/${id}/harvest`)}
+                    >
+                      <Database size={13} /> Ir para Coleta
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-flow-nav"
+                      onClick={() => navigate(`/projects/${id}/screening`)}
+                    >
+                      <CheckSquare size={13} /> Ir para Triagem
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-flow-nav primary"
+                      onClick={() => navigate(`/projects/${id}/extraction`)}
+                    >
+                      <FileText size={13} /> Ir para Extração dos Incluídos <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="methodological-flow-success animate-fade-in">
+                <CheckCircle2 size={20} className="success-icon" />
+                <div className="flow-success-body">
+                  <strong>Evidências Extraídas Disponíveis:</strong>
+                  <p>
+                    {extractionSummary.total_extracted} estudos possuem respostas extraídas consolidadas para subsidiar a redação dos achados empíricos.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-compile-evidence"
+                  onClick={handleCompileEvidenceIntoEditor}
+                  title="Insere o compilado estruturado das respostas extraídas de todos os artigos no editor de síntese"
+                >
+                  <Sparkles size={14} /> Compilar Evidências no Editor
+                </button>
+              </div>
+            )}
+
+            {/* Matriz sanfonada de evidências */}
+            {showEvidenceMatrix && extractionSummary && extractionSummary.questions_matrix?.length > 0 && (
+              <div className="evidence-matrix-drawer animate-fade-in">
+                <h4>Respostas Extraídas por Variável / Pergunta:</h4>
+                <div className="matrix-questions-list">
+                  {extractionSummary.questions_matrix.map((qm, qIdx) => (
+                    <div key={qm.question_id} className="matrix-question-item">
+                      <div className="matrix-q-header">
+                        <strong>Q{qIdx + 1}: {qm.question_text}</strong>
+                        <span className="badge-answered">{qm.total_answered} respostas</span>
+                      </div>
+                      <div className="matrix-answers-sublist">
+                        {qm.answers.length === 0 ? (
+                          <p className="no-answers-note">Nenhuma resposta cadastrada para este item.</p>
+                        ) : (
+                          qm.answers.map((ans) => (
+                            <div key={ans.paper_id} className="matrix-answer-row">
+                              <div className="ans-paper-meta">
+                                <span className="ans-paper-title">{ans.paper_title}</span>
+                                <span className="ans-paper-year">({ans.authors || 's/a'}, {ans.year || 's/d'})</span>
+                              </div>
+                              <p className="ans-text">"{ans.answer}"</p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="protocol-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">Item 24 — Essencial</span>
+              <span className="item-section-tag">DISCUSSÃO / RESULTADOS</span>
+            </div>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <Bookmark size={20} className="icon-accent" />
+                <h2>Síntese Geral das Evidências (Summary of Evidence)</h2>
+              </div>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="summary_evidence"
+                  fieldLabel="Síntese Geral das Evidências"
+                  currentValue={manuscript.summary_evidence}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 24: Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('summary_evidence')}
+                  onApply={(text) => updateManuscriptField('summary_evidence', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.summaryEvidence ? 'active' : ''}`}
+                  onClick={() => toggleHelp('summaryEvidence')}
+                  title="Ver guia de síntese das evidências"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia dos Achados (?)</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="section-help">
+              Conforme PRISMA-ScR Item 24: Resuma os principais conceitos identificados, os temas dominantes e a relevância prática dos achados para formuladores de políticas públicas e pesquisadores.
+            </p>
+
+            {helpOpen.summaryEvidence && (
+              <div className="structured-guide-box animate-fade-in">
+                <div className="guide-header">
+                  <div className="guide-title">
+                    <HelpCircle size={18} className="icon-accent" />
+                    <strong>Estrutura da Síntese de Evidências (PRISMA-ScR Item 24)</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-insert-template"
+                    onClick={() => {
+                      const template = `Panorama das Evidências Mapeadas:
+A síntese dos estudos incluídos evidenciou a evolução das pesquisas sobre [Conceito Central / Desenvolvimento Regional], concentrada principalmente em...
+
+Temas Dominantes e Padrões Identificados:
+Observou-se predominância de abordagens voltadas para..., com relativa escassez de análises longitudinais sobre sustentabilidade institucional dos arranjos territoriais.
+
+Relevância Prática e Institucional:
+Os resultados oferecem um panorama estruturado para gestores públicos, formuladores de políticas e pesquisadores sobre as potencialidades e desafios do desenvolvimento regional.`
+
+                      if (manuscript.summary_evidence && !window.confirm('Substituir síntese de evidências pelo modelo?')) return
+                      updateManuscriptField('summary_evidence', template)
+                    }}
+                  >
+                    <Plus size={14} /> Inserir Estrutura no Editor
+                  </button>
+                </div>
+                <div className="guide-grid">
+                  <div className="guide-item">
+                    <span className="guide-tag">1. Panorama Geral</span>
+                    <p>Volume e amplitude das evidências encontradas na literatura.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">2. Temas Dominantes</span>
+                    <p>Principais tendências teóricas ou territoriais mapeadas.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">3. Relevância Prática</span>
+                    <p>Utilidade para planejamento governamental e desenvolvimento local.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <textarea
+              rows={5}
+              className="protocol-textarea"
+              placeholder="Ex: A presente revisão de escopo identificou um crescimento expressivo na produção acadêmica sobre governança em arranjos produtivos..."
+              value={manuscript.summary_evidence}
+              onChange={(e) => updateManuscriptField('summary_evidence', e.target.value)}
+            />
+          </div>
+
+          <div className="protocol-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">Item 25 — Essencial</span>
+              <span className="item-section-tag">DISCUSSÃO / LIMITAÇÕES</span>
+            </div>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <AlertTriangle size={20} className="icon-accent" />
+                <h2>Limitações da Revisão de Escopo (Limitations)</h2>
+              </div>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="limitations"
+                  fieldLabel="Limitações da Revisão"
+                  currentValue={manuscript.limitations}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados)."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('limitations')}
+                  onApply={(text) => updateManuscriptField('limitations', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.limitations ? 'active' : ''}`}
+                  onClick={() => toggleHelp('limitations')}
+                  title="Ver guia de limitações"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia das Limitações (?)</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="section-help">
+              Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (ex: restrições de idioma, bases indexadas, ausência de busca manual de literatura cinzenta não publicada).
+            </p>
+
+            {helpOpen.limitations && (
+              <div className="structured-guide-box animate-fade-in">
+                <div className="guide-header">
+                  <div className="guide-title">
+                    <HelpCircle size={18} className="icon-accent" />
+                    <strong>Estrutura de Limitações da Revisão (PRISMA-ScR Item 25)</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-insert-template"
+                    onClick={() => {
+                      const template = `Limitações do Processo de Busca:
+A busca foi restrita a publicações em português, inglês e espanhol, o que pode ter desconsiderado estudos relevantes em outras línguas.
+
+Literatura Cinzenta e Documentos Institucionais:
+Embora teses e dissertações tenham sido consultadas na BDTD, relatórios técnicos municipais e documentos institucionais não indexados podem não ter sido integralmente capturados.
+
+Heterogeneidade dos Estudos Primários:
+A diversidade metodológica e conceitual na caracterização dos territórios limitou a comparabilidade direta entre determinadas realidades regionais.`
+
+                      if (manuscript.limitations && !window.confirm('Substituir limitações pelo modelo estruturado?')) return
+                      updateManuscriptField('limitations', template)
+                    }}
+                  >
+                    <Plus size={14} /> Inserir Estrutura no Editor
+                  </button>
+                </div>
+                <div className="guide-grid">
+                  <div className="guide-item">
+                    <span className="guide-tag">1. Limitações de Busca</span>
+                    <p>Filtros de idioma, bases consultadas e período considerado.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">2. Literatura Cinzenta</span>
+                    <p>Potencial não captura de relatórios governamentais não indexados.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">3. Desvios do Protocolo</span>
+                    <p>Justifique qualquer ajuste metodológico feito durante a revisão.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <textarea
+              rows={4}
+              className="protocol-textarea"
+              placeholder="Ex: Como limitação deste estudo, destaca-se a inclusão restrita a artigos publicados em português, inglês e espanhol, além da potencial não captura de relatórios técnicos governamentais não indexados."
+              value={manuscript.limitations}
+              onChange={(e) => updateManuscriptField('limitations', e.target.value)}
+            />
+          </div>
+
+          <div className="protocol-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">Item 26 — Essencial</span>
+              <span className="item-section-tag">CONCLUSÕES</span>
+            </div>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <CheckCircle2 size={20} className="icon-accent" />
+                <h2>Conclusões e Lacunas de Conhecimento (Conclusions)</h2>
+              </div>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="conclusions"
+                  fieldLabel="Conclusões e Lacunas de Conhecimento"
+                  currentValue={manuscript.conclusions}
+                  fieldGuidelines="Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('conclusions')}
+                  onApply={(text) => updateManuscriptField('conclusions', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.conclusions ? 'active' : ''}`}
+                  onClick={() => toggleHelp('conclusions')}
+                  title="Ver guia de conclusões e lacunas"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia das Conclusões (?)</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="section-help">
+              Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.
+            </p>
+
+            {helpOpen.conclusions && (
+              <div className="structured-guide-box animate-fade-in">
+                <div className="guide-header">
+                  <div className="guide-title">
+                    <HelpCircle size={18} className="icon-accent" />
+                    <strong>Estrutura de Conclusões e Lacunas (PRISMA-ScR Item 26)</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-insert-template"
+                    onClick={() => {
+                      const template = `Conclusão Geral:
+Esta scoping review sintetizou com rigor a produção científica sobre [Conceito Central / Desenvolvimento Regional], demonstrando que...
+
+Principais Lacunas Identificadas:
+Constatou-se escassez de pesquisas que avaliem a sustentabilidade financeira de longo prazo dos arranjos locais e a integração com políticas de inovação aberta.
+
+Recomendações para Estudos Futuros:
+Sugere-se que investigações futuras priorizem estudos longitudinais de governança territorial e análises comparadas entre diferentes recortes regionais.`
+
+                      if (manuscript.conclusions && !window.confirm('Substituir conclusões pelo modelo estruturado?')) return
+                      updateManuscriptField('conclusions', template)
+                    }}
+                  >
+                    <Plus size={14} /> Inserir Estrutura no Editor
+                  </button>
+                </div>
+                <div className="guide-grid">
+                  <div className="guide-item">
+                    <span className="guide-tag">1. Síntese Conclusiva</span>
+                    <p>Resposta direta aos objetivos e questão norteadora.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">2. Lacunas Mapeadas</span>
+                    <p>O que ainda falta na literatura para avanço do conhecimento na área.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">3. Próximos Passos</span>
+                    <p>Recomendações objetivas para futuras pesquisas e políticas públicas.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <textarea
+              rows={5}
+              className="protocol-textarea"
+              placeholder="Ex: Conclui-se que, embora haja vasta produção acadêmica sobre desenvolvimento territorial, verifica-se escassez de estudos com avaliação de impacto socioeconômico de longo prazo..."
+              value={manuscript.conclusions}
+              onChange={(e) => updateManuscriptField('conclusions', e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── ABA 6: RESUMO ESTRUTURADO FINAL (A POSTERIORI) ───────────────── */}
+      {activeStudioTab === 'final_summary' && (
+        <div className="tab-pane animate-fade-in">
+          <div className="phase-indicator-banner a-posteriori-banner">
+            <span className="phase-badge a-posteriori">Fase A Posteriori — Resumo Executivo Definitivo</span>
+            <p>
+              O Resumo Estruturado Final deve ser fechado <strong>após a conclusão de todo o trabalho</strong>, sintetizando os quantitativos exatos do funil PRISMA, as evidências descobertas e a conclusão central da pesquisa.
+            </p>
+          </div>
+          <div className="protocol-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">Item 2 — Essencial</span>
+              <span className="item-section-tag">RESUMO</span>
+            </div>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <FileText size={20} className="icon-accent" />
+                <h2>Resumo Estruturado do Artigo / Protocolo (Structured Summary)</h2>
+              </div>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="structured_summary"
+                  fieldLabel="Resumo Estruturado da Revisão"
+                  currentValue={manuscript.structured_summary}
+                  fieldGuidelines="Estruture o resumo com os tópicos recomendados: Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('structured_summary')}
+                  onApply={(text) => updateManuscriptField('structured_summary', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.summary ? 'active' : ''}`}
+                  onClick={() => toggleHelp('summary')}
+                  title="Ver tópicos sugeridos e guia estruturado do resumo"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia do Resumo (?)</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="section-help">
+              Conforme PRISMA-ScR Item 2: Estruture o resumo com os tópicos recomendados (Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões).
+            </p>
+
+            {helpOpen.summary && (
+              <div className="structured-guide-box animate-fade-in">
+                <div className="guide-header">
+                  <div className="guide-title">
+                    <HelpCircle size={18} className="icon-accent" />
+                    <strong>Estrutura Recomendada para o Resumo (PRISMA-ScR Item 2)</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-insert-template"
+                    onClick={() => {
+                      const template = `Contexto / Introdução:
+[Descreva o panorama socioeconômico, as dinâmicas territoriais e a relevância do desenvolvimento regional no tema abordado]
+
+Objetivo:
+[Defina a questão central e o objetivo do mapeamento conceitual com base no framework PCC]
+
+Critérios de Elegibilidade:
+[Atores sociais, políticas públicas/conceitos avaliados, contextos territoriais e tipos de estudo aceitos]
+
+Fontes de Informação:
+[Bases consultadas: BDTD, SciELO, Scopus, OpenAlex, literatura cinzenta institucional e data da busca]
+
+Métodos de Charting (Extração):
+[Extração em duplicata independente com formulário padronizado no RSAC V2]
+
+Resultados Esperados:
+[Mapeamento das abordagens metodológicas, instrumentos de política pública e principais lacunas identificadas]
+
+Conclusões:
+[Síntese das implicações para a formulação de políticas públicas e direções para pesquisas futuras]`
+
+                      if (manuscript.structured_summary && !window.confirm('Substituir resumo pelo modelo estruturado?')) return
+                      updateManuscriptField('structured_summary', template)
+                    }}
+                  >
+                    <Plus size={14} /> Inserir Estrutura no Editor
+                  </button>
+                </div>
+
+                <div className="guide-grid">
+                  <div className="guide-item">
+                    <span className="guide-tag">1. Contexto / Background</span>
+                    <p>Panorama do problema socioeconômico, institucional ou territorial abordado.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">2. Objetivos / Objectives</span>
+                    <p>Questão norteadora e finalidade de mapear a extensão da literatura.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">3. Critérios de Elegibilidade</span>
+                    <p>Atores, conceitos centrais, cenários territoriais e limites temporais/idiomáticos.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">4. Fontes de Informação</span>
+                    <p>Bases consultadas (BDTD, SciELO, etc.) e data da execução da busca.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">5. Métodos de Charting</span>
+                    <p>Extração dos dados em duplicata com instrumento padronizado.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">6. Resultados Esperados</span>
+                    <p>Mapeamento das características e lacunas teóricas/empíricas identificadas.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">7. Conclusões</span>
+                    <p>Contribuições para o desenvolvimento regional e políticas públicas.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <textarea
+              rows={9}
+              className="protocol-textarea"
+              placeholder="Digite ou cole aqui o resumo estruturado do seu artigo / protocolo..."
+              value={manuscript.structured_summary}
+              onChange={(e) => updateManuscriptField('structured_summary', e.target.value)}
+            />
+          </div>
+
+          <div className="protocol-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">Item 1 — Essencial</span>
+              <span className="item-section-tag">TÍTULO</span>
+            </div>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <Edit3 size={20} className="icon-accent" />
+                <h2>Título Oficial da Revisão de Escopo (Scoping Review)</h2>
+              </div>
+              <div className="card-header-actions">
+                <AIAssistButton
+                  fieldId="manuscript_title"
+                  fieldLabel="Título Oficial da Revisão"
+                  currentValue={manuscript.manuscript_title}
+                  fieldGuidelines="Identifique claramente o trabalho como uma Scoping Review / Revisão Sistemática e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional)."
+                  projectTitle={activeProject?.title}
+                  methodology={activeProject?.methodology}
+                  projectContext={getFullProtocolContext('manuscript_title')}
+                  onApply={(text) => updateManuscriptField('manuscript_title', text)}
+                />
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.title ? 'active' : ''}`}
+                  onClick={() => toggleHelp('title')}
+                  title="Ver guia de elaboração do título"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia do Título (?)</span>
+                </button>
+              </div>
+            </div>
+            <p className="section-help">
+              Conforme PRISMA-ScR Item 1: Identifique claramente o trabalho como uma <strong>Scoping Review</strong> e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).
+            </p>
+
+            {helpOpen.title && (
+              <div className="structured-guide-box animate-fade-in">
+                <div className="guide-header">
+                  <div className="guide-title">
+                    <HelpCircle size={18} className="icon-accent" />
+                    <strong>Estrutura Recomendada para o Título (PRISMA-ScR Item 1)</strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-insert-template"
+                    onClick={() => {
+                      const template = `Políticas Públicas de [Instrumento / Política] e [Conceito Central] no [Contexto Regional / Território] para [Atores Sociais / Setor Produtivo]: Uma Revisão de Escopo`
+                      if (manuscript.manuscript_title && !window.confirm('Substituir título atual pelo modelo?')) return
+                      updateManuscriptField('manuscript_title', template)
+                    }}
+                  >
+                    <Plus size={14} /> Inserir Estrutura no Editor
+                  </button>
+                </div>
+                <div className="guide-grid">
+                  <div className="guide-item">
+                    <span className="guide-tag">1. Identificação do Método</span>
+                    <p>O subtítulo DEVE conter explicitamente "Uma Revisão de Escopo" ou "Scoping Review".</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">2. Elementos PCC</span>
+                    <p>Mencione o Conceito Central (ex: Arranjos Produtivos Locais), o Contexto Territorial e os Atores Sociais.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <input
+              type="text"
+              className="protocol-input-large"
+              placeholder="Ex: Governança Territorial e Arranjos Produtivos Locais no Desenvolvimento Regional do Semiárido: Uma Revisão de Escopo"
+              value={manuscript.manuscript_title}
+              onChange={(e) => updateManuscriptField('manuscript_title', e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── ABA 7: AUDITORIA E CHECKLIST DO PROTOCOLO ATIVO ───────────────── */}
       {activeStudioTab === 'checklist' && (
         <div className="tab-pane animate-fade-in">
           <div className="protocol-card scr-checklist-card">
@@ -2550,36 +2801,87 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
               {currentProtocolDef.description} Referência: <em>{currentProtocolDef.reference}</em>. Utilize esta matriz para auditar e verificar o cumprimento de cada item metodológico no seu artigo.
             </p>
 
-            <div className="scr-items-grid">
-              {currentProtocolDef.checklistItems.map((chk) => {
-                const isChecked = checkedScRItems[chk.id] || false
-                return (
-                  <div
-                    key={chk.id}
-                    className={`scr-checklist-row ${isChecked ? 'checked' : ''} ${chk.essential ? 'essential' : 'optional'}`}
-                    onClick={() => toggleScRItem(chk.id)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => toggleScRItem(chk.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="scr-item-info">
-                      <div className="scr-item-header">
-                        <span className="scr-item-num">Item {chk.id}</span>
-                        <span className="scr-item-section">{chk.section}</span>
-                        <strong className="scr-item-title">{chk.item}</strong>
-                        <span className={`scr-item-badge ${chk.essential ? 'ess' : 'opt'}`}>
-                          {chk.essential ? 'Essencial' : 'Opcional'}
-                        </span>
+            {/* Grupo 1: Itens do Protocolo A Priori */}
+            <div className="checklist-phase-group">
+              <div className="checklist-group-header">
+                <span className="group-tag a-priori">1. Itens do Protocolo de Pesquisa (A Priori)</span>
+                <span className="group-count">
+                  {aPrioriChecklistItems.filter((chk) => checkedScRItems[chk.id]).length} / {aPrioriChecklistItems.length} atendidos
+                </span>
+              </div>
+              <div className="scr-items-grid">
+                {aPrioriChecklistItems.map((chk) => {
+                  const isChecked = checkedScRItems[chk.id] || false
+                  return (
+                    <div
+                      key={chk.id}
+                      className={`scr-checklist-row ${isChecked ? 'checked' : ''} ${chk.essential ? 'essential' : 'optional'}`}
+                      onClick={() => toggleScRItem(chk.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleScRItem(chk.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="scr-item-info">
+                        <div className="scr-item-header">
+                          <span className="scr-item-num">Item {chk.id}</span>
+                          <span className="scr-item-section">{chk.section}</span>
+                          <strong className="scr-item-title">{chk.item}</strong>
+                          <span className={`scr-item-badge ${chk.essential ? 'ess' : 'opt'}`}>
+                            {chk.essential ? 'Essencial' : 'Opcional'}
+                          </span>
+                        </div>
+                        <p className="scr-item-desc">{chk.desc}</p>
                       </div>
-                      <p className="scr-item-desc">{chk.desc}</p>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
+
+            {/* Grupo 2: Itens do Manuscrito Final A Posteriori */}
+            {aPosterioriChecklistItems.length > 0 && (
+              <div className="checklist-phase-group" style={{ marginTop: 'var(--space-6)' }}>
+                <div className="checklist-group-header">
+                  <span className="group-tag a-posteriori">2. Itens do Manuscrito Final Pós-Extração (A Posteriori)</span>
+                  <span className="group-count">
+                    {aPosterioriChecklistItems.filter((chk) => checkedScRItems[chk.id]).length} / {aPosterioriChecklistItems.length} atendidos
+                  </span>
+                </div>
+                <div className="scr-items-grid">
+                  {aPosterioriChecklistItems.map((chk) => {
+                    const isChecked = checkedScRItems[chk.id] || false
+                    return (
+                      <div
+                        key={chk.id}
+                        className={`scr-checklist-row ${isChecked ? 'checked' : ''} ${chk.essential ? 'essential' : 'optional'}`}
+                        onClick={() => toggleScRItem(chk.id)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleScRItem(chk.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <div className="scr-item-info">
+                          <div className="scr-item-header">
+                            <span className="scr-item-num">Item {chk.id}</span>
+                            <span className="scr-item-section">{chk.section}</span>
+                            <strong className="scr-item-title">{chk.item}</strong>
+                            <span className={`scr-item-badge ${chk.essential ? 'ess' : 'opt'}`}>
+                              {chk.essential ? 'Essencial' : 'Opcional'}
+                            </span>
+                          </div>
+                          <p className="scr-item-desc">{chk.desc}</p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

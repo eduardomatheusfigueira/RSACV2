@@ -75,7 +75,7 @@ const RIBBON_TABS: RibbonTab[] = [
   { id: 'harvest', label: 'Coleta', icon: <Download size={14} />, path: '/projects/:id/harvest', requiresProject: true, stepNumber: 2 },
   { id: 'screening', label: 'Triagem', icon: <CheckSquare size={14} />, path: '/projects/:id/screening', requiresProject: true, stepNumber: 3 },
   { id: 'extraction', label: 'Extração', icon: <FileText size={14} />, path: '/projects/:id/extraction', requiresProject: true, stepNumber: 4 },
-  { id: 'export', label: 'Exportar', icon: <FileDown size={14} />, path: '/projects/:id/export', requiresProject: true, stepNumber: 5 },
+  { id: 'export', label: 'Síntese & Exportar', icon: <FileDown size={14} />, path: '/projects/:id/export', requiresProject: true, stepNumber: 5 },
   { id: 'settings', label: 'Ferramentas', icon: <Settings size={14} />, path: '/settings' },
 ]
 
