@@ -129,7 +129,9 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
   box-shadow: var(--shadow-neo-sunken);
-  color: var(--copperwood);
+  /* `--copperwood` cru é pigmento de marca, não token de texto: rendia 2.9:1
+     na lava-steel. O acento medido preserva a mesma leitura. */
+  color: var(--color-accent-on-surface);
 }
 
 .badge-active {
@@ -137,7 +139,7 @@
   font-weight: var(--weight-bold);
   padding: var(--space-0-5) var(--space-2);
   background: var(--olive-leaf);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-olive);
   border-radius: var(--radius-xs);
   display: flex;
   align-items: center;

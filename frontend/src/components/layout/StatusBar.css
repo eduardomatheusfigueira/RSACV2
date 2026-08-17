@@ -98,7 +98,7 @@
 }
 
 .status-ai-mode.active {
-  color: var(--color-success);
+  color: var(--color-success-on-surface);
 }
 
 .status-ai-mode.manual {
@@ -180,5 +180,5 @@
 
 .log-badge.error {
   background: var(--color-error);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-error);
 }

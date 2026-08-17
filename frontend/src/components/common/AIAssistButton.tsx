@@ -7,6 +7,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Sparkles, ChevronDown, Check, RotateCcw, Loader2, Wand2, SpellCheck, Maximize2, Minimize2, MessageSquare } from 'lucide-react'
 import { api } from '@/api/client'
+import { toast } from '@/components/ui'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
 import './AIAssistButton.css'
@@ -127,7 +128,11 @@ export function AIAssistButton({
     } catch (err: any) {
       console.error(`[AIAssistButton] Erro ao processar campo ${fieldId}:`, err)
       logStore.error('Assistência', `Falha ao processar "${fieldLabel}"`, err.message || 'Erro desconhecido')
-      alert(`Falha no assistente: ${err.message || 'Erro de comunicação com o servidor'}`)
+      /* `alert()` trava a janela inteira e não é anunciado por leitor de tela
+         como erro; o aviso do sonner é anunciado e não interrompe o trabalho. */
+      toast.error('Falha no assistente', {
+        description: err.message || 'Erro de comunicação com o servidor.',
+      })
     } finally {
       setLoading(false)
     }

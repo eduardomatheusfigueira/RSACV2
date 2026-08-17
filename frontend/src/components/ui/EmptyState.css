@@ -53,7 +53,7 @@
 }
 
 .rsac-empty__spinner {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   animation: rsac-empty-spin 1s linear infinite;
 }
 

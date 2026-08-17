@@ -15,6 +15,7 @@ import { HarvestPage } from '@/pages/HarvestPage'
 import { ExtractionPage } from '@/pages/ExtractionPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 
@@ -105,6 +106,7 @@ export function App(): JSX.Element {
     <QueryClientProvider client={queryClient}>
       <HashRouter>
         <AppContent />
+        <Toaster />
       </HashRouter>
     </QueryClientProvider>
   )

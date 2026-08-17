@@ -100,15 +100,15 @@
 }
 
 .dedup-stat-chip.unique .stat-val {
-  color: var(--color-success);
+  color: var(--color-success-on-surface);
 }
 
 .dedup-stat-chip.duplicate .stat-val {
-  color: var(--color-warning);
+  color: var(--color-warning-on-surface);
 }
 
 .dedup-stat-chip.rate .stat-val {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 /* Body / Text View */

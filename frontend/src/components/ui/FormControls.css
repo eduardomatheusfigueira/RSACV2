@@ -22,7 +22,7 @@
 }
 
 .rsac-form-required {
-  color: var(--color-error);
+  color: var(--color-error-on-surface);
   font-weight: var(--weight-bold, 700);
 }
 
@@ -35,7 +35,7 @@
 .rsac-form-error {
   font-family: var(--font-sans);
   font-size: var(--font-size-3xs); /* 9px */
-  color: var(--color-error);
+  color: var(--color-error-on-surface);
   font-weight: var(--weight-medium, 500);
 }
 

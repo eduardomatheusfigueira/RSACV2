@@ -22,7 +22,7 @@
   padding: var(--space-2) var(--space-4);
   background: var(--color-error-bg);
   border: 1px solid var(--color-error);
-  color: var(--color-error);
+  color: var(--color-error-text);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
   border-radius: var(--radius-sm);
@@ -33,7 +33,7 @@
 .btn-close-error {
   background: none;
   border: none;
-  color: var(--color-error);
+  color: var(--color-error-on-surface);
   cursor: pointer;
   font-weight: bold;
 }
@@ -83,7 +83,7 @@
 }
 
 .queue-status-chip.inc {
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
   border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
 }
 
@@ -102,7 +102,7 @@
 }
 
 .queue-completion-chip.done {
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
   border-color: var(--color-included);
 }
 
@@ -170,7 +170,7 @@
 
 .btn-queue-scroll:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .horizontal-papers-strip {
@@ -236,7 +236,7 @@
   padding: var(--space-px) var(--space-1-5);
   border-radius: var(--radius-xs);
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border: 1px solid color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
@@ -345,13 +345,13 @@
 }
 
 .badge-pdf.ready {
-  color: var(--color-included);
+  color: var(--color-included-text);
   background: var(--color-included-bg);
   border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
 .badge-pdf.missing {
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   background: var(--color-warning-bg);
   border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
 }
@@ -382,7 +382,7 @@
 
 .btn-view-mode.active {
   background: var(--color-bg-secondary);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   font-weight: var(--weight-bold);
   box-shadow: var(--shadow-neo-sunken);
 }
@@ -405,17 +405,17 @@
 
 .btn-pdf-action:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .btn-pdf-action.highlight {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   font-weight: var(--weight-bold);
 }
 
 .btn-pdf-action.danger {
-  color: var(--color-error);
+  color: var(--color-error-on-surface);
 }
 
 .btn-pdf-action.danger:hover {
@@ -446,7 +446,7 @@
 
 .btn-study-step:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .study-counter-label {
@@ -633,7 +633,7 @@
 
 .btn-reader-tool:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 /* Article Typography Reader Card */
@@ -665,7 +665,7 @@
 
 .academic-paragraph.section-heading-highlight {
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   text-indent: 0;
   margin-top: var(--space-2);
   border-bottom: 1px solid var(--color-border);
@@ -774,13 +774,13 @@
 }
 
 .analysis-base-pill.pdf {
-  color: var(--color-included);
+  color: var(--color-included-text);
   background: var(--color-included-bg);
   border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
 .analysis-base-pill.abstract {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-primary);
   border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
@@ -861,7 +861,7 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   padding: var(--space-px) var(--space-1-5);
@@ -879,7 +879,7 @@
 
 .badge-answered {
   font-size: var(--font-size-2xs);
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -897,7 +897,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
   box-shadow: var(--shadow-neo-raised);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
@@ -954,7 +954,7 @@
 .evidence-badge {
   font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

@@ -119,6 +119,45 @@ const REGRAS = [
   },
 ]
 
+/**
+ * R8 é verificada por BLOCO, não por linha: a violação é o par
+ * `background: var(--color-X-bg)` com `color: var(--color-X)` dentro da mesma
+ * regra. Foi assim que 72 dos 91 pares semânticos acabaram reprovando em
+ * 4.5:1 — a cor do texto era o pigmento cheio, escolhido a olho, e não o token
+ * medido contra a própria tinta.
+ */
+const SEMANTICAS = ['success', 'warning', 'error', 'info', 'included', 'excluded', 'pending', 'accent']
+const R8 = {
+  id: 'R8',
+  nome: 'texto semântico sem par medido',
+  teto: 0,
+  dica: 'use var(--color-<X>-text) sobre a tinta e var(--color-<X>-on-surface) na superfície',
+}
+
+/** Pares fundo/texto não medidos dentro de uma mesma regra CSS. */
+function paresNaoMedidos(texto) {
+  const achados = []
+  for (const bloco of texto.matchAll(/\{([^{}]*)\}/g)) {
+    const corpo = bloco[1]
+    for (const x of SEMANTICAS) {
+      const tinta = x === 'accent' ? 'accent-subtle' : `${x}-bg`
+      const temTinta = new RegExp(`background(?:-color)?:\\s*var\\(--color-${tinta}\\)`).test(corpo)
+      const temCheio = new RegExp(`background(?:-color)?:\\s*var\\(--color-${x}\\)`).test(corpo)
+      const textoCheio = new RegExp(`(?:^|;|\\n)\\s*color:\\s*var\\(--color-${x}\\)`).test(corpo)
+      const textoOnAccent = /(?:^|;|\n)\s*color:\s*var\(--color-text-on-accent\)/.test(corpo)
+      if (temTinta && textoCheio) {
+        achados.push({ trecho: `--color-${x} sobre --color-${tinta}` })
+      }
+      // Etiqueta preenchida com o pigmento cheio de OUTRA família usando o
+      // token do acento: medido contra o acento, não contra esse pigmento.
+      if (temCheio && x !== 'accent' && textoOnAccent) {
+        achados.push({ trecho: `--color-text-on-accent sobre --color-${x}` })
+      }
+    }
+  }
+  return achados
+}
+
 // ── Coleta de arquivos ────────────────────────────────────────────────────
 function varrer(dir, saida = []) {
   for (const nome of readdirSync(dir)) {
@@ -138,7 +177,7 @@ function semComentarios(texto, ext) {
 
 // ── Execução ──────────────────────────────────────────────────────────────
 const arquivos = varrer(FONTE)
-const achados = new Map(REGRAS.map((r) => [r.id, []]))
+const achados = new Map([...REGRAS, R8].map((r) => [r.id, []]))
 
 for (const caminho of arquivos) {
   const rel = relative(RAIZ, caminho).replace(/\\/g, '/')
@@ -167,6 +206,15 @@ for (const caminho of arquivos) {
   }
 }
 
+// R8: pares fundo/texto não medidos, verificados por bloco.
+for (const caminho of arquivos.filter((c) => extname(c) === '.css')) {
+  const rel = relative(RAIZ, caminho).replace(/\\/g, '/')
+  if (rel.endsWith('styles/globals.css')) continue
+  for (const achado of paresNaoMedidos(semComentarios(readFileSync(caminho, 'utf8'), '.css'))) {
+    achados.get('R8').push({ arquivo: rel, linha: 0, ...achado })
+  }
+}
+
 // Sanidade: todo token referenciado precisa existir em globals.css.
 const declarados = new Set()
 for (const caminho of [TOKENS, ...arquivos.filter((c) => extname(c) === '.css')]) {
@@ -190,7 +238,7 @@ const json = process.argv.includes('--json')
 let regrediu = false
 const resumo = []
 
-for (const regra of REGRAS) {
+for (const regra of [...REGRAS, R8]) {
   const lista = achados.get(regra.id)
   const acima = lista.length > regra.teto
   if (acima) regrediu = true

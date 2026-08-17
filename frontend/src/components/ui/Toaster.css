@@ -1,0 +1,91 @@
+/**
+ * RSAC V2 — Avisos Transitórios
+ *
+ * O sonner traz o próprio tema claro/escuro embutido, que ignoraria as 13
+ * paletas. Aqui as classes são reescritas com os tokens do design system, e a
+ * geometria acompanha o resto: canto cirúrgico, borda de 1px, sem sombra
+ * difusa de aplicativo de consumo.
+ */
+
+.rsac-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-left-width: 3px !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-lg) !important;
+  color: var(--color-text-primary) !important;
+  font-family: var(--font-sans);
+}
+
+.rsac-toast__title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-tight);
+}
+
+.rsac-toast__description {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+/* A borda esquerda é o que distingue os quatro tipos sem depender só de cor de
+   texto — quem não separa matizes ainda enxerga a diferença pela espessura e
+   pelo ícone que o sonner desenha. */
+.rsac-toast--success {
+  border-left-color: var(--color-success-on-surface) !important;
+}
+
+.rsac-toast--error {
+  border-left-color: var(--color-error-on-surface) !important;
+}
+
+.rsac-toast--warning {
+  border-left-color: var(--color-warning-on-surface) !important;
+}
+
+.rsac-toast--info {
+  border-left-color: var(--color-info-on-surface) !important;
+}
+
+.rsac-toast__action,
+.rsac-toast__cancel {
+  height: 24px;
+  padding: 0 var(--space-2);
+  font-family: inherit;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-xs) !important;
+  cursor: pointer;
+}
+
+.rsac-toast__action {
+  background: var(--color-accent) !important;
+  color: var(--color-text-on-accent) !important;
+  border: 1px solid var(--color-accent) !important;
+}
+
+.rsac-toast__cancel {
+  background: var(--color-bg-tertiary) !important;
+  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.rsac-toast__close {
+  background: var(--color-bg-tertiary) !important;
+  border: 1px solid var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+  border-radius: var(--radius-xs) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast] {
+    transition-duration: 1ms !important;
+  }
+}

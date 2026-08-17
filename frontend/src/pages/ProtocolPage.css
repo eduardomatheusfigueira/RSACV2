@@ -20,7 +20,7 @@
   gap: var(--space-2);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-success);
+  color: var(--color-success-text);
   background: var(--color-success-bg);
   padding: var(--space-1-5) var(--space-3);
   border: 1px solid var(--color-border);
@@ -35,7 +35,7 @@
   padding: var(--space-3) var(--space-4);
   background: var(--color-error-bg);
   border: 1px solid var(--color-error);
-  color: var(--color-error);
+  color: var(--color-error-text);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
   border-radius: var(--radius-sm);
@@ -68,7 +68,7 @@
 }
 
 .icon-accent {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .section-help {
@@ -128,7 +128,7 @@
 }
 
 .pico-field label strong {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   font-weight: var(--weight-bold);
 }
 
@@ -243,7 +243,7 @@
   height: 32px;
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -292,12 +292,12 @@
 
 .criterion-code.inclusion {
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
 }
 
 .criterion-code.exclusion {
   background: var(--color-excluded-bg);
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
 }
 
 .criterion-desc-input {
@@ -434,7 +434,7 @@
   font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   font-family: var(--font-mono);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .scr-item-section {
@@ -559,8 +559,13 @@
   flex-shrink: 0;
 }
 
+/* Sem fundo próprio: a pílula fica sobre o acento da aba, exatamente o fundo
+   contra o qual `--color-text-on-accent` foi medido. Qualquer véu — claro ou
+   escuro — muda esse fundo e invalida a medição (3.3–4.0:1 nas versões
+   anteriores). O contorno de 1px é o que separa a pílula da aba. */
 .studio-tab.active .tab-pill {
-  background: color-mix(in srgb, var(--color-text-on-accent) 25%, transparent);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--color-text-on-accent) 38%, transparent);
   color: var(--color-text-on-accent);
 }
 
@@ -571,7 +576,7 @@
   padding: var(--space-px) var(--space-1-5);
   border-radius: var(--radius-xs);
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border: 1px solid var(--color-included);
   flex-shrink: 0;
 }
@@ -601,13 +606,13 @@
 
 .item-tag.essential {
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border: 1px solid var(--color-included);
 }
 
 .item-tag.optional {
   background: var(--color-warning-bg);
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   border: 1px solid var(--color-warning);
 }
 
@@ -732,7 +737,7 @@
   padding: var(--space-1-5) var(--space-2-5);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-sm);
@@ -786,7 +791,7 @@
   padding: var(--space-1) var(--space-2);
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -821,7 +826,7 @@
   font-size: var(--font-size-3xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .guide-col strong {
@@ -862,7 +867,7 @@
 .guide-template-preview code {
   font-size: var(--text-xs);
   font-family: var(--font-mono);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   line-height: var(--leading-relaxed);
 }
 
@@ -983,13 +988,15 @@
 
 .group-tag.a-priori {
   background: var(--color-info-bg);
-  color: var(--color-info);
+  color: var(--color-info-text);
   border: 1px solid var(--color-info);
 }
 
 .group-tag.a-posteriori {
   background: var(--color-warning-bg);
-  color: var(--color-accent);
+  /* A tinta é de aviso; o texto tem de ser o medido CONTRA essa tinta. O
+     acento aqui era um par não medido — 3.4:1 na lava-steel. */
+  color: var(--color-warning-text);
   border: 1px solid var(--color-accent);
 }
 
@@ -1067,7 +1074,7 @@
 
 .phase-badge.a-priori {
   background: var(--color-info);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-info);
 }
 
 .phase-badge.a-posteriori {
@@ -1106,7 +1113,7 @@
   gap: var(--space-1);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: none;
   border: 1px dashed var(--color-accent);
   border-radius: var(--radius-xs);
@@ -1167,7 +1174,7 @@
 
 .trace-stat-sub {
   font-size: var(--text-xs);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   font-weight: var(--weight-regular);
 }
 
@@ -1184,7 +1191,7 @@
 }
 
 .methodological-flow-alert .alert-icon {
-  color: var(--color-warning);
+  color: var(--color-warning-on-surface);
   flex-shrink: 0;
   margin-top: var(--space-0-5);
 }
@@ -1226,7 +1233,7 @@
 .btn-flow-nav:hover {
   background: var(--color-bg-secondary);
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .btn-flow-nav.primary {
@@ -1253,7 +1260,7 @@
 }
 
 .methodological-flow-success .success-icon {
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
   flex-shrink: 0;
 }
 
@@ -1264,7 +1271,7 @@
 .flow-success-body strong {
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
 }
 
 .flow-success-body p {
@@ -1335,7 +1342,7 @@
 
 .matrix-q-header strong {
   font-size: var(--text-xs);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .badge-answered {
@@ -1344,7 +1351,7 @@
   font-weight: var(--weight-bold);
   padding: var(--space-px) var(--space-1-5);
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border: 1px solid var(--color-included);
   border-radius: var(--radius-xs);
 }

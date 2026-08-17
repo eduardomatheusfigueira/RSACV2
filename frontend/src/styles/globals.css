@@ -47,7 +47,7 @@
   /* ── Cores de Texto ──────────────────────────────────────────────── */
   --color-text-primary: #283618; /* Black Forest com alto contraste e legibilidade */
   --color-text-secondary: #566442;
-  --color-text-tertiary: #879573;
+  --color-text-tertiary: #5e694f; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #fefae0;
   --color-text-sidebar: #d4ddbf;
   --color-text-sidebar-active: #fefae0;
@@ -59,8 +59,11 @@
 
   /* ── Acentos (Copperwood & Sunlit Clay) ──────────────────────────── */
   --color-accent: #bc6c25;
+  --color-accent-on-surface: #8f521c; /* 4.91:1 nas superfícies de conteúdo */
+  --color-accent-text: #97571e; /* 4.91:1 na tinta do acento */
+  --color-accent-on-chrome: #da8840; /* 4.65:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.0:1 · escuro 3.8:1 */
-  --color-text-on-accent: #ffffff;
+  --color-text-on-accent: #000000; /* 5.31:1 sobre #bc6c25 */
   --color-accent-hover: #a15516;
   --color-accent-subtle: #f8eed6;
   --color-accent-muted: #dda15e;
@@ -68,20 +71,35 @@
   /* ── Semânticas ──────────────────────────────────────────────────── */
   --color-success: #606c38; /* Olive Leaf */
   --color-success-bg: #eaf0d8;
-  --color-warning: #bc6c25; /* Copperwood */
+  --color-success-text: #5f6b38; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 5.68:1 sobre #606c38 */
+  --color-success-on-  --color-success-on-surface: #5b6635; /* 4.90:1 nas superfícies de conteúdo */bc6c25; /* Copperwood */
   --color-warning-bg: #fdf5df;
-  --color-error: #a83434;
+  --color-warning-text: #a35d20; /* 4.66:1 na tinta, composta sobre as superfícies */
+  --color-warning-on-  --color-warning-on-surface: #8f521c; /* 4.91:1 nas superfícies de conteúdo */3434;
   --color-error-bg: #fae6e6;
+  --color-error-text: #a83434; /* 5.47:1 sobre a tinta */
+  --color-error-on-surface: #a83434; /* 6.55:1 sobre a superfície de conteúdo */
   --color-info: #356788;
   --color-info-bg: #e2eff7;
-
-  /* ── Decisões (Triagem) ──────────────────────────────────────────── */
+  --color-info-text: #356788; /* 5.20:1 sobre a tinta */
+  --color-text-on-info: #ffffff; /* 6.09:1 sobre #356788 */
+  --color-info-on-sur  --color-info-on-surface: #356687; /* 4.91:1 nas superfícies de conteúdo */riagem) ──────────────────────────────────────────── */
   --color-included: #606c38; /* Olive Leaf */
   --color-included-bg: #eaf0d8;
+  --color-included-text: #5f6b38; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #ffffff; /* 5.68:1 sobre #606c38 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #a83434;
   --color-excluded-bg: #fae6e6;
+  --color-excluded-text: #a83434; /* 5.47:1 sobre a tinta */
+  --color-text-on-excluded: #ffffff; /* 6.55:1 sobre #a83434 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #bc6c25; /* Copperwood */
   --color-pending-bg: #fdf5df;
+  --color-pending-text: #9d5a1f; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 5.31:1 sobre #bc6c25 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 
   /* ── Tipografia Contemporânea (Inter + JetBrains Mono) ──────────── */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -179,7 +197,9 @@
      literal, ao contrário, ficaria congelado em todas as 13 paletas. */
   --color-chrome-bg: var(--black-forest);
   --color-chrome-text: var(--color-text-sidebar-active);
-  --color-chrome-text-muted: color-mix(in srgb, var(--color-text-sidebar-active) 62%, transparent);
+  /* 70%, não 62%: a 62% a synthwave-neon caía para 4.41:1 e a platinum-dusk
+     ficava em 4.50:1 raspando. O pior mínimo medido entre as 13 paletas é 65%. */
+  --color-chrome-text-muted: color-mix(in srgb, var(--color-text-sidebar-active) 70%, transparent);
   --color-chrome-border: color-mix(in srgb, var(--color-text-sidebar-active) 14%, transparent);
   --color-chrome-hover: color-mix(in srgb, var(--color-text-sidebar-active) 9%, transparent);
   --color-chrome-active: color-mix(in srgb, var(--color-text-sidebar-active) 20%, transparent);
@@ -232,7 +252,7 @@
 
   --color-text-primary: #fefae0; /* Cornsilk suave */
   --color-text-secondary: #cbd6b0;
-  --color-text-tertiary: #7d8f63;
+  --color-text-tertiary: #86996c; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #12180e;
   --color-text-sidebar: #cdd8b3;
   --color-text-sidebar-active: #fefae0;
@@ -242,6 +262,9 @@
   --color-border-focus: #dda15e;
 
   --color-accent: #dda15e;
+  --color-accent-on-surface: #dda15e; /* 4.72:1 nas superfícies de conteúdo e na tinta do acento */
+  --color-accent-text: #dfa565; /* 4.90:1 na tinta do acento */
+  --color-accent-on-chrome: #dda15e; /* 5.72:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 2.2:1 · escuro 8.0:1 */
   --color-text-on-accent: #12180e; /* Sunlit Clay para contraste no escuro */
   --color-accent-hover: #bc6c25;
@@ -249,19 +272,40 @@
   --color-accent-muted: #bc6c25;
 
   --color-success: #8da352;
+  --color-success-text: #a1b56c; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #000000; /* 7.49:1 sobre #8da352 */
+  --color-success-on-surface: #8da352; /* 5.85:1 sobre a superfície de conteúdo */
   --color-success-bg: rgba(96, 108, 56, 0.3);
   --color-warning: #dda15e;
+  --color-warning-text: #e3b27c; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 9.33:1 sobre #dda15e */
+  --color-warning-on-surface: #dda15e; /* 7.29:1 sobre a superfície de conteúdo */
   --color-warning-bg: rgba(221, 161, 94, 0.22);
   --color-error: #e06d53;
+  --color-error-text: #ea9c8a; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #000000; /* 6.48:1 sobre #e06d53 */
+  --color-error-on-surface: #e37961; /* 4.90:1 nas superfícies de conteúdo */
   --color-error-bg: rgba(224, 109, 83, 0.22);
   --color-info: #6fa8dc;
+  --color-info-text: #91bce4; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #000000; /* 8.31:1 sobre #6fa8dc */
+  --color-info-on-surface: #6fa8dc; /* 6.49:1 sobre a superfície de conteúdo */
   --color-info-bg: rgba(111, 168, 220, 0.22);
 
   --color-included: #8da352;
+  --color-included-text: #a1b56c; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #000000; /* 7.49:1 sobre #8da352 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-included-bg: rgba(96, 108, 56, 0.3);
   --color-excluded: #e06d53;
+  --color-excluded-text: #ea9c8a; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #000000; /* 6.48:1 sobre #e06d53 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-excluded-bg: rgba(224, 109, 83, 0.22);
   --color-pending: #dda15e;
+  --color-pending-text: #e3b27c; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 9.33:1 sobre #dda15e */
+  --color-pending-on-surface: var(--color-warning-on-surface);
   --color-pending-bg: rgba(221, 161, 94, 0.22);
 }
 
@@ -302,7 +346,7 @@
 
   --color-text-primary: #fdf0d5; /* Papaya Whip */
   --color-text-secondary: #c0d8e8;
-  --color-text-tertiary: #669bbc;
+  --color-text-tertiary: #689cbd; /* 4.65:1 no pior fundo da paleta */
   --color-text-inverse: #001824;
   --color-text-sidebar: #b2d0e2;
   --color-text-sidebar-active: #fdf0d5;
@@ -312,6 +356,9 @@
   --color-border-focus: #c1121f;
 
   --color-accent: #c1121f;
+  --color-accent-on-surface: #f2727b; /* 4.90:1 nas superfícies de conteúdo */
+  --color-accent-text: #f26f79; /* 4.90:1 na tinta do acento */
+  --color-accent-on-chrome: #ef505c; /* 4.66:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 6.2:1 · escuro 2.9:1 */
   --color-text-on-accent: #ffffff; /* Brick Red */
   --color-accent-hover: #780000;
@@ -320,18 +367,39 @@
 
   --color-success: #669bbc; /* Steel Blue */
   --color-success-bg: rgba(102, 155, 188, 0.22);
+  --color-success-text: #99bcd2; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #000000; /* 6.98:1 sobre #669bbc */
+  --color-success-on-  --color-success-on-surface: #6ea0bf; /* 4.91:1 nas superfícies de conteúdo */: rgba(102, 155, 188, 0.22);
   --color-warning: #fdf0d5;
+  --color-warning-text: #fdf0d5; /* 7.35:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 18.60:1 sobre #fdf0d5 */
+  --color-warning-on-surface: #fdf0d5; /* 14.25:1 sobre a superfície de conteúdo */
   --color-warning-bg: rgba(253, 240, 213, 0.18);
   --color-error: #c1121f;
-  --color-error-bg: rgba(193, 18, 31, 0.25);
+  --color-error-bg: rgba(193, 18, 31, 0.22);
+  --color-error-text: #f26f79; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #ffffff; /* 6.22:1 sobre #c1121f */
+  --color-error-on-su  --color-error-on-surface: #f2727b; /* 4.90:1 nas superfícies de conteúdo */rgba(193, 18, 31, 0.25);
   --color-info: #669bbc;
-  --color-info-bg: rgba(102, 155, 188, 0.2);
+  --color-info-bg: rgba(102, 155, 188, 0.22);
+  --color-info-text: #99bcd2; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #000000; /* 6.98:1 sobre #669bbc */
+  --color-info-on-sur  --color-info-on-surface: #6ea0bf; /* 4.91:1 nas superfícies de conteúdo */gba(102, 155, 188, 0.2);
 
   --color-included: #669bbc;
+  --color-included-text: #99bcd2; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #000000; /* 6.98:1 sobre #669bbc */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-included-bg: rgba(102, 155, 188, 0.22);
   --color-excluded: #c1121f;
+  --color-excluded-text: #f2707a; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #ffffff; /* 6.22:1 sobre #c1121f */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-excluded-bg: rgba(193, 18, 31, 0.25);
   --color-pending: #dca34f;
+  --color-pending-text: #e0ad62; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 9.39:1 sobre #dca34f */
+  --color-pending-on-surface: var(--color-warning-on-surface);
   --color-pending-bg: rgba(220, 163, 79, 0.2);
 }
 
@@ -372,7 +440,7 @@
 
   --color-text-primary: #2d1b38; /* Deep Thistle */
   --color-text-secondary: #5e4370;
-  --color-text-tertiary: #8f6da6;
+  --color-text-tertiary: #7d5b95; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #ffffff;
   --color-text-sidebar: #e9d9f0;
   --color-text-sidebar-active: #ffffff;
@@ -382,27 +450,44 @@
   --color-border-focus: #b05c86;
 
   --color-accent: #b05c86;
+  --color-accent-on-surface: #9a4b72; /* 4.90:1 nas superfícies de conteúdo */
+  --color-accent-text: #994a72; /* 4.91:1 na tinta do acento */
+  --color-accent-on-chrome: #c689a7; /* 4.65:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.4:1 · escuro 4.4:1 */
-  --color-text-on-accent: #ffffff; /* Deepened Baby Pink / Magenta Accent */
+  --color-text-on-accent: #000000; /* 4.72:1 sobre #b05c86 */
   --color-accent-hover: #8f4068;
   --color-accent-subtle: #fae6f0;
   --color-accent-muted: #cdb4db;
 
   --color-success: #5289b5; /* Sky Blue */
   --color-success-bg: #e2f0fb;
-  --color-warning: #b05c86;
+  --color-success-text: #3d6b8f; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #000000; /* 5.60:1 sobre #5289b5 */
+  --color-success-on-  --color-success-on-surface: #3c698d; /* 4.91:1 nas superfícies de conteúdo */b05c86;
   --color-warning-bg: #fcebf3;
-  --color-error: #c94065;
+  --color-warning-text: #a34f79; /* 4.65:1 na tinta, composta sobre as superfícies */
+  --color-warning-on-  --color-warning-on-surface: #9a4b72; /* 4.90:1 nas superfícies de conteúdo */4065;
   --color-error-bg: #fde8ee;
-  --color-info: #5289b5;
+  --color-error-text: #be365a; /* 4.66:1 na tinta, composta sobre as superfícies */
+  --color-error-on-su  --color-error-on-surface: #b63457; /* 4.90:1 nas superfícies de conteúdo */9b5;
   --color-info-bg: #e2f0fb;
-
-  --color-included: #5289b5;
+  --color-info-text: #356788; /* 5.25:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #ffffff; /* 6.09:1 sobre #356788 */
+  --color-info-on-sur  --color-info-on-surface: #3c698d; /* 4.91:1 nas superfícies de conteúdo */ #5289b5;
   --color-included-bg: #e2f0fb;
+  --color-included-text: #606c38; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #ffffff; /* 5.68:1 sobre #606c38 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #c94065;
   --color-excluded-bg: #fde8ee;
+  --color-excluded-text: #b83457; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #ffffff; /* 4.77:1 sobre #c94065 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #b05c86;
   --color-pending-bg: #fcebf3;
+  --color-pending-text: #9d4c75; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 4.72:1 sobre #b05c86 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -452,6 +537,9 @@
   --color-border-focus: #ff7d00;
 
   --color-accent: #ff7d00;
+  --color-accent-on-surface: #ff7d00; /* 5.00:1 nas superfícies de conteúdo e na tinta do acento */
+  --color-accent-text: #ff7d00; /* 5.00:1 na tinta do acento */
+  --color-accent-on-chrome: #ff7d00; /* 7.23:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 2.6:1 · escuro 7.7:1 */
   --color-text-on-accent: #000d17; /* Vivid Tangerine */
   --color-accent-hover: #e06d00;
@@ -459,19 +547,40 @@
   --color-accent-muted: #15616d;
 
   --color-success: #15616d; /* Stormy Teal */
+  --color-success-text: #25adc2; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 7.09:1 sobre #15616d */
+  --color-success-on-surface: #219aad; /* 4.91:1 nas superfícies de conteúdo */
   --color-success-bg: rgba(21, 97, 109, 0.3);
   --color-warning: #ff7d00;
+  --color-warning-text: #ff840e; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 8.19:1 sobre #ff7d00 */
+  --color-warning-on-surface: #ff7d00; /* 7.23:1 sobre a superfície de conteúdo */
   --color-warning-bg: rgba(255, 125, 0, 0.22);
   --color-error: #d94126;
+  --color-error-text: #e57f6d; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #000000; /* 4.73:1 sobre #d94126 */
+  --color-error-on-surface: #e16752; /* 4.91:1 nas superfícies de conteúdo */
   --color-error-bg: rgba(217, 65, 38, 0.25);
   --color-info: #2baab8;
+  --color-info-text: #2eb7c6; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #000000; /* 7.54:1 sobre #2baab8 */
+  --color-info-on-surface: #2baab8; /* 6.66:1 sobre a superfície de conteúdo */
   --color-info-bg: rgba(43, 170, 184, 0.2);
 
   --color-included: #2baab8;
+  --color-included-text: #2fbbca; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #000000; /* 7.54:1 sobre #2baab8 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-included-bg: rgba(43, 170, 184, 0.22);
   --color-excluded: #d94126;
+  --color-excluded-text: #e57f6d; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #000000; /* 4.73:1 sobre #d94126 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-excluded-bg: rgba(217, 65, 38, 0.25);
   --color-pending: #ff7d00;
+  --color-pending-text: #ff840e; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 8.19:1 sobre #ff7d00 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
   --color-pending-bg: rgba(255, 125, 0, 0.22);
 }
 
@@ -512,7 +621,7 @@
 
   --color-text-primary: #152940; /* Deep Dusk Blue */
   --color-text-secondary: #3d5a78;
-  --color-text-tertiary: #6b859e;
+  --color-text-tertiary: #506579; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #ffffff;
   --color-text-sidebar: #cbd8e4;
   --color-text-sidebar-active: #ffffff;
@@ -522,6 +631,9 @@
   --color-border-focus: #274c77;
 
   --color-accent: #274c77;
+  --color-accent-on-surface: #274c77; /* 6.78:1 nas superfícies de conteúdo e na tinta do acento */
+  --color-accent-text: #274c77; /* 7.31:1 na tinta do acento */
+  --color-accent-on-chrome: #a3bfe1; /* 4.66:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 8.8:1 · escuro 8.8:1 */
   --color-text-on-accent: #ffffff; /* Dusk Blue */
   --color-accent-hover: #1b3554;
@@ -530,19 +642,40 @@
 
   --color-success: #274c77;
   --color-success-bg: #e1ebf4;
+  --color-success-text: #274c77; /* 7.29:1 sobre a tinta */
+  --color-text-on-success: #ffffff; /* 8.80:1 sobre #274c77 */
+  --color-success-on-surface: #274c77; /* 8.80:1 sobre a superfície de conteúdo */
   --color-warning: #8b8c89;
   --color-warning-bg: #f0f1f1;
+  --color-warning-text: #686966; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 6.21:1 sobre #8b8c89 */
+  --color-warning-on-surface: #5f605d; /* 4.91:1 nas superfícies de conteúdo */
   --color-error: #a83434;
   --color-error-bg: #fae6e6;
+  --color-error-text: #a83434; /* 5.47:1 sobre a tinta */
+  --color-text-on-error: #ffffff; /* 6.55:1 sobre #a83434 */
+  --color-error-on-surface: #a83434; /* 6.55:1 sobre a superfície de conteúdo */
   --color-info: #6096ba;
   --color-info-bg: #e6f0f7;
+  --color-info-text: #3c6c8b; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #000000; /* 6.57:1 sobre #6096ba */
+  --color-info-on-surface: #386481; /* 4.91:1 nas superfícies de conteúdo */
 
   --color-included: #274c77;
   --color-included-bg: #e1ebf4;
+  --color-included-text: #274c77; /* 7.29:1 sobre a tinta */
+  --color-text-on-included: #ffffff; /* 8.80:1 sobre #274c77 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #a83434;
   --color-excluded-bg: #fae6e6;
+  --color-excluded-text: #a83434; /* 5.47:1 sobre a tinta */
+  --color-text-on-excluded: #ffffff; /* 6.55:1 sobre #a83434 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #6096ba;
   --color-pending-bg: #e6f0f7;
+  --color-pending-text: #3c6c8b; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 6.57:1 sobre #6096ba */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -592,6 +725,9 @@
   --color-border-focus: #ff36ab;
 
   --color-accent: #ff36ab;
+  --color-accent-on-surface: #ff42b0; /* 4.90:1 nas superfícies de conteúdo */
+  --color-accent-text: #ff72c4; /* 4.90:1 na tinta do acento */
+  --color-accent-on-chrome: #ff36ab; /* 5.34:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 3.3:1 · escuro 5.8:1 */
   --color-text-on-accent: #150924; /* Brilliant Rose */
   --color-accent-hover: #db198c;
@@ -599,19 +735,40 @@
   --color-accent-muted: #ff74d4;
 
   --color-success: #642ca9;
-  --color-success-bg: rgba(100, 44, 169, 0.25);
+  --color-success-bg: rgba(100, 44, 169, 0.22);
+  --color-success-text: #b089e0; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 8.48:1 sobre #642ca9 */
+  --color-success-on-  --color-success-on-surface: #a87ddd; /* 4.91:1 nas superfícies de conteúdo */: rgba(100, 44, 169, 0.25);
   --color-warning: #ff74d4;
+  --color-warning-text: #ff85d9; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 8.70:1 sobre #ff74d4 */
+  --color-warning-on-surface: #ff74d4; /* 7.30:1 sobre a superfície de conteúdo */
   --color-warning-bg: rgba(255, 116, 212, 0.2);
   --color-error: #ff36ab;
-  --color-error-bg: rgba(255, 54, 171, 0.25);
+  --color-error-bg: rgba(255, 54, 171, 0.22);
+  --color-error-text: #ff7cc8; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #000000; /* 6.37:1 sobre #ff36ab */
+  --color-error-on-su  --color-error-on-surface: #ff42b0; /* 4.90:1 nas superfícies de conteúdo */rgba(255, 54, 171, 0.25);
   --color-info: #a86fe8;
-  --color-info-bg: rgba(168, 111, 232, 0.2);
+  --color-info-bg: rgba(168, 111, 232, 0.22);
+  --color-info-text: #c29aef; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #000000; /* 6.10:1 sobre #a86fe8 */
+  --color-info-on-sur  --color-info-on-surface: #ae78e9; /* 4.90:1 nas superfícies de conteúdo */gba(168, 111, 232, 0.2);
 
   --color-included: #a86fe8;
+  --color-included-text: #c29aef; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #000000; /* 6.10:1 sobre #a86fe8 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-included-bg: rgba(168, 111, 232, 0.22);
   --color-excluded: #ff36ab;
+  --color-excluded-text: #ff85cc; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #000000; /* 6.37:1 sobre #ff36ab */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-excluded-bg: rgba(255, 54, 171, 0.25);
   --color-pending: #ff74d4;
+  --color-pending-text: #ff85d9; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 8.70:1 sobre #ff74d4 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
   --color-pending-bg: rgba(255, 116, 212, 0.2);
 }
 
@@ -655,7 +812,7 @@
 
   --color-text-primary: #e0aaff; /* Mauve */
   --color-text-secondary: #c77dff;
-  --color-text-tertiary: #9d4edd;
+  --color-text-tertiary: #a760e1; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #0a001a;
   --color-text-sidebar: #d9bbf2;
   --color-text-sidebar-active: #e0aaff;
@@ -665,26 +822,50 @@
   --color-border-focus: #9d4edd;
 
   --color-accent: #9d4edd;
+  --color-accent-on-surface: #aa66e2; /* 4.91:1 nas superfícies de conteúdo */
+  --color-accent-text: #b77de6; /* 4.91:1 na tinta do acento */
+  --color-accent-on-chrome: #a256df; /* 4.66:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.6:1 · escuro 4.4:1 */
-  --color-text-on-accent: #ffffff; /* Lavender Purple */
+  --color-text-on-accent: #ffffff; /* 4.60:1 sobre #9d4edd */
   --color-accent-hover: #7b2cbf;
   --color-accent-subtle: rgba(157, 78, 221, 0.2);
   --color-accent-muted: #5a189a;
 
   --color-success: #7b2cbf;
-  --color-success-bg: rgba(123, 44, 191, 0.25);
+  --color-success-bg: rgba(123, 44, 191, 0.22);
+  --color-success-text: #b17ae0; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 7.11:1 sobre #7b2cbf */
+  --color-success-on-  --color-success-on-surface: #a769dc; /* 4.90:1 nas superfícies de conteúdo */: rgba(123, 44, 191, 0.25);
   --color-warning: #c77dff;
+  --color-warning-text: #c77eff; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 7.81:1 sobre #c77dff */
+  --color-warning-on-surface: #c77dff; /* 7.39:1 sobre a superfície de conteúdo */
   --color-warning-bg: rgba(199, 125, 255, 0.2);
   --color-error: #e0538b;
+  --color-error-text: #e87da7; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #000000; /* 5.78:1 sobre #e0538b */
+  --color-error-on-surface: #e0538b; /* 5.47:1 sobre a superfície de conteúdo */
   --color-error-bg: rgba(224, 83, 139, 0.25);
   --color-info: #9d4edd;
-  --color-info-bg: rgba(157, 78, 221, 0.2);
+  --color-info-bg: rgba(157, 78, 221, 0.22);
+  --color-info-text: #b980e7; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #ffffff; /* 4.60:1 sobre #9d4edd */
+  --color-info-on-sur  --color-info-on-surface: #aa66e2; /* 4.91:1 nas superfícies de conteúdo */gba(157, 78, 221, 0.2);
 
   --color-included: #9d4edd;
+  --color-included-text: #bb84e7; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #ffffff; /* 4.60:1 sobre #9d4edd */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-included-bg: rgba(157, 78, 221, 0.25);
   --color-excluded: #e0538b;
+  --color-excluded-text: #e87da7; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #000000; /* 5.78:1 sobre #e0538b */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-excluded-bg: rgba(224, 83, 139, 0.25);
   --color-pending: #c77dff;
+  --color-pending-text: #c77eff; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 7.81:1 sobre #c77dff */
+  --color-pending-on-surface: var(--color-warning-on-surface);
   --color-pending-bg: rgba(199, 125, 255, 0.2);
 }
 
@@ -725,7 +906,7 @@
 
   --color-text-primary: #342923; /* Deep Roast */
   --color-text-secondary: #63534b;
-  --color-text-tertiary: #917f76;
+  --color-text-tertiary: #76665e; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #ffffff;
   --color-text-sidebar: #e0d4cc;
   --color-text-sidebar-active: #ffffff;
@@ -735,27 +916,45 @@
   --color-border-focus: #8d7365;
 
   --color-accent: #8d7365;
+  --color-accent-on-surface: #776155; /* 4.90:1 nas superfícies de conteúdo */
+  --color-accent-text: #745e53; /* 4.90:1 na tinta do acento */
+  --color-accent-on-chrome: #b5a197; /* 4.65:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.4:1 · escuro 4.4:1 */
-  --color-text-on-accent: #ffffff; /* Roasted Almond */
+  --color-text-on-accent: #000000; /* 4.77:1 sobre #8d7365 */
   --color-accent-hover: #735b4f;
   --color-accent-subtle: #f0e6dd;
   --color-accent-muted: #d5bdaf;
 
   --color-success: #5f7a55;
   --color-success-bg: #e6efe3;
-  --color-warning: #ad7c50;
+  --color-success-text: #546c4b; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 4.77:1 sobre #5f7a55 */
+  --color-success-on-  --color-success-on-surface: #546c4b; /* 4.90:1 nas superfícies de conteúdo */ad7c50;
   --color-warning-bg: #faefe4;
-  --color-error: #a84242;
+  --color-warning-text: #8b6440; /* 4.66:1 na tinta, composta sobre as superfícies */
+  --color-warning-on-  --color-warning-on-surface: #835e3d; /* 4.90:1 nas superfícies de conteúdo */4242;
   --color-error-bg: #fbe6e6;
+  --color-error-text: #a84242; /* 4.99:1 sobre a tinta */
+  --color-error-on-surface: #a84242; /* 5.96:1 sobre a superfície de conteúdo */
   --color-info: #55758c;
   --color-info-bg: #e4eef6;
-
-  --color-included: #5f7a55;
+  --color-info-text: #4c697e; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #ffffff; /* 4.87:1 sobre #55758c */
+  --color-info-on-sur  --color-info-on-surface: #4c697e; /* 4.90:1 nas superfícies de conteúdo */ #5f7a55;
   --color-included-bg: #e6efe3;
+  --color-included-text: #5f6b37; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #ffffff; /* 5.68:1 sobre #606c38 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #a84242;
   --color-excluded-bg: #fbe6e6;
+  --color-excluded-text: #a84242; /* 4.99:1 sobre a tinta */
+  --color-text-on-excluded: #ffffff; /* 5.96:1 sobre #a84242 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #ad7c50;
   --color-pending-bg: #faefe4;
+  --color-pending-text: #86603e; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 5.78:1 sobre #ad7c50 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -797,7 +996,7 @@
 
   --color-text-primary: #152238; /* Navy Slate */
   --color-text-secondary: #3b4e73;
-  --color-text-tertiary: #6b80a6;
+  --color-text-tertiary: #54688c; /* 4.65:1 no pior fundo da paleta */
   --color-text-inverse: #ffffff;
   --color-text-sidebar: #cdd9f0;
   --color-text-sidebar-active: #ffffff;
@@ -807,6 +1006,9 @@
   --color-border-focus: #4361ee;
 
   --color-accent: #3f55cf;
+  --color-accent-on-surface: #3f55cf; /* 5.10:1 nas superfícies de conteúdo e na tinta do acento */
+  --color-accent-text: #3f55cf; /* 5.31:1 na tinta do acento */
+  --color-accent-on-chrome: #7c8bde; /* 4.65:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 6.2:1 · escuro 6.2:1 */
   --color-text-on-accent: #ffffff; /* Periwinkle Royal */
   --color-accent-hover: #2e41a8;
@@ -815,19 +1017,40 @@
 
   --color-success: #3f55cf;
   --color-success-bg: #e8eeff;
+  --color-success-text: #3f55cf; /* 5.31:1 sobre a tinta */
+  --color-text-on-success: #ffffff; /* 6.16:1 sobre #3f55cf */
+  --color-success-on-surface: #3f55cf; /* 6.16:1 sobre a superfície de conteúdo */
   --color-warning: #7084a8;
   --color-warning-bg: #eef2f9;
+  --color-warning-text: #56698d; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 5.55:1 sobre #7084a8 */
+  --color-warning-on-surface: #526586; /* 4.90:1 nas superfícies de conteúdo */
   --color-error: #c43754;
   --color-error-bg: #fde8ed;
+  --color-error-text: #b9344f; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #ffffff; /* 5.22:1 sobre #c43754 */
+  --color-error-on-surface: #b5334e; /* 4.90:1 nas superfícies de conteúdo */
   --color-info: #4361ee;
   --color-info-bg: #e8eeff;
+  --color-info-text: #3556ed; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #ffffff; /* 5.02:1 sobre #4361ee */
+  --color-info-on-surface: #3152ec; /* 4.91:1 nas superfícies de conteúdo */
 
   --color-included: #3f55cf;
   --color-included-bg: #e8eeff;
+  --color-included-text: #3f55cf; /* 5.31:1 sobre a tinta */
+  --color-text-on-included: #ffffff; /* 6.16:1 sobre #3f55cf */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #c43754;
   --color-excluded-bg: #fde8ed;
+  --color-excluded-text: #b9344f; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #ffffff; /* 5.22:1 sobre #c43754 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #697eb3;
   --color-pending-bg: #edf2fb;
+  --color-pending-text: #5167a0; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 5.24:1 sobre #697eb3 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -872,7 +1095,7 @@
 
   --color-text-primary: #3d0515; /* Deep Crimson */
   --color-text-secondary: #701b33;
-  --color-text-tertiary: #a3405c;
+  --color-text-tertiary: #973b55; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #ffffff;
   --color-text-sidebar: #ffd1dc;
   --color-text-sidebar-active: #ffffff;
@@ -882,27 +1105,44 @@
   --color-border-focus: #ff0a54;
 
   --color-accent: #ff0a54;
+  --color-accent-on-surface: #b10035; /* 4.90:1 nas superfícies de conteúdo */
+  --color-accent-text: #cc003e; /* 4.90:1 na tinta do acento */
+  --color-accent-on-chrome: #ff3370; /* 4.65:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 3.9:1 · escuro 3.9:1 */
-  --color-text-on-accent: #ffffff; /* Hot Fuchsia */
+  --color-text-on-accent: #000000; /* 5.42:1 sobre #ff0a54 */
   --color-accent-hover: #d60041;
   --color-accent-subtle: #ffe6ed;
   --color-accent-muted: #ff5c8a;
 
   --color-success: #357a66;
   --color-success-bg: #e2f2ed;
-  --color-warning: #d46382;
+  --color-success-text: #31725f; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 5.09:1 sobre #357a66 */
+  --color-success-on-  --color-success-on-surface: #2a6151; /* 4.90:1 nas superfícies de conteúdo */d46382;
   --color-warning-bg: #fde8ee;
-  --color-error: #ff0a54;
+  --color-warning-text: #bf355a; /* 4.65:1 na tinta, composta sobre as superfícies */
+  --color-warning-on-  --color-warning-on-surface: #9e2c4b; /* 4.90:1 nas superfícies de conteúdo */0a54;
   --color-error-bg: #ffe6ed;
-  --color-info: #4a6fa5;
+  --color-error-text: #d2003f; /* 4.66:1 na tinta, composta sobre as superfícies */
+  --color-error-on-su  --color-error-on-surface: #b10035; /* 4.90:1 nas superfícies de conteúdo */fa5;
   --color-info-bg: #e5edf7;
-
-  --color-included: #357a66;
+  --color-info-text: #356788; /* 5.16:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #ffffff; /* 6.09:1 sobre #356788 */
+  --color-info-on-sur  --color-info-on-surface: #3b5883; /* 4.90:1 nas superfícies de conteúdo */ #357a66;
   --color-included-bg: #e2f2ed;
+  --color-included-text: #606c38; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #ffffff; /* 5.68:1 sobre #606c38 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #ff0a54;
   --color-excluded-bg: #ffe6ed;
+  --color-excluded-text: #cc003e; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #000000; /* 5.42:1 sobre #ff0a54 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #d46382;
   --color-pending-bg: #fde8ee;
+  --color-pending-text: #b83358; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 5.91:1 sobre #d46382 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -942,7 +1182,7 @@
 
   --color-text-primary: #242833;
   --color-text-secondary: #4a505e;
-  --color-text-tertiary: #767d8d;
+  --color-text-tertiary: #656b7a; /* 4.66:1 no pior fundo da paleta */
   --color-text-inverse: #ffffff;
   --color-text-sidebar: #d5dae2;
   --color-text-sidebar-active: #ffffff;
@@ -952,6 +1192,9 @@
   --color-border-focus: #5e6472;
 
   --color-accent: #5e6472;
+  --color-accent-on-surface: #5e6472; /* 5.18:1 nas superfícies de conteúdo e na tinta do acento */
+  --color-accent-text: #5e6472; /* 5.19:1 na tinta do acento */
+  --color-accent-on-chrome: #9499a7; /* 4.65:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 5.9:1 · escuro 5.9:1 */
   --color-text-on-accent: #ffffff; /* Blue Slate */
   --color-accent-hover: #454a54;
@@ -960,19 +1203,40 @@
 
   --color-success: #3c7d6d;
   --color-success-bg: #def4ef;
+  --color-success-text: #377263; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #ffffff; /* 4.83:1 sobre #3c7d6d */
+  --color-success-on-surface: #377263; /* 4.90:1 nas superfícies de conteúdo */
   --color-warning: #d97868;
   --color-warning-bg: #fae8e5;
+  --color-warning-text: #b13f2c; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 6.84:1 sobre #d97868 */
+  --color-warning-on-surface: #b5412d; /* 4.91:1 nas superfícies de conteúdo */
   --color-error: #c94038;
   --color-error-bg: #fae4e3;
+  --color-error-text: #b33831; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #ffffff; /* 4.91:1 sobre #c94038 */
+  --color-error-on-surface: #ba3a33; /* 4.90:1 nas superfícies de conteúdo */
   --color-info: #5e6472;
   --color-info-bg: #edf0f4;
+  --color-info-text: #5e6472; /* 5.19:1 sobre a tinta */
+  --color-text-on-info: #ffffff; /* 5.93:1 sobre #5e6472 */
+  --color-info-on-surface: #5e6472; /* 5.93:1 sobre a superfície de conteúdo */
 
   --color-included: #3c7d6d;
   --color-included-bg: #def4ef;
+  --color-included-text: #377263; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #ffffff; /* 4.83:1 sobre #3c7d6d */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-excluded: #c94038;
   --color-excluded-bg: #fae4e3;
+  --color-excluded-text: #b33831; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #ffffff; /* 4.91:1 sobre #c94038 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-pending: #d97868;
   --color-pending-bg: #fae8e5;
+  --color-pending-text: #b13f2c; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 6.84:1 sobre #d97868 */
+  --color-pending-on-surface: var(--color-warning-on-surface);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1027,6 +1291,9 @@
   --color-border-focus: #f72585;
 
   --color-accent: #f72585;
+  --color-accent-on-surface: #f8348d; /* 4.90:1 nas superfícies de conteúdo */
+  --color-accent-text: #f960a6; /* 4.90:1 na tinta do acento */
+  --color-accent-on-chrome: #f72585; /* 5.23:1 sobre o chrome escuro */
   /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 3.8:1 · escuro 5.3:1 */
   --color-text-on-accent: #0a0417; /* Neon Pink */
   --color-accent-hover: #d6116f;
@@ -1034,19 +1301,40 @@
   --color-accent-muted: #4cc9f0;
 
   --color-success: #4cc9f0; /* Sky Aqua */
+  --color-success-text: #4cc9f0; /* 6.25:1 na tinta, composta sobre as superfícies */
+  --color-text-on-success: #000000; /* 10.92:1 sobre #4cc9f0 */
+  --color-success-on-surface: #4cc9f0; /* 9.90:1 sobre a superfície de conteúdo */
   --color-success-bg: rgba(76, 201, 240, 0.2);
   --color-warning: #4895ef;
+  --color-warning-text: #60a3f1; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-warning: #000000; /* 6.82:1 sobre #4895ef */
+  --color-warning-on-surface: #4895ef; /* 6.18:1 sobre a superfície de conteúdo */
   --color-warning-bg: rgba(72, 149, 239, 0.22);
   --color-error: #f72585;
-  --color-error-bg: rgba(247, 37, 133, 0.25);
+  --color-error-bg: rgba(247, 37, 133, 0.22);
+  --color-error-text: #f966a9; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-error: #000000; /* 5.56:1 sobre #f72585 */
+  --color-error-on-su  --color-error-on-surface: #f8348d; /* 4.90:1 nas superfícies de conteúdo */rgba(247, 37, 133, 0.25);
   --color-info: #4361ee;
-  --color-info-bg: rgba(67, 97, 238, 0.2);
+  --color-info-bg: rgba(67, 97, 238, 0.22);
+  --color-info-text: #7d92f3; /* 4.91:1 na tinta, composta sobre as superfícies */
+  --color-text-on-info: #ffffff; /* 5.02:1 sobre #4361ee */
+  --color-info-on-sur  --color-info-on-surface: #667ef1; /* 4.91:1 nas superfícies de conteúdo */gba(67, 97, 238, 0.2);
 
   --color-included: #4cc9f0;
+  --color-included-text: #4cc9f0; /* 6.25:1 na tinta, composta sobre as superfícies */
+  --color-text-on-included: #000000; /* 10.92:1 sobre #4cc9f0 */
+  --color-included-on-surface: var(--color-success-on-surface);
   --color-included-bg: rgba(76, 201, 240, 0.2);
   --color-excluded: #f72585;
+  --color-excluded-text: #fa6cad; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-excluded: #000000; /* 5.56:1 sobre #f72585 */
+  --color-excluded-on-surface: var(--color-error-on-surface);
   --color-excluded-bg: rgba(247, 37, 133, 0.25);
   --color-pending: #4895ef;
+  --color-pending-text: #60a3f1; /* 4.90:1 na tinta, composta sobre as superfícies */
+  --color-text-on-pending: #000000; /* 6.82:1 sobre #4895ef */
+  --color-pending-on-surface: var(--color-warning-on-surface);
   --color-pending-bg: rgba(72, 149, 239, 0.22);
 }
 
@@ -1113,6 +1401,18 @@ button {
   border: none;
   background: none;
 }
+
+/* ── Utilidades semânticas de texto ──────────────────────────────────────
+   `text-success`, `text-warning`, `text-error` e `text-danger` já eram usadas
+   em seis pontos do JSX (contadores da triagem em lote, histórico da coleta,
+   confirmação de cópia) — e não tinham regra CSS nenhuma. A cor prometida
+   simplesmente não aparecia. Os tokens `-on-surface` são medidos contra
+   `--color-bg-secondary` em cada paleta. */
+.text-success { color: var(--color-success-on-surface); }
+.text-warning { color: var(--color-warning-on-surface); }
+.text-error,
+.text-danger { color: var(--color-error-on-surface); }
+.text-info { color: var(--color-info-on-surface); }
 
 input,
 textarea,
@@ -1417,7 +1717,7 @@ select {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
   box-shadow: var(--shadow-neo-sunken);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   outline: none;
 }
 

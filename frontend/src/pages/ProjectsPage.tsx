@@ -27,6 +27,7 @@ import {
   Button,
   EmptyState,
   LoadingState,
+  toast,
   Dialog,
   DialogContent,
   DialogTitlebar,
@@ -113,7 +114,9 @@ export function ProjectsPage(): JSX.Element {
       }
     } catch (err: any) {
       console.error('Erro ao excluir projeto:', err)
-      alert(`Erro ao excluir projeto: ${err.message || 'Falha na comunicação com o servidor'}`)
+      toast.error('Não foi possível excluir o projeto', {
+        description: err.message || 'Falha na comunicação com o servidor.',
+      })
     }
   }
 

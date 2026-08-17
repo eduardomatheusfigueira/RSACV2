@@ -52,46 +52,46 @@
 
 .rsac-badge--included {
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border-color: color-mix(in srgb, currentColor 32%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-badge--excluded {
   background: var(--color-excluded-bg);
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
   border-color: color-mix(in srgb, var(--color-error) 3%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-badge--pending {
   background: var(--color-pending-bg);
-  color: var(--color-pending);
+  color: var(--color-pending-text);
   border-color: color-mix(in srgb, currentColor 32%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-badge--info {
   background: var(--color-info-bg);
-  color: var(--color-info);
+  color: var(--color-info-text);
   border-color: color-mix(in srgb, currentColor 32%, transparent);
 }
 
 .rsac-badge--success {
   background: var(--color-success-bg);
-  color: var(--color-success);
+  color: var(--color-success-text);
   border-color: color-mix(in srgb, currentColor 32%, transparent);
 }
 
 .rsac-badge--warning {
   background: var(--color-warning-bg);
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   border-color: color-mix(in srgb, currentColor 32%, transparent);
 }
 
 .rsac-badge--error {
   background: var(--color-error-bg);
-  color: var(--color-error);
+  color: var(--color-error-text);
   border-color: color-mix(in srgb, var(--color-error) 3%, transparent);
 }
 

@@ -41,7 +41,7 @@
 
 .btn-ai-assist:hover:not(:disabled) {
   background: var(--color-bg-hover);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .btn-ai-assist.loading {
@@ -51,16 +51,16 @@
 
 .btn-ai-assist.applied {
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
 }
 
 .ai-sparkle-icon {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   flex-shrink: 0;
 }
 
 .ai-spin-icon {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   animation: ai-spin 1s linear infinite;
   flex-shrink: 0;
 }
@@ -71,7 +71,7 @@
 }
 
 .ai-check-icon {
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
   flex-shrink: 0;
 }
 
@@ -96,7 +96,7 @@
 .btn-ai-dropdown-toggle:hover:not(:disabled),
 .btn-ai-dropdown-toggle.active {
   background: var(--color-bg-hover);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 /* Undo Button */
@@ -119,7 +119,7 @@
 
 .btn-ai-undo:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-elevated);
 }
 
@@ -173,12 +173,12 @@
 
 .ai-dropdown-item:hover {
   background: var(--color-bg-primary);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .ai-dropdown-item .item-icon {
   margin-top: var(--space-0-5);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   flex-shrink: 0;
 }
 

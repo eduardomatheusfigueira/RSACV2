@@ -45,22 +45,14 @@
 /* `.rsac-on-brand` publica o acento de chrome para toda a assinatura — não só
    para o monograma —, de modo que o sufixo "v2" e o selo compartilhem
    exatamente o mesmo pigmento. */
+/* O pigmento é `--color-accent-on-chrome`: medido contra o chrome escuro de
+   cada paleta. A mistura 72/28 com o texto da barra lateral que havia aqui era
+   escolhida a olho e reprovava em contraste — 3.96:1 na platinum-dusk, 3.53:1
+   na lava-steel. Um único token continua unificando marca, sufixo e selo. */
 .rsac-on-brand,
 .rsac-mark--brand,
 .rsac-beta--brand {
-  --rsac-accent: var(--sunlit-clay);
-}
-
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  .rsac-on-brand,
-  .rsac-mark--brand,
-  .rsac-beta--brand {
-    --rsac-accent: color-mix(
-      in srgb,
-      var(--sunlit-clay) 72%,
-      var(--color-text-sidebar-active) 28%
-    );
-  }
+  --rsac-accent: var(--color-accent-on-chrome);
 }
 
 /* ── Selo BETA ───────────────────────────────────────────────────────── */
@@ -81,14 +73,14 @@
   flex-shrink: 0;
 }
 
-@supports (color: color-mix(in srgb, red 50%, blue)) {
-  .rsac-beta {
-    background: color-mix(in srgb, currentColor 14%, transparent);
-  }
-}
+/* O selo NÃO ganha fundo tingido da própria cor. A versão anterior preenchia
+   com `currentColor` a 14%, o que aproxima fundo e texto e derrubava o
+   contraste para 3.6–4.4:1 em nove das treze paletas. O contorno de 1px já é a
+   identidade da etiqueta, e sobre ele o pigmento medido rende o contraste
+   inteiro do chrome. */
 
 .rsac-beta--auto {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .rsac-beta--brand {

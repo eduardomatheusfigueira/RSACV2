@@ -74,19 +74,19 @@
 .counter-btn.included.active {
   background: var(--color-included-bg);
   border-color: var(--color-included);
-  color: var(--color-included);
+  color: var(--color-included-text);
 }
 
 .counter-btn.excluded.active {
   background: var(--color-excluded-bg);
   border-color: var(--color-excluded);
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
 }
 
 .counter-btn.pending.active {
   background: var(--color-pending-bg);
   border-color: var(--color-pending);
-  color: var(--color-pending);
+  color: var(--color-pending-text);
 }
 
 .count-num {
@@ -161,7 +161,7 @@
 .btn-pagination-nav:hover:not(:disabled) {
   background: var(--color-bg-secondary);
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .btn-pagination-nav:disabled {
@@ -286,19 +286,19 @@
 
 .badge-incluído {
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border-color: var(--color-included);
 }
 
 .badge-excluído {
   background: var(--color-excluded-bg);
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
   border-color: var(--color-excluded);
 }
 
 .badge-pendente {
   background: var(--color-pending-bg);
-  color: var(--color-pending);
+  color: var(--color-pending-text);
   border-color: var(--color-pending);
 }
 
@@ -309,7 +309,7 @@
   font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   font-family: var(--font-mono);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -446,21 +446,21 @@
 .btn-dec.include:hover,
 .btn-dec.include.active {
   background: var(--color-included);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-included);
   border-color: var(--color-included);
 }
 
 .btn-dec.exclude:hover,
 .btn-dec.exclude.active {
   background: var(--color-excluded);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-excluded);
   border-color: var(--color-excluded);
 }
 
 .btn-dec.pending:hover,
 .btn-dec.pending.active {
   background: var(--color-pending);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-pending);
   border-color: var(--color-pending);
 }
 
@@ -524,7 +524,7 @@
 
 .btn-study-step:hover {
   background: var(--color-bg-secondary);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .study-counter-label {
@@ -573,7 +573,7 @@
 }
 
 .meta-pill a {
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   text-decoration: underline;
 }
 
@@ -602,7 +602,7 @@
   gap: var(--space-1);
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .ai-confidence {
@@ -732,7 +732,7 @@
 
 .btn-criteria-action:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .btn-criteria-action.text-muted {
@@ -769,13 +769,13 @@
 .criteria-stat-badge.inc-badge.all-met {
   background: var(--color-included-bg);
   border-color: var(--color-included);
-  color: var(--color-included);
+  color: var(--color-included-text);
 }
 
 .criteria-stat-badge.exc-badge.has-exclusion {
   background: var(--color-excluded-bg);
   border-color: var(--color-excluded);
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
 }
 
 .criteria-alert-banner {
@@ -791,13 +791,13 @@
 .criteria-alert-banner.alert-include {
   background: var(--color-included-bg);
   border: 1px solid var(--color-included);
-  color: var(--color-included);
+  color: var(--color-included-text);
 }
 
 .criteria-alert-banner.alert-exclude {
   background: var(--color-excluded-bg);
   border: 1px solid var(--color-excluded);
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
 }
 
 .btn-quick-decision {
@@ -815,12 +815,12 @@
 
 .btn-quick-include {
   background: var(--color-included);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-included);
 }
 
 .btn-quick-exclude {
   background: var(--color-excluded);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-excluded);
 }
 
 /* Criteria Groups */
@@ -855,11 +855,11 @@
 }
 
 .group-label.inc {
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
 }
 
 .group-label.exc {
-  color: var(--color-excluded);
+  color: var(--color-excluded-on-surface);
 }
 
 .group-score {
@@ -911,11 +911,11 @@
 }
 
 .inc-checkbox {
-  color: var(--color-included);
+  color: var(--color-included-on-surface);
 }
 
 .exc-checkbox {
-  color: var(--color-excluded);
+  color: var(--color-excluded-on-surface);
 }
 
 .criterion-text {

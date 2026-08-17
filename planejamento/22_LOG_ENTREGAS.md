@@ -187,7 +187,90 @@ está limpo.
 
 ---
 
-## 22.6 O que segue aberto
+## 22.6 Interface — entregas de 17/08/2026 ✅
+
+Três frentes fechadas depois da consolidação do catálogo, todas verificadas com
+o aplicativo em execução.
+
+### Cabeçalho e estados canônicos (doc 25, Fase 3 parcial)
+
+O `<PageHeader>` existia mas só o Estúdio de Protocolo o usava; as outras sete
+páginas repetiam a mesma marcação `.page-header` local. Todas as 8 telas agora
+medem **44 px de cabeçalho** (47 no Protocolo, por causa do seletor de
+diretriz) e expõem **exatamente uma ação primária** — antes a Triagem tinha
+três, a Coleta três e a Extração duas.
+
+Os comandos que saíram do cabeçalho não sumiram: já eram despachados pelo
+ribbon pelo registro tipado da Fase 4. A exceção era a auditoria de duplicatas,
+que só existia no cabeçalho da Triagem; ganhou lugar no ribbon dessa aba, no
+grupo Tratamento do Acervo.
+
+Os estados vazios e de carregamento das seis telas que ainda os desenhavam à
+mão passaram a `<EmptyState>`/`<LoadingState>`. Dois deles ganharam causa
+declarada: em Projetos, filtro sem resultado deixou de dizer "crie um projeto";
+na Extração, "conclua a Triagem 1" é diferente de "limpe a busca".
+
+Removidas 112 linhas de CSS morto de `globals.css` mais os estados vazios locais
+de Painel e Projetos. `.loading-spinner` morava em `DashboardPage.css` e era
+usado por outras três páginas — dependência que sumiu junto.
+
+### Controles e modais (doc 25, Fase 5 parcial)
+
+Os **seis** modais da aplicação eram `<div className="modal-overlay">` escritos
+à mão — o diagnóstico contava cinco; o relatório de deduplicação era o sexto.
+Nenhum prendia o foco, fechava no Escape ou devolvia o foco ao fechar, e para
+um leitor de tela o resto da página continuava presente por baixo. Todos
+migraram para o `<Dialog>` do Radix. A janela de barra de título clássica virou
+a variante `window` do `DialogContent`.
+
+Catorze elementos não interativos com `onClick` viraram controles de verdade:
+`<button>` onde o elemento é o comando, `<label>` onde havia caixa de seleção
+dentro (o `onClick` do contêiner disparava junto com o `onChange` do input). O
+cartão de projeto continua `<div>`, com papel e teclado declarados — ele contém
+o botão de excluir, e controle dentro de controle é marcação inválida.
+
+`sonner` estava no `package.json` desde o início e nunca fora importado. Entrou
+com as cores da paleta ativa. Nível `error` do log store agora levanta aviso na
+tela: o painel de logs fica fechado por padrão, e enquanto ele era o único
+destino, uma falha ao registrar decisão de triagem não produzia sinal nenhum.
+Fontes de diagnóstico (`API`, `WebSocket`) seguem só no painel — "DELETE
+/projects/&lt;uuid&gt; falhou (500)" não é recado para quem está triando artigos.
+
+### Contraste medido nas 13 paletas (doc 24 § 24.5)
+
+A auditoria `axe-core` rodada nas 8 telas **× 13 paletas** — e não só na paleta
+padrão — expôs um defeito sistêmico: **72 dos 91 pares semânticos** de cor
+reprovavam em 4.5:1. O padrão era sempre o mesmo — `color: var(--color-X)`
+sobre `background: var(--color-X-bg)`, um par escolhido a olho.
+
+A correção derivou tokens de texto **medidos**, preservando o matiz:
+
+| Família | Medido contra | Para quê |
+|---|---|---|
+| `--color-{X}-text` | a tinta `--color-{X}-bg`, composta sobre a superfície | etiquetas e faixas tingidas |
+| `--color-{X}-on-surface` | as três superfícies de conteúdo | texto semântico solto |
+| `--color-text-on-{X}` | o pigmento sólido | etiquetas preenchidas |
+| `--color-accent-text` | a tinta do acento | etiquetas na tinta do acento |
+| `--color-accent-on-surface` / `--color-accent-on-chrome` | conteúdo / chrome escuro | acento como texto |
+| `--color-text-on-olive` | `--olive-leaf` de cada paleta | pílulas no verde de marca |
+
+Quatro defeitos de raiz apareceram no caminho e foram corrigidos:
+
+1. **Quatro paletas escuras não definiam as próprias tintas** (`lava-steel`,
+   `indigo-rose`, `amethyst-deep`, `synthwave-neon`) e herdavam as tintas
+   *claras* do `:root` — daí faixas claras com texto claro, a 1.57:1.
+2. **O selo BETA se preenchia com 14% da própria cor**, aproximando fundo e
+   texto. O contorno de 1px já era a identidade; o preenchimento saiu.
+3. **A pílula da aba ativa** usava véu sobre o acento, mudando exatamente o
+   fundo contra o qual `--color-text-on-accent` fora medido.
+4. **`--color-text-tertiary` reprovava em 8 paletas** e
+   `--color-chrome-text-muted` a 62% caía a 4.41:1 na synthwave-neon.
+
+Resultado: `axe-core` **sem violação** nas 8 telas × 13 paletas.
+
+---
+
+## 22.7 O que segue aberto
 
 Transportado para os documentos vigentes ou mantido no backlog.
 
@@ -208,7 +291,7 @@ Transportado para os documentos vigentes ou mantido no backlog.
 
 ---
 
-## 22.7 Marco de consolidação
+## 22.8 Marco de consolidação
 
 Em 17/08/2026 o RSAC V2 cobre o ciclo completo da revisão — protocolo, coleta
 em 5 bases, triagem, aquisição de texto integral, extração com evidência

@@ -69,7 +69,7 @@
 .rsac-card__title-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
 }
 
 .rsac-card__description {

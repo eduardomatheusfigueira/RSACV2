@@ -58,6 +58,9 @@ export type { DialogContentProps } from './Dialog'
 // Page Header
 export { PageHeader } from './PageHeader'
 
+// Avisos transitórios
+export { Toaster, toast } from './Toaster'
+
 // Empty & Loading States
 export { EmptyState, LoadingState } from './EmptyState'
 

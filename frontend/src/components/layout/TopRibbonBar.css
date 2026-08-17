@@ -248,7 +248,7 @@
   cursor: not-allowed;
 }
 
-.ribbon-tab-btn.active .ribbon-tab-icon { color: var(--color-accent); }
+.ribbon-tab-btn.active .ribbon-tab-icon { color: var(--color-accent-on-surface); }
 
 .ribbon-tab-icon { display: flex; align-items: center; }
 
@@ -484,7 +484,7 @@
 
 .tool-btn-compact.tool-btn-highlight {
   border-color: var(--copperwood);
-  color: var(--copperwood);
+  color: var(--color-accent-on-surface);
 }
 
 .tool-btn-compact.active {
@@ -521,36 +521,36 @@
 }
 
 .tool-btn-decision.included {
-  color: var(--color-included);
+  color: var(--color-included-text);
   background: var(--color-included-bg);
   border-color: var(--color-included);
 }
 
 .tool-btn-decision.included:hover:not(:disabled) {
   background: var(--color-included);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-included);
 }
 
 .tool-btn-decision.excluded {
-  color: var(--color-excluded);
+  color: var(--color-excluded-text);
   background: var(--color-excluded-bg);
   border-color: var(--color-excluded);
 }
 
 .tool-btn-decision.excluded:hover:not(:disabled) {
   background: var(--color-excluded);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-excluded);
 }
 
 .tool-btn-decision.pending {
-  color: var(--color-pending);
+  color: var(--color-pending-text);
   background: var(--color-pending-bg);
   border-color: var(--color-pending);
 }
 
 .tool-btn-decision.pending:hover:not(:disabled) {
   background: var(--color-pending);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-pending);
 }
 
 .tool-btn-decision:disabled {
@@ -559,10 +559,12 @@
   box-shadow: none;
 }
 
-/* Compact filter buttons with subtle color hints */
-.tool-btn-pending { color: var(--color-pending); }
-.tool-btn-included { color: var(--color-included); }
-.tool-btn-excluded { color: var(--color-excluded); }
+/* Compact filter buttons with subtle color hints.
+   O corpo do ribbon pousa na superfície de conteúdo, não no chrome escuro da
+   barra de título — por isso os tokens medidos aqui são os `-on-surface`. */
+.tool-btn-pending { color: var(--color-pending-on-surface); }
+.tool-btn-included { color: var(--color-included-on-surface); }
+.tool-btn-excluded { color: var(--color-excluded-on-surface); }
 
 /* ── NEXT STEP SMART INDICATOR ───────────────────────────────────── */
 .ribbon-next-step {

@@ -148,19 +148,19 @@ verificador passa a apontar quem foge dela.
 
 ---
 
-## 25.5 Fase 3 — Proporção e hierarquia de comando ⬜
+## 25.5 Fase 3 — Proporção e hierarquia de comando 🟡 (cabeçalho e estados fechados)
 
 **Objetivo**: devolver a tela ao conteúdo e acabar com o comando duplicado.
 
 | # | Tarefa | Entregável |
 |:-:|---|---|
-| 3.1 | Aplicar `<PageHeader>` nas 8 páginas | Altura cai de 84/51 px para 44 px |
-| 3.2 | Aplicar a hierarquia do § 24.9: cabeçalho fica só com a ação primária | Fim da duplicação ribbon × página |
+| 3.1 ✅ | Aplicar `<PageHeader>` nas 8 páginas | 44 px em todas (47 no Protocolo, por causa do seletor de diretriz) |
+| 3.2 ✅ | Aplicar a hierarquia do § 24.9: cabeçalho fica só com a ação primária | 1 ação por tela, medida. Os comandos que saíram já viviam no ribbon; a auditoria de duplicatas ganhou lugar na aba Triagem |
 | 3.3 | Mover os filtros de triagem do ribbon para a lista | Fim dos filtros em duplicata na mesma tela |
 | 3.4 | Comprimir o toolstrip do ribbon para ≤ 96 px | Estado de recolhimento lembrado entre sessões |
 | 3.5 | Reduzir as abas do estúdio de 114 px para uma faixa única | Grupos "a priori"/"a posteriori" por cor, não por caixa |
 | 3.6 | Redesenhar o Estúdio de Protocolo para leitura contínua | Alvo: 6+ campos visíveis a 1440 × 900 |
-| 3.7 | Aplicar `<Card>`, `<Panel>`, `<EmptyState>` nas 8 páginas | Remoção das classes por página |
+| 3.7 🟡 | Aplicar `<Card>`, `<Panel>`, `<EmptyState>` nas 8 páginas | `<EmptyState>`/`<LoadingState>` adotados nas 6 telas que os desenhavam à mão; `<Card>` e `<Panel>` seguem pendentes |
 | 3.8 | Levar a composição de duas colunas da Coleta para Extração e Exportação | Referência interna, não invenção |
 
 **Critérios de aceite**
@@ -198,23 +198,23 @@ verificador passa a apontar quem foge dela.
 
 ---
 
-## 25.7 Fase 5 — Acessibilidade e teclado ⬜
+## 25.7 Fase 5 — Acessibilidade e teclado 🟡 (controles, modais e contraste fechados)
 
 **Objetivo**: cumprir os 10 critérios do § 24.10. A Fase 4 é pré-requisito —
 sem comando tipado não há o que anunciar.
 
 | # | Tarefa | Entregável |
 |:-:|---|---|
-| 5.1 | `:focus-visible` global, verificado nas 13 paletas | A-2 |
-| 5.2 | Converter os 15 `onClick` em `<div>`/`<span>` para `<button>` | A-1 |
+| 5.1 ✅ | `:focus-visible` global, verificado nas 13 paletas | A-2 |
+| 5.2 ✅ | Converter os 15 `onClick` em `<div>`/`<span>` para `<button>` | 14 convertidos (`<button>` ou `<label>`); o cartão de projeto ficou `<div>` com papel e teclado, por conter o botão de excluir |
 | 5.3 | Migrar as 2 UIs de aba para `<Tabs>` | A-5 |
-| 5.4 | Migrar os 5 modais para `<Modal>` | A-4 |
-| 5.5 | `aria-live` em progresso de coleta, lote de triagem e confirmações | A-6 |
+| 5.4 ✅ | Migrar os 5 modais para `<Modal>` | 6 migrados para o `<Dialog>` do Radix (havia um sexto, o relatório de deduplicação). Variante `window` preserva a janela clássica |
+| 5.5 🟡 | `aria-live` em progresso de coleta, lote de triagem e confirmações | Confirmações e carregamentos anunciados; erros passam por `sonner`. Progresso de coleta e lote seguem pendentes |
 | 5.6 | Revisar a ordem de tabulação contra a ordem visual nas 8 telas | A-3 |
-| 5.7 | `aria-label` em todo botão só de ícone | A-7 |
+| 5.7 🟡 | `aria-label` em todo botão só de ícone | Os que o axe-core acusa estão fechados; falta varredura manual dos que têm apenas `title` |
 | 5.8 | `<Field>` em todos os formulários | A-8 |
 | 5.9 | Ícone junto da cor nas decisões de triagem | A-10 |
-| 5.10 | Auditoria automatizada com `axe-core` nas 8 telas | A-9 e varredura geral |
+| 5.10 ✅ | Auditoria automatizada com `axe-core` nas 8 telas | Rodada nas 8 telas × 13 paletas, não só na paleta padrão |
 | 5.11 | Percurso completo por teclado, das 8 telas | Roteiro do doc 26 |
 
 **Critérios de aceite**

@@ -92,6 +92,6 @@
 .rsac-page-header__back:hover {
   background: var(--color-bg-secondary);
   border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-accent-on-surface);
   transform: translateX(-1px);
 }
