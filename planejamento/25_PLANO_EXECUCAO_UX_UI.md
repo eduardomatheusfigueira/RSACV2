@@ -16,9 +16,9 @@ primeiro.
 |---|:---:|---|
 | **1 — Tokens** | ✅ **concluída** | **Zero** literal de cor, tipografia, espaçamento, raio e `z-index` em todo o `src/`. `lint:tokens --strict` passa com as 5 categorias fechadas |
 | **2 — Componentes** | 🟡 parcial | `components/ui/` entregue com Radix (`Dialog`, `Tooltip`), `Button`, `Badge`, `Card`, `FormControls`. **Ainda não adotado por nenhuma página** — as 25 classes de botão antigas seguem em uso |
-| **3 — Proporção e comando** | ⬜ | Moldura do Protocolo continua em 41% |
+| **3 — Proporção e comando** | 🟡 parcial | Moldura do Protocolo de 42% → **29%**; `<PageHeader>` aplicado e comando duplicado removido dessa tela. Falta aplicar às outras 7 e adotar `<Button>`/`<Card>`/`<EmptyState>` |
 | **4 — Registro de comandos** | ✅ **concluída** | `useRibbonStore` nas 7 páginas; acionamento por DOM de 34 → **0**; botões refletem estado real |
-| **5 — Acessibilidade** | ⬜ | Sem mudança: 3 `aria-label`, 0 `aria-live`, 2 `:focus-visible` |
+| **5 — Acessibilidade** | 🟡 parcial | `:focus-visible` global (era 1 regra no app inteiro); abas do Estúdio com `role="tab"`/`aria-selected`; confirmação de salvamento e carregamento com `aria-live`. Faltam os 15 `onClick` em `div`, os 5 modais e a auditoria com `axe` |
 | **6 — Conteúdo por diretriz** | 🟡 parcial | Ajuda e rótulos do Estúdio vêm do catálogo via `fieldKey`; contagem do checklist correta; os rótulos do diagrama deixaram de citar PRISMA 2020 fixo. Restam 5 modelos de texto inseríveis que citam a diretriz na própria prosa |
 | **7 — Higiene** | 🟡 parcial | Sidebar removida (−372 linhas). Faltam as dependências não importadas e a decomposição dos arquivos grandes |
 

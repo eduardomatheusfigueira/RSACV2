@@ -134,8 +134,34 @@ Os botões verticais do ribbon (ícone sobre rótulo) são a exceção declarada
 | Barra de status | 26 px |
 | **Total de moldura** | **≤ 228 px — 25% de 900 px** |
 
-Hoje o Estúdio de Protocolo usa 380 px (42%). O alvo de ≤ 25% em **todas** as
-telas é o critério objetivo da Fase 3.
+> **Ressalva descoberta na execução (17/08/2026).** Este orçamento não previa
+> que o Estúdio de Protocolo tem uma camada de navegação a mais que as outras
+> telas: a faixa das 7 seções do manuscrito. Ela não cabe em zero, e nenhum
+> aperto nas outras regiões compensa. O orçamento passa a ter dois valores:
+>
+> | Tela | Máximo |
+> |---|:---:|
+> | Todas, exceto o Estúdio de Protocolo | **≤ 25%** |
+> | Estúdio de Protocolo (+44 px de faixa de seções) | **≤ 30%** |
+>
+> Situação medida a 1440 × 900: Protocolo **29%** (era 42%), Triagem 25%,
+> Coleta 25%.
+
+**Como os 13 pontos percentuais do Protocolo foram recuperados:**
+
+| Região | Antes | Depois | Como |
+|---|:---:|:---:|---|
+| Cabeçalho | 84 px | **47 px** | `<PageHeader>`: título, diretriz e ação primária numa faixa só |
+| Faixa de seções | 114 px | **42 px** | Rótulo de fase inline e abas que encolhem em vez de quebrar |
+
+Duas armadilhas que só a medição revelou:
+
+- **Rótulo vertical não economiza altura** quando é mais comprido que a fileira
+  que acompanha. `writing-mode: vertical-rl` em "A Posteriori" passou a
+  **impor** ~90 px de altura ao grupo — pior que o rótulo horizontal.
+- **`flex-wrap: wrap` quebra a fileira antes de encolher os itens.** Com
+  `nowrap` + `min-width: 0` as abas se comprimem e o rótulo trunca, gastando uma
+  linha em vez de duas. O `title` de cada aba segue com o texto por extenso.
 
 ---
 

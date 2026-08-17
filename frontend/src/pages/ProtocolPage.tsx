@@ -56,6 +56,7 @@ import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
+import { PageHeader, Button } from '@/components/ui'
 import type {
   Criterion,
   ExtractionQuestion,
@@ -728,77 +729,49 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
   return (
     <div className="protocol-page animate-fade-in">
       {/* Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <button className="btn-back" onClick={() => navigate('/projects')}>
-              <ArrowLeft size={13} /> Voltar
-            </button>
-            <h1 className="page-title">Estúdio de Redação do Protocolo & Artigo</h1>
-          </div>
-          <div className="page-subtitle-with-select">
-            <span>Projeto: <strong>{activeProject?.title}</strong></span>
-            <span className="subtitle-divider">·</span>
-            <div className="protocol-selector-inline">
-              <label htmlFor="methodology-select">Diretriz:</label>
-              <select
-                id="methodology-select"
-                className="protocol-select-control"
-                value={activeProject?.methodology || 'PRISMA-ScR'}
-                onChange={(e) => handleChangeMethodology(e.target.value as Methodology)}
-                disabled={saving}
-                title="Trocar protocolo metodológico deste projeto"
-              >
-                {PROTOCOL_OPTIONS.map((m) => (
-                  <option key={m} value={m}>
-                    {PROTOCOL_CATALOG[m]?.name || m}
-                  </option>
-                ))}
-              </select>
-              <span className="badge-methodology-header">
-                {currentProtocolDef.badge}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="header-actions">
-          {saveSuccess && (
-            <span className="save-indicator success animate-fade-in">
-              <CheckCircle2 size={16} /> Salvo com Sucesso!
-            </span>
-          )}
-          {copiedNotification && (
-            <span className="save-indicator success animate-fade-in">
-              <CheckCircle2 size={16} /> Artigo Copiado (Markdown)!
-            </span>
-          )}
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={handleCopyFullManuscript}
-            title="Copia todo o texto estruturado do artigo/protocolo em formato Markdown para colar no Word/Docs"
-          >
-            <Copy size={16} className="icon-accent" />
-            Copiar Manuscrito
-          </button>
-          {aiEnabled && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleSuggestWithAI}
+      <PageHeader
+        title="Estúdio de Redação do Protocolo & Artigo"
+        onBack={() => navigate('/projects')}
+        meta={
+          <div className="protocol-selector-inline">
+            <label htmlFor="methodology-select">Diretriz:</label>
+            <select
+              id="methodology-select"
+              className="protocol-select-control"
+              value={activeProject?.methodology || 'PRISMA-ScR'}
+              onChange={(e) => handleChangeMethodology(e.target.value as Methodology)}
               disabled={saving}
-              title="Gera proposta com Assistência"
+              title="Trocar protocolo metodológico deste projeto"
             >
-              <Sparkles size={16} className="icon-accent" />
-              Sugerir com Assistência
-            </button>
-          )}
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>
-            <Save size={18} />
-            {saving ? 'Salvando...' : 'Salvar Tudo'}
-          </button>
-        </div>
-      </div>
+              {PROTOCOL_OPTIONS.map((m) => (
+                <option key={m} value={m}>
+                  {PROTOCOL_CATALOG[m]?.name || m}
+                </option>
+              ))}
+            </select>
+            <span className="badge-methodology-header">{currentProtocolDef.badge}</span>
+          </div>
+        }
+        subtitle={<span>Projeto: <strong>{activeProject?.title}</strong></span>}
+        status={
+          /* Confirmações são anunciadas: sem aria-live, quem usa leitor de tela
+             salva o protocolo e não recebe retorno nenhum. */
+          (saveSuccess || copiedNotification) && (
+            <span className="save-indicator success animate-fade-in" role="status" aria-live="polite">
+              <CheckCircle2 size={14} aria-hidden="true" />
+              {saveSuccess ? 'Salvo com Sucesso!' : 'Artigo Copiado (Markdown)!'}
+            </span>
+          )
+        }
+        primaryAction={
+          /* Ação primária ÚNICA. "Copiar Manuscrito" e "Sugerir com Assistência"
+             saíram daqui: já vivem no ribbon, despachados pelo registro de
+             comandos, e repetir os três criava dois caminhos sem estado comum. */
+          <Button variant="primary" size="md" loading={saving} onClick={handleSave} leftIcon={<Save size={14} />}>
+            {saving ? 'Salvando…' : 'Salvar Tudo'}
+          </Button>
+        }
+      />
 
       {errorMessage && (
         <div className="protocol-error-banner animate-fade-in">
@@ -809,25 +782,29 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
 
       {/* Studio Navigation Tabs with Clear Temporal Phase Grouping */}
       <div className="studio-tabs-container">
-        <div className="studio-tabs-bar-grouped">
+        <div className="studio-tabs-bar-grouped" role="tablist" aria-label="Seções do protocolo">
           {/* GRUPO A PRIORI: PROTOCOLO DE PESQUISA */}
           <div className="tabs-group a-priori-group">
             <div className="tabs-group-header">
-              <span className="group-tag a-priori">Fase A Priori (Protocolo / Planejamento)</span>
+              <span className="group-tag a-priori">A Priori</span>
             </div>
             <div className="tabs-group-buttons">
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'ident_intro'}
                 className={`studio-tab ${activeStudioTab === 'ident_intro' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('ident_intro')}
                 title={sectionItemsTitle('ident_intro', '1. Identificação, Registro & Justificativa')}
               >
                 <Edit3 size={13} className="tab-icon" />
-                <span className="tab-label">1. Identificação & Justificativa</span>
+                <span className="tab-label">1. Identificação</span>
                 {sectionItems.ident_intro && <span className="tab-pill">{sectionItems.ident_intro}</span>}
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'objectives'}
                 className={`studio-tab ${activeStudioTab === 'objectives' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('objectives')}
                 title={sectionItemsTitle('objectives', `2. Questão & Objetivos (${frameworkType})`)}
@@ -838,6 +815,8 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'search_eligibility'}
                 className={`studio-tab ${activeStudioTab === 'search_eligibility' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('search_eligibility')}
                 title={sectionItemsTitle('search_eligibility', '3. Fontes, Descritores & Elegibilidade')}
@@ -848,6 +827,8 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'methods_extraction'}
                 className={`studio-tab ${activeStudioTab === 'methods_extraction' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('methods_extraction')}
                 title={sectionItemsTitle('methods_extraction', '4. Seleção, Data Charting & Métodos de Síntese')}
@@ -862,31 +843,37 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
           {/* GRUPO A POSTERIORI: SÍNTESE & REDAÇÃO FINAL */}
           <div className="tabs-group a-posteriori-group">
             <div className="tabs-group-header">
-              <span className="group-tag a-posteriori">Fase A Posteriori (Pós-Extração / Síntese)</span>
+              <span className="group-tag a-posteriori">A Posteriori</span>
             </div>
             <div className="tabs-group-buttons">
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'synthesis_discussion'}
                 className={`studio-tab ${activeStudioTab === 'synthesis_discussion' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('synthesis_discussion')}
                 title={sectionItemsTitle('synthesis_discussion', '5. Síntese dos Achados, Limitações & Conclusões')}
               >
                 <Bookmark size={13} className="tab-icon" />
-                <span className="tab-label">5. Síntese dos Achados & Discussão</span>
+                <span className="tab-label">5. Síntese & Discussão</span>
                 {sectionItems.synthesis_discussion && <span className="tab-pill">{sectionItems.synthesis_discussion}</span>}
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'final_summary'}
                 className={`studio-tab ${activeStudioTab === 'final_summary' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('final_summary')}
                 title={sectionItemsTitle('final_summary', '6. Resumo Estruturado Final do Artigo Concluído')}
               >
                 <FileText size={13} className="tab-icon" />
-                <span className="tab-label">6. Resumo Estruturado Final</span>
+                <span className="tab-label">6. Resumo Final</span>
                 {sectionItems.final_summary && <span className="tab-pill">{sectionItems.final_summary}</span>}
               </button>
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeStudioTab === 'checklist'}
                 className={`studio-tab checklist-tab ${activeStudioTab === 'checklist' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('checklist')}
                 title={`Auditoria de Conformidade ${currentProtocolDef.shortLabel}`}

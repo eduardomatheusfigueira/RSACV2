@@ -922,8 +922,12 @@
 }
 
 /* ── Agrupamento Temporal Metodológico (A Priori vs A Posteriori) ── */
+/* A distinção a priori / a posteriori é pedagogia do aplicativo e fica; o que
+   sai é o CARTÃO em volta dela. Antes eram duas caixas empilhadas com cabeçalho
+   próprio, ocupando 114 px — 13% da altura da janela só para rotular abas.
+   Agora o rótulo do grupo entra na mesma linha das abas. */
 .studio-tabs-container {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-3);
   width: 100%;
 }
 
@@ -944,11 +948,13 @@
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   box-shadow: var(--shadow-neo-raised);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: var(--space-2);
+  min-width: 0;
 }
 
 .tabs-group.a-priori-group {
@@ -962,7 +968,7 @@
 .tabs-group-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .group-tag {
@@ -990,12 +996,37 @@
 .tabs-group-buttons {
   display: flex;
   gap: var(--space-1);
-  flex-wrap: wrap;
+  /* `wrap` quebrava a fileira ANTES de encolher os itens, gastando uma segunda
+     linha inteira. Com `nowrap` + `min-width: 0` as abas se comprimem e o
+     rótulo trunca — e o `title` de cada uma segue com o texto por extenso. */
+  flex-wrap: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .tabs-group-buttons .studio-tab {
   flex: 1 1 auto;
-  min-width: 120px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tabs-group-buttons .studio-tab .tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Escopado à faixa de abas: `.group-tag` também rotula os grupos do checklist.
+   Aqui fica horizontal e minúsculo, ocupando a mesma linha das abas.
+
+   Tentei antes `writing-mode: vertical-rl` para gastar zero altura — e o texto
+   vertical passou a IMPOR a altura do grupo (~90px). Rótulo vertical só
+   economiza espaço quando é mais curto que a fileira que acompanha. */
+.tabs-group-header .group-tag {
+  font-size: var(--font-size-3xs);
+  letter-spacing: 0.06em;
+  padding: var(--space-px) var(--space-1);
+  white-space: nowrap;
 }
 
 /* Phase Indicator Banners */

@@ -1111,6 +1111,41 @@ select {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   FOCO VISÍVEL (doc 24 § 24.10, critério A-2)
+   ═══════════════════════════════════════════════════════════════════════
+
+   A aplicação inteira tinha UMA regra de `:focus-visible`. Navegar por teclado
+   era navegar às cegas — e a Triagem tem atalhos (I/E/P) que pressupõem
+   justamente o uso sem mouse.
+
+   `:focus-visible` e não `:focus`: o anel aparece para quem navega por teclado
+   e não para quem clica, que é o comportamento que o navegador já sabe inferir.
+
+   O anel é desenhado com `box-shadow` em dois halos — um da cor do fundo, outro
+   da cor de acento — em vez de `outline`. Assim ele permanece visível tanto
+   sobre superfícies claras quanto sobre o chrome escuro, sem alterar o layout.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-bg-primary),
+    0 0 0 4px var(--color-border-focus);
+  border-radius: var(--radius-sm);
+  position: relative;
+  z-index: var(--z-sticky);
+}
+
+/* Sobre o chrome escuro o halo interno precisa ser da cor do chrome, não do
+   fundo de conteúdo. */
+.ribbon-titlebar :focus-visible,
+.rsac-on-brand :focus-visible {
+  box-shadow:
+    0 0 0 2px var(--color-chrome-bg),
+    0 0 0 4px var(--rsac-accent, var(--sunlit-clay));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    CONTEMPORARY NEO-RETRO BUTTON SYSTEM
    ═══════════════════════════════════════════════════════════════════════ */
 
