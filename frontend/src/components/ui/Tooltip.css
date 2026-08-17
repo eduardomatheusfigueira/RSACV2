@@ -1,0 +1,84 @@
+/**
+ * RSAC V2 — Tooltip Component Styles
+ * Contemporary Neo-Retro Accessible Tooltips
+ */
+
+.rsac-tooltip-content {
+  background: var(--color-bg-sidebar, #222e15);
+  color: var(--cornsilk, #fefae0);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+  font-weight: var(--weight-medium, 500);
+  line-height: var(--leading-tight, 1.25);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  border-radius: var(--radius-xs, 3px);
+  border: 1px solid rgba(254, 250, 224, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  max-width: 280px;
+  word-wrap: break-word;
+  animation-duration: 120ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.rsac-tooltip-content[data-state='delayed-open'][data-side='top'] {
+  animation-name: rsac-slide-down-and-fade;
+}
+.rsac-tooltip-content[data-state='delayed-open'][data-side='right'] {
+  animation-name: rsac-slide-left-and-fade;
+}
+.rsac-tooltip-content[data-state='delayed-open'][data-side='bottom'] {
+  animation-name: rsac-slide-up-and-fade;
+}
+.rsac-tooltip-content[data-state='delayed-open'][data-side='left'] {
+  animation-name: rsac-slide-right-and-fade;
+}
+
+.rsac-tooltip-arrow {
+  fill: var(--color-bg-sidebar, #222e15);
+}
+
+@keyframes rsac-slide-up-and-fade {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rsac-slide-right-and-fade {
+  from {
+    opacity: 0;
+    transform: translateX(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes rsac-slide-down-and-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rsac-slide-left-and-fade {
+  from {
+    opacity: 0;
+    transform: translateX(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

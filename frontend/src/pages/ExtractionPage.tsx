@@ -46,6 +46,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import type { Paper, Protocol } from '@/types/api'
 import './ExtractionPage.css'
 
@@ -331,6 +332,46 @@ export function ExtractionPage(): JSX.Element {
       }
     }
   }
+
+  // ── Sincronização de Ações com o Ribbon Bar ─────────────────────────
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
+
+  useEffect(() => {
+    registerRibbonActions({
+      saveExtraction: handleSaveAnswers,
+      extractAiGlobal: handleExtractWithAI,
+      downloadPdf: handleDownloadPDF,
+      openDoiLink: () => {
+        if (selectedPaper?.doi) {
+          window.open(`https://doi.org/${selectedPaper.doi}`, '_blank')
+        }
+      },
+      hasPdf,
+      hasDoi: !!selectedPaper?.doi,
+      isExtractionSaving: saving,
+    })
+    return () => {
+      unregisterRibbonActions([
+        'saveExtraction',
+        'extractAiGlobal',
+        'downloadPdf',
+        'openDoiLink',
+        'hasPdf',
+        'hasDoi',
+        'isExtractionSaving',
+      ])
+    }
+  }, [
+    registerRibbonActions,
+    unregisterRibbonActions,
+    handleSaveAnswers,
+    handleExtractWithAI,
+    handleDownloadPDF,
+    selectedPaper,
+    hasPdf,
+    saving,
+  ])
 
   const handleOpenPdfExternally = () => {
     if (!id || !selectedPaper || !hasPdf) return

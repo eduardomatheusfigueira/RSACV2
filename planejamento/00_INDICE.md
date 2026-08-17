@@ -1,11 +1,24 @@
 # 📋 RSAC V2 — Índice do Planejamento
 
-> **Revisão Sistemática Assistida por Computador — Versão 2.0**
-> Arquitetura Python + Electron | Agosto 2026
+> **Revisão Sistemática Assistida por Computador — Versão 2.0**  
+> **Arquitetura Python + Electron | Agosto 2026**  
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–26` Vigente (Design System & Governança)
 
 ---
 
-## Documentos de Planejamento
+## 🟢 Documentos Vigentes de Design System & Governança
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| 22 | [Log de Consolidação e Auditoria](./22_LOG_CONSOLIDACAO.md) | Confronto do código real contra o planejamento, fechamento de fases e divergências |
+| 23 | [Diagnóstico da UI e Design System](./23_DIAGNOSTICO_DESIGN_SYSTEM.md) | Auditoria empírica de métricas, densidade, moldura vertical e fragilidades do Ribbon |
+| 24 | [Especificação Normativa do Design System](./24_ESPECIFICACAO_DESIGN_SYSTEM.md) | Tokens compactos reais (9–11px, 2–6px), componentes canônicos Radix e WCAG 2.1 AA |
+| 25 | [Plano de Execução em 7 Fases](./25_PLANO_EXECUCAO_DESIGN_SYSTEM.md) | Cronograma de implementação incremental sem big-bang, com portões de aceite |
+| 26 | [Testes, Verificação e Linha de Base Numérica](./26_TESTES_VERIFICACAO_DESIGN_SYSTEM.md) | 4 camadas de qualidade, metas quantitativas e baseline de não regressão |
+
+---
+
+## 🏛️ Documentos Históricos de Arquitetura e Engenharia (01 a 21)
 
 | # | Documento | Descrição |
 |---|-----------|-----------|
@@ -36,14 +49,13 @@
 ## Referência Bibliográfica Base
 
 - **Adam D. Scott** — *JavaScript Everywhere: Building Cross-Platform Applications with GraphQL, React, React Native, and Electron* (O'Reilly Media, 2020)
-  - Modelo arquitetural: **GraphQL API (Backend) → React (Frontend) → Electron (Desktop)**
-  - Adaptação para RSAC V2: **FastAPI (Python Backend) → React (Frontend) → Electron (Desktop Shell)**
+  - Modelo arquitetural: **FastAPI (Python Backend) → React (Frontend) → Electron (Desktop Shell)**
 
 ---
 
-## Convenções
+## Convenções de Status
 
-- 🟢 = Decisão confirmada
+- 🟢 = Documento normativo vigente
+- 🏛️ = Documento de referência histórica
 - 🟡 = Em discussão / aguardando validação
 - 🔴 = Bloqueante / risco identificado
-- 📖 = Referência ao livro *JavaScript Everywhere*

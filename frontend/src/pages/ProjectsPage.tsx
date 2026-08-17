@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
 import type { Project, Methodology } from '@/types/api'
@@ -27,6 +28,8 @@ import './ProjectsPage.css'
 export function ProjectsPage(): JSX.Element {
   const navigate = useNavigate()
   const { activeProject, setActiveProject } = useSettingsStore()
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -37,6 +40,15 @@ export function ProjectsPage(): JSX.Element {
   const [description, setDescription] = useState('')
   const [methodology, setMethodology] = useState<Methodology>('PRISMA-ScR')
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    registerRibbonActions({
+      createProject: () => setIsModalOpen(true),
+    })
+    return () => {
+      unregisterRibbonActions(['createProject'])
+    }
+  }, [registerRibbonActions, unregisterRibbonActions])
 
   useEffect(() => {
     loadProjects()

@@ -20,7 +20,6 @@ interface SettingsState {
   theme: string
   backendStatus: 'connecting' | 'online' | 'offline'
   backendVersion: string
-  sidebarCollapsed: boolean
   activeProject: Project | null
   aiEnabled: boolean
 
@@ -29,7 +28,6 @@ interface SettingsState {
   toggleTheme: () => void
   setBackendStatus: (status: 'connecting' | 'online' | 'offline') => void
   setBackendVersion: (version: string) => void
-  toggleSidebar: () => void
   setActiveProject: (project: Project | null) => void
   setAiEnabled: (enabled: boolean) => void
 }
@@ -40,7 +38,6 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'dark',
       backendStatus: 'connecting',
       backendVersion: '',
-      sidebarCollapsed: false,
       activeProject: null,
       aiEnabled: true,
 
@@ -63,7 +60,6 @@ export const useSettingsStore = create<SettingsState>()(
 
       setBackendStatus: (backendStatus) => set({ backendStatus }),
       setBackendVersion: (backendVersion) => set({ backendVersion }),
-      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setActiveProject: (activeProject) => set({ activeProject }),
       setAiEnabled: (aiEnabled) => set({ aiEnabled }),
     }),
@@ -74,7 +70,6 @@ export const useSettingsStore = create<SettingsState>()(
         theme: state.theme,
         aiEnabled: state.aiEnabled,
         activeProject: state.activeProject,
-        sidebarCollapsed: state.sidebarCollapsed,
       }),
       // Ao reidratar do localStorage, aplicar o tema salvo ao DOM imediatamente
       onRehydrateStorage: () => {
