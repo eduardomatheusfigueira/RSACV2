@@ -71,6 +71,14 @@ electron.vite.config.*.mjs
 *.zip
 *.tar.gz
 
+# ── Identidade Visual (exceções) ────────────────────────────────────
+# `build/` acima é regra de artefatos Python. Os buildResources do
+# electron-builder moram em frontend/build/ e SÃO versionados: são o ícone do
+# executável, os ícones e as artes do instalador NSIS, gerados por
+# `python3 brand/generate_brand_assets.py`.
+!frontend/build/
+!frontend/build/**
+
 # ── Environment & Secrets ───────────────────────────────────────────
 .env
 .env.local

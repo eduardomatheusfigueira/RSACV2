@@ -1,0 +1,196 @@
+/**
+ * RSAC V2 — Identidade Visual (camada de tema)
+ * ============================================
+ *
+ * Regra central: NENHUMA cor literal. Todo pigmento vem dos tokens do design
+ * system, então a marca se re-pigmenta sozinha nos 13 temas do app.
+ *
+ *   • Haste e lente do monograma → `currentColor` (acompanham o texto).
+ *   • Cabo da lupa               → `--rsac-accent`, resolvido por tom.
+ *
+ * Os três tons existem porque a marca aparece em dois tipos de superfície:
+ *
+ *   auto  — superfícies de conteúdo. Usa `--color-accent`, que todo tema já
+ *           garante legível sobre os fundos de conteúdo.
+ *   brand — chrome escuro da aplicação (barra de título, sidebar, splash),
+ *           cujo fundo é sempre `--black-forest`. Ali `--color-accent` pode
+ *           colidir com o próprio fundo (em `platinum-dusk` os dois são
+ *           #274c77), então parte-se de `--sunlit-clay` e mistura-se um pouco
+ *           da cor de texto do chrome para garantir contraste mesmo nos temas
+ *           de acento escuro (`lava-steel`).
+ *   mono   — um traço só, para alto contraste e impressão.
+ */
+
+/* ── Monograma ───────────────────────────────────────────────────────── */
+
+.rsac-mark {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.rsac-mark .rsac-mark-leg {
+  stroke: var(--rsac-accent);
+  transition: stroke var(--transition-base);
+}
+
+.rsac-mark--auto {
+  --rsac-accent: var(--color-accent);
+}
+
+.rsac-mark--mono {
+  --rsac-accent: currentColor;
+}
+
+/* `.rsac-on-brand` publica o acento de chrome para toda a assinatura — não só
+   para o monograma —, de modo que o sufixo "v2" e o selo compartilhem
+   exatamente o mesmo pigmento. */
+.rsac-on-brand,
+.rsac-mark--brand,
+.rsac-beta--brand {
+  --rsac-accent: var(--sunlit-clay);
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .rsac-on-brand,
+  .rsac-mark--brand,
+  .rsac-beta--brand {
+    --rsac-accent: color-mix(
+      in srgb,
+      var(--sunlit-clay) 72%,
+      var(--color-text-sidebar-active) 28%
+    );
+  }
+}
+
+/* ── Selo BETA ───────────────────────────────────────────────────────── */
+
+.rsac-beta {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  white-space: nowrap;
+  border-radius: var(--radius-xs);
+  border: 1px solid currentColor;
+  background: transparent;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .rsac-beta {
+    background: color-mix(in srgb, currentColor 14%, transparent);
+  }
+}
+
+.rsac-beta--auto {
+  color: var(--color-accent);
+}
+
+.rsac-beta--brand {
+  color: var(--rsac-accent);
+}
+
+/* O letter-spacing sobra à direita do último caractere; o padding assimétrico
+   devolve o equilíbrio óptico da etiqueta. */
+.rsac-beta--xs {
+  font-size: 0.5rem;
+  padding: 2px 3px 2px 5px;
+}
+
+.rsac-beta--sm {
+  font-size: 0.5625rem;
+  padding: 2px 4px 2px 6px;
+}
+
+.rsac-beta--md {
+  font-size: 0.6875rem;
+  padding: 3px 5px 3px 8px;
+}
+
+/* ── Assinatura horizontal ───────────────────────────────────────────── */
+
+.rsac-lockup {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.rsac-lockup-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rsac-lockup-title-row {
+  display: flex;
+  align-items: center;
+}
+
+.rsac-lockup-word {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: currentColor;
+}
+
+.rsac-lockup-version {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  text-transform: uppercase;
+  color: currentColor;
+  opacity: 0.62;
+}
+
+.rsac-lockup--sm {
+  gap: 7px;
+}
+.rsac-lockup--sm .rsac-lockup-title-row {
+  gap: 5px;
+}
+.rsac-lockup--sm .rsac-lockup-word {
+  font-size: 0.8125rem;
+  letter-spacing: 0.055em;
+}
+.rsac-lockup--sm .rsac-lockup-version {
+  font-size: 0.5rem;
+  letter-spacing: 0.11em;
+  margin-top: 3px;
+}
+
+.rsac-lockup--md {
+  gap: 10px;
+}
+.rsac-lockup--md .rsac-lockup-title-row {
+  gap: 7px;
+}
+.rsac-lockup--md .rsac-lockup-word {
+  font-size: 1.1875rem;
+  letter-spacing: 0.05em;
+}
+.rsac-lockup--md .rsac-lockup-version {
+  font-size: 0.5625rem;
+  letter-spacing: 0.13em;
+  margin-top: 5px;
+}
+
+.rsac-lockup--lg {
+  gap: 16px;
+}
+.rsac-lockup--lg .rsac-lockup-title-row {
+  gap: 10px;
+}
+.rsac-lockup--lg .rsac-lockup-word {
+  font-size: 1.875rem;
+  letter-spacing: 0.05em;
+}
+.rsac-lockup--lg .rsac-lockup-version {
+  font-size: 0.6875rem;
+  letter-spacing: 0.15em;
+  margin-top: 7px;
+}

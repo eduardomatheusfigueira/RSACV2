@@ -31,36 +31,34 @@
 .ribbon-brand {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   cursor: pointer;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: var(--radius-xs);
+  transition: background var(--transition-fast);
 }
 
-.brand-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: var(--copperwood);
-  color: #fff;
-  border-radius: 3px;
+.ribbon-brand:hover {
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .brand-name {
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   font-weight: var(--weight-bold);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
+/* "v2" é sufixo do logotipo, não uma etiqueta: fica discreto ao lado do nome
+   para não competir com o selo BETA, que é a informação de estado. */
 .brand-ver {
-  font-size: 0.5625rem;
+  font-size: 0.6875rem;
   font-family: var(--font-mono);
-  background: var(--olive-leaf);
-  color: #fff;
-  padding: 0 3px;
-  border-radius: 2px;
-  margin-left: 2px;
-  vertical-align: middle;
+  font-weight: var(--weight-medium);
+  color: var(--rsac-accent, var(--sunlit-clay));
+  margin-left: 3px;
+  letter-spacing: 0;
 }
 
 /* Active Project Pill */

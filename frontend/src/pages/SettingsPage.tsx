@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { RsacLockup } from '@/components/brand/RsacLockup'
 import './SettingsPage.css'
 
 export interface ColorThemeOption {
@@ -256,7 +257,7 @@ const LOCAL_ENDPOINTS = [
 ]
 
 export function SettingsPage(): JSX.Element {
-  const { theme, setTheme, activeProject, setActiveProject, aiEnabled, setAiEnabled } = useSettingsStore()
+  const { theme, setTheme, activeProject, setActiveProject, aiEnabled, setAiEnabled, backendVersion } = useSettingsStore()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -862,6 +863,32 @@ export function SettingsPage(): JSX.Element {
               </div>
             )
           })}
+        </div>
+
+        {/* ── Identidade visual: a marca acompanha a paleta ativa ── */}
+        <div className="brand-identity-strip">
+          <RsacLockup size="lg" tone="auto" version="Versão 2" />
+          <div className="brand-identity-meta">
+            <p className="brand-identity-note">
+              O monograma <strong>R-Lupa</strong> — cujo laço é a lente e cuja perna diagonal
+              é o cabo — se re-pigmenta com a paleta selecionada acima: haste e lente seguem
+              a cor do texto, o cabo segue a cor de acento do tema.
+            </p>
+            <div className="brand-identity-facts">
+              <span className="brand-fact">
+                <span className="brand-fact-label">Backend</span>
+                <span className="brand-fact-value">{backendVersion || '—'}</span>
+              </span>
+              <span className="brand-fact">
+                <span className="brand-fact-label">Estágio</span>
+                <span className="brand-fact-value">Beta em desenvolvimento</span>
+              </span>
+              <span className="brand-fact">
+                <span className="brand-fact-label">Paletas</span>
+                <span className="brand-fact-value">{COLOR_THEMES.length} temas</span>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 

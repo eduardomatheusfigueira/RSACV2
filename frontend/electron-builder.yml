@@ -3,19 +3,50 @@ productName: RSAC V2
 copyright: Copyright © 2026 Eduardo Matheus Figueira
 directories:
   output: release
+  # Todos os assets abaixo são gerados por `python3 brand/generate_brand_assets.py`.
+  # Não edite os binários à mão: regenere a partir da geometria da marca.
   buildResources: build
 files:
   - out/**/*
   - package.json
+# Ícone da janela para plataformas que não o extraem do executável (Linux e
+# desenvolvimento). No Windows empacotado o ícone vem embutido no .exe.
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+
 win:
+  # build/icon.ico — 16/24/32/48/64/128/256 px, com ajuste óptico por tamanho:
+  # abaixo de 64 px o selo BETA é suprimido para o monograma respirar.
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
         - x64
   artifactName: ${productName}-Setup-${version}.${ext}
+
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: RSAC V2
+  # Identidade visual do instalador e do desinstalador
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/installerHeaderIcon.ico
+  installerHeader: build/installerHeader.bmp
+  installerSidebar: build/installerSidebar.bmp
+  # O painel de desinstalação usa a mesma arte de marca do de instalação.
+  uninstallerSidebar: build/installerSidebar.bmp
+  uninstallDisplayName: ${productName} ${version}
+
+mac:
+  icon: build/icon.icns
+  category: public.app-category.productivity
+
+linux:
+  icon: build/icon.png
+  category: Science
+  target:
+    - AppImage

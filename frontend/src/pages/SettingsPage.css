@@ -564,3 +564,75 @@
   display: none;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FAIXA DE IDENTIDADE VISUAL
+   Fecha o cartão de paletas mostrando a marca já re-pigmentada pelo tema
+   que o usuário acabou de escolher — a prova visual de que a identidade
+   é derivada dos tokens, e não colada por cima deles.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.brand-identity-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.brand-identity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 260px;
+}
+
+.brand-identity-note {
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 62ch;
+}
+
+.brand-identity-note strong {
+  color: var(--color-text-primary);
+}
+
+.brand-identity-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.brand-fact {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+}
+
+.brand-fact-label {
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+}
+
+.brand-fact-value {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}

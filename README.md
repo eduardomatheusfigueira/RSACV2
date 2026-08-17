@@ -2,7 +2,11 @@
 
 <div align="center">
 
+<img src="brand/svg/rsac-lockup-dark.svg#gh-dark-mode-only" alt="RSAC V2" height="76" />
+<img src="brand/svg/rsac-lockup-light.svg#gh-light-mode-only" alt="RSAC V2" height="76" />
+
 ![RSAC V2 Banner](https://img.shields.io/badge/RSAC_V2-v2.0.0-283618?style=for-the-badge&logo=electron&logoColor=fefae0)
+![Estágio](https://img.shields.io/badge/Estágio-BETA-dda15e?style=for-the-badge&labelColor=283618)
 ![Python Version](https://img.shields.io/badge/Python-3.12+-606c38?style=for-the-badge&logo=python&logoColor=fefae0)
 ![React Version](https://img.shields.io/badge/React-19.0-bc6c25?style=for-the-badge&logo=react&logoColor=fefae0)
 ![License](https://img.shields.io/badge/License-MIT-dda15e?style=for-the-badge)
@@ -61,7 +65,10 @@ A plataforma cobre integralmente o ciclo de vida da pesquisa secundária conform
 - Geração automática do **Diagrama de Fluxo PRISMA 2020** com contagem exata em cada fase.
 - Exportação em **Markdown**, **Word (.docx)**, **Planilhas Excel/CSV** e pacotes de citações **BibTeX/RIS**.
 
-### 6. 🎨 Design System & 13 Paletas de Cores
+### 6. 🎨 Identidade Visual, Design System & 13 Paletas de Cores
+- **Monograma "R-Lupa"**: o "R" de *Revisão* desenhado em traço monolinear único, em que o laço da letra é a **lente** de uma lupa e a perna diagonal é o **cabo**. A geometria é declarada uma única vez e alimenta o ícone do executável, o instalador NSIS, o favicon e o símbolo dentro do app — ver [`brand/IDENTIDADE_VISUAL.md`](brand/IDENTIDADE_VISUAL.md).
+- **Marca sem cor fixa**: dentro do app a haste e a lente herdam a cor de texto e o cabo herda a cor de acento, então o símbolo se re-pigmenta sozinho em qualquer uma das 13 paletas.
+- **Selo BETA** presente na splash, no cabeçalho, na sidebar, na barra de status e nos ícones de distribuição — o produto ainda está em desenvolvimento.
 - Identidade visual contemporânea de engenharia com cantos de precisão cirúrgica (`2px`).
 - Catálogo com **13 paletas cromáticas harmônicas** ajustadas para leitura prolongada:
   - *Organic Earth (Florestal / Soft Warm)*

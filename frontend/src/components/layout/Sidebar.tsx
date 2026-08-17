@@ -9,7 +9,6 @@ import {
   FolderOpen,
   Settings,
   FileText,
-  Search,
   CheckSquare,
   FileDown,
   Download,
@@ -19,6 +18,8 @@ import {
   FolderDot,
 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { RsacMark } from '@/components/brand/RsacMark'
+import { BetaBadge } from '@/components/brand/BetaBadge'
 import './Sidebar.css'
 
 interface NavItem {
@@ -95,14 +96,20 @@ export function Sidebar(): JSX.Element {
 
   return (
     <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-      {/* Logo */}
+      {/* Assinatura da marca */}
       <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <Search size={24} strokeWidth={2.5} />
+        <div
+          className="sidebar-logo rsac-on-brand"
+          title="RSAC — Revisão Sistemática Assistida por Computador (Versão 2, beta)"
+        >
+          <RsacMark size={sidebarCollapsed ? 26 : 24} tone="brand" label="RSAC V2" />
           {!sidebarCollapsed && (
-            <span className="sidebar-title">
-              RSAC<span className="sidebar-version">v2</span>
-            </span>
+            <>
+              <span className="sidebar-title">
+                RSAC<span className="sidebar-version">v2</span>
+              </span>
+              <BetaBadge tone="brand" size="xs" className="sidebar-beta" />
+            </>
           )}
         </div>
       </div>

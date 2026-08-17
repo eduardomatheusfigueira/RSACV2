@@ -59,6 +59,8 @@ import {
   FolderArchive,
 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { RsacMark } from '@/components/brand/RsacMark'
+import { BetaBadge } from '@/components/brand/BetaBadge'
 import './TopRibbonBar.css'
 
 interface RibbonTab {
@@ -161,9 +163,14 @@ export function TopRibbonBar(): JSX.Element {
           Brand + Active Project Context + Quick Global Controls
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="ribbon-titlebar">
-        <div className="ribbon-brand" onClick={() => navigate('/')}>
-          <div className="brand-badge"><Search size={13} strokeWidth={2.5} /></div>
+        <div
+          className="ribbon-brand rsac-on-brand"
+          onClick={() => navigate('/')}
+          title="RSAC — Revisão Sistemática Assistida por Computador (Versão 2, beta)"
+        >
+          <RsacMark size={19} tone="brand" label={null} />
           <span className="brand-name">RSAC<span className="brand-ver">v2</span></span>
+          <BetaBadge tone="brand" size="xs" />
         </div>
 
         <div className="ribbon-active-project-bar">

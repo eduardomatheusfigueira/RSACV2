@@ -4,6 +4,7 @@
  */
 
 import { app, BrowserWindow, shell } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { PythonManager } from './python-manager'
@@ -12,7 +13,31 @@ import { registerIpcHandlers } from './ipc-handlers'
 const pythonManager = new PythonManager()
 let mainWindow: BrowserWindow | null = null
 
+/**
+ * Identificador do modelo de usuário do Windows. Precisa ser idêntico ao
+ * `appId` do electron-builder: é ele que faz a barra de tarefas, o menu
+ * Iniciar e as notificações associarem a janela ao ícone instalado do app.
+ */
+const APP_ID = 'br.ufsc.rsac'
+
+/** Cor de fundo da janela — mesma base da splash e dos ícones gerados. */
+const BRAND_BACKGROUND = '#171f0d'
+
+/**
+ * Ícone da janela (barra de tarefas no Linux, janela em desenvolvimento).
+ * No Windows empacotado quem manda é o ícone embutido no .exe pelo
+ * electron-builder; aqui garantimos o mesmo símbolo nos demais casos.
+ */
+function resolveAppIcon(): string | undefined {
+  const candidates = is.dev
+    ? [join(__dirname, '../../resources/icon.png'), join(__dirname, '../../build/icon.png')]
+    : [join(process.resourcesPath, 'icon.png')]
+  return candidates.find(existsSync)
+}
+
 function createWindow(backendPort: number): void {
+  const icon = resolveAppIcon()
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -20,7 +45,8 @@ function createWindow(backendPort: number): void {
     minHeight: 700,
     show: false,
     title: 'RSAC V2',
-    backgroundColor: '#0f0f0f',
+    backgroundColor: BRAND_BACKGROUND,
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -56,7 +82,7 @@ function createWindow(backendPort: number): void {
 
 app.whenReady().then(async () => {
   // Configurações de segurança do Electron
-  electronApp.setAppUserModelId('com.rsac.v2')
+  electronApp.setAppUserModelId(APP_ID)
 
   // Otimização de atalhos (DevTools: F12)
   app.on('browser-window-created', (_, window) => {

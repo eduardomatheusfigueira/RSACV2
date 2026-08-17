@@ -6,6 +6,8 @@
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { Sparkles, Edit3, Terminal, AlertCircle } from 'lucide-react'
+import { RsacMark } from '@/components/brand/RsacMark'
+import { BetaBadge } from '@/components/brand/BetaBadge'
 import './StatusBar.css'
 
 export function StatusBar(): JSX.Element {
@@ -21,6 +23,12 @@ export function StatusBar(): JSX.Element {
   return (
     <footer className="status-bar">
       <div className="status-bar-left">
+        <span className="status-brand" title="RSAC V2 — versão beta">
+          <RsacMark size={12} tone="auto" label={null} />
+          <span className="status-brand-name">RSAC V2</span>
+          <BetaBadge tone="auto" size="xs" />
+        </span>
+        <span className="status-divider">|</span>
         <span className="status-indicator">
           <span className={`status-dot ${backendStatus || 'offline'}`} />
           {statusText}
