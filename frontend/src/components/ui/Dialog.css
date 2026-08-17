@@ -1,0 +1,139 @@
+/**
+ * RSAC V2 — Dialog / Modal Component Styles
+ * Contemporary Neo-Retro Accessible Modals
+ */
+
+.rsac-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(34, 46, 21, 0.65);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+  animation: rsac-fade-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rsac-dialog-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-bg-secondary, #ffffff);
+  border: 1px solid var(--color-border, #d0c8b3);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 16px 36px rgba(40, 54, 24, 0.25);
+  padding: var(--space-5, 20px);
+  z-index: 1000;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  animation: rsac-dialog-scale-in 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Sizes ─────────────────────────────────────────────────────────── */
+.rsac-dialog-content--sm {
+  width: 90vw;
+  max-width: 420px;
+}
+
+.rsac-dialog-content--md {
+  width: 90vw;
+  max-width: 580px;
+}
+
+.rsac-dialog-content--lg {
+  width: 90vw;
+  max-width: 780px;
+}
+
+.rsac-dialog-content--xl {
+  width: 92vw;
+  max-width: 980px;
+}
+
+.rsac-dialog-content--full {
+  width: 95vw;
+  max-width: 1200px;
+  height: 90vh;
+}
+
+/* ── Close Button ──────────────────────────────────────────────────── */
+.rsac-dialog-close-btn {
+  position: absolute;
+  top: var(--space-3, 12px);
+  right: var(--space-3, 12px);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs, 3px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary, #566442);
+  cursor: pointer;
+  transition: all var(--transition-fast, 80ms);
+}
+
+.rsac-dialog-close-btn:hover {
+  background: var(--color-bg-tertiary, #ebe5d4);
+  color: var(--color-text-primary, #283618);
+  border-color: var(--color-border-subtle, #e6dfcd);
+}
+
+/* ── Header, Title & Description ───────────────────────────────────── */
+.rsac-dialog-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  margin-bottom: var(--space-4, 16px);
+  padding-right: var(--space-6, 24px);
+}
+
+.rsac-dialog-title {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg, 1rem); /* 16px */
+  font-weight: var(--weight-bold, 700);
+  color: var(--color-text-primary, #283618);
+  margin: 0;
+  line-height: var(--leading-tight, 1.25);
+}
+
+.rsac-dialog-description {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+  color: var(--color-text-secondary, #566442);
+  margin: 0;
+  line-height: var(--leading-normal, 1.5);
+}
+
+/* ── Footer ────────────────────────────────────────────────────────── */
+.rsac-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-5, 20px);
+  padding-top: var(--space-3, 12px);
+  border-top: 1px solid var(--color-border-subtle, #e6dfcd);
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────── */
+@keyframes rsac-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rsac-dialog-scale-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}

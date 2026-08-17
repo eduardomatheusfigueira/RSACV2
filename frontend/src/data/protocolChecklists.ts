@@ -48,6 +48,19 @@ export interface ProtocolChecklistItem {
   essential: boolean
   /** Momento do ciclo da revisão. Ausente equivale a `a_priori`. */
   phase?: ChecklistPhase
+  /**
+   * Campo do Estúdio de Protocolo que este item governa.
+   *
+   * Não é declarado aqui, e sim aplicado por `withFieldKeys` em
+   * protocolCatalog.ts: a mesma lista é reaproveitada por diretrizes
+   * diferentes (Cochrane e Campbell usam a do PRISMA 2020), e a ligação
+   * campo → item pertence à diretriz, não à lista.
+   *
+   * Quando um campo do Estúdio não tem item correspondente na diretriz ativa,
+   * fica sem `fieldKey` e a interface cai no texto genérico — melhor do que
+   * exibir a numeração de um item que não trata daquilo.
+   */
+  fieldKey?: string
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

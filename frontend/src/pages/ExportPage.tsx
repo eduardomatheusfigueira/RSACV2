@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import type { PrismaFlowData } from '@/types/api'
 import './ExportPage.css'
 
@@ -33,6 +34,8 @@ export function ExportPage(): JSX.Element {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { activeProject, setActiveProject } = useSettingsStore()
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
 
   const [prismaData, setPrismaData] = useState<PrismaFlowData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -69,6 +72,16 @@ export function ExportPage(): JSX.Element {
     if (!id) return
     window.open(api.getBibtexExportUrl(id), '_blank')
   }
+
+  useEffect(() => {
+    registerRibbonActions({
+      exportExcel: handleDownloadExcel,
+      exportBibtex: handleDownloadBibtex,
+    })
+    return () => {
+      unregisterRibbonActions(['exportExcel', 'exportBibtex'])
+    }
+  }, [registerRibbonActions, unregisterRibbonActions, id])
 
   return (
     <div className="export-page animate-fade-in">

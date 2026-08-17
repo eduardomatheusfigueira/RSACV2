@@ -52,6 +52,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
@@ -153,6 +154,35 @@ export function ProtocolPage(): JSX.Element {
   const [activeLangTab, setActiveLangTab] = useState<'pt' | 'en' | 'es'>('pt')
 
   const currentProtocolDef = PROTOCOL_CATALOG[activeProject?.methodology as Methodology] || PROTOCOL_CATALOG['PRISMA-ScR']
+
+  const getFieldGuideline = (fieldKey: string, fallbackDesc: string): string => {
+    const item = currentProtocolDef.checklistItems?.find((i) => i.fieldKey === fieldKey)
+    if (item) {
+      return `Conforme ${currentProtocolDef.shortLabel} Item ${item.id}: ${item.desc}`
+    }
+    return `Conforme ${currentProtocolDef.shortLabel}: ${fallbackDesc}`
+  }
+
+  /**
+   * Referência do campo na diretriz ativa, pronta para exibição.
+   *
+   * Quando a diretriz não tem item para o campo — o PRISMA-P não trata de
+   * conclusões, o Methodi Ordinatio não trata de redação —, devolve só a sigla,
+   * sem número. Citar o número de OUTRA diretriz seria pior do que não citar
+   * nenhum, num aplicativo cujo valor é o rigor metodológico.
+   */
+  const getFieldItemRef = (fieldKey: string): string => {
+    const item = currentProtocolDef.checklistItems?.find((i) => i.fieldKey === fieldKey)
+    return item
+      ? `${currentProtocolDef.shortLabel} Item ${item.id}`
+      : currentProtocolDef.shortLabel
+  }
+
+  const getFieldItemTag = (fieldKey: string, _fallbackNum: number, essential = true): string => {
+    const item = currentProtocolDef.checklistItems?.find((i) => i.fieldKey === fieldKey)
+    const grau = (item ? item.essential : essential) ? 'Essencial' : 'Opcional'
+    return item ? `Item ${item.id} — ${grau}` : grau
+  }
 
   useEffect(() => {
     if (id) {
@@ -622,6 +652,52 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
     setTimeout(() => setSaveSuccess(false), 3000)
   }
 
+  // ── Sincronização de Ações com o Ribbon Bar ─────────────────────────
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
+
+  const studioTabsList: StudioTab[] = [
+    'ident_intro',
+    'objectives',
+    'search_eligibility',
+    'methods_extraction',
+    'synthesis_discussion',
+    'checklist',
+  ]
+
+  useEffect(() => {
+    registerRibbonActions({
+      saveProtocol: handleSave,
+      copyManuscript: handleCopyFullManuscript,
+      openAiSuggest: handleSuggestWithAI,
+      setStudioTab: (tabIndex: number) => {
+        if (studioTabsList[tabIndex]) {
+          setActiveStudioTab(studioTabsList[tabIndex])
+        }
+      },
+      activeStudioTabIndex: studioTabsList.indexOf(activeStudioTab),
+      isProtocolSaving: saving,
+    })
+    return () => {
+      unregisterRibbonActions([
+        'saveProtocol',
+        'copyManuscript',
+        'openAiSuggest',
+        'setStudioTab',
+        'activeStudioTabIndex',
+        'isProtocolSaving',
+      ])
+    }
+  }, [
+    registerRibbonActions,
+    unregisterRibbonActions,
+    handleSave,
+    handleCopyFullManuscript,
+    handleSuggestWithAI,
+    activeStudioTab,
+    saving,
+  ])
+
   if (loading) {
     return (
       <div className="protocol-page">
@@ -866,7 +942,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </div>
             </div>
             <p className="section-help">
-              Conforme PRISMA-ScR Item 1: Identifique claramente o trabalho como uma <strong>Scoping Review</strong> e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).
+              {getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).')}
             </p>
 
             {helpOpen.title && (
@@ -874,7 +950,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Título (PRISMA-ScR Item 1)</strong>
+                    <strong>Estrutura Recomendada para o Título ({getFieldItemRef('manuscript_title')})</strong>
                   </div>
                   <button
                     type="button"
@@ -912,7 +988,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 5 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('protocol_registration', 5)}</span>
               <span className="item-section-tag">MÉTODOS / REGISTRO</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -925,7 +1001,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                   fieldId="protocol_registration"
                   fieldLabel="Registro do Protocolo (OSF / Repositório)"
                   currentValue={manuscript.protocol_registration}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori."
+                  fieldGuidelines={getFieldGuideline('protocol_registration', 'Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('protocol_registration')}
@@ -944,7 +1020,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 5: Informe a plataforma de registro público (ex: Open Science Framework - OSF, Figshare, Zenodo), identificador/DOI e data de submissão do protocolo.
+              {getFieldGuideline('protocol_registration', 'Informe a plataforma de registro público (ex: Open Science Framework - OSF, Figshare, Zenodo), identificador/DOI e data de submissão do protocolo.')}
             </p>
 
             {helpOpen.registration && (
@@ -952,7 +1028,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Registro do Protocolo (PRISMA-ScR Item 5)</strong>
+                    <strong>Estrutura de Registro do Protocolo ({getFieldItemRef('protocol_registration')})</strong>
                   </div>
                   <button
                     type="button"
@@ -990,7 +1066,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 3 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('rationale', 3)}</span>
               <span className="item-section-tag">INTRODUÇÃO</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1003,7 +1079,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                   fieldId="rationale"
                   fieldLabel="Justificativa e Racional da Revisão"
                   currentValue={manuscript.rationale}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 3: Descreva o contexto do conhecimento existente na área e fundamente por que o escopo necessita de uma Scoping Review em vez de uma revisão sistemática tradicional nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                  fieldGuidelines={getFieldGuideline('rationale', 'Descreva o contexto do conhecimento existente na área e fundamente a necessidade da revisão nas Ciências Sociais Aplicadas e Desenvolvimento Regional.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('rationale')}
@@ -1022,7 +1098,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 3: Descreva o contexto do conhecimento existente na área e fundamente <strong>por que o escopo necessita de uma Scoping Review</strong> em vez de uma revisão sistemática tradicional com meta-análise.
+              {getFieldGuideline('rationale', 'Descreva o contexto do conhecimento existente na área e fundamente a necessidade da revisão nas Ciências Sociais Aplicadas e Desenvolvimento Regional.')}
             </p>
 
             {helpOpen.rationale && (
@@ -1030,7 +1106,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para a Justificativa (PRISMA-ScR Item 3)</strong>
+                    <strong>Estrutura Recomendada para a Justificativa ({getFieldItemRef('rationale')})</strong>
                   </div>
                   <button
                     type="button"
@@ -1098,7 +1174,7 @@ Relevância e Contribuição Esperada:
           </div>
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 4 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('objective', 4)}</span>
               <span className="item-section-tag">INTRODUÇÃO / OBJETIVOS</span>
             </div>
             <div className="card-header-with-toggle">
@@ -1112,7 +1188,7 @@ Relevância e Contribuição Esperada:
                   className={`btn-framework-opt ${frameworkType === 'PCC' ? 'active' : ''}`}
                   onClick={() => setFrameworkType('PCC')}
                 >
-                  PCC (PRISMA-ScR / Escopo)
+                  PCC ({currentProtocolDef.shortLabel} / Escopo)
                 </button>
                 <button
                   type="button"
@@ -1127,15 +1203,15 @@ Relevância e Contribuição Esperada:
             <div className="card-section-title-with-actions" style={{ marginTop: 'var(--space-2)' }}>
               <p className="section-help" style={{ margin: 0 }}>
                 {frameworkType === 'PCC'
-                  ? 'Conforme PRISMA-ScR Item 4 e JBI: Estruture os objetivos centrais em População/Atores (P), Conceito Central (C) e Contexto Territorial (C).'
-                  : 'Estruture os objetivos em População/Atores (P), Intervenção/Política (I), Comparador (C) e Desfecho (O).'}
+                  ? getFieldGuideline('objective', `Estruture os objetivos centrais em População/Atores (P), Conceito Central (C) e Contexto Territorial (C).`)
+                  : getFieldGuideline('objective', `Estruture os objetivos em População/Atores (P), Intervenção/Política (I), Comparador (C) e Desfecho (O).`)}
               </p>
               <div className="card-header-actions">
                 <AIAssistButton
                   fieldId="objective"
                   fieldLabel="Objetivo Geral da Revisão"
                   currentValue={objective}
-                  fieldGuidelines={`Conforme PRISMA-ScR Item 4: Formule o objetivo geral da scoping review delimitando a questão norteadora com base nos elementos ${frameworkType} em Ciências Sociais Aplicadas / Desenvolvimento Regional.`}
+                  fieldGuidelines={getFieldGuideline('objective', `Formule o objetivo geral da revisão delimitando a questão norteadora com base nos elementos ${frameworkType} em Ciências Sociais Aplicadas / Desenvolvimento Regional.`)}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('objective')}
@@ -1158,7 +1234,7 @@ Relevância e Contribuição Esperada:
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Formulação de Objetivos PCC (PRISMA-ScR Item 4)</strong>
+                    <strong>Formulação de Objetivos {frameworkType} ({getFieldItemRef('objective')})</strong>
                   </div>
                   <button
                     type="button"
@@ -1384,7 +1460,7 @@ Relevância e Contribuição Esperada:
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 6: Defina as regras de inclusão e exclusão com base na população/atores, conceitos avaliados, recortes territoriais, idiomas e períodos considerados.
+              {getFieldGuideline('criteria', 'Defina as regras de inclusão e exclusão com base na população/atores, conceitos avaliados, recortes territoriais, idiomas e períodos considerados.')}
             </p>
 
             {helpOpen.criteria && (
@@ -1392,7 +1468,7 @@ Relevância e Contribuição Esperada:
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Diretrizes de Critérios de Elegibilidade (PRISMA-ScR Item 6)</strong>
+                    <strong>Diretrizes de Critérios de Elegibilidade ({getFieldItemRef('criteria')})</strong>
                   </div>
                 </div>
                 <div className="guide-grid">
@@ -1449,7 +1525,7 @@ Relevância e Contribuição Esperada:
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 7 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('info_sources', 7)}</span>
               <span className="item-section-tag">MÉTODOS / FONTES</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1462,7 +1538,7 @@ Relevância e Contribuição Esperada:
                   fieldId="info_sources"
                   fieldLabel="Fontes de Informação e Bases"
                   currentValue={manuscript.info_sources}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 7: Descreva todas as bases de dados bibliográficas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, recorte temporal e a data da busca mais recente."
+                  fieldGuidelines={getFieldGuideline('info_sources', 'Descreva todas as bases de dados bibliográficas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, recorte temporal e a data da busca mais recente.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('info_sources')}
@@ -1481,7 +1557,7 @@ Relevância e Contribuição Esperada:
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 7: Liste todas as bases consultadas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, busca manual e a <strong>data exata da busca mais recente</strong>.
+              {getFieldGuideline('info_sources', 'Liste todas as bases consultadas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, busca manual e a data exata da busca mais recente.')}
             </p>
 
             {helpOpen.sources && (
@@ -1489,7 +1565,7 @@ Relevância e Contribuição Esperada:
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Fontes de Informação (PRISMA-ScR Item 7)</strong>
+                    <strong>Estrutura de Fontes de Informação ({getFieldItemRef('info_sources')})</strong>
                   </div>
                   <button
                     type="button"
@@ -1546,7 +1622,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 8 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('search_descriptors', 8)}</span>
               <span className="item-section-tag">MÉTODOS / DESCRITORES</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1687,7 +1763,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
           </div>
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 9 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('selection_process', 9)}</span>
               <span className="item-section-tag">MÉTODOS / TRIAGEM</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1700,7 +1776,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                   fieldId="selection_process"
                   fieldLabel="Processo de Seleção de Estudos"
                   currentValue={manuscript.selection_process}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 9: Especifique os métodos de triagem em duas etapas (títulos/resumos e texto integral), duplo-cego independente, teste piloto prévio e resolução de conflitos."
+                  fieldGuidelines={getFieldGuideline('selection_process', 'Especifique os métodos de triagem em duas etapas (títulos/resumos e texto integral), duplo-cego independente, teste piloto prévio e resolução de conflitos.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('selection_process')}
@@ -1719,7 +1795,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 9: Descreva como foi realizada a triagem em duas etapas (1: Títulos e Resumos; 2: Texto Completo), o número de revisores independentes, exercícios prévios de calibração piloto e como foram resolvidas as divergências (consenso ou terceiro revisor).
+              {getFieldGuideline('selection_process', 'Descreva como foi realizada a triagem em duas etapas (1: Títulos e Resumos; 2: Texto Completo), o número de revisores independentes e resolução de divergências.')}
             </p>
 
             {helpOpen.selection && (
@@ -1727,7 +1803,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura do Processo de Seleção (PRISMA-ScR Item 9)</strong>
+                    <strong>Estrutura do Processo de Seleção ({getFieldItemRef('selection_process')})</strong>
                   </div>
                   <button
                     type="button"
@@ -1777,7 +1853,7 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 10 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('data_charting_process', 10)}</span>
               <span className="item-section-tag">MÉTODOS / EXTRAÇÃO</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1790,7 +1866,7 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
                   fieldId="data_charting_process"
                   fieldLabel="Processo de Extração de Dados"
                   currentValue={manuscript.data_charting_process}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 10: Descreva o formulário de extração de dados calibrado, o procedimento de extração em duplicata independente e a resolução de discordâncias."
+                  fieldGuidelines={getFieldGuideline('data_charting_process', 'Descreva o formulário de extração de dados calibrado, o procedimento de extração em duplicata independente e a resolução de discordâncias.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('data_charting_process')}
@@ -1809,7 +1885,7 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 10: Descreva os procedimentos de preenchimento do formulário de mapeamento (*data charting form*), se foi calibrado previamente e como os dados foram checados e confirmados.
+              {getFieldGuideline('data_charting_process', 'Descreva os procedimentos de preenchimento do formulário de mapeamento (data charting form), se foi calibrado previamente e como os dados foram checados e confirmados.')}
             </p>
 
             {helpOpen.charting && (
@@ -1817,7 +1893,7 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura do Processo de Data Charting (PRISMA-ScR Item 10)</strong>
+                    <strong>Estrutura do Processo de Data Charting ({getFieldItemRef('data_charting_process')})</strong>
                   </div>
                   <button
                     type="button"
@@ -1863,7 +1939,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 11 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('extraction_questions', 11)}</span>
               <span className="item-section-tag">MÉTODOS / VARIÁVEIS</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1897,7 +1973,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
               </div>
             </div>
             <p className="section-help">
-              Conforme PRISMA-ScR Item 11: Liste as perguntas estruturadas de extração que responderão aos objetivos e mapearão as variáveis de cada estudo na Triagem 2.
+              {getFieldGuideline('extraction_questions', 'Liste as perguntas estruturadas de extração que responderão aos objetivos e mapearão as variáveis de cada estudo na Triagem 2.')}
             </p>
 
             <div className="criteria-list">
@@ -1932,7 +2008,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag optional">Item 12 — Opcional</span>
+              <span className="item-tag optional">{getFieldItemTag('critical_appraisal', 12, false)}</span>
               <span className="item-section-tag">MÉTODOS / AVALIAÇÃO CRÍTICA</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -1945,7 +2021,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                   fieldId="critical_appraisal"
                   fieldLabel="Avaliação Crítica e Risco de Viés"
                   currentValue={manuscript.critical_appraisal}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 12: Em revisões de escopo, a avaliação de risco de viés é opcional. Descreva o instrumento ou justifique a dispensa metodológica formal."
+                  fieldGuidelines={getFieldGuideline('critical_appraisal', 'Em revisões de escopo, a avaliação de risco de viés é opcional. Descreva o instrumento ou justifique a dispensa metodológica formal.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('critical_appraisal')}
@@ -1964,7 +2040,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 12: Em revisões de escopo, a avaliação formal de risco de viés é <strong>opcional</strong>. Caso realizada, descreva o instrumento utilizado ou justifique sua dispensa.
+              {getFieldGuideline('critical_appraisal', 'Caso realizada avaliação formal de risco de viés, descreva o instrumento utilizado ou justifique sua dispensa.')}
             </p>
 
             {helpOpen.appraisal && (
@@ -1972,7 +2048,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Orientações sobre Avaliação Crítica (PRISMA-ScR Item 12)</strong>
+                    <strong>Orientações sobre Avaliação Crítica ({getFieldItemRef('critical_appraisal')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2010,7 +2086,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 14 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('synthesis_methods', 13)}</span>
               <span className="item-section-tag">MÉTODOS / SÍNTESE</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -2023,7 +2099,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                   fieldId="synthesis_methods"
                   fieldLabel="Métodos de Síntese e Mapeamento"
                   currentValue={manuscript.synthesis_methods}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 14: Descreva os métodos de agrupamento temático, mapas de evidências tabulares, gráficos de tendências e matriz de identificação de lacunas."
+                  fieldGuidelines={getFieldGuideline('synthesis_methods', 'Descreva os métodos de agrupamento temático, mapas de evidências tabulares, gráficos de tendências e matriz de identificação de lacunas.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('synthesis_methods')}
@@ -2042,7 +2118,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 14: Descreva como os dados serão estruturados (tabelas descritivas, gráficos de tendências temporais, mapas territoriais ou matrizes de lacunas de evidência).
+              {getFieldGuideline('synthesis_methods', 'Descreva como os dados serão estruturados (tabelas descritivas, gráficos de tendências temporais, mapas territoriais ou matrizes de lacunas de evidência).')}
             </p>
 
             {helpOpen.synthesis && (
@@ -2050,7 +2126,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Métodos de Síntese (PRISMA-ScR Item 14)</strong>
+                    <strong>Estrutura de Métodos de Síntese ({getFieldItemRef('synthesis_methods')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2103,7 +2179,7 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 27 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('funding', 17)}</span>
               <span className="item-section-tag">FINANCIAMENTO</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -2116,7 +2192,7 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
                   fieldId="funding"
                   fieldLabel="Financiamento e Declaração de Conflitos"
                   currentValue={manuscript.funding}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 27: Declare as agências de fomento, bolsas (CAPES, CNPq, FAPESP) e confirme a inexistência de conflitos de interesse."
+                  fieldGuidelines={getFieldGuideline('funding', 'Declare as agências de fomento, bolsas (CAPES, CNPq, FAPESP) e confirme a inexistência de conflitos de interesse.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('funding')}
@@ -2135,7 +2211,7 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 27: Declare as fontes de financiamento ou bolsas (ex: CAPES, CNPq, FAPESP, FAPEMIG) e confirme a inexistência de conflitos de interesse.
+              {getFieldGuideline('funding', 'Declare as fontes de financiamento ou bolsas e confirme a inexistência de conflitos de interesse.')}
             </p>
 
             {helpOpen.funding && (
@@ -2143,7 +2219,7 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Financiamento e Conflitos (PRISMA-ScR Item 27)</strong>
+                    <strong>Estrutura de Financiamento e Conflitos ({getFieldItemRef('funding')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2334,7 +2410,7 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
           </div>
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 24 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('summary_evidence', 14)}</span>
               <span className="item-section-tag">DISCUSSÃO / RESULTADOS</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -2347,7 +2423,7 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
                   fieldId="summary_evidence"
                   fieldLabel="Síntese Geral das Evidências"
                   currentValue={manuscript.summary_evidence}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 24: Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores."
+                  fieldGuidelines={getFieldGuideline('summary_evidence', 'Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('summary_evidence')}
@@ -2366,7 +2442,7 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 24: Resuma os principais conceitos identificados, os temas dominantes e a relevância prática dos achados para formuladores de políticas públicas e pesquisadores.
+              {getFieldGuideline('summary_evidence', 'Resuma os principais conceitos identificados, os temas dominantes e a relevância prática dos achados para formuladores de políticas públicas e pesquisadores.')}
             </p>
 
             {helpOpen.summaryEvidence && (
@@ -2374,7 +2450,7 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura da Síntese de Evidências (PRISMA-ScR Item 24)</strong>
+                    <strong>Estrutura da Síntese de Evidências ({getFieldItemRef('summary_evidence')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2424,20 +2500,20 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 25 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('limitations', 15)}</span>
               <span className="item-section-tag">DISCUSSÃO / LIMITAÇÕES</span>
             </div>
             <div className="card-section-title-with-actions">
               <div className="card-section-title">
                 <AlertTriangle size={20} className="icon-accent" />
-                <h2>Limitações da Revisão de Escopo (Limitations)</h2>
+                <h2>Limitações da Revisão (Limitations)</h2>
               </div>
               <div className="card-header-actions">
                 <AIAssistButton
                   fieldId="limitations"
                   fieldLabel="Limitações da Revisão"
                   currentValue={manuscript.limitations}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados)."
+                  fieldGuidelines={getFieldGuideline('limitations', 'Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados).')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('limitations')}
@@ -2456,7 +2532,7 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 25: Aponte as limitações inerentes ao processo da revisão (ex: restrições de idioma, bases indexadas, ausência de busca manual de literatura cinzenta não publicada).
+              {getFieldGuideline('limitations', 'Aponte as limitações inerentes ao processo da revisão (ex: restrições de idioma, bases indexadas, ausência de busca manual de literatura cinzenta não publicada).')}
             </p>
 
             {helpOpen.limitations && (
@@ -2464,7 +2540,7 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Limitações da Revisão (PRISMA-ScR Item 25)</strong>
+                    <strong>Estrutura de Limitações da Revisão ({getFieldItemRef('limitations')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2514,7 +2590,7 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 26 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('conclusions', 16)}</span>
               <span className="item-section-tag">CONCLUSÕES</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -2527,7 +2603,7 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
                   fieldId="conclusions"
                   fieldLabel="Conclusões e Lacunas de Conhecimento"
                   currentValue={manuscript.conclusions}
-                  fieldGuidelines="Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras."
+                  fieldGuidelines={getFieldGuideline('conclusions', 'Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('conclusions')}
@@ -2546,7 +2622,7 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 26: Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.
+              {getFieldGuideline('conclusions', 'Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.')}
             </p>
 
             {helpOpen.conclusions && (
@@ -2554,7 +2630,7 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Conclusões e Lacunas (PRISMA-ScR Item 26)</strong>
+                    <strong>Estrutura de Conclusões e Lacunas ({getFieldItemRef('conclusions')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2615,7 +2691,7 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
           </div>
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 2 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('structured_summary', 2)}</span>
               <span className="item-section-tag">RESUMO</span>
             </div>
             <div className="card-section-title-with-actions">
@@ -2647,7 +2723,7 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 2: Estruture o resumo com os tópicos recomendados (Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões).
+              {getFieldGuideline('structured_summary', 'Estruture o resumo com os tópicos recomendados (Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões).')}
             </p>
 
             {helpOpen.summary && (
@@ -2655,7 +2731,7 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Resumo (PRISMA-ScR Item 2)</strong>
+                    <strong>Estrutura Recomendada para o Resumo ({getFieldItemRef('structured_summary')})</strong>
                   </div>
                   <button
                     type="button"
@@ -2734,20 +2810,20 @@ Conclusões:
 
           <div className="protocol-card">
             <div className="item-header-meta">
-              <span className="item-tag essential">Item 1 — Essencial</span>
+              <span className="item-tag essential">{getFieldItemTag('manuscript_title', 1)}</span>
               <span className="item-section-tag">TÍTULO</span>
             </div>
             <div className="card-section-title-with-actions">
               <div className="card-section-title">
                 <Edit3 size={20} className="icon-accent" />
-                <h2>Título Oficial da Revisão de Escopo (Scoping Review)</h2>
+                <h2>Título Oficial da Revisão ({currentProtocolDef.shortLabel})</h2>
               </div>
               <div className="card-header-actions">
                 <AIAssistButton
                   fieldId="manuscript_title"
                   fieldLabel="Título Oficial da Revisão"
                   currentValue={manuscript.manuscript_title}
-                  fieldGuidelines="Identifique claramente o trabalho como uma Scoping Review / Revisão Sistemática e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional)."
+                  fieldGuidelines={getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional).')}
                   projectTitle={activeProject?.title}
                   methodology={activeProject?.methodology}
                   projectContext={getFullProtocolContext('manuscript_title')}
@@ -2765,7 +2841,7 @@ Conclusões:
               </div>
             </div>
             <p className="section-help">
-              Conforme PRISMA-ScR Item 1: Identifique claramente o trabalho como uma <strong>Scoping Review</strong> e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).
+              {getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).')}
             </p>
 
             {helpOpen.title && (
@@ -2773,7 +2849,7 @@ Conclusões:
                 <div className="guide-header">
                   <div className="guide-title">
                     <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Título (PRISMA-ScR Item 1)</strong>
+                    <strong>Estrutura Recomendada para o Título ({getFieldItemRef('manuscript_title')})</strong>
                   </div>
                   <button
                     type="button"

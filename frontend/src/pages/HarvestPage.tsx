@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
 import type {
@@ -271,6 +272,28 @@ export function HarvestPage(): JSX.Element {
       setIsDeduplicating(false)
     }
   }
+
+  // ── Sincronização de Ações com o Ribbon Bar ─────────────────────────
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
+
+  useEffect(() => {
+    registerRibbonActions({
+      startHarvest: handleStartHarvest,
+      stopHarvest: handleCancelHarvest,
+      isHarvesting,
+      openDedupModal: () => {
+        if (dedupReport) {
+          setIsDedupModalOpen(true)
+        } else {
+          handleDeduplicate()
+        }
+      },
+    })
+    return () => {
+      unregisterRibbonActions(['startHarvest', 'stopHarvest', 'isHarvesting', 'openDedupModal'])
+    }
+  }, [registerRibbonActions, unregisterRibbonActions, handleStartHarvest, handleCancelHarvest, isHarvesting, dedupReport, handleDeduplicate])
 
   const allDescriptors: string[] = []
   if (protocol?.search_descriptors) {

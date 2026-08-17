@@ -42,6 +42,169 @@ import {
 export type { ProtocolChecklistItem } from './protocolChecklists'
 
 /**
+ * Ligação entre os campos do Estúdio de Protocolo e os itens da diretriz.
+ *
+ * O Estúdio tem 17 campos redigíveis; cada diretriz numera os seus itens do seu
+ * próprio jeito, e nem toda diretriz tem item para todo campo — o PRISMA-P, por
+ * ser guia de protocolo, não trata de limitações nem de conclusões. Um campo
+ * sem item correspondente simplesmente não é mapeado, e a interface recorre ao
+ * texto genérico da diretriz.
+ *
+ * Cada item recebe no máximo um campo: quando dois campos do Estúdio caem sobre
+ * o mesmo item da diretriz, mapeia-se o mais específico e o outro usa o texto
+ * genérico. Preferimos o silêncio à citação de um item que não trata do assunto.
+ */
+type FieldMap = Record<string, string>
+
+function withFieldKeys(
+  items: ProtocolChecklistItem[],
+  map: FieldMap
+): ProtocolChecklistItem[] {
+  const fieldByItemId = new Map(
+    Object.entries(map).map(([fieldKey, itemId]) => [itemId, fieldKey])
+  )
+  return items.map((item) => {
+    const fieldKey = fieldByItemId.get(item.id)
+    return fieldKey ? { ...item, fieldKey } : item
+  })
+}
+
+/** PRISMA-ScR — a única diretriz que cobre os 17 campos do Estúdio. */
+const CAMPOS_PRISMA_SCR: FieldMap = {
+  manuscript_title: '1',
+  structured_summary: '2',
+  rationale: '3',
+  objective: '4',
+  protocol_registration: '5',
+  criteria: '6',
+  info_sources: '7',
+  search_descriptors: '8',
+  selection_process: '9',
+  data_charting_process: '10',
+  extraction_questions: '11',
+  critical_appraisal: '12',
+  synthesis_methods: '13',
+  summary_evidence: '19',
+  limitations: '20',
+  conclusions: '21',
+  funding: '22',
+}
+
+const CAMPOS_PRISMA_2020: FieldMap = {
+  manuscript_title: '1',
+  structured_summary: '2',
+  rationale: '3',
+  objective: '4',
+  criteria: '5',
+  info_sources: '6',
+  search_descriptors: '7',
+  selection_process: '8',
+  data_charting_process: '9',
+  extraction_questions: '10a',
+  critical_appraisal: '11',
+  synthesis_methods: '13d',
+  summary_evidence: '23a',
+  limitations: '23c',
+  conclusions: '23d',
+  protocol_registration: '24a',
+  funding: '25',
+}
+
+/** Diretriz de protocolo: sem itens de resultado, discussão ou conclusão. */
+const CAMPOS_PRISMA_P: FieldMap = {
+  manuscript_title: '1a',
+  protocol_registration: '2',
+  funding: '5a',
+  rationale: '6',
+  objective: '7',
+  criteria: '8',
+  info_sources: '9',
+  search_descriptors: '10',
+  selection_process: '11b',
+  data_charting_process: '11c',
+  extraction_questions: '12',
+  critical_appraisal: '14',
+  synthesis_methods: '15a',
+}
+
+const CAMPOS_ROSES: FieldMap = {
+  manuscript_title: '1',
+  structured_summary: '2',
+  rationale: '3',
+  objective: '5',
+  protocol_registration: '6',
+  search_descriptors: '7',
+  info_sources: '9',
+  selection_process: '13',
+  criteria: '14',
+  critical_appraisal: '15',
+  data_charting_process: '16',
+  synthesis_methods: '18',
+  summary_evidence: '20',
+  limitations: '24',
+  conclusions: '25',
+  funding: '27',
+}
+
+const CAMPOS_UMBRELLA: FieldMap = {
+  manuscript_title: '1',
+  structured_summary: '2',
+  rationale: '3',
+  objective: '4',
+  criteria: '5',
+  info_sources: '6',
+  search_descriptors: '7',
+  selection_process: '8',
+  data_charting_process: '9',
+  extraction_questions: '10',
+  critical_appraisal: '11',
+  synthesis_methods: '14',
+  summary_evidence: '23',
+  conclusions: '24',
+  protocol_registration: '25',
+  funding: '26',
+}
+
+/** Estrutura por fases: vários campos do Estúdio caem na mesma etapa. */
+const CAMPOS_EBSE: FieldMap = {
+  rationale: '1.1',
+  objective: '1.3',
+  protocol_registration: '1.4',
+  search_descriptors: '2.1',
+  selection_process: '2.2',
+  critical_appraisal: '2.3',
+  data_charting_process: '2.4',
+  synthesis_methods: '2.5',
+  structured_summary: '3.2',
+}
+
+/** Método de ordenação de portfólio: não cobre redação de manuscrito. */
+const CAMPOS_METHODI: FieldMap = {
+  objective: '1',
+  search_descriptors: '3',
+  info_sources: '4',
+  selection_process: '5',
+  critical_appraisal: '7',
+  data_charting_process: '9',
+}
+
+const CAMPOS_GENERICO: FieldMap = {
+  manuscript_title: '1',
+  objective: '2',
+  protocol_registration: '3',
+  criteria: '4',
+  search_descriptors: '5',
+  selection_process: '6',
+  data_charting_process: '7',
+  critical_appraisal: '8',
+  synthesis_methods: '9',
+  summary_evidence: '12',
+  conclusions: '13',
+  limitations: '14',
+  funding: '15',
+}
+
+/**
  * As seções de redação do Estúdio de Protocolo. Espelha `StudioTab`
  * (ProtocolPage.tsx) sem a aba 'checklist', que audita as demais em vez de ser
  * uma seção do manuscrito. Declarado aqui, e não importado de ProtocolPage,
@@ -97,7 +260,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Tricco AC, Lillie E, Zarin W, et al. Ann Intern Med. 2018;169(7):467-473',
     defaultFramework: 'PCC',
     checklistTitle: 'Auditoria de Conformidade PRISMA-ScR (22 itens)',
-    checklistItems: PRISMA_SCR_CHECKLIST,
+    checklistItems: withFieldKeys(PRISMA_SCR_CHECKLIST, CAMPOS_PRISMA_SCR),
     sectionItems: {
       ident_intro: '1, 5, 3',
       objectives: '4',
@@ -119,7 +282,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
     reference: 'Page MJ, McKenzie JE, Bossuyt PM, et al. BMJ. 2021;372:n71',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade PRISMA 2020 (27 itens)',
-    checklistItems: PRISMA_2020_CHECKLIST,
+    checklistItems: withFieldKeys(PRISMA_2020_CHECKLIST, CAMPOS_PRISMA_2020),
     sectionItems: {
       ident_intro: '1, 3, 24a-24b',
       objectives: '4',
@@ -141,7 +304,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
     reference: 'Moher D, Shamseer L, Clarke M, et al. Syst Rev. 2015;4:1',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade PRISMA-P (17 itens)',
-    checklistItems: PRISMA_P_CHECKLIST,
+    checklistItems: withFieldKeys(PRISMA_P_CHECKLIST, CAMPOS_PRISMA_P),
     sectionItems: {
       ident_intro: '1a-5c, 6',
       objectives: '7',
@@ -162,7 +325,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Higgins JPT, Thomas J, Chandler J, et al. (eds). Cochrane Handbook for Systematic Reviews of Interventions, v6.5, 2024 · MECIR — Methodological Expectations of Cochrane Intervention Reviews · relato conforme PRISMA 2020 (BMJ. 2021;372:n71)',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade Cochrane — relato PRISMA 2020 (27 itens)',
-    checklistItems: PRISMA_2020_CHECKLIST,
+    checklistItems: withFieldKeys(PRISMA_2020_CHECKLIST, CAMPOS_PRISMA_2020),
     sectionItems: {
       ident_intro: '1, 3, 24a-24b',
       objectives: '4',
@@ -185,7 +348,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Aromataris E, Lockwood C, Porritt K, Pilla B, Jordan Z (eds). JBI Manual for Evidence Synthesis. JBI, 2024 · relato de escopo conforme PRISMA-ScR (Ann Intern Med. 2018;169(7):467-473)',
     defaultFramework: 'PCC',
     checklistTitle: 'Auditoria de Conformidade JBI — relato PRISMA-ScR (22 itens)',
-    checklistItems: PRISMA_SCR_CHECKLIST,
+    checklistItems: withFieldKeys(PRISMA_SCR_CHECKLIST, CAMPOS_PRISMA_SCR),
     sectionItems: {
       ident_intro: '1, 5, 3',
       objectives: '4',
@@ -208,7 +371,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Campbell Collaboration. MECCIR — Methodological Expectations of Campbell Collaboration Intervention Reviews · Campbell Systematic Reviews policies · relato conforme PRISMA 2020 (BMJ. 2021;372:n71)',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade Campbell — relato PRISMA 2020 (27 itens)',
-    checklistItems: PRISMA_2020_CHECKLIST,
+    checklistItems: withFieldKeys(PRISMA_2020_CHECKLIST, CAMPOS_PRISMA_2020),
     sectionItems: {
       ident_intro: '1, 3, 24a-24b',
       objectives: '4',
@@ -231,7 +394,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Haddaway NR, Macura B, Whaley P, Pullin AS. Environ Evid. 2018;7:7 · CEE Guidelines and Standards for Evidence Synthesis in Environmental Management, v5.1',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade ROSES (27 itens por domínio)',
-    checklistItems: ROSES_CHECKLIST,
+    checklistItems: withFieldKeys(ROSES_CHECKLIST, CAMPOS_ROSES),
     sectionItems: {
       ident_intro: '1, 3, 4, 6',
       objectives: '5',
@@ -254,7 +417,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Kitchenham B, Charters S. Guidelines for performing Systematic Literature Reviews in Software Engineering. EBSE Technical Report EBSE-2007-01. Keele University & University of Durham, 2007',
     defaultFramework: 'PICOS',
     checklistTitle: 'Auditoria de Conformidade EBSE (13 passos em 3 fases)',
-    checklistItems: EBSE_CHECKLIST,
+    checklistItems: withFieldKeys(EBSE_CHECKLIST, CAMPOS_EBSE),
   },
 
   'Umbrella Review': {
@@ -269,7 +432,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Gates M, Gates A, Pieper D, et al. PRIOR statement. BMJ. 2022;378:e070849 · JBI Manual for Evidence Synthesis, cap. Umbrella Reviews',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade PRIOR (27 itens por domínio)',
-    checklistItems: UMBRELLA_CHECKLIST,
+    checklistItems: withFieldKeys(UMBRELLA_CHECKLIST, CAMPOS_UMBRELLA),
     sectionItems: {
       ident_intro: '1, 3, 25',
       objectives: '4',
@@ -292,7 +455,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Pagani RN, Kovaleski JL, Resende LM. Scientometrics. 2015;105(3):2109-2135',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Conformidade Methodi Ordinatio (9 fases)',
-    checklistItems: METHODI_ORDINATIO_CHECKLIST,
+    checklistItems: withFieldKeys(METHODI_ORDINATIO_CHECKLIST, CAMPOS_METHODI),
   },
 
   Other: {
@@ -307,7 +470,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
       'Núcleo comum às diretrizes de síntese de evidência. Declare no manuscrito qual diretriz foi efetivamente seguida.',
     defaultFramework: 'PICO',
     checklistTitle: 'Auditoria de Requisitos Metodológicos Essenciais (15 itens)',
-    checklistItems: GENERIC_CHECKLIST,
+    checklistItems: withFieldKeys(GENERIC_CHECKLIST, CAMPOS_GENERICO),
   },
 }
 

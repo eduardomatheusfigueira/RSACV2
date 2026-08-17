@@ -45,6 +45,7 @@ import {
   X,
   ArrowRight,
   Play,
+  StopCircle,
   Upload,
   BarChart3,
   ListChecks,
@@ -59,6 +60,9 @@ import {
   FolderArchive,
 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
+import { PROTOCOL_CATALOG } from '@/data/protocolCatalog'
+import type { Methodology } from '@/types/api'
 import { RsacMark } from '@/components/brand/RsacMark'
 import { BetaBadge } from '@/components/brand/BetaBadge'
 import './TopRibbonBar.css'
@@ -93,6 +97,7 @@ export function TopRibbonBar(): JSX.Element {
     backendStatus,
     backendVersion,
   } = useSettingsStore()
+  const { actions } = useRibbonStore()
 
   const [ribbonCollapsed, setRibbonCollapsed] = useState(false)
 
@@ -115,46 +120,25 @@ export function TopRibbonBar(): JSX.Element {
       return pathname === '/settings' || pathname.startsWith('/settings/')
     }
     if (tab.requiresProject) {
-      if (tab.id === 'protocol') return pathname.includes('/protocol')
-      if (tab.id === 'harvest') return pathname.includes('/harvest')
-      if (tab.id === 'screening') return pathname.includes('/screening')
-      if (tab.id === 'extraction') return pathname.includes('/extraction')
-      if (tab.id === 'export') return pathname.includes('/export')
+      return pathname.includes(`/${tab.id}`)
     }
-    return false
+    return pathname.startsWith(tab.path)
   }
 
-  const handleTabClick = (tab: RibbonTab) => {
-    if (tab.requiresProject && !activeProject) {
+  const navToProjectPage = (section: string) => {
+    if (activeProject) {
+      navigate(`/projects/${activeProject.id}/${section}`)
+    } else {
       navigate('/projects')
-      return
     }
-    navigate(resolvePath(tab))
-  }
-
-  const navToProjectPage = (page: string) => {
-    if (!activeProject) return
-    navigate(`/projects/${activeProject.id}/${page}`)
   }
 
   const currentTab = RIBBON_TABS.find((tab) => isTabActive(tab)) || RIBBON_TABS[0]
 
-  // Helper: trigger a click on a DOM element by selector
-  const clickDom = (selector: string) => {
-    const el = document.querySelector(selector) as HTMLElement
-    if (el) el.click()
-  }
-
-  const clickDomByText = (selector: string, text: string) => {
-    const els = Array.from(document.querySelectorAll(selector)) as HTMLElement[]
-    const el = els.find((e) => e.textContent?.includes(text))
-    if (el) el.click()
-  }
-
-  const clickDomByIndex = (selector: string, index: number) => {
-    const els = Array.from(document.querySelectorAll(selector)) as HTMLElement[]
-    if (els[index]) els[index].click()
-  }
+  const activeProtocol =
+    PROTOCOL_CATALOG[activeProject?.methodology as Methodology] ||
+    PROTOCOL_CATALOG['PRISMA-ScR']
+  const checklistCount = activeProtocol?.checklistItems?.length || 22
 
   return (
     <header className="ribbon-container">
@@ -177,12 +161,12 @@ export function TopRibbonBar(): JSX.Element {
           {activeProject ? (
             <div className="active-project-pill" onClick={() => navigate('/projects')} title="Trocar projeto ativo">
               <FolderDot size={13} className="icon-project" />
-              <span className="project-label">Projeto:</span>
+              <span className="project-label">PROJETO:</span>
               <strong className="project-title">{activeProject.title}</strong>
               <span className="project-methodology-tag">{activeProject.methodology}</span>
             </div>
           ) : (
-            <button className="btn-select-project-alert" onClick={() => navigate('/projects')}>
+            <button type="button" className="btn-select-project-alert" onClick={() => navigate('/projects')}>
               <FolderOpen size={13} />
               <span>Selecionar ou Criar Projeto</span>
             </button>
@@ -190,39 +174,59 @@ export function TopRibbonBar(): JSX.Element {
         </div>
 
         <div className="ribbon-quick-actions">
+          {/* Master AI Mode Pill */}
           <button
             type="button"
             className={`ribbon-action-pill ${aiEnabled ? 'ai-active' : 'ai-manual'}`}
             onClick={() => setAiEnabled(!aiEnabled)}
-            title={aiEnabled ? 'Assistência Ativa — Clique para Modo Manual' : 'Modo Manual — Clique para ativar Assistência'}
+            title={aiEnabled ? 'Assistência Ativa — clique para modo manual' : 'Modo 100% Manual — clique para ativar assistência'}
           >
-            {aiEnabled ? <Sparkles size={12} /> : <Edit3 size={12} />}
+            {aiEnabled ? <Sparkles size={12} className="icon-sparkle" /> : <Edit3 size={12} />}
             <span>{aiEnabled ? 'Assistência' : 'Manual'}</span>
           </button>
 
-          <button type="button" className={`ribbon-icon-btn collapse-btn ${ribbonCollapsed ? 'active' : ''}`}
+          {/* Collapse Ribbon */}
+          <button
+            type="button"
+            className={`ribbon-icon-btn collapse-btn ${ribbonCollapsed ? 'active' : ''}`}
             onClick={() => setRibbonCollapsed(!ribbonCollapsed)}
-            title={ribbonCollapsed ? 'Expandir Ribbon' : 'Recolher Ribbon'}>
+            title={ribbonCollapsed ? 'Expandir barra de ferramentas' : 'Recolher barra de ferramentas'}
+          >
             {ribbonCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
           </button>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          LAYER 2: TAB BAR
-          The 8 navigation tabs — each one is a phase of the review process
+          LAYER 2: WORKFLOW NAVIGATION TABS
+          The pipeline ribbon tabs (Project → Protocol → Harvest → Screen → Extract → Export)
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="ribbon-tabs-bar">
-        <nav className="ribbon-tabs-nav">
+        <nav className="ribbon-tabs-nav" aria-label="Navegação da Revisão Sistemática">
           {RIBBON_TABS.map((tab) => {
             const active = isTabActive(tab)
             const disabled = tab.requiresProject && !activeProject
+
             return (
               <button
                 key={tab.id}
                 type="button"
                 className={`ribbon-tab-btn ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
-                onClick={() => handleTabClick(tab)}
+                disabled={disabled}
+                onClick={() => {
+                  if (tab.requiresProject && !activeProject) {
+                    navigate('/projects')
+                    return
+                  }
+                  navigate(resolvePath(tab))
+                }}
+                title={
+                  disabled
+                    ? 'Selecione ou crie um projeto primeiro'
+                    : tab.stepNumber
+                    ? `Etapa ${tab.stepNumber}: ${tab.label}`
+                    : tab.label
+                }
               >
                 {tab.stepNumber && <span className="tab-step-num">{tab.stepNumber}</span>}
                 <span className="ribbon-tab-icon">{tab.icon}</span>
@@ -250,7 +254,17 @@ export function TopRibbonBar(): JSX.Element {
               {/* Group: Novo */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-large" onClick={() => clickDom('.btn-create-project, .dashboard-cta')}>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => {
+                      if (actions.createProject) {
+                        actions.createProject()
+                      } else {
+                        navigate('/projects')
+                      }
+                    }}
+                  >
                     <Plus size={20} className="icon-accent" />
                     <span>Novo<br />Projeto</span>
                   </button>
@@ -313,32 +327,57 @@ export function TopRibbonBar(): JSX.Element {
 
           {/* ──────────────────────────────────────────────────────────────
               TAB: INÍCIO (Dashboard)
-              Purpose: Overview of the project, quick navigation to stages
+              Purpose: High-level overview, quick resume, pipeline status
           ────────────────────────────────────────────────────────────── */}
           {currentTab.id === 'dashboard' && (
             <>
               {/* Group: Ir Para (Etapas) */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
-                    onClick={() => navToProjectPage('protocol')} disabled={!activeProject}>
-                    <BookOpen size={16} /><span>Protocolo</span>
+                  <button
+                    type="button"
+                    className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
+                    onClick={() => navToProjectPage('protocol')}
+                    disabled={!activeProject}
+                  >
+                    <BookOpen size={16} />
+                    <span>Protocolo</span>
                   </button>
-                  <button type="button" className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
-                    onClick={() => navToProjectPage('harvest')} disabled={!activeProject}>
-                    <Download size={16} /><span>Coleta</span>
+                  <button
+                    type="button"
+                    className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
+                    onClick={() => navToProjectPage('harvest')}
+                    disabled={!activeProject}
+                  >
+                    <Download size={16} />
+                    <span>Coleta</span>
                   </button>
-                  <button type="button" className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
-                    onClick={() => navToProjectPage('screening')} disabled={!activeProject}>
-                    <CheckSquare size={16} /><span>Triagem</span>
+                  <button
+                    type="button"
+                    className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
+                    onClick={() => navToProjectPage('screening')}
+                    disabled={!activeProject}
+                  >
+                    <CheckSquare size={16} />
+                    <span>Triagem</span>
                   </button>
-                  <button type="button" className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
-                    onClick={() => navToProjectPage('extraction')} disabled={!activeProject}>
-                    <FileText size={16} /><span>Extração</span>
+                  <button
+                    type="button"
+                    className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
+                    onClick={() => navToProjectPage('extraction')}
+                    disabled={!activeProject}
+                  >
+                    <FileText size={16} />
+                    <span>Extração</span>
                   </button>
-                  <button type="button" className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
-                    onClick={() => navToProjectPage('export')} disabled={!activeProject}>
-                    <FileDown size={16} /><span>Exportar</span>
+                  <button
+                    type="button"
+                    className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
+                    onClick={() => navToProjectPage('export')}
+                    disabled={!activeProject}
+                  >
+                    <FileDown size={16} />
+                    <span>Exportar</span>
                   </button>
                 </div>
                 <span className="ribbon-group-title">Ir para Etapa</span>
@@ -368,27 +407,39 @@ export function TopRibbonBar(): JSX.Element {
           )}
 
           {/* ──────────────────────────────────────────────────────────────
-              TAB: 1. PROTOCOLO
-              Purpose: Write the entire manuscript/protocol.
+              TAB: 1. PROTOCOLO (Estúdio de Redação & Manuscrito)
+              Purpose: Formulate research question, eligibility, descriptors.
               Primary actions: Save, Copy manuscript, AI suggestion.
-              Secondary: Navigate between the 6 sub-sections.
-              Context: Descriptor rules reminder.
+              Secondary: Navigate between the sub-sections.
           ────────────────────────────────────────────────────────────── */}
           {currentTab.id === 'protocol' && (
             <>
               {/* Group: Manuscrito */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Salvar Tudo')}>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => actions.saveProtocol?.()}
+                    disabled={actions.isProtocolSaving}
+                  >
                     <Save size={20} className="icon-accent" />
                     <span>Salvar<br />Tudo</span>
                   </button>
-                  <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Copiar Manuscrito')}>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => actions.copyManuscript?.()}
+                  >
                     <Copy size={20} />
                     <span>Copiar<br />Artigo</span>
                   </button>
                   {aiEnabled && (
-                    <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Sugerir com Assistência')}>
+                    <button
+                      type="button"
+                      className="tool-btn-large"
+                      onClick={() => actions.openAiSuggest?.()}
+                    >
                       <Sparkles size={20} className="icon-sparkle" />
                       <span>Sugerir<br />com Assistência</span>
                     </button>
@@ -399,26 +450,50 @@ export function TopRibbonBar(): JSX.Element {
 
               <div className="ribbon-divider" />
 
-              {/* Group: Seções (PRISMA-ScR sub-tabs) */}
+              {/* Group: Seções */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools ribbon-group-tools-wrap">
-                  <button type="button" className="tool-btn-compact" onClick={() => clickDomByIndex('.studio-tab', 0)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact ${actions.activeStudioTabIndex === 0 ? 'active' : ''}`}
+                    onClick={() => actions.setStudioTab?.(0)}
+                  >
                     <Edit3 size={12} /> Título & Resumo
                   </button>
-                  <button type="button" className="tool-btn-compact" onClick={() => clickDomByIndex('.studio-tab', 1)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact ${actions.activeStudioTabIndex === 1 ? 'active' : ''}`}
+                    onClick={() => actions.setStudioTab?.(1)}
+                  >
                     <BookOpen size={12} /> Justificativa & PCC
                   </button>
-                  <button type="button" className="tool-btn-compact" onClick={() => clickDomByIndex('.studio-tab', 2)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact ${actions.activeStudioTabIndex === 2 ? 'active' : ''}`}
+                    onClick={() => actions.setStudioTab?.(2)}
+                  >
                     <Search size={12} /> Fontes & Descritores
                   </button>
-                  <button type="button" className="tool-btn-compact" onClick={() => clickDomByIndex('.studio-tab', 3)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact ${actions.activeStudioTabIndex === 3 ? 'active' : ''}`}
+                    onClick={() => actions.setStudioTab?.(3)}
+                  >
                     <Filter size={12} /> Seleção & Síntese
                   </button>
-                  <button type="button" className="tool-btn-compact" onClick={() => clickDomByIndex('.studio-tab', 4)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact ${actions.activeStudioTabIndex === 4 ? 'active' : ''}`}
+                    onClick={() => actions.setStudioTab?.(4)}
+                  >
                     <BookMarked size={12} /> Discussão & Conclusões
                   </button>
-                  <button type="button" className="tool-btn-compact tool-btn-highlight" onClick={() => clickDomByIndex('.studio-tab', 5)}>
-                    <ListChecks size={12} /> Checklist (22 Itens)
+                  <button
+                    type="button"
+                    className={`tool-btn-compact tool-btn-highlight ${actions.activeStudioTabIndex === 5 ? 'active' : ''}`}
+                    onClick={() => actions.setStudioTab?.(5)}
+                  >
+                    <ListChecks size={12} /> Checklist ({checklistCount} Itens)
                   </button>
                 </div>
                 <span className="ribbon-group-title">Seções do Protocolo</span>
@@ -432,33 +507,52 @@ export function TopRibbonBar(): JSX.Element {
                   <div className="ribbon-next-step">
                     <HelpCircle size={14} className="icon-accent" />
                     <div className="next-step-text">
-                      <strong>Descritores VuFind:</strong>
-                      <span>Máx. 2 termos com AND por par · Sugestão: ~5 pares por idioma</span>
+                      <strong>Regra de Descritores:</strong>
+                      <span>Máx. 2 termos por expressão (pares com AND) · Até 5 pares por idioma</span>
                     </div>
                     <button type="button" className="tool-btn-next" onClick={() => navToProjectPage('harvest')}>
                       Próximo: Coleta <ArrowRight size={12} />
                     </button>
                   </div>
                 </div>
-                <span className="ribbon-group-title">Regras & Fluxo</span>
+                <span className="ribbon-group-title">Diretriz & Próximo Passo</span>
               </div>
             </>
           )}
 
           {/* ──────────────────────────────────────────────────────────────
-              TAB: 2. COLETA
-              Purpose: Execute federated search, import files, deduplicate.
-              Primary: Start harvest (the one action you came here for).
-              Context: Which bases are connected, descriptor preview.
+              TAB: 2. COLETA (Busca Federada)
+              Purpose: Execute searches across academic databases.
+              Primary: Start Harvest, Deduplicate.
           ────────────────────────────────────────────────────────────── */}
           {currentTab.id === 'harvest' && (
             <>
               {/* Group: Execução */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-large" onClick={() => clickDom('.btn-primary')}>
-                    <Play size={20} className="icon-accent" />
-                    <span>Iniciar<br />Coleta</span>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => {
+                      if (actions.isHarvesting) {
+                        actions.stopHarvest?.()
+                      } else {
+                        actions.startHarvest?.()
+                      }
+                    }}
+                  >
+                    {actions.isHarvesting ? (
+                      <StopCircle size={20} className="icon-destructive" />
+                    ) : (
+                      <Play size={20} className="icon-accent" />
+                    )}
+                    <span>
+                      {actions.isHarvesting ? (
+                        <>Parar<br />Coleta</>
+                      ) : (
+                        <>Iniciar<br />Coleta</>
+                      )}
+                    </span>
                   </button>
                 </div>
                 <span className="ribbon-group-title">Busca Federada</span>
@@ -466,26 +560,26 @@ export function TopRibbonBar(): JSX.Element {
 
               <div className="ribbon-divider" />
 
-              {/* Group: Importar & Desduplicar */}
+              {/* Group: Limpeza & Deduplicação */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDom('.btn-import-ris')}>
-                    <Upload size={15} />
-                    <span>Importar RIS</span>
-                  </button>
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDom('.btn-dedup')}>
+                  <button
+                    type="button"
+                    className="tool-btn-vertical"
+                    onClick={() => actions.openDedupModal?.()}
+                  >
                     <Layers size={15} />
-                    <span>Desduplicar</span>
+                    <span>Deduplicação</span>
                   </button>
                 </div>
-                <span className="ribbon-group-title">Importação & Limpeza</span>
+                <span className="ribbon-group-title">Tratamento do Acervo</span>
               </div>
 
               <div className="ribbon-divider" />
 
               {/* Group: Bases Acadêmicas Conectadas */}
               <div className="ribbon-group">
-                <div className="ribbon-group-tools">
+                <div className="ribbon-db-grid">
                   <span className="db-badge bdtd">BDTD</span>
                   <span className="db-badge scielo">SciELO</span>
                   <span className="db-badge scopus">Scopus</span>
@@ -520,23 +614,37 @@ export function TopRibbonBar(): JSX.Element {
               TAB: 3. TRIAGEM (Fase 1)
               Purpose: Decide Include/Exclude/Pending for each paper.
               Primary: The 3 decision buttons (the core of this tab).
-              Secondary: Filters by status, AI batch, add manual paper.
-              Context: Zero hallucination rule.
+              Secondary: Filters by status, AI batch.
           ────────────────────────────────────────────────────────────── */}
           {currentTab.id === 'screening' && (
             <>
-              {/* Group: Decisão (the 3 actions that are THE point of this tab) */}
+              {/* Group: Decisão */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-decision included" onClick={() => clickDomByText('button', 'Incluir')}>
+                  <button
+                    type="button"
+                    className="tool-btn-decision included"
+                    onClick={() => actions.decisionInclude?.()}
+                    disabled={!actions.canScreenSingle}
+                  >
                     <Check size={18} />
                     <span>Incluir</span>
                   </button>
-                  <button type="button" className="tool-btn-decision excluded" onClick={() => clickDomByText('button', 'Excluir')}>
+                  <button
+                    type="button"
+                    className="tool-btn-decision excluded"
+                    onClick={() => actions.decisionExclude?.()}
+                    disabled={!actions.canScreenSingle}
+                  >
                     <X size={18} />
                     <span>Excluir</span>
                   </button>
-                  <button type="button" className="tool-btn-decision pending" onClick={() => clickDomByText('button', 'Pendente')}>
+                  <button
+                    type="button"
+                    className="tool-btn-decision pending"
+                    onClick={() => actions.decisionPending?.()}
+                    disabled={!actions.canScreenSingle}
+                  >
                     <Clock size={18} />
                     <span>Pendente</span>
                   </button>
@@ -551,13 +659,22 @@ export function TopRibbonBar(): JSX.Element {
                 <>
                   <div className="ribbon-group">
                     <div className="ribbon-group-tools">
-                      <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Triar')}>
+                      <button
+                        type="button"
+                        className="tool-btn-vertical"
+                        onClick={() => actions.screenAiSingle?.()}
+                        disabled={!actions.canScreenSingle}
+                      >
                         <Sparkles size={15} className="icon-sparkle" />
-                        <span>Triar com Assistência</span>
+                        <span>Triar Estudo</span>
                       </button>
-                      <button type="button" className="tool-btn-vertical" onClick={() => clickDom('.btn-secondary')}>
+                      <button
+                        type="button"
+                        className="tool-btn-vertical"
+                        onClick={() => actions.screenAiBatch?.()}
+                      >
                         <Zap size={15} />
-                        <span>Lote com Assistência</span>
+                        <span>Triar Lote</span>
                       </button>
                     </div>
                     <span className="ribbon-group-title">Assistência</span>
@@ -569,33 +686,36 @@ export function TopRibbonBar(): JSX.Element {
               {/* Group: Filtros de Status */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools ribbon-group-tools-wrap">
-                  <button type="button" className="tool-btn-compact" onClick={() => clickDomByIndex('.counter-btn', 0)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact ${actions.activeDecisionFilter === '' ? 'active' : ''}`}
+                    onClick={() => actions.setDecisionFilter?.('')}
+                  >
                     Todos
                   </button>
-                  <button type="button" className="tool-btn-compact tool-btn-pending" onClick={() => clickDomByIndex('.counter-btn', 1)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact tool-btn-pending ${actions.activeDecisionFilter === 'Pendente' ? 'active' : ''}`}
+                    onClick={() => actions.setDecisionFilter?.('Pendente')}
+                  >
                     <Clock size={11} /> Pendentes
                   </button>
-                  <button type="button" className="tool-btn-compact tool-btn-included" onClick={() => clickDomByIndex('.counter-btn', 2)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact tool-btn-included ${actions.activeDecisionFilter === 'Incluído' ? 'active' : ''}`}
+                    onClick={() => actions.setDecisionFilter?.('Incluído')}
+                  >
                     <Check size={11} /> Incluídos
                   </button>
-                  <button type="button" className="tool-btn-compact tool-btn-excluded" onClick={() => clickDomByIndex('.counter-btn', 3)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-compact tool-btn-excluded ${actions.activeDecisionFilter === 'Excluído' ? 'active' : ''}`}
+                    onClick={() => actions.setDecisionFilter?.('Excluído')}
+                  >
                     <X size={11} /> Excluídos
                   </button>
                 </div>
                 <span className="ribbon-group-title">Filtrar por Decisão</span>
-              </div>
-
-              <div className="ribbon-divider" />
-
-              {/* Group: Acervo */}
-              <div className="ribbon-group">
-                <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDom('.btn-primary')}>
-                    <Plus size={15} />
-                    <span>Adicionar Artigo</span>
-                  </button>
-                </div>
-                <span className="ribbon-group-title">Acervo Manual</span>
               </div>
 
               <div className="ribbon-divider" />
@@ -606,15 +726,15 @@ export function TopRibbonBar(): JSX.Element {
                   <div className="ribbon-next-step">
                     <ShieldCheck size={14} className="icon-accent" />
                     <div className="next-step-text">
-                      <strong>Regra de Ouro:</strong>
-                      <span>Na dúvida, marque como Pendente para leitura integral do texto completo</span>
+                      <strong>Após triar todos os estudos:</strong>
+                      <span>Os estudos com decisão "Incluído" avançam para a Extração de Dados (Fase 2)</span>
                     </div>
                     <button type="button" className="tool-btn-next" onClick={() => navToProjectPage('extraction')}>
                       Próximo: Extração <ArrowRight size={12} />
                     </button>
                   </div>
                 </div>
-                <span className="ribbon-group-title">Diretrizes & Fluxo</span>
+                <span className="ribbon-group-title">Avanço Metodológico</span>
               </div>
             </>
           )}
@@ -623,19 +743,27 @@ export function TopRibbonBar(): JSX.Element {
               TAB: 4. EXTRAÇÃO (Fase 2 / Data Charting)
               Purpose: Fill the extraction questionnaire for included papers.
               Primary: Save answers, AI extraction.
-              Context: How many papers extracted vs remaining.
           ────────────────────────────────────────────────────────────── */}
           {currentTab.id === 'extraction' && (
             <>
               {/* Group: Data Charting */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Salvar')}>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => actions.saveExtraction?.()}
+                    disabled={actions.isExtractionSaving}
+                  >
                     <Save size={20} className="icon-accent" />
                     <span>Salvar<br />Respostas</span>
                   </button>
                   {aiEnabled && (
-                    <button type="button" className="tool-btn-large" onClick={() => clickDomByText('button', 'Extrair com Assistência')}>
+                    <button
+                      type="button"
+                      className="tool-btn-large"
+                      onClick={() => actions.extractAiGlobal?.()}
+                    >
                       <Sparkles size={20} className="icon-sparkle" />
                       <span>Extrair<br />com Assistência</span>
                     </button>
@@ -649,11 +777,20 @@ export function TopRibbonBar(): JSX.Element {
               {/* Group: Navegação de Artigos */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Baixar PDF')}>
+                  <button
+                    type="button"
+                    className="tool-btn-vertical"
+                    onClick={() => actions.downloadPdf?.()}
+                  >
                     <Download size={15} />
                     <span>Baixar PDF</span>
                   </button>
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'DOI')}>
+                  <button
+                    type="button"
+                    className="tool-btn-vertical"
+                    onClick={() => actions.openDoiLink?.()}
+                    disabled={!actions.hasDoi}
+                  >
                     <Globe size={15} />
                     <span>Abrir DOI</span>
                   </button>
@@ -692,11 +829,19 @@ export function TopRibbonBar(): JSX.Element {
               {/* Group: Relatórios de Dados */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-large" onClick={() => clickDom('.export-card:first-child')}>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => actions.exportExcel?.()}
+                  >
                     <FileSpreadsheet size={20} className="icon-accent" />
                     <span>Planilha<br />Excel</span>
                   </button>
-                  <button type="button" className="tool-btn-large" onClick={() => clickDom('.export-card:last-child')}>
+                  <button
+                    type="button"
+                    className="tool-btn-large"
+                    onClick={() => actions.exportBibtex?.()}
+                  >
                     <BookMarked size={20} />
                     <span>BibTeX<br />Citações</span>
                   </button>
@@ -743,7 +888,7 @@ export function TopRibbonBar(): JSX.Element {
                     <CheckSquare size={14} className="icon-accent" />
                     <div className="next-step-text">
                       <strong>Etapa Final:</strong>
-                      <span>Verifique o checklist PRISMA-ScR (22 itens) no Protocolo antes de submeter</span>
+                      <span>Verifique o checklist {activeProtocol.shortLabel} ({checklistCount} itens) no Protocolo antes de submeter</span>
                     </div>
                     <button type="button" className="tool-btn-next" onClick={() => navToProjectPage('protocol')}>
                       Voltar ao Protocolo <ArrowRight size={12} />
@@ -764,13 +909,19 @@ export function TopRibbonBar(): JSX.Element {
               {/* Group: Modo de Operação */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className={`tool-btn-large ${aiEnabled ? 'tool-active' : ''}`}
-                    onClick={() => setAiEnabled(true)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-large ${aiEnabled ? 'tool-active' : ''}`}
+                    onClick={() => setAiEnabled(true)}
+                  >
                     <Sparkles size={20} className={aiEnabled ? 'icon-sparkle' : ''} />
                     <span>Modo<br />Assistido</span>
                   </button>
-                  <button type="button" className={`tool-btn-large ${!aiEnabled ? 'tool-active' : ''}`}
-                    onClick={() => setAiEnabled(false)}>
+                  <button
+                    type="button"
+                    className={`tool-btn-large ${!aiEnabled ? 'tool-active' : ''}`}
+                    onClick={() => setAiEnabled(false)}
+                  >
                     <Edit3 size={20} />
                     <span>Modo<br />Manual</span>
                   </button>
@@ -782,12 +933,10 @@ export function TopRibbonBar(): JSX.Element {
 
               {/* Group: Provedores de Assistência */}
               <div className="ribbon-group">
-                <div className="ribbon-group-tools">
-                  <div className="ribbon-provider-stack">
-                    <span className="db-badge google"><Cpu size={10} /> Google Gemini</span>
-                    <span className="db-badge qwen"><Server size={10} /> Alibaba Qwen</span>
-                    <span className="db-badge local"><Database size={10} /> Ollama Local</span>
-                  </div>
+                <div className="ribbon-provider-stack">
+                  <span className="db-badge google"><Cpu size={10} /> Google Gemini</span>
+                  <span className="db-badge qwen"><Server size={10} /> Alibaba Qwen</span>
+                  <span className="db-badge local"><Database size={10} /> Ollama Local</span>
                 </div>
                 <span className="ribbon-group-title">Provedores Disponíveis</span>
               </div>
@@ -797,11 +946,21 @@ export function TopRibbonBar(): JSX.Element {
               {/* Group: Ações de Teste */}
               <div className="ribbon-group">
                 <div className="ribbon-group-tools">
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Testar')}>
+                  <button
+                    type="button"
+                    className="tool-btn-vertical"
+                    onClick={() => actions.testConnection?.()}
+                    disabled={actions.isTestingSettings}
+                  >
                     <Zap size={15} />
                     <span>Testar Conexão</span>
                   </button>
-                  <button type="button" className="tool-btn-vertical" onClick={() => clickDomByText('button', 'Salvar')}>
+                  <button
+                    type="button"
+                    className="tool-btn-vertical"
+                    onClick={() => actions.saveSettings?.()}
+                    disabled={actions.isSavingSettings}
+                  >
                     <Save size={15} />
                     <span>Salvar Config</span>
                   </button>
@@ -830,6 +989,7 @@ export function TopRibbonBar(): JSX.Element {
               </div>
             </>
           )}
+
         </div>
       )}
     </header>

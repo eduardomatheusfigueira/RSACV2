@@ -49,6 +49,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import type { DeduplicationReport, Paper, Decision, Protocol } from '@/types/api'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
@@ -451,6 +452,52 @@ export function ScreeningPage(): React.JSX.Element {
       setIsBatchRunning(false)
     }
   }
+
+  // ── Sincronização de Ações com o Ribbon Bar ─────────────────────────
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
+
+  useEffect(() => {
+    registerRibbonActions({
+      decisionInclude: () => {
+        if (selectedPaper) handleDecision(selectedPaper.id, 'Incluído')
+      },
+      decisionExclude: () => {
+        if (selectedPaper) handleDecision(selectedPaper.id, 'Excluído')
+      },
+      decisionPending: () => {
+        if (selectedPaper) handleDecision(selectedPaper.id, 'Pendente')
+      },
+      screenAiSingle: handleSingleAIScreening,
+      screenAiBatch: handleStartBatchAI,
+      setDecisionFilter: (filter: string) => {
+        setDecisionFilter(filter)
+        setPage(1)
+      },
+      activeDecisionFilter: decisionFilter,
+      canScreenSingle: !!selectedPaper,
+    })
+    return () => {
+      unregisterRibbonActions([
+        'decisionInclude',
+        'decisionExclude',
+        'decisionPending',
+        'screenAiSingle',
+        'screenAiBatch',
+        'setDecisionFilter',
+        'activeDecisionFilter',
+        'canScreenSingle',
+      ])
+    }
+  }, [
+    registerRibbonActions,
+    unregisterRibbonActions,
+    selectedPaper,
+    handleDecision,
+    handleSingleAIScreening,
+    handleStartBatchAI,
+    decisionFilter,
+  ])
 
   const inclusionCriteria = useMemo(() => {
     return (protocol?.criteria || []).filter((c) => !c.is_exclusion)

@@ -275,25 +275,34 @@
   display: flex;
   align-items: stretch;
   gap: 6px;
-  padding: 5px var(--space-3);
+  padding: 4px var(--space-3);
   background: var(--color-bg-secondary);
   border-bottom: 1px solid var(--color-border);
   overflow-x: auto;
-  min-height: 68px;
+  overflow-y: hidden;
+  height: 80px;
+  min-height: 80px;
+  max-height: 80px;
+  box-sizing: border-box;
 }
 
 .ribbon-group {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 4px 8px 2px;
+  height: 100%;
+  padding: 3px 6px 2px;
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-neo-raised);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
-.ribbon-group-flex { flex: 1; }
+.ribbon-group-flex {
+  flex: 1;
+}
 
 /* Group title — BOTTOM of group (Office pattern) */
 .ribbon-group-title {
@@ -306,26 +315,40 @@
   text-align: center;
   border-top: 1px solid var(--color-border);
   padding-top: 2px;
-  margin-top: 3px;
+  margin-top: 2px;
+  line-height: 1;
 }
 
 .ribbon-group-tools {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: 1;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  box-sizing: border-box;
 }
 
 .ribbon-group-tools-wrap {
-  flex-wrap: wrap;
-  gap: 3px;
+  display: grid;
+  grid-template-rows: 23px 23px;
+  grid-auto-flow: column;
+  gap: 2px 4px;
+  align-content: center;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  box-sizing: border-box;
 }
 
 .ribbon-divider {
   width: 1px;
+  height: calc(100% - 8px);
+  align-self: center;
   background: var(--color-border);
-  margin: 4px 0;
+  margin: 0 2px;
   opacity: 0.5;
+  flex-shrink: 0;
 }
 
 /* ── LARGE PRIMARY BUTTONS (vertical with icon on top) ───────────── */
@@ -335,8 +358,11 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 54px;
-  padding: 4px 8px;
+  width: 58px;
+  min-width: 58px;
+  max-width: 58px;
+  height: 48px;
+  padding: 2px 4px;
   font-size: 0.5625rem;
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
@@ -346,17 +372,18 @@
   cursor: pointer;
   box-shadow: var(--shadow-neo-raised);
   transition: all var(--transition-fast);
-  line-height: 1.15;
+  line-height: 1.12;
   text-align: center;
+  box-sizing: border-box;
 }
 
-.tool-btn-large:hover {
+.tool-btn-large:hover:not(:disabled) {
   color: var(--color-text-primary);
   background: var(--color-bg-secondary);
   border-color: var(--color-accent);
 }
 
-.tool-btn-large:active {
+.tool-btn-large:active:not(:disabled) {
   transform: translateY(1px);
   box-shadow: var(--shadow-neo-pressed);
 }
@@ -368,6 +395,12 @@
   box-shadow: var(--shadow-neo-pressed);
 }
 
+.tool-btn-large:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* ── MEDIUM VERTICAL BUTTONS ─────────────────────────────────────── */
 .tool-btn-vertical {
   display: flex;
@@ -376,7 +409,8 @@
   justify-content: center;
   gap: 2px;
   min-width: 52px;
-  padding: 3px 6px;
+  height: 48px;
+  padding: 2px 6px;
   font-size: 0.5625rem;
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
@@ -386,6 +420,9 @@
   cursor: pointer;
   box-shadow: var(--shadow-neo-raised);
   transition: all var(--transition-fast);
+  line-height: 1.12;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .tool-btn-vertical:hover:not(:disabled) {
@@ -409,8 +446,9 @@
 .tool-btn-compact {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 7px;
+  gap: 4px;
+  height: 23px;
+  padding: 0 7px;
   font-size: 0.5625rem;
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
@@ -421,6 +459,8 @@
   box-shadow: var(--shadow-neo-raised);
   transition: all var(--transition-fast);
   white-space: nowrap;
+  box-sizing: border-box;
+  line-height: 1;
 }
 
 .tool-btn-compact:hover {
@@ -439,6 +479,13 @@
   color: var(--copperwood);
 }
 
+.tool-btn-compact.active {
+  background: var(--copperwood);
+  color: #fff;
+  border-color: var(--copperwood);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
 /* ── DECISION BUTTONS (colored for Include/Exclude/Pending) ──────── */
 .tool-btn-decision {
   display: flex;
@@ -447,17 +494,20 @@
   justify-content: center;
   gap: 2px;
   min-width: 52px;
-  padding: 4px 8px;
-  font-size: 0.625rem;
+  height: 48px;
+  padding: 2px 6px;
+  font-size: 0.5625rem;
   font-weight: var(--weight-bold);
   border-radius: var(--radius-xs);
   cursor: pointer;
   box-shadow: var(--shadow-neo-raised);
   transition: all var(--transition-fast);
   border: 1px solid;
+  line-height: 1.12;
+  box-sizing: border-box;
 }
 
-.tool-btn-decision:active {
+.tool-btn-decision:active:not(:disabled) {
   transform: translateY(1px);
   box-shadow: var(--shadow-neo-pressed);
 }
@@ -468,7 +518,7 @@
   border-color: var(--color-included);
 }
 
-.tool-btn-decision.included:hover {
+.tool-btn-decision.included:hover:not(:disabled) {
   background: var(--color-included);
   color: #fff;
 }
@@ -479,7 +529,7 @@
   border-color: var(--color-excluded);
 }
 
-.tool-btn-decision.excluded:hover {
+.tool-btn-decision.excluded:hover:not(:disabled) {
   background: var(--color-excluded);
   color: #fff;
 }
@@ -490,9 +540,15 @@
   border-color: var(--color-pending);
 }
 
-.tool-btn-decision.pending:hover {
+.tool-btn-decision.pending:hover:not(:disabled) {
   background: var(--color-pending);
   color: #fff;
+}
+
+.tool-btn-decision:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Compact filter buttons with subtle color hints */
@@ -505,7 +561,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 2px 6px;
+  padding: 0 6px;
+  height: 48px;
+  box-sizing: border-box;
   flex: 1;
 }
 
@@ -520,19 +578,21 @@
   font-size: 0.5625rem;
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
+  line-height: 1.15;
 }
 
 .ribbon-next-step .next-step-text span {
   font-size: 0.5625rem;
   color: var(--color-text-secondary);
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .tool-btn-next {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  height: 26px;
+  padding: 0 10px;
   font-size: 0.5625rem;
   font-weight: var(--weight-bold);
   color: #fff;
@@ -544,6 +604,7 @@
   transition: all var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .tool-btn-next:hover { filter: brightness(1.12); }
@@ -555,8 +616,11 @@
 .ribbon-info-box {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 1px;
-  padding: 1px 6px;
+  padding: 0 6px;
+  height: 48px;
+  box-sizing: border-box;
 }
 
 .info-label {
@@ -565,6 +629,7 @@
   color: var(--color-text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  line-height: 1;
 }
 
 .info-value {
@@ -572,6 +637,7 @@
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .status-dot-inline {
@@ -587,15 +653,27 @@
 .status-dot-inline.offline { background: var(--color-error); }
 
 /* ── DATABASE BADGES ─────────────────────────────────────────────── */
+.ribbon-db-grid {
+  display: grid;
+  grid-template-rows: 23px 23px;
+  grid-auto-flow: column;
+  gap: 2px 4px;
+  align-content: center;
+  height: 48px;
+  box-sizing: border-box;
+}
+
 .db-badge {
   font-size: 0.5625rem;
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
-  padding: 2px 6px;
+  padding: 0 6px;
+  height: 23px;
   border-radius: 3px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  box-sizing: border-box;
 }
 
 .db-badge.bdtd    { background: var(--olive-leaf);  color: #fff; }
@@ -609,8 +687,10 @@
 
 .ribbon-provider-stack {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
+  height: 48px;
+  box-sizing: border-box;
 }
 
 /* ── ICON ACCENT CLASSES ─────────────────────────────────────────── */

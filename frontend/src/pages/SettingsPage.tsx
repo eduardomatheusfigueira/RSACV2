@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useRibbonStore } from '@/stores/useRibbonStore'
 import { RsacLockup } from '@/components/brand/RsacLockup'
 import './SettingsPage.css'
 
@@ -519,6 +520,34 @@ export function SettingsPage(): JSX.Element {
       setTesting(false)
     }
   }
+
+  // ── Sincronização de Ações com o Ribbon Bar ─────────────────────────
+  const registerRibbonActions = useRibbonStore((s) => s.registerActions)
+  const unregisterRibbonActions = useRibbonStore((s) => s.unregisterActions)
+
+  useEffect(() => {
+    registerRibbonActions({
+      testConnection: handleTestConnection,
+      saveSettings: () => handleSave(),
+      isTestingSettings: testing,
+      isSavingSettings: saving,
+    })
+    return () => {
+      unregisterRibbonActions([
+        'testConnection',
+        'saveSettings',
+        'isTestingSettings',
+        'isSavingSettings',
+      ])
+    }
+  }, [
+    registerRibbonActions,
+    unregisterRibbonActions,
+    handleTestConnection,
+    handleSave,
+    testing,
+    saving,
+  ])
 
   // ── Helper para Download de Arquivos JSON ───────────────────────────
   const downloadJsonFile = (filename: string, data: any) => {

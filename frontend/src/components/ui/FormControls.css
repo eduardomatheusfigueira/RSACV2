@@ -1,0 +1,174 @@
+/**
+ * RSAC V2 — Form Controls Styles
+ * High Density Inputs, Textareas and Selects
+ */
+
+/* ── Form Group & Labels ───────────────────────────────────────────── */
+.rsac-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  margin-bottom: var(--space-3, 12px);
+}
+
+.rsac-form-label {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+  font-weight: var(--weight-semibold, 600);
+  color: var(--color-text-primary, #283618);
+  display: flex;
+  align-items: center;
+  gap: var(--space-0-5, 2px);
+}
+
+.rsac-form-required {
+  color: var(--color-error, #a83434);
+  font-weight: var(--weight-bold, 700);
+}
+
+.rsac-form-helper {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-3xs, 0.5625rem); /* 9px */
+  color: var(--color-text-tertiary, #879573);
+}
+
+.rsac-form-error {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-3xs, 0.5625rem); /* 9px */
+  color: var(--color-error, #a83434);
+  font-weight: var(--weight-medium, 500);
+}
+
+/* ── Base Input Styles ─────────────────────────────────────────────── */
+.rsac-input,
+.rsac-textarea,
+.rsac-select {
+  width: 100%;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary, #283618);
+  background: var(--color-bg-secondary, #ffffff);
+  border: 1px solid var(--color-border, #d0c8b3);
+  border-radius: var(--radius-sm, 4px);
+  box-shadow: inset 0 1px 2px rgba(40, 54, 24, 0.05);
+  box-sizing: border-box;
+  transition: all var(--transition-fast, 80ms);
+  outline: none;
+}
+
+.rsac-input:focus,
+.rsac-textarea:focus,
+.rsac-select:focus {
+  border-color: var(--color-border-focus, #bc6c25);
+  box-shadow: 0 0 0 2px rgba(188, 108, 37, 0.18);
+}
+
+.rsac-input--error,
+.rsac-textarea--error,
+.rsac-select--error {
+  border-color: var(--color-error, #a83434) !important;
+  box-shadow: 0 0 0 2px rgba(168, 52, 52, 0.18) !important;
+}
+
+/* ── Input Sizes ───────────────────────────────────────────────────── */
+.rsac-input--sm {
+  height: 26px;
+  padding: 0 var(--space-2, 8px);
+  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+}
+
+.rsac-input--md {
+  height: 32px;
+  padding: 0 var(--space-2-5, 10px);
+  font-size: var(--font-size-sm, 0.75rem); /* 12px */
+}
+
+.rsac-input--lg {
+  height: 38px;
+  padding: 0 var(--space-3, 12px);
+  font-size: var(--font-size-md, 0.8125rem); /* 13px */
+}
+
+/* ── Input with Icons ──────────────────────────────────────────────── */
+.rsac-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rsac-input-icon {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary, #879573);
+  pointer-events: none;
+}
+
+.rsac-input-icon--left {
+  left: var(--space-2-5, 10px);
+}
+
+.rsac-input-icon--right {
+  right: var(--space-2-5, 10px);
+}
+
+.rsac-input--has-left-icon {
+  padding-left: var(--space-8, 32px);
+}
+
+.rsac-input--has-right-icon {
+  padding-right: var(--space-8, 32px);
+}
+
+/* ── Textarea ──────────────────────────────────────────────────────── */
+.rsac-textarea {
+  min-height: 72px;
+  padding: var(--space-2, 8px) var(--space-2-5, 10px);
+  font-size: var(--font-size-sm, 0.75rem); /* 12px */
+  line-height: var(--leading-normal, 1.5);
+  resize: vertical;
+}
+
+/* ── Select ────────────────────────────────────────────────────────── */
+.rsac-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.rsac-select {
+  appearance: none;
+  padding-right: var(--space-6, 24px);
+  cursor: pointer;
+}
+
+.rsac-select--sm {
+  height: 26px;
+  padding-left: var(--space-2, 8px);
+  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+}
+
+.rsac-select--md {
+  height: 32px;
+  padding-left: var(--space-2-5, 10px);
+  font-size: var(--font-size-sm, 0.75rem); /* 12px */
+}
+
+.rsac-select--lg {
+  height: 38px;
+  padding-left: var(--space-3, 12px);
+  font-size: var(--font-size-md, 0.8125rem); /* 13px */
+}
+
+.rsac-select-arrow {
+  position: absolute;
+  right: var(--space-2-5, 10px);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--color-text-secondary, #566442);
+  pointer-events: none;
+}

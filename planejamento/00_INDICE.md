@@ -1,7 +1,8 @@
 # 📋 RSAC V2 — Índice do Planejamento
 
-> **Revisão Sistemática Assistida por Computador — Versão 2.0**
-> Arquitetura Python + Electron | Agosto 2026
+> **Revisão Sistemática Assistida por Computador — Versão 2.0**  
+> **Arquitetura Python + Electron | Agosto 2026**  
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–26` Vigente (Design System & Governança)
 
 ---
 
@@ -72,14 +73,14 @@ anteriores — diagnóstico → especificação → execução → validação.
 ## Referência Bibliográfica Base
 
 - **Adam D. Scott** — *JavaScript Everywhere: Building Cross-Platform Applications with GraphQL, React, React Native, and Electron* (O'Reilly Media, 2020)
-  - Modelo arquitetural: **GraphQL API (Backend) → React (Frontend) → Electron (Desktop)**
-  - Adaptação para RSAC V2: **FastAPI (Python Backend) → React (Frontend) → Electron (Desktop Shell)**
+  - Modelo arquitetural: **FastAPI (Python Backend) → React (Frontend) → Electron (Desktop Shell)**
 
 ---
 
-## Convenções
+## Convenções de Status
 
-- 🟢 = Decisão confirmada
+- 🟢 = Documento normativo vigente
+- 🏛️ = Documento de referência histórica
 - 🟡 = Em discussão / aguardando validação
 - 🔴 = Bloqueante / risco identificado
 - 📖 = Referência ao livro *JavaScript Everywhere*
