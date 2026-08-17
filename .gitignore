@@ -12,7 +12,11 @@ lerna-debug.log*
 *.sqlite
 *.sqlite3
 backend/data/
-data/
+# Ancorado na raiz de propósito. Sem a barra inicial, `data/` casava também com
+# `frontend/src/data/` — que é CÓDIGO-FONTE (o catálogo de diretrizes
+# metodológicas), não persistência. Foi o que fez o catálogo ser ignorado em
+# silêncio e nunca entrar no repositório, quebrando o build num clone limpo.
+/data/
 *.parquet
 
 # ── Python ──────────────────────────────────────────────────────────

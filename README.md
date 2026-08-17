@@ -28,14 +28,19 @@ A plataforma cobre integralmente o ciclo de vida da pesquisa secundária conform
 ## ✨ Principais Funcionalidades
 
 ### 1. 🗂️ Gestão de Projetos & Diretrizes Metodológicas
-- Suporte a múltiplos protocolos metodológicos pré-configurados:
-  - **PRISMA 2020**: Revisão Sistemática com/sem Meta-análise
-  - **PRISMA-ScR (Tricco et al., 2018)**: Revisões de Escopo (*Scoping Reviews*)
-  - **JBI (Joanna Briggs Institute)**: Revisões com foco em Metassíntese / Evidências Mistas
+- **11 diretrizes metodológicas pré-configuradas**, cada uma com sua matriz de auditoria de conformidade:
+  - **PRISMA-ScR (Tricco et al., 2018)**: Revisões de Escopo (*Scoping Reviews*) — 22 itens
+  - **PRISMA 2020 (Page et al., 2021)**: Revisão Sistemática com/sem Meta-análise — 27 itens
+  - **PRISMA-P (Moher et al., 2015)**: Protocolo e registro prospectivo — 17 itens
+  - **JBI (Joanna Briggs Institute)**: Metassíntese qualitativa e evidências mistas
   - **Cochrane Handbook & MECIR**: Padrão ouro em síntese de intervenções
-  - **ROSES**: Revisões sistemáticas e mapas em gestão ambiental e sustentabilidade
-  - **Campbell Collaboration**: Políticas sociais, educação, economia e desenvolvimento
-  - **CEE (Collaboration for Environmental Evidence)**: Evidências socioambientais
+  - **Campbell Collaboration (MECCIR)**: Políticas sociais, educação, economia e desenvolvimento
+  - **CEE / ROSES**: Evidências socioambientais e gestão de recursos naturais
+  - **EBSE (Kitchenham & Charters, 2007)**: Engenharia de software baseada em evidência
+  - **Revisão Guarda-Chuva (PRIOR)**: Síntese de revisões, com controle de sobreposição
+  - **Methodi Ordinatio (Pagani et al., 2015)**: Portfólio bibliográfico ordenado por InOrdinatio
+  - **Outra / Personalizada**: Núcleo comum às diretrizes de síntese de evidência
+- O catálogo declara a proveniência de cada lista: numeração oficial reproduzida onde a diretriz publica uma, e organização por domínios (com a citação da fonte) onde o documento é um formulário por seções — ver [`frontend/src/data/protocolChecklists.ts`](frontend/src/data/protocolChecklists.ts).
 - Estruturação completa em frameworks de questão: **PICO**, **PCC**, **PICOS**, **SPICE** e **SPIDER**.
 - Estratégia de descritores de busca estruturada em pares compatível com o motor **VuFind da BDTD**.
 

@@ -53,6 +53,7 @@ import {
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
+import type { ProtocolSectionKey } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
 import type {
   Criterion,
@@ -135,7 +136,10 @@ export function ProtocolPage(): JSX.Element {
   const [showEvidenceMatrix, setShowEvidenceMatrix] = useState(false)
 
   // Checklist Checkbox State
-  const [checkedScRItems, setCheckedScRItems] = useState<Record<number, boolean>>({})
+  // Chaveado pelo código oficial do item da diretriz ativa — que nem sempre é
+  // um inteiro: o PRISMA 2020 numera subitens como "10a"/"13b" e o EBSE usa
+  // "1.1". Estado apenas de sessão; a auditoria não é persistida no backend.
+  const [checkedScRItems, setCheckedScRItems] = useState<Record<string, boolean>>({})
 
   // Section Help Drawers/Popups Toggle State
   const [helpOpen, setHelpOpen] = useState<Record<string, boolean>>({})
@@ -321,7 +325,7 @@ export function ProtocolPage(): JSX.Element {
     }))
   }
 
-  const toggleScRItem = (itemId: number) => {
+  const toggleScRItem = (itemId: string) => {
     setCheckedScRItems((prev) => ({
       ...prev,
       [itemId]: !prev[itemId],
@@ -629,6 +633,15 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
     )
   }
 
+  // Quais itens da diretriz ATIVA cada seção do estúdio cobre. As seções têm
+  // formato PRISMA, então nem toda diretriz mapeia — as que não mapeiam ficam
+  // sem etiqueta, em vez de exibir a numeração de outra diretriz.
+  const sectionItems = currentProtocolDef.sectionItems ?? {}
+  const sectionItemsTitle = (key: ProtocolSectionKey, label: string): string => {
+    const items = sectionItems[key]
+    return items ? `${label} (Itens ${items} · ${currentProtocolDef.shortLabel})` : label
+  }
+
   const aPrioriChecklistItems = currentProtocolDef.checklistItems.filter(
     (item) => item.phase === 'a_priori' || !item.phase
   )
@@ -731,41 +744,41 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 type="button"
                 className={`studio-tab ${activeStudioTab === 'ident_intro' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('ident_intro')}
-                title="1. Identificação, Registro & Justificativa (Itens 1, 5, 3)"
+                title={sectionItemsTitle('ident_intro', '1. Identificação, Registro & Justificativa')}
               >
                 <Edit3 size={13} className="tab-icon" />
                 <span className="tab-label">1. Identificação & Justificativa</span>
-                <span className="tab-pill">1, 5, 3</span>
+                {sectionItems.ident_intro && <span className="tab-pill">{sectionItems.ident_intro}</span>}
               </button>
               <button
                 type="button"
                 className={`studio-tab ${activeStudioTab === 'objectives' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('objectives')}
-                title={`2. Questão & Objetivos (${frameworkType}) (Item 4)`}
+                title={sectionItemsTitle('objectives', `2. Questão & Objetivos (${frameworkType})`)}
               >
                 <BookOpen size={13} className="tab-icon" />
                 <span className="tab-label">2. Questão & Objetivos ({frameworkType})</span>
-                <span className="tab-pill">4</span>
+                {sectionItems.objectives && <span className="tab-pill">{sectionItems.objectives}</span>}
               </button>
               <button
                 type="button"
                 className={`studio-tab ${activeStudioTab === 'search_eligibility' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('search_eligibility')}
-                title="3. Fontes, Descritores & Elegibilidade (Itens 6, 7, 8)"
+                title={sectionItemsTitle('search_eligibility', '3. Fontes, Descritores & Elegibilidade')}
               >
                 <Search size={13} className="tab-icon" />
                 <span className="tab-label">3. Fontes & Elegibilidade</span>
-                <span className="tab-pill">6-8</span>
+                {sectionItems.search_eligibility && <span className="tab-pill">{sectionItems.search_eligibility}</span>}
               </button>
               <button
                 type="button"
                 className={`studio-tab ${activeStudioTab === 'methods_extraction' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('methods_extraction')}
-                title="4. Seleção, Data Charting & Métodos de Síntese (Itens 9-13, 17)"
+                title={sectionItemsTitle('methods_extraction', '4. Seleção, Data Charting & Métodos de Síntese')}
               >
                 <Filter size={13} className="tab-icon" />
                 <span className="tab-label">4. Métodos & Extração</span>
-                <span className="tab-pill">9-13, 17</span>
+                {sectionItems.methods_extraction && <span className="tab-pill">{sectionItems.methods_extraction}</span>}
               </button>
             </div>
           </div>
@@ -780,21 +793,21 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 type="button"
                 className={`studio-tab ${activeStudioTab === 'synthesis_discussion' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('synthesis_discussion')}
-                title="5. Síntese dos Achados, Limitações & Conclusões (Itens 14-16)"
+                title={sectionItemsTitle('synthesis_discussion', '5. Síntese dos Achados, Limitações & Conclusões')}
               >
                 <Bookmark size={13} className="tab-icon" />
                 <span className="tab-label">5. Síntese dos Achados & Discussão</span>
-                <span className="tab-pill">14-16</span>
+                {sectionItems.synthesis_discussion && <span className="tab-pill">{sectionItems.synthesis_discussion}</span>}
               </button>
               <button
                 type="button"
                 className={`studio-tab ${activeStudioTab === 'final_summary' ? 'active' : ''}`}
                 onClick={() => setActiveStudioTab('final_summary')}
-                title="6. Resumo Estruturado Final do Artigo Concluído (Item 2)"
+                title={sectionItemsTitle('final_summary', '6. Resumo Estruturado Final do Artigo Concluído')}
               >
                 <FileText size={13} className="tab-icon" />
                 <span className="tab-label">6. Resumo Estruturado Final</span>
-                <span className="tab-pill">2</span>
+                {sectionItems.final_summary && <span className="tab-pill">{sectionItems.final_summary}</span>}
               </button>
               <button
                 type="button"
