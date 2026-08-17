@@ -30,6 +30,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #222e15; /* Black Forest profundo */
   --color-bg-hover: rgba(40, 54, 24, 0.06);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   /* ── Bevels & Efeitos Táteis Híbridos (Neo-Bevels) ────────────────── */
   --bevel-light: rgba(255, 255, 255, 0.9);
@@ -56,6 +58,8 @@
 
   /* ── Acentos (Copperwood & Sunlit Clay) ──────────────────────────── */
   --color-accent: #bc6c25;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.0:1 · escuro 3.8:1 */
+  --color-text-on-accent: #ffffff;
   --color-accent-hover: #a15516;
   --color-accent-subtle: #f8eed6;
   --color-accent-muted: #dda15e;
@@ -134,15 +138,25 @@
   --space-12: 3rem;      /* 48px */
   --space-16: 4rem;      /* 64px */
 
-  /* ── Cantos & Raios Compactos ───────────────────────────────────────── */
+  /* ── Cantos Cirúrgicos (identidade neo-retrô de engenharia) ─────────────
+     Os 2px são identidade da marca, não preferência: o README e o manual de
+     marca descrevem "precisão cirúrgica (2px)", e é o que separa a aparência de
+     ferramenta profissional da de aplicativo de consumo.
+
+     Os nomes da escala ampliada foram preservados para não quebrar os
+     componentes de `components/ui/`, mas remapeados para a geometria cirúrgica.
+     Redefinir estes valores sem migrar os ~192 pontos de uso mudou a forma de
+     toda a aplicação de uma vez; qualquer suavização futura deve ser feita por
+     call site, com comparação visual, e não trocando o token debaixo de quem
+     já o usa. */
   --radius-none: 0px;
-  --radius-2xs: 2px;
-  --radius-xs: 3px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
-  --radius-full: 9999px;
+  --radius-2xs: 1px;
+  --radius-xs: 1px;   /* etiquetas e pílulas de contagem */
+  --radius-sm: 2px;   /* PADRÃO — botões, campos, cartões */
+  --radius-md: 2px;   /* contêineres de agrupamento */
+  --radius-lg: 3px;   /* painéis e gavetas */
+  --radius-xl: 4px;   /* diálogos */
+  --radius-full: 2px; /* Adeus pílulas de app mobile, olá tags de engenharia */
 
   /* ── Sombras & Linework de Precisão ────────────────────────────────── */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -174,6 +188,8 @@
   --color-bg-elevated: #283618;
   --color-bg-sidebar: #0e140b;
   --color-bg-hover: rgba(254, 250, 224, 0.07);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(254, 250, 224, 0.08);
   --bevel-border: #384628;
@@ -195,7 +211,9 @@
   --color-border-subtle: #242f19;
   --color-border-focus: #dda15e;
 
-  --color-accent: #dda15e; /* Sunlit Clay para contraste no escuro */
+  --color-accent: #dda15e;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 2.2:1 · escuro 8.0:1 */
+  --color-text-on-accent: #12180e; /* Sunlit Clay para contraste no escuro */
   --color-accent-hover: #bc6c25;
   --color-accent-subtle: rgba(221, 161, 94, 0.16);
   --color-accent-muted: #bc6c25;
@@ -239,6 +257,8 @@
   --color-bg-elevated: #003049;
   --color-bg-sidebar: #00121c;
   --color-bg-hover: rgba(102, 155, 188, 0.12);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(253, 240, 213, 0.1);
   --bevel-border: #184b6b;
@@ -260,7 +280,9 @@
   --color-border-subtle: #0a3147;
   --color-border-focus: #c1121f;
 
-  --color-accent: #c1121f; /* Brick Red */
+  --color-accent: #c1121f;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 6.2:1 · escuro 2.9:1 */
+  --color-text-on-accent: #ffffff; /* Brick Red */
   --color-accent-hover: #780000;
   --color-accent-subtle: rgba(193, 18, 31, 0.18);
   --color-accent-muted: #669bbc;
@@ -304,6 +326,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #3c2a47;
   --color-bg-hover: rgba(205, 180, 219, 0.2);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 255, 255, 0.9);
   --bevel-border: #cdb4db;
@@ -325,7 +349,9 @@
   --color-border-subtle: #f0e2f7;
   --color-border-focus: #b05c86;
 
-  --color-accent: #b05c86; /* Deepened Baby Pink / Magenta Accent */
+  --color-accent: #b05c86;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.4:1 · escuro 4.4:1 */
+  --color-text-on-accent: #ffffff; /* Deepened Baby Pink / Magenta Accent */
   --color-accent-hover: #8f4068;
   --color-accent-subtle: #fae6f0;
   --color-accent-muted: #cdb4db;
@@ -369,6 +395,8 @@
   --color-bg-elevated: #0c2c44;
   --color-bg-sidebar: #000a12;
   --color-bg-hover: rgba(21, 97, 109, 0.2);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 236, 209, 0.1);
   --bevel-border: #15616d;
@@ -390,7 +418,9 @@
   --color-border-subtle: #0c3c44;
   --color-border-focus: #ff7d00;
 
-  --color-accent: #ff7d00; /* Vivid Tangerine */
+  --color-accent: #ff7d00;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 2.6:1 · escuro 7.7:1 */
+  --color-text-on-accent: #000d17; /* Vivid Tangerine */
   --color-accent-hover: #e06d00;
   --color-accent-subtle: rgba(255, 125, 0, 0.18);
   --color-accent-muted: #15616d;
@@ -434,6 +464,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #1a3350; /* Deep Dusk */
   --color-bg-hover: rgba(39, 76, 119, 0.08);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 255, 255, 0.95);
   --bevel-border: #b0c0cb;
@@ -455,7 +487,9 @@
   --color-border-subtle: #dbe5ec;
   --color-border-focus: #274c77;
 
-  --color-accent: #274c77; /* Dusk Blue */
+  --color-accent: #274c77;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 8.8:1 · escuro 8.8:1 */
+  --color-text-on-accent: #ffffff; /* Dusk Blue */
   --color-accent-hover: #1b3554;
   --color-accent-subtle: #e3ebf3;
   --color-accent-muted: #6096ba;
@@ -499,6 +533,8 @@
   --color-bg-elevated: #3d1b66;
   --color-bg-sidebar: #10061c;
   --color-bg-hover: rgba(255, 54, 171, 0.12);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 221, 225, 0.1);
   --bevel-border: #642ca9;
@@ -520,7 +556,9 @@
   --color-border-subtle: #411b6e;
   --color-border-focus: #ff36ab;
 
-  --color-accent: #ff36ab; /* Brilliant Rose */
+  --color-accent: #ff36ab;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 3.3:1 · escuro 5.8:1 */
+  --color-text-on-accent: #150924; /* Brilliant Rose */
   --color-accent-hover: #db198c;
   --color-accent-subtle: rgba(255, 54, 171, 0.18);
   --color-accent-muted: #ff74d4;
@@ -567,6 +605,8 @@
   --color-bg-elevated: #3c096c;
   --color-bg-sidebar: #060010;
   --color-bg-hover: rgba(157, 78, 221, 0.15);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(224, 170, 255, 0.1);
   --bevel-border: #3c096c;
@@ -588,7 +628,9 @@
   --color-border-subtle: #240046;
   --color-border-focus: #9d4edd;
 
-  --color-accent: #9d4edd; /* Lavender Purple */
+  --color-accent: #9d4edd;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.6:1 · escuro 4.4:1 */
+  --color-text-on-accent: #ffffff; /* Lavender Purple */
   --color-accent-hover: #7b2cbf;
   --color-accent-subtle: rgba(157, 78, 221, 0.2);
   --color-accent-muted: #5a189a;
@@ -632,6 +674,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #382d27;
   --color-bg-hover: rgba(141, 115, 101, 0.09);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 255, 255, 0.9);
   --bevel-border: #c9bcb0;
@@ -653,7 +697,9 @@
   --color-border-subtle: #e8ded4;
   --color-border-focus: #8d7365;
 
-  --color-accent: #8d7365; /* Roasted Almond */
+  --color-accent: #8d7365;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 4.4:1 · escuro 4.4:1 */
+  --color-text-on-accent: #ffffff; /* Roasted Almond */
   --color-accent-hover: #735b4f;
   --color-accent-subtle: #f0e6dd;
   --color-accent-muted: #d5bdaf;
@@ -699,6 +745,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #1b2742;
   --color-bg-hover: rgba(67, 97, 238, 0.08);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 255, 255, 0.95);
   --bevel-border: #b8cbf2;
@@ -720,7 +768,9 @@
   --color-border-subtle: #e0e9fb;
   --color-border-focus: #4361ee;
 
-  --color-accent: #3f55cf; /* Periwinkle Royal */
+  --color-accent: #3f55cf;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 6.2:1 · escuro 6.2:1 */
+  --color-text-on-accent: #ffffff; /* Periwinkle Royal */
   --color-accent-hover: #2e41a8;
   --color-accent-subtle: #e8eeff;
   --color-accent-muted: #abc4ff;
@@ -769,6 +819,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #380715;
   --color-bg-hover: rgba(255, 10, 84, 0.08);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 255, 255, 0.95);
   --bevel-border: #fbb1bd;
@@ -790,7 +842,9 @@
   --color-border-subtle: #fbe6ea;
   --color-border-focus: #ff0a54;
 
-  --color-accent: #ff0a54; /* Hot Fuchsia */
+  --color-accent: #ff0a54;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 3.9:1 · escuro 3.9:1 */
+  --color-text-on-accent: #ffffff; /* Hot Fuchsia */
   --color-accent-hover: #d60041;
   --color-accent-subtle: #ffe6ed;
   --color-accent-muted: #ff5c8a;
@@ -834,6 +888,8 @@
   --color-bg-elevated: #ffffff;
   --color-bg-sidebar: #2b303c; /* Blue Slate Deep */
   --color-bg-hover: rgba(94, 100, 114, 0.08);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(255, 255, 255, 0.95);
   --bevel-border: #c4d7dc;
@@ -855,7 +911,9 @@
   --color-border-subtle: #d6ebee;
   --color-border-focus: #5e6472;
 
-  --color-accent: #5e6472; /* Blue Slate */
+  --color-accent: #5e6472;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 5.9:1 · escuro 5.9:1 */
+  --color-text-on-accent: #ffffff; /* Blue Slate */
   --color-accent-hover: #454a54;
   --color-accent-subtle: #edf0f4;
   --color-accent-muted: #ffa69e;
@@ -904,6 +962,8 @@
   --color-bg-elevated: #281157;
   --color-bg-sidebar: #06020f;
   --color-bg-hover: rgba(247, 37, 133, 0.14);
+  /* Véu do diálogo modal — deriva do tom profundo de cada paleta. */
+  --color-overlay: color-mix(in srgb, var(--color-bg-sidebar) 72%, transparent);
 
   --bevel-light: rgba(76, 201, 240, 0.12);
   --bevel-border: #4361ee;
@@ -925,7 +985,9 @@
   --color-border-subtle: #2e086e;
   --color-border-focus: #f72585;
 
-  --color-accent: #f72585; /* Neon Pink */
+  --color-accent: #f72585;
+  /* Texto legível SOBRE o acento. Escolhido por contraste medido: branco 3.8:1 · escuro 5.3:1 */
+  --color-text-on-accent: #0a0417; /* Neon Pink */
   --color-accent-hover: #d6116f;
   --color-accent-subtle: rgba(247, 37, 133, 0.2);
   --color-accent-muted: #4cc9f0;

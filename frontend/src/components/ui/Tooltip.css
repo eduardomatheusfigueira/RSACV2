@@ -4,16 +4,16 @@
  */
 
 .rsac-tooltip-content {
-  background: var(--color-bg-sidebar, #222e15);
-  color: var(--cornsilk, #fefae0);
+  background: var(--color-bg-sidebar);
+  color: var(--cornsilk);
   font-family: var(--font-sans);
-  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+  font-size: var(--font-size-xs); /* 11px */
   font-weight: var(--weight-medium, 500);
   line-height: var(--leading-tight, 1.25);
-  padding: var(--space-1, 4px) var(--space-2, 8px);
-  border-radius: var(--radius-xs, 3px);
-  border: 1px solid rgba(254, 250, 224, 0.15);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
   max-width: 280px;
   word-wrap: break-word;
@@ -36,7 +36,7 @@
 }
 
 .rsac-tooltip-arrow {
-  fill: var(--color-bg-sidebar, #222e15);
+  fill: var(--color-bg-sidebar);
 }
 
 @keyframes rsac-slide-up-and-fade {

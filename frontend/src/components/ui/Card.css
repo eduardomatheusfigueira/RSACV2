@@ -4,32 +4,32 @@
  */
 
 .rsac-card {
-  background: var(--color-bg-secondary, #ffffff);
-  border: 1px solid var(--color-border, #d0c8b3);
-  border-radius: var(--radius-sm, 4px);
-  padding: var(--space-4, 16px);
-  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.08));
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-xs));
   box-sizing: border-box;
 }
 
 .rsac-card--compact {
-  padding: var(--space-2-5, 10px);
+  padding: var(--space-2-5);
 }
 
 /* ── Variants ──────────────────────────────────────────────────────── */
 .rsac-card--elevated {
-  background: var(--color-bg-elevated, #ffffff);
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-sm));
 }
 
 .rsac-card--sunken {
-  background: var(--color-bg-primary, #f5f2e8);
-  border-color: var(--color-border-subtle, #e6dfcd);
-  box-shadow: inset 0 1px 2px rgba(40, 54, 24, 0.06);
+  background: var(--color-bg-primary);
+  border-color: var(--color-border-subtle);
+  box-shadow: var(--shadow-neo-sunken);
 }
 
 .rsac-card--accent-bordered {
-  border-left: 3px solid var(--color-accent, #bc6c25);
+  border-left: 3px solid var(--color-accent);
 }
 
 /* ── Header ────────────────────────────────────────────────────────── */
@@ -37,31 +37,31 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-3, 12px);
-  margin-bottom: var(--space-3, 12px);
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 
 .rsac-card__header-content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-0-5, 2px);
+  gap: var(--space-0-5);
 }
 
 .rsac-card__header-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-1-5, 6px);
+  gap: var(--space-1-5);
 }
 
 /* ── Title & Description ───────────────────────────────────────────── */
 .rsac-card__title {
   display: flex;
   align-items: center;
-  gap: var(--space-1-5, 6px);
+  gap: var(--space-1-5);
   font-family: var(--font-sans);
-  font-size: var(--font-size-md, 0.8125rem); /* 13px */
+  font-size: var(--font-size-md); /* 13px */
   font-weight: var(--weight-semibold, 600);
-  color: var(--color-text-primary, #283618);
+  color: var(--color-text-primary);
   margin: 0;
   line-height: var(--leading-tight, 1.25);
 }
@@ -69,13 +69,13 @@
 .rsac-card__title-icon {
   display: inline-flex;
   align-items: center;
-  color: var(--color-accent, #bc6c25);
+  color: var(--color-accent);
 }
 
 .rsac-card__description {
   font-family: var(--font-sans);
-  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
-  color: var(--color-text-secondary, #566442);
+  font-size: var(--font-size-xs); /* 11px */
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: var(--leading-normal, 1.5);
 }
@@ -83,16 +83,16 @@
 /* ── Content & Footer ──────────────────────────────────────────────── */
 .rsac-card__content {
   font-family: var(--font-sans);
-  font-size: var(--font-size-sm, 0.75rem); /* 12px */
-  color: var(--color-text-primary, #283618);
+  font-size: var(--font-size-sm); /* 12px */
+  color: var(--color-text-primary);
 }
 
 .rsac-card__footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2, 8px);
-  margin-top: var(--space-3, 12px);
-  padding-top: var(--space-2-5, 10px);
-  border-top: 1px solid var(--color-border-subtle, #e6dfcd);
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2-5);
+  border-top: 1px solid var(--color-border-subtle);
 }

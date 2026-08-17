@@ -70,20 +70,25 @@ classe, com nome e propósito.
 
 | Token | rem | px | Propósito |
 |---|:---:|:---:|---|
-| `--text-2xs` | 0.5625 | 9 | etiqueta em versalete, contador em pílula |
-| `--text-xs` | 0.625 | 10 | rótulo de grupo, metadado, legenda |
-| `--text-sm` | 0.6875 | **11** | **tamanho de trabalho da interface** — controles, abas, células |
-| `--text-base` | 0.8125 | 13 | corpo de leitura curta, descrição de item |
-| `--text-md` | 0.9375 | 15 | corpo de leitura longa (campos do manuscrito) |
-| `--text-lg` | 1.0625 | 17 | título de página |
-| `--text-xl` | 1.1875 | 19 | título de seção destacada |
-| `--text-2xl` | 1.5 | 24 | número em destaque, métrica |
-| `--text-3xl` | 1.875 | 30 | título de estado vazio, splash |
+| `--font-size-3xs` | 0.5625 | 9 | etiqueta em versalete, contador em pílula |
+| `--font-size-2xs` | 0.625 | 10 | rótulo de grupo, metadado, legenda |
+| `--font-size-xs` | 0.6875 | **11** | **tamanho de trabalho da interface** — controles, abas, células |
+| `--font-size-sm` | 0.75 | 12 | texto auxiliar, descrição de item |
+| `--font-size-md` | 0.8125 | 13 | **superfícies de escrita e leitura longa** (campos do manuscrito) |
+| `--font-size-base` | 0.875 | 14 | corpo padrão |
+| `--font-size-lg` | 1 | 16 | título de cartão |
+| `--font-size-xl` | 1.125 | 18 | título de seção |
+| `--font-size-2xl` | 1.25 | 20 | título de página |
+| `--font-size-3xl` | 1.5 | 24 | métrica em destaque |
+| `--font-size-4xl` | 1.875 | 30 | estado vazio, splash |
 
-> **Mudança de referencial**: `--text-sm` (11 px) é o tamanho **padrão** da
-> interface, não uma redução. O antigo `--text-base` de 15 px passa a ser
-> `--text-md` e fica reservado à leitura longa. Renomear é mais seguro do que
-> redefinir: o `codemod` da Fase 1 (doc 25) faz a tradução de uma vez.
+Os apelidos `--text-*` permanecem como alias de compatibilidade.
+
+> **Regra de escrita × interface.** O degrau de 11px é o padrão da interface —
+> controles, abas, células. Mas **superfície de escrita não é interface**: o
+> campo onde o pesquisador redige o manuscrito usa `--font-size-md` (13px) com
+> entrelinha relaxada. Densificar o chrome é ganho; densificar o texto que se lê
+> por horas é perda.
 
 **Pesos**: 400 corpo · 500 rótulo · 600 ênfase · 700 título e etiqueta.
 Abaixo de 11 px, **nunca** usar peso 400 — a haste desaparece nos temas
@@ -133,18 +138,33 @@ telas é o critério objetivo da Fase 3.
 **Zero cor literal fora de `globals.css`.** Verificado por script (doc 26).
 Toda cor nova entra como token e é definida nas 13 paletas.
 
-### Tokens que faltam e precisam existir
+### Tokens de sistema criados (17/08/2026)
 
-O vazamento de 143 cores não é indisciplina: é falta de token. O sistema
-precisa ganhar:
+O vazamento de cor nunca foi indisciplina: era falta de token. Já existem:
 
-| Token novo | Para quê |
+| Token | Para quê |
 |---|---|
-| `--color-chrome-bg`, `--color-chrome-text`, `--color-chrome-border` | superfícies escuras de aplicação (ribbon, sidebar, splash) — hoje escritas como `var(--black-forest)` + `rgba()` literais |
-| `--color-chrome-hover`, `--color-chrome-active` | estados sobre o chrome — hoje `rgba(255,255,255,0.07)` fixo |
-| `--color-source-*` (uma por base acadêmica) | etiquetas BDTD / SciELO / Scopus / PubMed / OpenAlex, hoje em cores de marca fixas que ignoram o tema |
-| `--color-overlay` | véu de modal — hoje `rgba(0,0,0,…)` variando por arquivo |
-| `--rsac-accent` | já existe, vindo da identidade visual — generalizar para todo chrome |
+| `--color-text-on-accent` | Texto sobre preenchimento de acento. **Escolhido por contraste medido em cada uma das 13 paletas** — em `dark` o branco dava 2.2:1 e em `stormy-tangerine` 2.6:1, ambos abaixo do mínimo; nessas paletas o token é escuro |
+| `--color-overlay` | Véu do diálogo modal, derivado do tom profundo de cada paleta |
+| `--rsac-accent` | Acento sobre chrome escuro, vindo da identidade visual |
+
+Ainda faltam:
+
+| Token | Para quê |
+|---|---|
+| `--color-chrome-bg`, `--color-chrome-text`, `--color-chrome-border`, `--color-chrome-hover` | Superfícies escuras de aplicação — hoje `var(--black-forest)` mais `rgba()` literais no `TopRibbonBar.css` |
+| `--color-source-*` | Etiquetas BDTD / SciELO / Scopus / PubMed / OpenAlex, hoje em cores de marca fixas que ignoram o tema |
+
+### Tintas derivadas
+
+Borda e anel de foco tingidos **não** levam token próprio: derivam da cor
+semântica com `color-mix`, o que os mantém corretos nas 13 paletas sem
+multiplicar tokens por 13.
+
+```css
+border-color: color-mix(in srgb, var(--color-included) 35%, transparent);
+box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 20%, transparent);
+```
 
 ### Contraste
 
@@ -156,14 +176,24 @@ maior e para bordas de controle — em **todas as 13 paletas**. Não é aspiraç
 
 ## 24.6 Forma: raio, borda, elevação
 
-**Raio** — os cantos de 2 px são identidade e ficam. Só existem quatro valores:
+**Raio** — os cantos de 2 px são identidade e ficam. A escala tem sete degraus
+nomeados (por compatibilidade com `components/ui/`), mas apenas quatro valores
+geométricos:
 
 | Token | Valor | Uso |
 |---|:---:|---|
-| `--radius-xs` | 1 px | etiquetas e pílulas |
-| `--radius-sm` | 2 px | **padrão** — botões, campos, cartões |
-| `--radius-md` | 3 px | contêineres de agrupamento |
-| `--radius-lg` | 4 px | diálogos |
+| `--radius-2xs`, `--radius-xs` | 1 px | etiquetas e pílulas de contagem |
+| `--radius-sm`, `--radius-md` | 2 px | **padrão** — botões, campos, cartões |
+| `--radius-lg` | 3 px | painéis e gavetas |
+| `--radius-xl` | 4 px | diálogos |
+| `--radius-full` | 2 px | etiqueta de engenharia, **não** pílula |
+
+> **Precedente registrado (17/08/2026).** Esta escala já foi redefinida uma vez
+> para 2–12 px com `--radius-full: 9999px`. Como nenhum ponto de uso foi tocado,
+> ~192 elementos mudaram de forma de uma só vez e a identidade declarada no
+> README deixou de ser verdadeira. Os valores foram restaurados. **Token não se
+> redefine debaixo de quem já o usa**: suavização futura se faz por call site,
+> com comparação visual — que é justamente o que o doc 26 passa a exigir.
 
 Sem `50%`: um elemento redondo é um ponto de estado (`--dot`), não um botão.
 

@@ -86,7 +86,10 @@
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-neo-sunken);
   color: var(--color-text-primary);
-  font-size: var(--text-xs);
+  /* Superfície de ESCRITA, não de interface: o pesquisador redige o manuscrito
+     aqui por horas. Os 11px da densidade do chrome não servem para leitura
+     longa — este campo usa o degrau de prosa. */
+  font-size: var(--font-size-md);
   line-height: var(--leading-relaxed);
   outline: none;
   font-family: inherit;

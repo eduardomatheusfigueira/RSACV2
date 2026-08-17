@@ -7,17 +7,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1-5, 6px);
+  gap: var(--space-1-5);
   font-family: var(--font-sans);
   font-weight: var(--weight-medium, 500);
   line-height: 1;
   text-decoration: none;
   white-space: nowrap;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
   user-select: none;
-  transition: all var(--transition-fast, 80ms);
+  transition: all var(--transition-fast);
   outline: none;
   box-sizing: border-box;
 }
@@ -36,26 +36,26 @@
 /* ── Sizes ─────────────────────────────────────────────────────────── */
 .rsac-btn--xs {
   height: 22px;
-  padding: 0 var(--space-1-5, 6px);
-  font-size: var(--font-size-3xs, 0.5625rem); /* 9px / 10px */
+  padding: 0 var(--space-1-5);
+  font-size: var(--font-size-3xs); /* 9px / 10px */
 }
 
 .rsac-btn--sm {
   height: 26px;
-  padding: 0 var(--space-2, 8px);
-  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs); /* 11px */
 }
 
 .rsac-btn--md {
   height: 30px;
-  padding: 0 var(--space-3, 12px);
-  font-size: var(--font-size-sm, 0.75rem); /* 12px */
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm); /* 12px */
 }
 
 .rsac-btn--lg {
   height: 36px;
-  padding: 0 var(--space-4, 16px);
-  font-size: var(--font-size-md, 0.8125rem); /* 13px */
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-md); /* 13px */
 }
 
 .rsac-btn--full {
@@ -66,15 +66,15 @@
 
 /* Primary */
 .rsac-btn--primary {
-  background: var(--color-accent, #bc6c25);
-  color: #ffffff;
-  border-color: rgba(0, 0, 0, 0.15);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: color-mix(in srgb, var(--color-text-on-accent) 22%, transparent);
+  box-shadow: var(--shadow-xs);
 }
 
 .rsac-btn--primary:hover:not(:disabled) {
-  background: var(--color-accent-hover, #a15516);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.16);
+  background: var(--color-accent-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .rsac-btn--primary:active:not(:disabled) {
@@ -83,16 +83,16 @@
 
 /* Secondary */
 .rsac-btn--secondary {
-  background: var(--color-bg-elevated, #ffffff);
-  color: var(--color-text-primary, #283618);
-  border-color: var(--color-border, #d0c8b3);
-  box-shadow: var(--shadow-xs, 0 1px 2px rgba(0, 0, 0, 0.08));
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-xs));
 }
 
 .rsac-btn--secondary:hover:not(:disabled) {
-  background: var(--color-bg-tertiary, #ebe5d4);
-  border-color: var(--color-border-focus, #bc6c25);
-  color: var(--color-accent, #bc6c25);
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-focus);
+  color: var(--color-accent);
 }
 
 .rsac-btn--secondary:active:not(:disabled) {
@@ -102,73 +102,73 @@
 /* Outline */
 .rsac-btn--outline {
   background: transparent;
-  color: var(--color-text-primary, #283618);
-  border-color: var(--color-border, #d0c8b3);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
 }
 
 .rsac-btn--outline:hover:not(:disabled) {
-  background: var(--color-bg-hover, rgba(40, 54, 24, 0.06));
-  border-color: var(--color-text-primary, #283618);
+  background: var(--color-bg-hover);
+  border-color: var(--color-text-primary);
 }
 
 /* Ghost */
 .rsac-btn--ghost {
   background: transparent;
-  color: var(--color-text-secondary, #566442);
+  color: var(--color-text-secondary);
 }
 
 .rsac-btn--ghost:hover:not(:disabled) {
-  background: var(--color-bg-hover, rgba(40, 54, 24, 0.06));
-  color: var(--color-text-primary, #283618);
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
 }
 
 /* Destructive */
 .rsac-btn--destructive {
-  background: var(--color-error-bg, #fae6e6);
-  color: var(--color-error, #a83434);
-  border-color: rgba(168, 52, 52, 0.3);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: color-mix(in srgb, var(--color-error) 3%, transparent);
 }
 
 .rsac-btn--destructive:hover:not(:disabled) {
-  background: var(--color-error, #a83434);
-  color: #ffffff;
+  background: var(--color-error);
+  color: var(--color-text-on-accent);
 }
 
 /* Decisions */
 .rsac-btn--decision-included {
-  background: var(--color-included-bg, #eaf0d8);
-  color: var(--color-included, #606c38);
-  border-color: rgba(96, 108, 56, 0.35);
+  background: var(--color-included-bg);
+  color: var(--color-included);
+  border-color: color-mix(in srgb, var(--color-included) 35%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-btn--decision-included:hover:not(:disabled) {
-  background: var(--color-included, #606c38);
-  color: #ffffff;
+  background: var(--color-included);
+  color: var(--color-text-on-accent);
 }
 
 .rsac-btn--decision-excluded {
-  background: var(--color-excluded-bg, #fae6e6);
-  color: var(--color-excluded, #a83434);
-  border-color: rgba(168, 52, 52, 0.35);
+  background: var(--color-excluded-bg);
+  color: var(--color-excluded);
+  border-color: color-mix(in srgb, var(--color-error) 35%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-btn--decision-excluded:hover:not(:disabled) {
-  background: var(--color-excluded, #a83434);
-  color: #ffffff;
+  background: var(--color-excluded);
+  color: var(--color-text-on-accent);
 }
 
 .rsac-btn--decision-pending {
-  background: var(--color-pending-bg, #fdf5df);
-  color: var(--color-pending, #bc6c25);
-  border-color: rgba(188, 108, 37, 0.35);
+  background: var(--color-pending-bg);
+  color: var(--color-pending);
+  border-color: color-mix(in srgb, var(--color-pending) 35%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-btn--decision-pending:hover:not(:disabled) {
-  background: var(--color-pending, #bc6c25);
-  color: #ffffff;
+  background: var(--color-pending);
+  color: var(--color-text-on-accent);
 }
 
 /* ── Spinner & Icons ───────────────────────────────────────────────── */

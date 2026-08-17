@@ -6,6 +6,32 @@
 
 ---
 
+## 25.0 Situação em 17/08/2026
+
+O plano começou a ser executado no mesmo dia em que foi escrito, e fora da
+ordem prevista — o que se mostrou acertado: as fases de maior valor saíram
+primeiro.
+
+| Fase | Situação | Evidência |
+|---|:---:|---|
+| **1 — Tokens** | 🟡 parcial | Escala tipográfica e de espaçamento ampliadas; `--color-text-on-accent` e `--color-overlay` criados nas 13 paletas; `components/ui/` com **zero** cor literal. Faltam os tokens de chrome e de fonte acadêmica, e a migração das 128 cores literais restantes nas páginas |
+| **2 — Componentes** | 🟡 parcial | `components/ui/` entregue com Radix (`Dialog`, `Tooltip`), `Button`, `Badge`, `Card`, `FormControls`. **Ainda não adotado por nenhuma página** — as 25 classes de botão antigas seguem em uso |
+| **3 — Proporção e comando** | ⬜ | Moldura do Protocolo continua em 41% |
+| **4 — Registro de comandos** | ✅ **concluída** | `useRibbonStore` nas 7 páginas; acionamento por DOM de 34 → **0**; botões refletem estado real |
+| **5 — Acessibilidade** | ⬜ | Sem mudança: 3 `aria-label`, 0 `aria-live`, 2 `:focus-visible` |
+| **6 — Conteúdo por diretriz** | 🟡 parcial | Ajuda e rótulos do Estúdio vêm do catálogo via `fieldKey`; contagem do checklist correta por diretriz. Falta o diagrama de fluxo |
+| **7 — Higiene** | 🟡 parcial | Sidebar removida (−372 linhas). Faltam as dependências não importadas e a decomposição dos arquivos grandes |
+
+**Lição registrada.** A Fase 1 foi executada redefinindo os valores dos tokens
+em vez de migrar os pontos de uso. Como não havia referência visual, ~192
+elementos mudaram de forma e o texto encolheu em cascata sem que ninguém
+percebesse — inclusive o campo de escrita do manuscrito, que caiu para 11 px.
+Foi exatamente o risco de probabilidade **Alta** previsto em § 25.11, e a
+mitigação prevista (referência visual **antes** de começar) não foi aplicada.
+A referência de 104 imagens já existe agora; a partir daqui ela é obrigatória.
+
+---
+
 ## 25.1 Estratégia
 
 **Ordem obrigatória, por dependência real:** cada fase existe porque a

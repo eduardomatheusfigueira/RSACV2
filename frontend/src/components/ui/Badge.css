@@ -6,12 +6,12 @@
 .rsac-badge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1, 4px);
+  gap: var(--space-1);
   font-family: var(--font-sans);
   font-weight: var(--weight-medium, 500);
   line-height: 1;
   white-space: nowrap;
-  border-radius: var(--radius-xs, 3px);
+  border-radius: var(--radius-xs);
   border: 1px solid transparent;
   box-sizing: border-box;
   user-select: none;
@@ -20,85 +20,85 @@
 /* ── Sizes ─────────────────────────────────────────────────────────── */
 .rsac-badge--xs {
   height: 18px;
-  padding: 0 var(--space-1, 4px);
-  font-size: var(--font-size-3xs, 0.5625rem); /* 9px */
+  padding: 0 var(--space-1);
+  font-size: var(--font-size-3xs); /* 9px */
   letter-spacing: 0.02em;
 }
 
 .rsac-badge--sm {
   height: 20px;
-  padding: 0 var(--space-1-5, 6px);
-  font-size: var(--font-size-xs, 0.6875rem); /* 11px */
+  padding: 0 var(--space-1-5);
+  font-size: var(--font-size-xs); /* 11px */
 }
 
 .rsac-badge--md {
   height: 24px;
-  padding: 0 var(--space-2, 8px);
-  font-size: var(--font-size-sm, 0.75rem); /* 12px */
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-sm); /* 12px */
 }
 
 /* ── Variants ──────────────────────────────────────────────────────── */
 .rsac-badge--brand {
-  background: var(--color-bg-sidebar, #222e15);
-  color: var(--cornsilk, #fefae0);
-  border-color: rgba(254, 250, 224, 0.2);
+  background: var(--color-bg-sidebar);
+  color: var(--cornsilk);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .rsac-badge--neutral {
-  background: var(--color-bg-tertiary, #ebe5d4);
-  color: var(--color-text-secondary, #566442);
-  border-color: var(--color-border-subtle, #e6dfcd);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-subtle);
 }
 
 .rsac-badge--included {
-  background: var(--color-included-bg, #eaf0d8);
-  color: var(--color-included, #606c38);
-  border-color: rgba(96, 108, 56, 0.3);
+  background: var(--color-included-bg);
+  color: var(--color-included);
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-badge--excluded {
-  background: var(--color-excluded-bg, #fae6e6);
-  color: var(--color-excluded, #a83434);
-  border-color: rgba(168, 52, 52, 0.3);
+  background: var(--color-excluded-bg);
+  color: var(--color-excluded);
+  border-color: color-mix(in srgb, var(--color-error) 3%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-badge--pending {
-  background: var(--color-pending-bg, #fdf5df);
-  color: var(--color-pending, #bc6c25);
-  border-color: rgba(188, 108, 37, 0.3);
+  background: var(--color-pending-bg);
+  color: var(--color-pending);
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
   font-weight: var(--weight-semibold, 600);
 }
 
 .rsac-badge--info {
-  background: var(--color-info-bg, #e2eff7);
-  color: var(--color-info, #356788);
-  border-color: rgba(53, 103, 136, 0.3);
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
 }
 
 .rsac-badge--success {
-  background: var(--color-success-bg, #eaf0d8);
-  color: var(--color-success, #606c38);
-  border-color: rgba(96, 108, 56, 0.3);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
 }
 
 .rsac-badge--warning {
-  background: var(--color-warning-bg, #fdf5df);
-  color: var(--color-warning, #bc6c25);
-  border-color: rgba(188, 108, 37, 0.3);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: color-mix(in srgb, currentColor 32%, transparent);
 }
 
 .rsac-badge--error {
-  background: var(--color-error-bg, #fae6e6);
-  color: var(--color-error, #a83434);
-  border-color: rgba(168, 52, 52, 0.3);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: color-mix(in srgb, var(--color-error) 3%, transparent);
 }
 
 /* ── Interactive ───────────────────────────────────────────────────── */
 .rsac-badge--interactive {
   cursor: pointer;
-  transition: all var(--transition-fast, 80ms);
+  transition: all var(--transition-fast);
 }
 
 .rsac-badge--interactive:hover {
@@ -110,7 +110,7 @@
 .rsac-badge__dot {
   width: 5px;
   height: 5px;
-  border-radius: var(--radius-full, 9999px);
+  border-radius: var(--radius-full);
   background: currentColor;
 }
 
