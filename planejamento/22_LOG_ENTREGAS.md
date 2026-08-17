@@ -266,7 +266,16 @@ Quatro defeitos de raiz apareceram no caminho e foram corrigidos:
 4. **`--color-text-tertiary` reprovava em 8 paletas** e
    `--color-chrome-text-muted` a 62% caía a 4.41:1 na synthwave-neon.
 
-Resultado: `axe-core` **sem violação** nas 8 telas × 13 paletas.
+Resultado: `axe-core` **sem violação nas 104 verificações** — 8 telas × 13
+paletas, cada uma auditada contra WCAG 2.1 AA.
+
+Vale registrar como esse número foi obtido, porque a primeira tentativa de
+afirmá-lo estava errada. Rodar a varredura só na paleta padrão dava 4
+violações; a impressão de "quase pronto" vinha da amostra, não do produto. E
+duas vezes a varredura completa foi interrompida no meio porque o script de
+auditoria vivia dentro do repositório e a limpeza o apagou — o resultado
+parcial foi tomado por completo. A corrupção dos 13 tokens sobreviveu a duas
+rodadas por causa disso. O script passou a viver fora da árvore do projeto.
 
 A geração dos tokens vive em `frontend/scripts/derivar-tokens-de-contraste.py`,
 e a regra **R8** do verificador — que analisa por bloco, não por linha — impede
