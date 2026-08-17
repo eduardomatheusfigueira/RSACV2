@@ -5,7 +5,43 @@
 
 ---
 
-## Documentos de Planejamento
+## Como ler esta pasta
+
+Os documentos **01 a 21** são **histórico**. Descrevem o planejamento que levou
+o produto ao estado consolidado de 17/08/2026 e devem ser lidos como registro
+de decisão, não como lista de pendências.
+
+O **doc 22** é a fronteira: consolida o que cada plano anterior previu, o que
+foi entregue, o que divergiu e o que segue aberto.
+
+Os documentos **23 a 26** são o **planejamento vigente**, dedicado a UX, UI e
+profissionalização da interface. Seguem a mesma gramática dos planos temáticos
+anteriores — diagnóstico → especificação → execução → validação.
+
+```
+01–21   histórico          o que nos trouxe até aqui
+  22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
+23–26   vigente            para onde vamos agora (UX/UI)
+```
+
+---
+
+## 📌 Planejamento vigente — UX, UI e profissionalização
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **22** | [Log de Entregas](./22_LOG_ENTREGAS.md) | Consolidação verificada dos planos 01–21: entregue, divergente e aberto |
+| **23** | [Diagnóstico de UX e UI](./23_DIAGNOSTICO_UX_UI.md) | Análise crítica da interface, medida contra o código e o app em execução |
+| **24** | [Especificação do Design System](./24_ESPECIFICACAO_DESIGN_SYSTEM.md) | Documento normativo: tokens, proporções, componentes, fluxo e acessibilidade |
+| **25** | [Plano de Execução — UX e UI](./25_PLANO_EXECUCAO_UX_UI.md) | Sete fases com dependências, critérios de aceite e riscos |
+| **26** | [Testes e Validação — UX e UI](./26_TESTES_VALIDACAO_UX_UI.md) | Quatro camadas de verificação e portões por fase |
+
+> A identidade visual da marca tem documento próprio, fora desta pasta:
+> [`brand/IDENTIDADE_VISUAL.md`](../brand/IDENTIDADE_VISUAL.md).
+
+---
+
+## 📚 Histórico — planejamento da V2 (01–21)
 
 | # | Documento | Descrição |
 |---|-----------|-----------|
@@ -47,3 +83,6 @@
 - 🟡 = Em discussão / aguardando validação
 - 🔴 = Bloqueante / risco identificado
 - 📖 = Referência ao livro *JavaScript Everywhere*
+- ✅ = Entregue e verificado no repositório
+- ⬜ = Aberto
+- 🟠 = Gravidade média (docs 23–26)

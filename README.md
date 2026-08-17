@@ -73,7 +73,7 @@ A plataforma cobre integralmente o ciclo de vida da pesquisa secundária conform
 ### 6. 🎨 Identidade Visual, Design System & 13 Paletas de Cores
 - **Monograma "R-Lupa"**: o "R" de *Revisão* desenhado em traço monolinear único, em que o laço da letra é a **lente** de uma lupa e a perna diagonal é o **cabo**. A geometria é declarada uma única vez e alimenta o ícone do executável, o instalador NSIS, o favicon e o símbolo dentro do app — ver [`brand/IDENTIDADE_VISUAL.md`](brand/IDENTIDADE_VISUAL.md).
 - **Marca sem cor fixa**: dentro do app a haste e a lente herdam a cor de texto e o cabo herda a cor de acento, então o símbolo se re-pigmenta sozinho em qualquer uma das 13 paletas.
-- **Selo BETA** presente na splash, no cabeçalho, na sidebar, na barra de status e nos ícones de distribuição — o produto ainda está em desenvolvimento.
+- **Selo BETA** presente na splash de inicialização, na barra de título, na barra de status e nos ícones de distribuição — o produto ainda está em desenvolvimento.
 - Identidade visual contemporânea de engenharia com cantos de precisão cirúrgica (`2px`).
 - Catálogo com **13 paletas cromáticas harmônicas** ajustadas para leitura prolongada:
   - *Organic Earth (Florestal / Soft Warm)*
@@ -171,7 +171,21 @@ npm run dev
 
 ## 📚 Documentação Técnica
 
-O diretório [`planejamento/`](./planejamento/) contém 22 especificações arquiteturais detalhadas:
+O diretório [`planejamento/`](./planejamento/) contém 27 documentos. Os de
+número **01 a 21** são histórico do planejamento que levou o produto ao estado
+atual; o **22** consolida o que foi entregue; e os de **23 a 26** são o
+planejamento vigente, dedicado a UX, UI e profissionalização da interface.
+
+**Planejamento vigente**
+
+- [`22_LOG_ENTREGAS.md`](./planejamento/22_LOG_ENTREGAS.md) — o que cada plano previu, o que foi entregue e o que segue aberto
+- [`23_DIAGNOSTICO_UX_UI.md`](./planejamento/23_DIAGNOSTICO_UX_UI.md) — diagnóstico da interface, medido contra o código e o app em execução
+- [`24_ESPECIFICACAO_DESIGN_SYSTEM.md`](./planejamento/24_ESPECIFICACAO_DESIGN_SYSTEM.md) — documento normativo: tokens, proporções, componentes e acessibilidade
+- [`25_PLANO_EXECUCAO_UX_UI.md`](./planejamento/25_PLANO_EXECUCAO_UX_UI.md) — sete fases com dependências, critérios de aceite e riscos
+- [`26_TESTES_VALIDACAO_UX_UI.md`](./planejamento/26_TESTES_VALIDACAO_UX_UI.md) — quatro camadas de verificação e portões por fase
+
+**Histórico (01–21)**
+
 
 1. `00_INDICE.md` — Índice e mapa do repositório
 2. `01_DIAGNOSTICO_V1.md` — Lições aprendidas da V1
