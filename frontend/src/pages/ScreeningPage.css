@@ -236,6 +236,9 @@
   justify-content: space-between;
   transition: all var(--transition-fast);
   user-select: none;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
 .queue-paper-card:hover {
@@ -1004,8 +1007,10 @@
 }
 
 /* Modals */
-.batch-modal {
-  max-width: 520px;
+.batch-minimize-row {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
 }
 
 .batch-config-form {

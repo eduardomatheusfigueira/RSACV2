@@ -44,7 +44,15 @@ function LogEntryRow({ entry }: { entry: LogEntry }): JSX.Element {
 
   return (
     <div className={`log-entry ${config.className} ${expanded ? 'expanded' : ''}`}>
-      <div className="log-entry-main" onClick={() => entry.detail && setExpanded(!expanded)}>
+      {/* A linha inteira é o controle que expande o detalhe: precisa ser um
+          <button> para o teclado e para o leitor de tela chegarem nela. */}
+      <button
+        type="button"
+        className="log-entry-main"
+        onClick={() => entry.detail && setExpanded(!expanded)}
+        disabled={!entry.detail}
+        aria-expanded={entry.detail ? expanded : undefined}
+      >
         <span className="log-level-badge">
           {config.icon}
         </span>
@@ -59,7 +67,7 @@ function LogEntryRow({ entry }: { entry: LogEntry }): JSX.Element {
             {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
           </span>
         )}
-      </div>
+      </button>
       {expanded && entry.detail && (
         <div className="log-entry-detail">
           <pre>{entry.detail}</pre>

@@ -423,10 +423,14 @@ export function HarvestPage(): JSX.Element {
                   const isDisabled = !src.enabled
 
                   return (
-                    <div
+                    /* O cartão é o rótulo da própria caixa de seleção: com
+                       <label>, o clique em qualquer ponto e a navegação por
+                       teclado saem de graça do controle nativo. O onClick no
+                       contêiner, além de invisível ao teclado, disparava duas
+                       vezes junto com o onChange. */
+                    <label
                       key={src.id}
                       className={`source-card-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
-                      onClick={() => toggleSource(src)}
                     >
                       <input
                         type="checkbox"
@@ -445,7 +449,7 @@ export function HarvestPage(): JSX.Element {
                         </div>
                         <span className="source-desc">{src.description}</span>
                       </div>
-                    </div>
+                    </label>
                   )
                 })}
               </div>
@@ -455,9 +459,13 @@ export function HarvestPage(): JSX.Element {
             <div className="harvest-config-card">
               <div className="card-mini-title">
                 <h4>2. Descritores em Pares ({allDescriptors.length})</h4>
-                <a className="link-action" onClick={() => navigate(`/projects/${id}/protocol`)}>
+                <button
+                  type="button"
+                  className="link-action"
+                  onClick={() => navigate(`/projects/${id}/protocol`)}
+                >
                   Editar no Protocolo
-                </a>
+                </button>
               </div>
               {allDescriptors.length === 0 ? (
                 <div className="no-descriptors-warning">

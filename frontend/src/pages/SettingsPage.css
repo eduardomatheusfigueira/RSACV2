@@ -193,10 +193,23 @@
   border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
-.model-option-card:hover {
+.model-option-card:hover:not(:disabled) {
   background: var(--color-bg-hover);
+}
+
+/* Sem assistência ativa não há modelo a escolher. */
+.model-option-card:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .model-option-card.selected {
@@ -394,6 +407,9 @@
   transition: all var(--transition-fast);
   user-select: none;
   position: relative;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
 .theme-card-item:hover {

@@ -41,7 +41,9 @@
 .rsac-empty__description {
   font-size: var(--font-size-xs);
   line-height: var(--leading-relaxed);
-  color: var(--color-text-tertiary);
+  /* O terciário reprovava em 3.66:1 no tema padrão. Um estado vazio explica o
+     porquê de a tela estar vazia — é justamente o texto que precisa ser lido. */
+  color: var(--color-text-secondary);
   max-width: 46ch;
   margin: 0;
 }

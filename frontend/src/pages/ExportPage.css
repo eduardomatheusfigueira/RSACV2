@@ -84,6 +84,10 @@
   box-shadow: var(--shadow-neo-raised);
   cursor: pointer;
   transition: all var(--transition-fast);
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
 .export-package-card:hover {

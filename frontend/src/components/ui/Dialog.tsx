@@ -17,6 +17,13 @@ export interface DialogContentProps
   extends React.ComponentPropsWithoutRef<typeof RadixDialog.Content> {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   showCloseButton?: boolean
+  /**
+   * `window` reproduz a janela clássica do app — barra de título no acento,
+   * corpo sem respiro próprio. É o que os cinco modais escritos à mão já
+   * pareciam; a diferença é que agora vêm com foco preso, Escape e devolução
+   * do foco de graça.
+   */
+  variant?: 'plain' | 'window'
 }
 
 export const DialogOverlay = forwardRef<
@@ -34,24 +41,58 @@ DialogOverlay.displayName = 'DialogOverlay'
 export const DialogContent = forwardRef<
   React.ElementRef<typeof RadixDialog.Content>,
   DialogContentProps
->(({ size = 'md', showCloseButton = true, className = '', children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <RadixDialog.Content
-      ref={ref}
-      className={`rsac-dialog-content rsac-dialog-content--${size} ${className}`.trim()}
-      {...props}
-    >
-      {children}
-      {showCloseButton && (
-        <RadixDialog.Close className="rsac-dialog-close-btn" aria-label="Fechar modal">
-          <X size={16} />
-        </RadixDialog.Close>
-      )}
-    </RadixDialog.Content>
-  </DialogPortal>
-))
+>(({ size = 'md', variant = 'plain', showCloseButton, className = '', children, ...props }, ref) => {
+  /* Na variante janela quem fecha é o botão da barra de título — o X flutuante
+     do Radix ficaria por cima dele. */
+  const withClose = showCloseButton ?? variant !== 'window'
+  return (
+    <DialogPortal>
+      <DialogOverlay />
+      <RadixDialog.Content
+        ref={ref}
+        className={`rsac-dialog-content rsac-dialog-content--${size} rsac-dialog-content--${variant} ${className}`.trim()}
+        {...props}
+      >
+        {children}
+        {withClose && (
+          <RadixDialog.Close className="rsac-dialog-close-btn" aria-label="Fechar modal">
+            <X size={16} />
+          </RadixDialog.Close>
+        )}
+      </RadixDialog.Content>
+    </DialogPortal>
+  )
+})
 DialogContent.displayName = 'DialogContent'
+
+/**
+ * Barra de título da janela clássica. Carrega o `DialogTitle` que o Radix exige
+ * para nomear o diálogo, e o botão de fechar.
+ */
+export const DialogTitlebar = ({
+  children,
+  closeLabel = 'Fechar',
+}: {
+  children: React.ReactNode
+  closeLabel?: string
+}): JSX.Element => (
+  <div className="rsac-dialog-titlebar">
+    <RadixDialog.Title className="rsac-dialog-titlebar__title">{children}</RadixDialog.Title>
+    <RadixDialog.Close className="rsac-dialog-titlebar__close" aria-label={closeLabel} title={closeLabel}>
+      <X size={13} aria-hidden="true" />
+    </RadixDialog.Close>
+  </div>
+)
+DialogTitlebar.displayName = 'DialogTitlebar'
+
+/** Corpo com o respiro da janela clássica. */
+export const DialogBody = ({
+  className = '',
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>): JSX.Element => (
+  <div className={`rsac-dialog-body ${className}`.trim()} {...props} />
+)
+DialogBody.displayName = 'DialogBody'
 
 export const DialogHeader = ({
   className = '',

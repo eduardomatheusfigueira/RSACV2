@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Sparkles,
 } from 'lucide-react'
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui'
 import type { DeduplicationReport } from '@/types/api'
 import './DeduplicationReportModal.css'
 
@@ -34,7 +35,7 @@ export function DeduplicationReportModal({
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
 
-  if (!isOpen || !report) return null
+  if (!report) return null
 
   const handleCopyText = async () => {
     try {
@@ -65,23 +66,32 @@ export function DeduplicationReportModal({
     }
   }
 
+  /* A janela mantém o próprio layout, mas quem a monta agora é o Dialog do
+     Radix: foco preso enquanto aberta, Escape fecha, foco volta ao botão que
+     abriu. Nada disso existia na versão desenhada à mão. */
   return (
-    <div className="dedup-modal-backdrop" onClick={onClose}>
-      <div className="dedup-modal-window" onClick={(e) => e.stopPropagation()}>
+    <Dialog open={isOpen} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        className="dedup-modal-window"
+        showCloseButton={false}
+        aria-describedby="dedup-modal-subtitle"
+      >
         {/* Header */}
         <div className="dedup-modal-header">
           <div className="dedup-modal-title-area">
-            <Layers size={22} className="icon-accent" />
+            <Layers size={22} className="icon-accent" aria-hidden="true" />
             <div>
-              <h2>Relatório de Deduplicação e Fusão de Fontes</h2>
-              <p className="dedup-modal-subtitle">
+              <DialogTitle asChild>
+                <h2>Relatório de Deduplicação e Fusão de Fontes</h2>
+              </DialogTitle>
+              <p className="dedup-modal-subtitle" id="dedup-modal-subtitle">
                 Consolidação dos 3 passes algorítmicos (DOI ➔ Título Normalizado ➔ Similaridade Fuzzy)
               </p>
             </div>
           </div>
-          <button className="dedup-modal-close-btn" onClick={onClose} title="Fechar">
-            <X size={20} />
-          </button>
+          <DialogClose className="dedup-modal-close-btn" aria-label="Fechar" title="Fechar">
+            <X size={20} aria-hidden="true" />
+          </DialogClose>
         </div>
 
         {/* Top Summary Bar */}
@@ -137,7 +147,7 @@ export function DeduplicationReportModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -147,24 +147,31 @@ export function TopRibbonBar(): JSX.Element {
           Brand + Active Project Context + Quick Global Controls
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="ribbon-titlebar">
-        <div
+        <button
+          type="button"
           className="ribbon-brand rsac-on-brand"
           onClick={() => navigate('/')}
           title="RSAC — Revisão Sistemática Assistida por Computador (Versão 2, beta)"
+          aria-label="Ir para o início"
         >
           <RsacMark size={19} tone="brand" label={null} />
           <span className="brand-name">RSAC<span className="brand-ver">v2</span></span>
           <BetaBadge tone="brand" size="xs" />
-        </div>
+        </button>
 
         <div className="ribbon-active-project-bar">
           {activeProject ? (
-            <div className="active-project-pill" onClick={() => navigate('/projects')} title="Trocar projeto ativo">
-              <FolderDot size={13} className="icon-project" />
+            <button
+              type="button"
+              className="active-project-pill"
+              onClick={() => navigate('/projects')}
+              title="Trocar projeto ativo"
+            >
+              <FolderDot size={13} className="icon-project" aria-hidden="true" />
               <span className="project-label">PROJETO:</span>
               <strong className="project-title">{activeProject.title}</strong>
               <span className="project-methodology-tag">{activeProject.methodology}</span>
-            </div>
+            </button>
           ) : (
             <button type="button" className="btn-select-project-alert" onClick={() => navigate('/projects')}>
               <FolderOpen size={13} />

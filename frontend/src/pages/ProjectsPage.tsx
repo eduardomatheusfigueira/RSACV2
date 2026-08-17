@@ -22,7 +22,16 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
-import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
+import {
+  PageHeader,
+  Button,
+  EmptyState,
+  LoadingState,
+  Dialog,
+  DialogContent,
+  DialogTitlebar,
+  DialogBody,
+} from '@/components/ui'
 import type { Project, Methodology } from '@/types/api'
 import './ProjectsPage.css'
 
@@ -181,10 +190,13 @@ export function ProjectsPage(): JSX.Element {
           {filteredProjects.map((project) => {
             const isActive = activeProject?.id === project.id
             return (
+              /* O cartão inteiro abre o projeto, mas carrega dentro de si o
+                 botão de excluir. Controle dentro de controle é marcação
+                 inválida — então quem é clicável é o título, e a área do
+                 cartão vira alvo dele por um ::after esticado. */
               <div
                 key={project.id}
                 className={`project-card-full ${isActive ? 'active-card' : ''}`}
-                onClick={() => handleSelectProject(project)}
               >
                 <div className="card-header">
                   <div className="card-meta">
@@ -196,15 +208,25 @@ export function ProjectsPage(): JSX.Element {
                     )}
                   </div>
                   <button
+                    type="button"
                     className="btn-icon danger"
                     title="Excluir Projeto"
+                    aria-label={`Excluir projeto: ${project.title}`}
                     onClick={(e) => handleDeleteProject(project.id, e)}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16} aria-hidden="true" />
                   </button>
                 </div>
 
-                <h3 className="card-title">{project.title}</h3>
+                <h3 className="card-title">
+                  <button
+                    type="button"
+                    className="card-title-action"
+                    onClick={() => handleSelectProject(project)}
+                  >
+                    {project.title}
+                  </button>
+                </h3>
                 <p className="card-desc">
                   {project.description || 'Sem descrição cadastrada.'}
                 </p>
@@ -224,28 +246,12 @@ export function ProjectsPage(): JSX.Element {
         </div>
       )}
 
-      {/* Create Modal */}
-      {isModalOpen && (
-        <div
-          className="modal-overlay animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsModalOpen(false)
-          }}
-        >
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-titlebar">
-              <span>Novo Projeto de Revisão</span>
-              <button
-                type="button"
-                className="modal-titlebar-btn"
-                onClick={() => setIsModalOpen(false)}
-                title="Fechar"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body">
+      {/* Criação de projeto — janela clássica sobre o Dialog do Radix, que
+          prende o foco, fecha no Escape e devolve o foco ao botão de origem. */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent variant="window" size="md" aria-describedby={undefined}>
+          <DialogTitlebar>Novo Projeto de Revisão</DialogTitlebar>
+          <DialogBody>
               <div className="modal-intro">
                 <p>Defina o título, a diretriz metodológica e a justificativa inicial da sua pesquisa secundária.</p>
               </div>
@@ -358,10 +364,9 @@ export function ProjectsPage(): JSX.Element {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

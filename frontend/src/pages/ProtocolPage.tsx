@@ -48,7 +48,6 @@ import {
   BookMarked,
   ListChecks,
   Check,
-  X,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -56,7 +55,16 @@ import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
-import { PageHeader, Button } from '@/components/ui'
+import {
+  PageHeader,
+  Button,
+  LoadingState,
+  Dialog,
+  DialogContent,
+  DialogTitlebar,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui'
 import type {
   Criterion,
   ExtractionQuestion,
@@ -2898,16 +2906,14 @@ Conclusões:
                 {aPrioriChecklistItems.map((chk) => {
                   const isChecked = checkedScRItems[chk.id] || false
                   return (
-                    <div
+                    <label
                       key={chk.id}
                       className={`scr-checklist-row ${isChecked ? 'checked' : ''} ${chk.essential ? 'essential' : 'optional'}`}
-                      onClick={() => toggleScRItem(chk.id)}
                     >
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => toggleScRItem(chk.id)}
-                        onClick={(e) => e.stopPropagation()}
                       />
                       <div className="scr-item-info">
                         <div className="scr-item-header">
@@ -2918,9 +2924,9 @@ Conclusões:
                             {chk.essential ? 'Essencial' : 'Opcional'}
                           </span>
                         </div>
-                        <p className="scr-item-desc">{chk.desc}</p>
+                        <span className="scr-item-desc">{chk.desc}</span>
                       </div>
-                    </div>
+                    </label>
                   )
                 })}
               </div>
@@ -2939,16 +2945,14 @@ Conclusões:
                   {aPosterioriChecklistItems.map((chk) => {
                     const isChecked = checkedScRItems[chk.id] || false
                     return (
-                      <div
+                      <label
                         key={chk.id}
                         className={`scr-checklist-row ${isChecked ? 'checked' : ''} ${chk.essential ? 'essential' : 'optional'}`}
-                        onClick={() => toggleScRItem(chk.id)}
                       >
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleScRItem(chk.id)}
-                          onClick={(e) => e.stopPropagation()}
                         />
                         <div className="scr-item-info">
                           <div className="scr-item-header">
@@ -2959,9 +2963,9 @@ Conclusões:
                               {chk.essential ? 'Essencial' : 'Opcional'}
                             </span>
                           </div>
-                          <p className="scr-item-desc">{chk.desc}</p>
+                          <span className="scr-item-desc">{chk.desc}</span>
                         </div>
-                      </div>
+                      </label>
                     )
                   })}
                 </div>
@@ -2971,24 +2975,15 @@ Conclusões:
         </div>
       )}
 
-      {/* AI Suggestion Modal */}
-      {isAiModalOpen && (
-        <div className="modal-overlay animate-fade-in" onClick={() => setIsAiModalOpen(false)}>
-          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-titlebar">
-              <span>Proposta de Protocolo Gerada por Assistência ({activeProject?.methodology})</span>
-              <button className="modal-titlebar-btn" onClick={() => setIsAiModalOpen(false)}>
-                <X size={14} />
-              </button>
-            </div>
-            <div className="modal-body">
+      {/* Proposta de protocolo por assistência */}
+      <Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
+        <DialogContent variant="window" size="md" aria-describedby={undefined}>
+          <DialogTitlebar>
+            Proposta de Protocolo Gerada por Assistência ({activeProject?.methodology})
+          </DialogTitlebar>
+          <DialogBody>
               {aiLoading ? (
-                <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
-                  <Sparkles size={32} className="animate-spin icon-accent" />
-                  <p style={{ marginTop: 'var(--space-2)' }}>
-                    Elaborando proposta de PICO/PCC, descritores em pares e critérios em Ciências Sociais Aplicadas...
-                  </p>
-                </div>
+                <LoadingState label="Elaborando proposta de PICO/PCC, descritores em pares e critérios em Ciências Sociais Aplicadas…" />
               ) : aiSuggestions ? (
                 <div className="ai-suggestions-preview">
                   <div className="form-group">
@@ -3023,20 +3018,24 @@ Conclusões:
                     </div>
                   </div>
 
-                  <div className="modal-actions">
-                    <button type="button" className="btn-secondary" onClick={() => setIsAiModalOpen(false)}>
+                  <DialogFooter>
+                    <Button variant="secondary" size="md" onClick={() => setIsAiModalOpen(false)}>
                       Cancelar
-                    </button>
-                    <button type="button" className="btn-primary" onClick={handleApplyAISuggestions}>
-                      <Sparkles size={16} /> Aplicar Proposta ao Protocolo
-                    </button>
-                  </div>
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={handleApplyAISuggestions}
+                      leftIcon={<Sparkles size={14} />}
+                    >
+                      Aplicar Proposta ao Protocolo
+                    </Button>
+                  </DialogFooter>
                 </div>
               ) : null}
-            </div>
-          </div>
-        </div>
-      )}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -72,6 +72,29 @@
   flex-direction: column;
   transition: all var(--transition-fast);
   user-select: none;
+  position: relative;
+}
+
+/* O botão do título cobre o cartão: o alvo é a área toda, mas quem existe
+   para o teclado e o leitor de tela é um único controle nomeado. */
+.card-title-action {
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-title-action::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* O excluir precisa ficar acima da capa do título para continuar clicável. */
+.project-card-full .btn-icon.danger {
+  position: relative;
+  z-index: var(--z-sticky);
 }
 
 .project-card-full:hover {

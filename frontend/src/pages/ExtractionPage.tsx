@@ -35,7 +35,6 @@ import {
   Trash2,
   Link,
   FileCode,
-  X,
   ZoomIn,
   ZoomOut,
   Copy,
@@ -46,7 +45,18 @@ import {
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
-import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
+import {
+  PageHeader,
+  Button,
+  EmptyState,
+  LoadingState,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui'
 import type { Paper, Protocol } from '@/types/api'
 import './ExtractionPage.css'
 
@@ -636,21 +646,23 @@ export function ExtractionPage(): JSX.Element {
               filteredPapers.map((paper) => {
                 const isSelected = selectedPaper?.id === paper.id
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={paper.id}
                     className={`queue-paper-card ${isSelected ? 'selected' : ''}`}
                     onClick={() => setSelectedPaper(paper)}
                     title={paper.title}
+                    aria-current={isSelected}
                   >
                     <div className="queue-card-meta">
                       <span className="badge-decision badge-incluído">Incluído</span>
                       {paper.year && <span className="queue-card-year">{paper.year}</span>}
                     </div>
-                    <h4 className="queue-card-title">{paper.title}</h4>
+                    <span className="queue-card-title">{paper.title}</span>
                     {paper.authors && (
-                      <p className="queue-card-authors">{paper.authors}</p>
+                      <span className="queue-card-authors">{paper.authors}</span>
                     )}
-                  </div>
+                  </button>
                 )
               })
             )}
@@ -1168,60 +1180,43 @@ export function ExtractionPage(): JSX.Element {
         </div>
       )}
 
-      {/* Modal / Diálogo Rápido de Link Direto de PDF */}
-      {isUrlModalOpen && (
-        <div className="modal-overlay animate-fade-in" onClick={() => setIsUrlModalOpen(false)}>
-          <div className="modal-content-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title-group">
-                <Link size={16} className="icon-accent" />
-                <h3>Link Direto do PDF</h3>
-              </div>
-              <button className="btn-close-modal" onClick={() => setIsUrlModalOpen(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <div className="modal-body">
-              <p className="modal-desc">
-                Cole a URL direta do arquivo PDF (ex: repositório institucional, SciELO, ResearchGate) para download automático:
-              </p>
-              <input
-                type="url"
-                className="input-text-full"
-                placeholder="https://exemplo.org/artigo.pdf"
-                value={customDownloadUrl}
-                onChange={(e) => setCustomDownloadUrl(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => setIsUrlModalOpen(false)}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={handleSaveCustomDownloadUrl}
-                disabled={!customDownloadUrl.trim() || downloadingPdf}
-              >
-                {downloadingPdf ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" /> Baixando...
-                  </>
-                ) : (
-                  <>
-                    <Download size={14} /> Salvar & Baixar PDF
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Link direto de PDF */}
+      <Dialog open={isUrlModalOpen} onOpenChange={setIsUrlModalOpen}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>
+              <Link size={15} className="icon-accent" aria-hidden="true" /> Link Direto do PDF
+            </DialogTitle>
+            <DialogDescription>
+              Cole a URL direta do arquivo PDF (ex: repositório institucional, SciELO, ResearchGate) para download
+              automático:
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            type="url"
+            className="input-text-full"
+            placeholder="https://exemplo.org/artigo.pdf"
+            value={customDownloadUrl}
+            onChange={(e) => setCustomDownloadUrl(e.target.value)}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="secondary" size="md" onClick={() => setIsUrlModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleSaveCustomDownloadUrl}
+              loading={downloadingPdf}
+              disabled={!customDownloadUrl.trim()}
+              leftIcon={<Download size={14} />}
+            >
+              {downloadingPdf ? 'Baixando…' : 'Salvar & Baixar PDF'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

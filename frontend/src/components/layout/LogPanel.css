@@ -190,6 +190,16 @@
   font-size: var(--font-size-xs);
   min-height: 30px;
   flex-shrink: 0;
+  width: 100%;
+  text-align: left;
+  color: inherit;
+}
+
+/* Entrada sem detalhe não expande nada: o botão fica inerte, mas a linha
+   continua legível. */
+.log-entry-main:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .log-level-badge {

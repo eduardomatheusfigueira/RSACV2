@@ -159,7 +159,7 @@ export function ExportPage(): JSX.Element {
 
           <div className="pane-scroll-body">
             {/* Card Excel */}
-            <div className="export-package-card" onClick={handleDownloadExcel}>
+            <button type="button" className="export-package-card" onClick={handleDownloadExcel}>
               <div className="package-card-icon excel">
                 <FileSpreadsheet size={24} />
               </div>
@@ -174,10 +174,10 @@ export function ExportPage(): JSX.Element {
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Card BibTeX */}
-            <div className="export-package-card" onClick={handleDownloadBibtex}>
+            <button type="button" className="export-package-card" onClick={handleDownloadBibtex}>
               <div className="package-card-icon bibtex">
                 <BookMarked size={24} />
               </div>
@@ -192,10 +192,11 @@ export function ExportPage(): JSX.Element {
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Card Manuscrito */}
-            <div
+            <button
+              type="button"
               className="export-package-card"
               onClick={() => navigate(`/projects/${id}/protocol`)}
             >
@@ -213,7 +214,7 @@ export function ExportPage(): JSX.Element {
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Banner de Auditoria e Reprodutibilidade */}
             <div className="export-audit-card">

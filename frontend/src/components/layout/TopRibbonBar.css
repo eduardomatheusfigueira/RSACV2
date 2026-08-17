@@ -37,6 +37,8 @@
   margin-left: -4px;
   border-radius: var(--radius-xs);
   transition: background var(--transition-fast);
+  text-align: left;
+  color: inherit;
 }
 
 .ribbon-brand:hover {
@@ -83,6 +85,9 @@
   transition: all var(--transition-fast);
   max-width: 100%;
   overflow: hidden;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
 }
 
 .active-project-pill:hover {
@@ -155,9 +160,12 @@
   border: 1px solid transparent;
 }
 
+/* O texto aqui pousa em `--olive-leaf`, não em `--color-accent` — usar o
+   token do acento dava 3.18:1 no tema padrão. `--color-text-on-olive` é medido
+   contra o olive de cada paleta. */
 .ribbon-action-pill.ai-active {
   background: var(--olive-leaf);
-  color: var(--color-text-on-accent);
+  color: var(--color-text-on-olive);
 }
 
 .ribbon-action-pill.ai-manual {

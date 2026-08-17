@@ -18,6 +18,7 @@
 :root {
   /* ── Paleta Base Orgânica ────────────────────────────────────────── */
   --olive-leaf: #606c38;
+  --color-text-on-olive: #ffffff; /* 5.68:1 sobre #606c38 */
   --black-forest: #283618;
   --cornsilk: #fefae0;
   --sunlit-clay: #dda15e;
@@ -276,6 +277,7 @@
 [data-theme='lava-steel'] {
   --black-forest: #002236;
   --olive-leaf: #669bbc;
+  --color-text-on-olive: #000000; /* 6.98:1 sobre #669bbc */
   --cornsilk: #fdf0d5;
   --sunlit-clay: #c1121f;
   --copperwood: #c1121f;
@@ -345,6 +347,7 @@
 [data-theme='pastel-dream'] {
   --black-forest: #3c2a47;
   --olive-leaf: #7b5993;
+  --color-text-on-olive: #ffffff; /* 5.69:1 sobre #7b5993 */
   --cornsilk: #ffffff;
   --sunlit-clay: #ffafcc;
   --copperwood: #b05c86;
@@ -414,6 +417,7 @@
 [data-theme='stormy-tangerine'] {
   --black-forest: #001524;
   --olive-leaf: #15616d;
+  --color-text-on-olive: #ffffff; /* 7.09:1 sobre #15616d */
   --cornsilk: #ffecd1;
   --sunlit-clay: #ff7d00;
   --copperwood: #ff7d00;
@@ -483,6 +487,7 @@
 [data-theme='platinum-dusk'] {
   --black-forest: #274c77;
   --olive-leaf: #6096ba;
+  --color-text-on-olive: #000000; /* 6.57:1 sobre #6096ba */
   --cornsilk: #ffffff;
   --sunlit-clay: #6096ba;
   --copperwood: #274c77;
@@ -552,6 +557,7 @@
 [data-theme='indigo-rose'] {
   --black-forest: #220e3a;
   --olive-leaf: #642ca9;
+  --color-text-on-olive: #ffffff; /* 8.48:1 sobre #642ca9 */
   --cornsilk: #ffdde1;
   --sunlit-clay: #ff74d4;
   --copperwood: #ff36ab;
@@ -624,6 +630,7 @@
 [data-theme='amethyst-deep'] {
   --black-forest: #10002b;
   --olive-leaf: #7b2cbf;
+  --color-text-on-olive: #ffffff; /* 7.11:1 sobre #7b2cbf */
   --cornsilk: #e0aaff;
   --sunlit-clay: #c77dff;
   --copperwood: #9d4edd;
@@ -693,6 +700,7 @@
 [data-theme='parchment-linen'] {
   --black-forest: #443730;
   --olive-leaf: #8d7365;
+  --color-text-on-olive: #000000; /* 4.77:1 sobre #8d7365 */
   --cornsilk: #ffffff;
   --sunlit-clay: #d5bdaf;
   --copperwood: #8d7365;
@@ -764,6 +772,7 @@
 [data-theme='periwinkle-ice'] {
   --black-forest: #1b2742;
   --olive-leaf: #4361ee;
+  --color-text-on-olive: #ffffff; /* 5.02:1 sobre #4361ee */
   --cornsilk: #ffffff;
   --sunlit-clay: #abc4ff;
   --copperwood: #3f55cf;
@@ -838,6 +847,7 @@
 [data-theme='fuchsia-blush'] {
   --black-forest: #420819;
   --olive-leaf: #ff0a54;
+  --color-text-on-olive: #000000; /* 5.42:1 sobre #ff0a54 */
   --cornsilk: #ffffff;
   --sunlit-clay: #ff7096;
   --copperwood: #ff0a54;
@@ -907,6 +917,7 @@
 [data-theme='powder-aqua'] {
   --black-forest: #2b303c;
   --olive-leaf: #407b70;
+  --color-text-on-olive: #ffffff; /* 4.90:1 sobre #407b70 */
   --cornsilk: #ffffff;
   --sunlit-clay: #ffa69e;
   --copperwood: #5e6472;
@@ -981,6 +992,7 @@
 [data-theme='synthwave-neon'] {
   --black-forest: #0d061f;
   --olive-leaf: #4361ee;
+  --color-text-on-olive: #ffffff; /* 5.02:1 sobre #4361ee */
   --cornsilk: #4cc9f0;
   --sunlit-clay: #f72585;
   --copperwood: #f72585;

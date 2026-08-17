@@ -202,6 +202,9 @@
   cursor: pointer;
   flex-shrink: 0;
   transition: all var(--transition-fast);
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
 }
 
 .queue-paper-card:hover {

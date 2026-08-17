@@ -52,7 +52,18 @@ import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import type { DeduplicationReport, Paper, Decision, Protocol } from '@/types/api'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
-import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
+import {
+  PageHeader,
+  Button,
+  EmptyState,
+  LoadingState,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui'
 import './ScreeningPage.css'
 
 export function ScreeningPage(): React.JSX.Element {
@@ -809,7 +820,8 @@ export function ScreeningPage(): React.JSX.Element {
               papers.map((paper, idx) => {
                 const isSelected = selectedPaper?.id === paper.id
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={paper.id}
                     className={`queue-paper-card ${isSelected ? 'selected' : ''} dec-${paper.decision.toLowerCase()}`}
                     onClick={() => {
@@ -817,6 +829,7 @@ export function ScreeningPage(): React.JSX.Element {
                       setAiLastResult(null)
                     }}
                     title={paper.title}
+                    aria-current={isSelected}
                   >
                     <div className="queue-card-meta">
                       <span className={`badge-decision badge-${paper.decision.toLowerCase()}`}>
@@ -829,11 +842,11 @@ export function ScreeningPage(): React.JSX.Element {
                       )}
                       {paper.year && <span className="queue-card-year">{paper.year}</span>}
                     </div>
-                    <h4 className="queue-card-title">{paper.title}</h4>
+                    <span className="queue-card-title">{paper.title}</span>
                     {paper.authors && (
-                      <p className="queue-card-authors">{paper.authors}</p>
+                      <span className="queue-card-authors">{paper.authors}</span>
                     )}
-                  </div>
+                  </button>
                 )
               })
             )}
@@ -1338,16 +1351,22 @@ export function ScreeningPage(): React.JSX.Element {
         </div>
       )}
 
-      {/* Batch AI Screening Modal */}
-      {isBatchModalOpen && (
-        <div className="modal-overlay animate-fade-in" onClick={() => !isBatchRunning && setIsBatchModalOpen(false)}>
-          <div className="modal-content batch-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Triagem em Lote com Assistência</h2>
-              <p>Execute a avaliação automática em massa de artigos com status Pendente</p>
-            </div>
+      {/* Triagem em lote — enquanto roda, o modal não fecha por clique fora nem
+          por Escape: interromper por acidente custaria a execução inteira. */}
+      <Dialog open={isBatchModalOpen} onOpenChange={(o) => !isBatchRunning && setIsBatchModalOpen(o)}>
+        <DialogContent
+          size="sm"
+          onEscapeKeyDown={(e) => isBatchRunning && e.preventDefault()}
+          onPointerDownOutside={(e) => isBatchRunning && e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Triagem em Lote com Assistência</DialogTitle>
+            <DialogDescription>
+              Execute a avaliação automática em massa de artigos com status Pendente
+            </DialogDescription>
+          </DialogHeader>
 
-            {!isBatchRunning ? (
+          {!isBatchRunning ? (
               <div className="batch-config-form">
                 <div className="form-group">
                   <label>Quantidade Máxima de Artigos Pendentes ({batchLimit})</label>
@@ -1374,18 +1393,14 @@ export function ScreeningPage(): React.JSX.Element {
                   </select>
                 </div>
 
-                <div className="modal-actions">
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    onClick={() => setIsBatchModalOpen(false)}
-                  >
+                <DialogFooter>
+                  <Button variant="secondary" size="md" onClick={() => setIsBatchModalOpen(false)}>
                     Cancelar
-                  </button>
-                  <button type="button" className="btn-primary" onClick={handleStartBatchAI}>
-                    <Zap size={16} /> Iniciar Triagem em Lote
-                  </button>
-                </div>
+                  </Button>
+                  <Button variant="primary" size="md" onClick={handleStartBatchAI} leftIcon={<Zap size={14} />}>
+                    Iniciar Triagem em Lote
+                  </Button>
+                </DialogFooter>
               </div>
             ) : (
               <div className="batch-progress-view animate-fade-in">
@@ -1425,29 +1440,24 @@ export function ScreeningPage(): React.JSX.Element {
                 <p className="batch-hint-text">
                   A triagem continuará em segundo plano mesmo se você fechar este modal.
                 </p>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ alignSelf: 'center', marginTop: 'var(--space-4)' }}
-                  onClick={() => setIsBatchModalOpen(false)}
-                >
-                  Minimizar e Continuar
-                </button>
+                <div className="batch-minimize-row">
+                  <Button variant="secondary" size="md" onClick={() => setIsBatchModalOpen(false)}>
+                    Minimizar e Continuar
+                  </Button>
+                </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
-      {/* Manual Paper Modal */}
-      {isAddModalOpen && (
-        <div className="modal-overlay animate-fade-in" onClick={() => setIsAddModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Cadastrar Estudo Manualmente</h2>
-              <p>Insira os metadados do artigo a ser triado</p>
-            </div>
-            <form onSubmit={handleAddManualPaper} className="modal-form">
+      {/* Cadastro manual de estudo */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent size="md">
+          <DialogHeader>
+            <DialogTitle>Cadastrar Estudo Manualmente</DialogTitle>
+            <DialogDescription>Insira os metadados do artigo a ser triado</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddManualPaper} className="modal-form">
               <div className="form-group">
                 <label>Título do Estudo *</label>
                 <input
@@ -1490,22 +1500,17 @@ export function ScreeningPage(): React.JSX.Element {
                 />
               </div>
 
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setIsAddModalOpen(false)}
-                >
+              <DialogFooter>
+                <Button variant="secondary" size="md" onClick={() => setIsAddModalOpen(false)}>
                   Cancelar
-                </button>
-                <button type="submit" className="btn-primary">
+                </Button>
+                <Button type="submit" variant="primary" size="md">
                   Adicionar ao Projeto
-                </button>
-              </div>
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Deduplication Report Modal */}
       <DeduplicationReportModal

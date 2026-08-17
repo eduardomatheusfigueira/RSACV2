@@ -863,11 +863,13 @@ export function SettingsPage(): JSX.Element {
               (t.id === 'dark' && (theme === 'organic-dark' || theme === 'dark')) ||
               (t.id === 'light' && (theme === 'organic-light' || theme === 'light'))
             return (
-              <div
+              <button
+                type="button"
                 key={t.id}
                 className={`theme-card-item ${isSelected ? 'selected' : ''}`}
                 onClick={() => setTheme(t.id)}
                 title={`Aplicar paleta ${t.name}`}
+                aria-pressed={isSelected}
               >
                 <div className="theme-card-header">
                   <span className="theme-card-name">{t.name}</span>
@@ -882,10 +884,10 @@ export function SettingsPage(): JSX.Element {
                 </div>
                 {isSelected && (
                   <div className="theme-selected-badge">
-                    <Check size={11} /> Tema Ativo
+                    <Check size={11} aria-hidden="true" /> Tema Ativo
                   </div>
                 )}
-              </div>
+              </button>
             )
           })}
         </div>
@@ -972,17 +974,20 @@ export function SettingsPage(): JSX.Element {
                 {currentModelList.map((m) => {
                   const active = model === m.id
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={m.id}
                       className={`model-option-card ${active ? 'selected' : ''}`}
-                      onClick={() => isAiActive && handleModelPresetSelect(m.id)}
+                      onClick={() => handleModelPresetSelect(m.id)}
+                      disabled={!isAiActive}
+                      aria-pressed={active}
                     >
                       <div className="model-opt-header">
                         <span className="model-opt-name">{m.name}</span>
                         {m.badge && <span className="model-badge">{m.badge}</span>}
                       </div>
-                      <p className="model-opt-desc">{m.desc}</p>
-                    </div>
+                      <span className="model-opt-desc">{m.desc}</span>
+                    </button>
                   )
                 })}
               </div>
@@ -1237,10 +1242,14 @@ export function SettingsPage(): JSX.Element {
 
             <div className="form-group">
               <div className="range-label-row">
-                <label>Temperatura ({temperature})</label>
-                <span className="range-hint">Valores baixos (0.0 - 0.3) garantem rigor e zero alucinação.</span>
+                <label htmlFor="cfg-temperature">Temperatura ({temperature})</label>
+                <span className="range-hint" id="cfg-temperature-hint">
+                  Valores baixos (0.0 - 0.3) garantem rigor e zero alucinação.
+                </span>
               </div>
               <input
+                id="cfg-temperature"
+                aria-describedby="cfg-temperature-hint"
                 type="range"
                 min="0.0"
                 max="1.0"
@@ -1252,8 +1261,9 @@ export function SettingsPage(): JSX.Element {
             </div>
 
             <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-              <label>Máximo de Tokens de Saída ({maxTokens})</label>
+              <label htmlFor="cfg-max-tokens">Máximo de Tokens de Saída ({maxTokens})</label>
               <select
+                id="cfg-max-tokens"
                 disabled={!isAiActive}
                 value={maxTokens}
                 onChange={(e) => setMaxTokens(parseInt(e.target.value, 10))}
