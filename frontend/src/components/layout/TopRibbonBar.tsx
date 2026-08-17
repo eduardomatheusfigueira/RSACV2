@@ -654,6 +654,27 @@ export function TopRibbonBar(): JSX.Element {
 
               <div className="ribbon-divider" />
 
+              {/* Group: Tratamento do Acervo
+                  A auditoria de duplicatas era exclusiva do cabeçalho da
+                  Triagem. Ao consolidar o cabeçalho em uma única ação primária,
+                  o comando passa a viver aqui — mesmo registro tipado que a
+                  Coleta usa. */}
+              <div className="ribbon-group">
+                <div className="ribbon-group-tools">
+                  <button
+                    type="button"
+                    className="tool-btn-vertical"
+                    onClick={() => actions.openDedupModal?.()}
+                  >
+                    <Layers size={15} />
+                    <span>Auditar<br />Duplicatas</span>
+                  </button>
+                </div>
+                <span className="ribbon-group-title">Tratamento do Acervo</span>
+              </div>
+
+              <div className="ribbon-divider" />
+
               {/* Group: Assistência */}
               {aiEnabled && (
                 <>

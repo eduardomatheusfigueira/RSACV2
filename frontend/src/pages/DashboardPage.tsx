@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { api } from '@/api/client'
+import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { Project } from '@/types/api'
 import './DashboardPage.css'
@@ -49,26 +50,16 @@ export function DashboardPage(): JSX.Element {
 
   return (
     <div className="dashboard animate-slide-up">
-      {/* Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <Sparkles size={18} className="icon-accent" />
-            <h1 className="page-title">Revisão Sistemática Assistida por Computador</h1>
-          </div>
-          <p className="page-subtitle">
-            Gerencie seus protocolos, coletas e revisões com rigor metodológico e assistência computacional
-          </p>
-        </div>
-        <div className="header-actions">
-          <button
-            className="btn-primary"
-            onClick={() => navigate('/projects')}
-          >
-            <Plus size={14} /> Novo Projeto
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Revisão Sistemática Assistida por Computador"
+        meta={<Sparkles size={16} className="icon-accent" aria-hidden="true" />}
+        subtitle="Gerencie seus protocolos, coletas e revisões com rigor metodológico e assistência computacional"
+        primaryAction={
+          <Button variant="primary" size="md" onClick={() => navigate('/projects')} leftIcon={<Plus size={14} />}>
+            Novo Projeto
+          </Button>
+        }
+      />
 
       {/* Stat Cards */}
       <div className="dashboard-stats">
@@ -120,20 +111,18 @@ export function DashboardPage(): JSX.Element {
         </div>
 
         {loading ? (
-          <div className="dashboard-loading">
-            <div className="loading-spinner animate-spin" />
-            <span>Carregando projetos...</span>
-          </div>
+          <LoadingState label="Carregando projetos…" />
         ) : projects.length === 0 ? (
-          <div className="dashboard-empty">
-            <FolderOpen size={48} strokeWidth={1} />
-            <h3>Nenhum projeto ainda</h3>
-            <p>Crie seu primeiro projeto de revisão sistemática para começar.</p>
-            <button className="dashboard-cta" onClick={() => navigate('/projects')}>
-              <Plus size={18} />
-              Criar Primeiro Projeto
-            </button>
-          </div>
+          <EmptyState
+            icon={<FolderOpen size={32} strokeWidth={1.25} aria-hidden="true" />}
+            title="Nenhum projeto ainda"
+            description="Um projeto guarda o protocolo, o acervo coletado e as decisões de triagem. Crie o primeiro para começar a revisão."
+            action={
+              <Button variant="primary" size="md" onClick={() => navigate('/projects')} leftIcon={<Plus size={14} />}>
+                Criar Primeiro Projeto
+              </Button>
+            }
+          />
         ) : (
           <div className="project-grid">
             {projects.map((project) => {

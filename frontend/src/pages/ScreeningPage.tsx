@@ -18,7 +18,6 @@ import {
   Filter,
   ExternalLink,
   BookOpen,
-  ArrowLeft,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
@@ -53,6 +52,7 @@ import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import type { DeduplicationReport, Paper, Decision, Protocol } from '@/types/api'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
+import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
 import './ScreeningPage.css'
 
 export function ScreeningPage(): React.JSX.Element {
@@ -470,6 +470,11 @@ export function ScreeningPage(): React.JSX.Element {
       },
       screenAiSingle: handleSingleAIScreening,
       screenAiBatch: handleStartBatchAI,
+      /* Só captura `id` (estável na rota) e setters — a closure não envelhece,
+         por isso fica fora das dependências. */
+      openDedupModal: () => {
+        void handleOpenDedupModal()
+      },
       setDecisionFilter: (filter: string) => {
         setDecisionFilter(filter)
         setPage(1)
@@ -484,6 +489,7 @@ export function ScreeningPage(): React.JSX.Element {
         'decisionPending',
         'screenAiSingle',
         'screenAiBatch',
+        'openDedupModal',
         'setDecisionFilter',
         'activeDecisionFilter',
         'canScreenSingle',
@@ -660,39 +666,31 @@ export function ScreeningPage(): React.JSX.Element {
 
   return (
     <div className="screening-page animate-fade-in">
-      {/* Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <button className="btn-back" onClick={() => navigate('/projects')}>
-              <ArrowLeft size={13} /> Voltar
-            </button>
-            <h1 className="page-title">Triagem de Estudos (Triagem 1)</h1>
-          </div>
-          <p className="page-subtitle">
-            Projeto: <strong>{activeProject?.title}</strong> — Avaliação rápida de título, resumo e critérios de inclusão/exclusão
-          </p>
-        </div>
-        <div className="header-actions">
-          <button
-            className="btn-secondary"
-            onClick={handleOpenDedupModal}
-            disabled={isDeduplicating}
-            title="Verificar e auditar registros duplicados"
-          >
-            <Layers size={14} className="icon-accent" />
-            {isDeduplicating ? 'Auditando...' : 'Auditoria de Duplicatas'}
-          </button>
-          {aiEnabled && (
-            <button className="btn-secondary" onClick={() => setIsBatchModalOpen(true)}>
-              <Zap size={14} className="icon-accent" /> Triagem em Lote com Assistência
-            </button>
-          )}
-          <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={14} /> Adicionar Manual
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Triagem de Estudos (Triagem 1)"
+        onBack={() => navigate('/projects')}
+        subtitle={
+          <span>
+            Projeto: <strong>{activeProject?.title}</strong> — Avaliação rápida de título, resumo e critérios de
+            inclusão/exclusão
+          </span>
+        }
+        status={
+          isDeduplicating && (
+            <span className="save-indicator animate-fade-in" role="status" aria-live="polite">
+              <Layers size={13} aria-hidden="true" /> Auditando duplicatas…
+            </span>
+          )
+        }
+        primaryAction={
+          /* "Auditoria de Duplicatas" e "Triagem em Lote" saíram do cabeçalho:
+             agora são despachadas pelo ribbon (`openDedupModal`,
+             `screenAiBatch`), que é onde o resto dos comandos da etapa vive. */
+          <Button variant="primary" size="md" onClick={() => setIsAddModalOpen(true)} leftIcon={<Plus size={14} />}>
+            Adicionar Manual
+          </Button>
+        }
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           FILA HORIZONTAL DE TRABALHOS (ACIMA)
@@ -799,15 +797,14 @@ export function ScreeningPage(): React.JSX.Element {
 
           <div className="horizontal-papers-strip" ref={queueScrollRef}>
             {loading ? (
-              <div className="queue-loading-state">
-                <div className="loading-spinner animate-spin" />
-                <span>Carregando fila de estudos...</span>
-              </div>
+              <LoadingState size="inline" label="Carregando fila de estudos…" />
             ) : papers.length === 0 ? (
-              <div className="queue-empty-state">
-                <FileText size={18} />
-                <span>Nenhum estudo encontrado para os filtros atuais.</span>
-              </div>
+              <EmptyState
+                size="inline"
+                icon={<FileText size={18} aria-hidden="true" />}
+                title="Nenhum estudo nesta fila"
+                description="Nenhum registro corresponde ao filtro de decisão e à busca ativos."
+              />
             ) : (
               papers.map((paper, idx) => {
                 const isSelected = selectedPaper?.id === paper.id

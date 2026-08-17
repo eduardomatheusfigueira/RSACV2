@@ -17,7 +17,6 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  ArrowLeft,
   ArrowRight,
   Download,
   FileCheck,
@@ -47,6 +46,7 @@ import {
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
+import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
 import type { Paper, Protocol } from '@/types/api'
 import './ExtractionPage.css'
 
@@ -514,50 +514,44 @@ export function ExtractionPage(): JSX.Element {
         style={{ display: 'none' }}
       />
 
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <button className="btn-back" onClick={() => navigate('/projects')}>
-              <ArrowLeft size={13} /> Voltar
-            </button>
-            <h1 className="page-title">Extração de Dados (Triagem 2)</h1>
-          </div>
-          <p className="page-subtitle">
-            Projeto: <strong>{activeProject?.title}</strong> — Extração estruturada a partir do texto completo dos estudos incluídos
-          </p>
-        </div>
-        <div className="header-actions">
-          {saveSuccess && (
-            <span className="save-indicator success animate-fade-in">
-              <CheckCircle2 size={14} /> Respostas Salvas!
-            </span>
-          )}
-          {aiEnabled && (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={handleExtractWithAI}
-              disabled={extractingAI || extractingSingleId !== null || !selectedPaper || questions.length === 0}
-              title="Extrai automaticamente as respostas de todas as perguntas usando Assistência e o texto completo"
-            >
-              {extractingAI ? (
-                <>
-                  <RefreshCw size={14} className="animate-spin" /> Extraindo Todas...
-                </>
-              ) : (
-                <>
-                  <Sparkles size={14} /> Extrair Todas com Assistência
-                </>
-              )}
-            </button>
-          )}
-          <button className="btn-primary" onClick={handleSaveAnswers} disabled={saving || !selectedPaper}>
-            <Save size={14} />
-            {saving ? 'Salvando...' : 'Salvar Respostas'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Extração de Dados (Triagem 2)"
+        onBack={() => navigate('/projects')}
+        subtitle={
+          <span>
+            Projeto: <strong>{activeProject?.title}</strong> — Extração estruturada a partir do texto completo dos
+            estudos incluídos
+          </span>
+        }
+        status={
+          <>
+            {saveSuccess && (
+              <span className="save-indicator success animate-fade-in" role="status" aria-live="polite">
+                <CheckCircle2 size={14} aria-hidden="true" /> Respostas Salvas!
+              </span>
+            )}
+            {extractingAI && (
+              <span className="save-indicator animate-fade-in" role="status" aria-live="polite">
+                <RefreshCw size={13} className="animate-spin" aria-hidden="true" /> Extraindo todas as respostas…
+              </span>
+            )}
+          </>
+        }
+        primaryAction={
+          /* "Extrair Todas com Assistência" saiu do cabeçalho — o ribbon já a
+             despacha por `extractAiGlobal`. Aqui fica só o salvar. */
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleSaveAnswers}
+            loading={saving}
+            disabled={!selectedPaper}
+            leftIcon={<Save size={14} />}
+          >
+            {saving ? 'Salvando…' : 'Salvar Respostas'}
+          </Button>
+        }
+      />
 
       {errorMessage && (
         <div className="extraction-error-banner animate-fade-in">
@@ -615,28 +609,29 @@ export function ExtractionPage(): JSX.Element {
 
           <div className="horizontal-papers-strip" ref={queueScrollRef}>
             {loading ? (
-              <div className="queue-loading-state">
-                <div className="loading-spinner animate-spin" />
-                <span>Carregando estudos incluídos...</span>
-              </div>
+              <LoadingState size="inline" label="Carregando estudos incluídos…" />
             ) : filteredPapers.length === 0 ? (
-              <div className="queue-empty-state">
-                <BookOpen size={18} />
-                <span>
-                  {papers.length === 0
-                    ? 'Nenhum estudo incluído para extração. Conclua a Triagem 1 primeiro.'
-                    : 'Nenhum estudo incluído corresponde à busca.'}
-                </span>
-                {papers.length === 0 && (
-                  <button
-                    type="button"
-                    className="btn-secondary small"
-                    onClick={() => navigate(`/projects/${id}/screening`)}
-                  >
-                    Ir para Triagem 1
-                  </button>
-                )}
-              </div>
+              <EmptyState
+                size="inline"
+                icon={<BookOpen size={18} aria-hidden="true" />}
+                title={papers.length === 0 ? 'Nenhum estudo incluído ainda' : 'Nenhum estudo corresponde à busca'}
+                description={
+                  papers.length === 0
+                    ? 'A extração trabalha sobre o que a Triagem 1 incluiu. Conclua a triagem para povoar esta fila.'
+                    : 'Ajuste ou limpe o termo de busca para ver os estudos incluídos.'
+                }
+                action={
+                  papers.length === 0 ? (
+                    <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${id}/screening`)}>
+                      Ir para Triagem 1
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="sm" onClick={() => setSearchTerm('')}>
+                      Limpar busca
+                    </Button>
+                  )
+                }
+              />
             ) : (
               filteredPapers.map((paper) => {
                 const isSelected = selectedPaper?.id === paper.id

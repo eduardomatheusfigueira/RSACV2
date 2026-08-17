@@ -17,7 +17,6 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
-  ArrowLeft,
   ArrowRight,
   Layers,
   Key,
@@ -36,6 +35,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
+import { PageHeader, Button } from '@/components/ui'
 import type {
   HarvestSourceInfo,
   HarvestRun,
@@ -316,65 +316,48 @@ export function HarvestPage(): JSX.Element {
 
   return (
     <div className="harvest-page animate-fade-in">
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <button className="btn-back" onClick={() => navigate('/projects')}>
-              <ArrowLeft size={13} /> Voltar
-            </button>
-            <h1 className="page-title">Coleta Multibase de Artigos</h1>
-          </div>
-          <p className="page-subtitle">
+      <PageHeader
+        title="Coleta Multibase de Artigos"
+        onBack={() => navigate('/projects')}
+        subtitle={
+          <span>
             Projeto: <strong>{activeProject?.title}</strong> — Coleta concorrente com deduplicação algorítmica de 3 passes
-          </p>
-        </div>
-        <div className="header-actions">
-          {isHarvesting && (
-            <button
-              type="button"
-              className="btn-secondary text-danger"
+          </span>
+        }
+        primaryAction={
+          /* Ação primária ÚNICA. "Cancelar Coleta" e "Deduplicar & Relatório"
+             saíram daqui: o ribbon já os despacha por `stopHarvest` e
+             `openDedupModal`, e manter os dois conjuntos dava dois caminhos
+             para o mesmo comando. */
+          isHarvesting ? (
+            <Button
+              variant="destructive"
+              size="md"
               onClick={handleCancelHarvest}
-              style={{ borderColor: 'var(--color-danger, #ef4444)' }}
+              leftIcon={<StopCircle size={14} />}
             >
-              <StopCircle size={14} /> Cancelar Coleta
-            </button>
-          )}
-          <button
-            type="button"
-            className="btn-secondary btn-dedup"
-            onClick={handleDeduplicate}
-            disabled={isDeduplicating || isHarvesting}
-            title="Executa a desduplicação e gera o relatório consolidado"
-          >
-            {isDeduplicating ? (
-              <>
-                <RefreshCw size={14} className="animate-spin" /> Deduplicando...
-              </>
-            ) : (
-              <>
-                <Layers size={14} /> Deduplicar & Relatório
-              </>
-            )}
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleStartHarvest}
-            disabled={isHarvesting || selectedSources.length === 0 || allDescriptors.length === 0}
-          >
-            {isHarvesting ? (
-              <>
-                <RefreshCw size={14} className="animate-spin" /> Coletando...
-              </>
-            ) : (
-              <>
-                <Play size={14} /> Iniciar Coleta Multibase
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+              Cancelar Coleta
+            </Button>
+          ) : (
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleStartHarvest}
+              disabled={selectedSources.length === 0 || allDescriptors.length === 0}
+              leftIcon={<Play size={14} />}
+            >
+              Iniciar Coleta Multibase
+            </Button>
+          )
+        }
+        status={
+          isDeduplicating && (
+            <span className="save-indicator animate-fade-in" role="status" aria-live="polite">
+              <RefreshCw size={13} className="animate-spin" aria-hidden="true" /> Deduplicando…
+            </span>
+          )
+        }
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           BARRA SUPERIOR DE STATUS E MÉTRICAS DA COLETA (ACIMA)

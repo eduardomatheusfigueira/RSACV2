@@ -16,7 +16,6 @@ import {
   BookMarked,
   Layers,
   ArrowDown,
-  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   FileText,
@@ -27,6 +26,7 @@ import {
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
+import { PageHeader, Button, LoadingState } from '@/components/ui'
 import type { PrismaFlowData } from '@/types/api'
 import './ExportPage.css'
 
@@ -85,29 +85,29 @@ export function ExportPage(): JSX.Element {
 
   return (
     <div className="export-page animate-fade-in">
-      {/* Top Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <button className="btn-back" onClick={() => navigate('/projects')}>
-              <ArrowLeft size={13} /> Voltar
-            </button>
-            <h1 className="page-title">Central de Exportação & Fluxograma PRISMA</h1>
-          </div>
-          <p className="page-subtitle">
-            Projeto: <strong>{activeProject?.title}</strong> — Relatórios acadêmicos, planilhas consolidadas e manuscrito
-          </p>
-        </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="btn-secondary"
+      <PageHeader
+        title="Central de Exportação & Fluxograma PRISMA"
+        onBack={() => navigate('/projects')}
+        subtitle={
+          <span>
+            Projeto: <strong>{activeProject?.title}</strong> — Relatórios acadêmicos, planilhas consolidadas e
+            manuscrito
+          </span>
+        }
+        primaryAction={
+          /* Navegação lateral, não comando de exportação: os downloads em si
+             vivem no ribbon (`exportExcel`, `exportBibtex`) e nos cartões
+             abaixo. */
+          <Button
+            variant="secondary"
+            size="md"
             onClick={() => navigate(`/projects/${id}/protocol`)}
+            leftIcon={<FileText size={14} />}
           >
-            <FileText size={14} /> Ver Protocolo
-          </button>
-        </div>
-      </div>
+            Ver Protocolo
+          </Button>
+        }
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           BARRA SUPERIOR DE MÉTRICAS PRISMA
@@ -239,10 +239,7 @@ export function ExportPage(): JSX.Element {
 
           <div className="pane-scroll-body">
             {loading || !prismaData ? (
-              <div className="loading-state">
-                <div className="loading-spinner animate-spin" />
-                <span>Calculando métricas do PRISMA...</span>
-              </div>
+              <LoadingState label="Calculando métricas do PRISMA…" />
             ) : (
               <div className="prisma-flow-chart-compact">
                 {/* 1. Identificação */}

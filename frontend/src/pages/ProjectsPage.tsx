@@ -22,6 +22,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
+import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
 import type { Project, Methodology } from '@/types/api'
 import './ProjectsPage.css'
 
@@ -121,22 +122,15 @@ export function ProjectsPage(): JSX.Element {
 
   return (
     <div className="projects-page animate-fade-in">
-      {/* Top Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <h1 className="page-title">Projetos de Revisão Sistemática</h1>
-          </div>
-          <p className="page-subtitle">
-            Crie, selecione e gerencie seus protocolos e revisões com rigor metodológico
-          </p>
-        </div>
-        <div className="header-actions">
-          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={14} /> Novo Projeto
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Projetos de Revisão Sistemática"
+        subtitle="Crie, selecione e gerencie seus protocolos e revisões com rigor metodológico"
+        primaryAction={
+          <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)} leftIcon={<Plus size={14} />}>
+            Novo Projeto
+          </Button>
+        }
+      />
 
       {/* Filter Bar */}
       <div className="projects-filter-bar">
@@ -154,20 +148,34 @@ export function ProjectsPage(): JSX.Element {
 
       {/* Grid of Projects */}
       {loading ? (
-        <div className="loading-state">
-          <div className="loading-spinner animate-spin" />
-          <span>Carregando projetos...</span>
-        </div>
+        <LoadingState label="Carregando projetos…" />
       ) : filteredProjects.length === 0 ? (
-        <div className="empty-state">
-          <FolderOpen size={48} strokeWidth={1.2} />
-          <h3>Nenhum projeto encontrado</h3>
-          <p>Comece criando seu primeiro projeto de revisão sistemática.</p>
-          <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={18} />
-            Criar Novo Projeto
-          </button>
-        </div>
+        /* O vazio por filtro e o vazio por acervo têm causas diferentes e
+           saídas diferentes — dizer "crie um projeto" a quem só digitou mal
+           no filtro é mandar a pessoa pelo caminho errado. */
+        searchFilter.trim() ? (
+          <EmptyState
+            icon={<Search size={32} strokeWidth={1.25} aria-hidden="true" />}
+            title="Nenhum projeto corresponde ao filtro"
+            description={<>Nenhum título, metodologia ou descrição contém <strong>{searchFilter}</strong>.</>}
+            action={
+              <Button variant="secondary" size="md" onClick={() => setSearchFilter('')}>
+                Limpar filtro
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={<FolderOpen size={32} strokeWidth={1.25} aria-hidden="true" />}
+            title="Nenhum projeto ainda"
+            description="Um projeto reúne protocolo, acervo e decisões de triagem sob a mesma metodologia. Comece pelo primeiro."
+            action={
+              <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)} leftIcon={<Plus size={14} />}>
+                Criar Novo Projeto
+              </Button>
+            }
+          />
+        )
       ) : (
         <div className="projects-grid">
           {filteredProjects.map((project) => {

@@ -36,6 +36,7 @@ import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { RsacLockup } from '@/components/brand/RsacLockup'
+import { PageHeader, Button } from '@/components/ui'
 import './SettingsPage.css'
 
 export interface ColorThemeOption {
@@ -669,27 +670,22 @@ export function SettingsPage(): JSX.Element {
 
   return (
     <div className="settings-page animate-fade-in">
-      {/* Top Header */}
-      <div className="page-header">
-        <div className="page-header-left">
-          <div className="page-header-title-row">
-            <h1 className="page-title">Configurações & Portabilidade</h1>
-          </div>
-          <p className="page-subtitle">
-            Gerencie chaves de API isoladas por provedor, exporte/importe credenciais e salve perfis completos de workspace
-          </p>
-        </div>
-        <div className="header-actions">
-          {saveSuccess && (
-            <span className="save-indicator success animate-fade-in">
-              <CheckCircle2 size={13} /> Salvo com sucesso!
+      <PageHeader
+        title="Configurações & Portabilidade"
+        subtitle="Gerencie chaves de API isoladas por provedor, exporte/importe credenciais e salve perfis completos de workspace"
+        status={
+          saveSuccess && (
+            <span className="save-indicator success animate-fade-in" role="status" aria-live="polite">
+              <CheckCircle2 size={13} aria-hidden="true" /> Salvo com sucesso!
             </span>
-          )}
-          <button className="btn-primary" onClick={() => handleSave()} disabled={saving}>
-            {saving ? 'Salvando...' : 'Salvar Alterações'}
-          </button>
-        </div>
-      </div>
+          )
+        }
+        primaryAction={
+          <Button variant="primary" size="md" onClick={() => handleSave()} loading={saving}>
+            {saving ? 'Salvando…' : 'Salvar Alterações'}
+          </Button>
+        }
+      />
 
       {/* Master AI Toggle Card */}
       <div className={`master-ai-toggle-card ${isAiActive ? 'ai-active' : 'ai-disabled'}`}>
