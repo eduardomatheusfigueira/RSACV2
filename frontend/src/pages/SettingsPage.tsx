@@ -1,14 +1,15 @@
 /**
- * RSAC V2 — Settings Page (Configurações de Inteligência Artificial & Modo Manual)
+ * RSAC V2 — Settings Page (Configurações de Inteligência Artificial, Portabilidade & Modo Manual)
  * Gerenciamento do interruptor mestre de IA (Ativar IA vs Modo 100% Manual),
- * seleção de provedores e modelos conforme o RSAC, rotação de chaves e testes de conectividade.
+ * separação estrita de chaves (Gemini vs Qwen vs Local), exportação/importação de chaves (.json / .env)
+ * e backup/restauração de perfil completo de sessão e workspace.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
-  Settings,
   Sparkles,
   Key,
+  KeyRound,
   Cpu,
   CheckCircle2,
   XCircle,
@@ -19,17 +20,20 @@ import {
   Server,
   Layers,
   Globe,
-  Power,
   Edit3,
-  ShieldCheck,
   Palette,
   Check,
   Eye,
   EyeOff,
+  Download,
+  Upload,
+  FolderArchive,
+  FileCode,
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import type { AISettings, AISettingsUpdate } from '@/types/api'
 import './SettingsPage.css'
 
 export interface ColorThemeOption {
@@ -252,7 +256,7 @@ const LOCAL_ENDPOINTS = [
 ]
 
 export function SettingsPage(): JSX.Element {
-  const { theme, setTheme, aiEnabled, setAiEnabled } = useSettingsStore()
+  const { theme, setTheme, activeProject, setActiveProject, aiEnabled, setAiEnabled } = useSettingsStore()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -264,8 +268,16 @@ export function SettingsPage(): JSX.Element {
   const [isAiActive, setIsAiActive] = useState(true)
   const [provider, setProvider] = useState<'gemini' | 'qwen' | 'local'>('gemini')
   const [model, setModel] = useState('gemini-3.6-flash')
-  const [apiKeys, setApiKeys] = useState<string[]>([''])
-  const [showKeyVisibility, setShowKeyVisibility] = useState<Record<number, boolean>>({})
+
+  // Chaves Separadas por Provedor (Isolamento Estrito)
+  const [geminiKeys, setGeminiKeys] = useState<string[]>([''])
+  const [qwenKeys, setQwenKeys] = useState<string[]>([''])
+  const [localKeys, setLocalKeys] = useState<string[]>([''])
+
+  const [showGeminiVisibility, setShowGeminiVisibility] = useState<Record<number, boolean>>({})
+  const [showQwenVisibility, setShowQwenVisibility] = useState<Record<number, boolean>>({})
+  const [showLocalVisibility, setShowLocalVisibility] = useState<Record<number, boolean>>({})
+
   const [endpoint, setEndpoint] = useState('http://localhost:11434/v1')
   const [temperature, setTemperature] = useState(0.2)
   const [maxTokens, setMaxTokens] = useState(4096)
@@ -278,6 +290,18 @@ export function SettingsPage(): JSX.Element {
   const [openalexEmail, setOpenalexEmail] = useState('')
   const [savingSourceCreds, setSavingSourceCreds] = useState(false)
   const [sourceSaveSuccess, setSourceSaveSuccess] = useState(false)
+
+  // Portability States (Keys & Profile Backup/Restore)
+  const [exportingKeys, setExportingKeys] = useState(false)
+  const [importingKeys, setImportingKeys] = useState(false)
+  const [keysImportResult, setKeysImportResult] = useState<{ success: boolean; message: string; details?: string } | null>(null)
+
+  const [exportingProfile, setExportingProfile] = useState(false)
+  const [importingProfile, setImportingProfile] = useState(false)
+  const [profileImportResult, setProfileImportResult] = useState<{ success: boolean; message: string; details?: string } | null>(null)
+
+  const keysFileInputRef = useRef<HTMLInputElement>(null)
+  const profileFileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadSettings()
@@ -295,11 +319,30 @@ export function SettingsPage(): JSX.Element {
       setAiEnabled(data.ai_enabled !== false)
       setProvider(data.provider)
       setModel(data.model)
-      if (data.api_keys && data.api_keys.length > 0) {
-        setApiKeys(data.api_keys)
+
+      // Preencher chaves isoladas
+      if (data.gemini_api_keys && data.gemini_api_keys.length > 0) {
+        setGeminiKeys(data.gemini_api_keys)
+      } else if (data.provider === 'gemini' && data.api_keys && data.api_keys.length > 0) {
+        setGeminiKeys(data.api_keys)
       } else {
-        setApiKeys([''])
+        setGeminiKeys([''])
       }
+
+      if (data.qwen_api_keys && data.qwen_api_keys.length > 0) {
+        setQwenKeys(data.qwen_api_keys)
+      } else if (data.provider === 'qwen' && data.api_keys && data.api_keys.length > 0) {
+        setQwenKeys(data.api_keys)
+      } else {
+        setQwenKeys([''])
+      }
+
+      if (data.local_api_keys && data.local_api_keys.length > 0) {
+        setLocalKeys(data.local_api_keys)
+      } else {
+        setLocalKeys([''])
+      }
+
       setEndpoint(data.endpoint || (data.provider === 'qwen' ? QWEN_REGIONS[0].id : 'http://localhost:11434/v1'))
       setTemperature(data.temperature)
       setMaxTokens(data.max_tokens)
@@ -369,47 +412,83 @@ export function SettingsPage(): JSX.Element {
     setModel(presetId)
   }
 
-  const addKeyField = () => {
-    setApiKeys([...apiKeys, ''])
-  }
-
-  const updateKeyField = (index: number, val: string) => {
-    const list = [...apiKeys]
+  // ── Gemini Key Handlers ─────────────────────────────────────────────
+  const addGeminiKeyField = () => setGeminiKeys([...geminiKeys, ''])
+  const updateGeminiKeyField = (index: number, val: string) => {
+    const list = [...geminiKeys]
     list[index] = val
-    setApiKeys(list)
+    setGeminiKeys(list)
+  }
+  const removeGeminiKeyField = (index: number) => {
+    const list = geminiKeys.filter((_, i) => i !== index)
+    setGeminiKeys(list.length ? list : [''])
+  }
+  const toggleGeminiKeyVisibility = (index: number) => {
+    setShowGeminiVisibility((prev) => ({ ...prev, [index]: !prev[index] }))
   }
 
-  const removeKeyField = (index: number) => {
-    const list = apiKeys.filter((_, i) => i !== index)
-    setApiKeys(list.length ? list : [''])
+  // ── Qwen Key Handlers ───────────────────────────────────────────────
+  const addQwenKeyField = () => setQwenKeys([...qwenKeys, ''])
+  const updateQwenKeyField = (index: number, val: string) => {
+    const list = [...qwenKeys]
+    list[index] = val
+    setQwenKeys(list)
+  }
+  const removeQwenKeyField = (index: number) => {
+    const list = qwenKeys.filter((_, i) => i !== index)
+    setQwenKeys(list.length ? list : [''])
+  }
+  const toggleQwenKeyVisibility = (index: number) => {
+    setShowQwenVisibility((prev) => ({ ...prev, [index]: !prev[index] }))
   }
 
-  const toggleKeyVisibility = (index: number) => {
-    setShowKeyVisibility((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }))
+  // ── Local Key Handlers ──────────────────────────────────────────────
+  const addLocalKeyField = () => setLocalKeys([...localKeys, ''])
+  const updateLocalKeyField = (index: number, val: string) => {
+    const list = [...localKeys]
+    list[index] = val
+    setLocalKeys(list)
+  }
+  const removeLocalKeyField = (index: number) => {
+    const list = localKeys.filter((_, i) => i !== index)
+    setLocalKeys(list.length ? list : [''])
+  }
+  const toggleLocalKeyVisibility = (index: number) => {
+    setShowLocalVisibility((prev) => ({ ...prev, [index]: !prev[index] }))
   }
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     try {
       setSaving(true)
-      const cleanKeys = apiKeys.map((k) => k.trim()).filter(Boolean)
+      const cleanGemini = geminiKeys.map((k) => k.trim()).filter(Boolean)
+      const cleanQwen = qwenKeys.map((k) => k.trim()).filter(Boolean)
+      const cleanLocal = localKeys.map((k) => k.trim()).filter(Boolean)
+
       const finalModel = model || (provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'qwen' ? 'qwen3.8-max' : 'Llama-3.2-3B')
 
       const updated = await api.updateAISettings({
         ai_enabled: isAiActive,
         provider,
         model: finalModel,
-        api_keys: cleanKeys,
+        gemini_api_keys: cleanGemini,
+        qwen_api_keys: cleanQwen,
+        local_api_keys: cleanLocal,
         endpoint: provider !== 'gemini' ? endpoint.trim() : null,
         temperature,
         max_tokens: maxTokens,
       })
-      if (updated.api_keys && updated.api_keys.length > 0) {
-        setApiKeys(updated.api_keys)
+
+      if (updated.gemini_api_keys && updated.gemini_api_keys.length > 0) {
+        setGeminiKeys(updated.gemini_api_keys)
       }
+      if (updated.qwen_api_keys && updated.qwen_api_keys.length > 0) {
+        setQwenKeys(updated.qwen_api_keys)
+      }
+      if (updated.local_api_keys && updated.local_api_keys.length > 0) {
+        setLocalKeys(updated.local_api_keys)
+      }
+
       setAiEnabled(isAiActive)
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -440,6 +519,122 @@ export function SettingsPage(): JSX.Element {
     }
   }
 
+  // ── Helper para Download de Arquivos JSON ───────────────────────────
+  const downloadJsonFile = (filename: string, data: any) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Exportação & Importação de Chaves de API ────────────────────────
+  const handleExportKeys = async () => {
+    try {
+      setExportingKeys(true)
+      const data = await api.exportKeys()
+      const dateStr = new Date().toISOString().slice(0, 10)
+      downloadJsonFile(`rsac-chaves-api-${dateStr}.json`, data)
+    } catch (err: any) {
+      console.error('Erro ao exportar chaves:', err)
+    } finally {
+      setExportingKeys(false)
+    }
+  }
+
+  const handleImportKeysFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setImportingKeys(true)
+      setKeysImportResult(null)
+      const text = await file.text()
+      let payload: any = {}
+      try {
+        payload = JSON.parse(text)
+      } catch {
+        payload = { raw_content: text }
+      }
+
+      const res = await api.importKeys(payload)
+      await loadSettings()
+      setKeysImportResult({
+        success: true,
+        message: res.message,
+        details: `Google Gemini: ${res.gemini_keys_count} chaves | Alibaba Qwen: ${res.qwen_keys_count} chaves | Bases científicas: ${res.sources_configured.join(', ') || 'Nenhuma'}`,
+      })
+    } catch (err: any) {
+      setKeysImportResult({
+        success: false,
+        message: err.message || 'Falha ao importar arquivo de chaves de API.',
+      })
+    } finally {
+      setImportingKeys(false)
+      e.target.value = ''
+    }
+  }
+
+  // ── Exportação & Importação de Perfil Completo ───────────────────────
+  const handleExportProfile = async () => {
+    try {
+      setExportingProfile(true)
+      const profile = await api.exportProfile({
+        theme,
+        active_project_id: activeProject?.id,
+        sidebar_collapsed: false,
+        ai_enabled: isAiActive,
+      })
+      const dateStr = new Date().toISOString().slice(0, 10)
+      downloadJsonFile(`rsac-perfil-backup-${dateStr}.json`, profile)
+    } catch (err: any) {
+      console.error('Erro ao exportar perfil completo:', err)
+    } finally {
+      setExportingProfile(false)
+    }
+  }
+
+  const handleImportProfileFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setImportingProfile(true)
+      setProfileImportResult(null)
+      const text = await file.text()
+      const profileData = JSON.parse(text)
+      const res = await api.importProfile(profileData)
+
+      if (res.restored_session?.theme) {
+        setTheme(res.restored_session.theme)
+      }
+      await loadSettings()
+
+      // Se havia um projeto ativo no perfil importado, tentar recarregá-lo
+      if (res.restored_session?.active_project_id) {
+        api.getProject(res.restored_session.active_project_id)
+          .then((p) => setActiveProject(p))
+          .catch(() => {})
+      }
+
+      setProfileImportResult({
+        success: true,
+        message: res.message,
+        details: `${res.projects_imported} projetos, ${res.papers_imported} artigos e ${res.extractions_imported} extrações restaurados com sucesso.`,
+      })
+    } catch (err: any) {
+      setProfileImportResult({
+        success: false,
+        message: err.message || 'Falha ao restaurar perfil completo. Verifique se o arquivo JSON é válido.',
+      })
+    } finally {
+      setImportingProfile(false)
+      e.target.value = ''
+    }
+  }
+
   const currentModelList = provider === 'gemini' ? GEMINI_MODELS : provider === 'qwen' ? QWEN_MODELS : LOCAL_MODELS
 
   return (
@@ -448,10 +643,10 @@ export function SettingsPage(): JSX.Element {
       <div className="page-header">
         <div className="page-header-left">
           <div className="page-header-title-row">
-            <h1 className="page-title">Configurações & Modos de Operação</h1>
+            <h1 className="page-title">Configurações & Portabilidade</h1>
           </div>
           <p className="page-subtitle">
-            Ative ou desative recursos de assistência e configure modelos em nuvem ou locais
+            Gerencie chaves de API isoladas por provedor, exporte/importe credenciais e salve perfis completos de workspace
           </p>
         </div>
         <div className="header-actions">
@@ -476,8 +671,8 @@ export function SettingsPage(): JSX.Element {
             <h3>{isAiActive ? 'Recursos de Assistência Ativos' : 'Modo Manual'}</h3>
             <p>
               {isAiActive
-                ? 'A assistência auxilia na sugestão de protocolo, triagem de estudos e extração de dados.'
-                : 'O processo de revisão é conduzido integralmente pelo pesquisador.'}
+                ? 'A assistência auxilia na sugestão de protocolo, triagem de estudos e extração de dados conforme o padrão RSAC.'
+                : 'O processo de revisão é conduzido integralmente pelo pesquisador, sem chamadas externas a modelos.'}
             </p>
           </div>
         </div>
@@ -497,6 +692,131 @@ export function SettingsPage(): JSX.Element {
           >
             <Edit3 size={15} /> Modo Manual
           </button>
+        </div>
+      </div>
+
+      {/* ── SEÇÃO DE PORTABILIDADE: CHAVES & PERFIL COMPLETO ── */}
+      <div className="settings-card portability-section">
+        <div className="card-section-title">
+          <FolderArchive size={20} className="icon-accent" />
+          <h2>Portabilidade & Transferência entre Computadores</h2>
+        </div>
+        <p className="section-help">
+          Utilize as ferramentas abaixo para migrar suas configurações e projetos para qualquer outro computador com o app instalado.
+        </p>
+
+        <div className="portability-cards-grid">
+          {/* Card 1: Chaves de API */}
+          <div className="portability-card">
+            <div className="portability-header">
+              <div className="portability-icon">
+                <KeyRound size={22} />
+              </div>
+              <div className="portability-info">
+                <h3>Arquivo de Chaves de API</h3>
+                <p>
+                  Salva e carrega um arquivo estruturado padronizado (<code>.json</code> ou <code>.env</code>) contendo suas chaves do Google Gemini, Alibaba Qwen, Scopus, PubMed e OpenAlex.
+                </p>
+              </div>
+            </div>
+
+            {keysImportResult && (
+              <div className={`portability-result-box ${keysImportResult.success ? 'success' : 'error'} animate-fade-in`}>
+                {keysImportResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <div>
+                  <strong>{keysImportResult.message}</strong>
+                  {keysImportResult.details && <div className="portability-result-details">{keysImportResult.details}</div>}
+                </div>
+              </div>
+            )}
+
+            <div className="portability-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleExportKeys}
+                disabled={exportingKeys}
+                title="Baixar arquivo JSON com todas as chaves cadastradas"
+              >
+                {exportingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                Exportar Chaves (.json)
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => keysFileInputRef.current?.click()}
+                disabled={importingKeys}
+                title="Carregar arquivo de chaves salvo em outro computador"
+              >
+                {importingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+                Importar Chaves (.json / .env)
+              </button>
+              <input
+                type="file"
+                ref={keysFileInputRef}
+                className="file-input-hidden"
+                accept=".json,.env,.txt"
+                onChange={handleImportKeysFile}
+              />
+            </div>
+          </div>
+
+          {/* Card 2: Perfil Completo */}
+          <div className="portability-card">
+            <div className="portability-header">
+              <div className="portability-icon">
+                <FolderArchive size={22} />
+              </div>
+              <div className="portability-info">
+                <h3>Perfil Completo (Workspace & Sessão)</h3>
+                <p>
+                  Exporta e restaura o ecossistema integral: tema visual, modo de IA, chaves, credenciais de bases e todos os seus projetos com protocolos, critérios, artigos e extrações.
+                </p>
+              </div>
+            </div>
+
+            {profileImportResult && (
+              <div className={`portability-result-box ${profileImportResult.success ? 'success' : 'error'} animate-fade-in`}>
+                {profileImportResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <div>
+                  <strong>{profileImportResult.message}</strong>
+                  {profileImportResult.details && <div className="portability-result-details">{profileImportResult.details}</div>}
+                </div>
+              </div>
+            )}
+
+            <div className="portability-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleExportProfile}
+                disabled={exportingProfile}
+                title="Exportar perfil completo contendo projetos, artigos e configurações"
+              >
+                {exportingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                Exportar Perfil Completo (.json)
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => profileFileInputRef.current?.click()}
+                disabled={importingProfile}
+                title="Restaurar perfil completo em um novo PC"
+              >
+                {importingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+                Importar Perfil Completo (.json)
+              </button>
+              <input
+                type="file"
+                ref={profileFileInputRef}
+                className="file-input-hidden"
+                accept=".json"
+                onChange={handleImportProfileFile}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -554,7 +874,7 @@ export function SettingsPage(): JSX.Element {
               <h2>Provedor de Assistência</h2>
             </div>
             <p className="section-help">
-              Selecione o provedor e o modelo desejado para triagem, sugestão de protocolo e extração de dados.
+              Selecione o provedor e o modelo desejado. Cada provedor possui seu conjunto independente de chaves de API.
             </p>
 
             {/* Provider Tabs */}
@@ -566,7 +886,7 @@ export function SettingsPage(): JSX.Element {
                 disabled={!isAiActive}
               >
                 <span className="provider-tab-title">Google Gemini</span>
-                <span className="provider-tab-desc">Nuvem / Alta velocidade</span>
+                <span className="provider-tab-desc">Google AI Studio</span>
               </button>
 
               <button
@@ -576,7 +896,7 @@ export function SettingsPage(): JSX.Element {
                 disabled={!isAiActive}
               >
                 <span className="provider-tab-title">Alibaba Qwen</span>
-                <span className="provider-tab-desc">DashScope / OpenAI Format</span>
+                <span className="provider-tab-desc">DashScope / OpenRouter</span>
               </button>
 
               <button
@@ -676,40 +996,141 @@ export function SettingsPage(): JSX.Element {
               </div>
             )}
 
-            {/* API Keys (for Gemini and Qwen) */}
-            {provider !== 'local' && (
+            {/* ── GOOGLE GEMINI API KEYS (DEDICADAS) ── */}
+            {provider === 'gemini' && (
               <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
                 <div className="label-with-action">
-                  <label>Chaves de API (Rotação Automática)</label>
-                  <button type="button" className="btn-text-action" onClick={addKeyField} disabled={!isAiActive}>
+                  <label>Chaves de API do Google Gemini (AI Studio)</label>
+                  <button type="button" className="btn-text-action" onClick={addGeminiKeyField} disabled={!isAiActive}>
                     <Plus size={13} /> Adicionar outra chave
                   </button>
                 </div>
+                <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
+                  Chaves do Google AI Studio (iniciam com <code>AIzaSy...</code>). Permite rotação entre múltiplas chaves.
+                </p>
                 <div className="keys-list">
-                  {apiKeys.map((k, idx) => (
+                  {geminiKeys.map((k, idx) => (
                     <div key={idx} className="key-input-row">
                       <Key size={16} className="key-icon" />
                       <input
-                        type={showKeyVisibility[idx] ? 'text' : 'password'}
+                        type={showGeminiVisibility[idx] ? 'text' : 'password'}
                         disabled={!isAiActive}
-                        placeholder={provider === 'gemini' ? 'Cole sua API Key do Google AI Studio...' : 'Cole sua API Key do DashScope...'}
+                        placeholder="Cole sua API Key do Google AI Studio (AIzaSy...)"
                         value={k}
-                        onChange={(e) => updateKeyField(idx, e.target.value)}
+                        onChange={(e) => updateGeminiKeyField(idx, e.target.value)}
                       />
                       <button
                         type="button"
                         className="btn-icon"
-                        onClick={() => toggleKeyVisibility(idx)}
+                        onClick={() => toggleGeminiKeyVisibility(idx)}
                         disabled={!isAiActive}
-                        title={showKeyVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
+                        title={showGeminiVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
                       >
-                        {showKeyVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
+                        {showGeminiVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
-                      {apiKeys.length > 1 && (
+                      {geminiKeys.length > 1 && (
                         <button
                           type="button"
                           className="btn-icon danger"
-                          onClick={() => removeKeyField(idx)}
+                          onClick={() => removeGeminiKeyField(idx)}
+                          disabled={!isAiActive}
+                          title="Remover chave"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── ALIBABA QWEN API KEYS (DEDICADAS) ── */}
+            {provider === 'qwen' && (
+              <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+                <div className="label-with-action">
+                  <label>Chaves de API do Alibaba Qwen (DashScope / OpenRouter)</label>
+                  <button type="button" className="btn-text-action" onClick={addQwenKeyField} disabled={!isAiActive}>
+                    <Plus size={13} /> Adicionar outra chave
+                  </button>
+                </div>
+                <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
+                  Chaves do Alibaba Cloud DashScope (iniciam com <code>sk-...</code>) ou chave do OpenRouter.
+                </p>
+                <div className="keys-list">
+                  {qwenKeys.map((k, idx) => (
+                    <div key={idx} className="key-input-row">
+                      <Key size={16} className="key-icon" />
+                      <input
+                        type={showQwenVisibility[idx] ? 'text' : 'password'}
+                        disabled={!isAiActive}
+                        placeholder="Cole sua API Key do DashScope (sk-...) ou OpenRouter"
+                        value={k}
+                        onChange={(e) => updateQwenKeyField(idx, e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => toggleQwenKeyVisibility(idx)}
+                        disabled={!isAiActive}
+                        title={showQwenVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
+                      >
+                        {showQwenVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      {qwenKeys.length > 1 && (
+                        <button
+                          type="button"
+                          className="btn-icon danger"
+                          onClick={() => removeQwenKeyField(idx)}
+                          disabled={!isAiActive}
+                          title="Remover chave"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── LOCAL AUTH TOKENS (OPCIONAL) ── */}
+            {provider === 'local' && (
+              <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+                <div className="label-with-action">
+                  <label>Token / Chave de Autenticação Local (Opcional)</label>
+                  <button type="button" className="btn-text-action" onClick={addLocalKeyField} disabled={!isAiActive}>
+                    <Plus size={13} /> Adicionar chave
+                  </button>
+                </div>
+                <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
+                  Geralmente não exigido para Ollama/LM Studio padrão, mas pode ser configurado para servidores protegidos por Bearer Token.
+                </p>
+                <div className="keys-list">
+                  {localKeys.map((k, idx) => (
+                    <div key={idx} className="key-input-row">
+                      <Key size={16} className="key-icon" />
+                      <input
+                        type={showLocalVisibility[idx] ? 'text' : 'password'}
+                        disabled={!isAiActive}
+                        placeholder="Bearer token local ou deixe em branco para Ollama"
+                        value={k}
+                        onChange={(e) => updateLocalKeyField(idx, e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        onClick={() => toggleLocalKeyVisibility(idx)}
+                        disabled={!isAiActive}
+                        title={showLocalVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
+                      >
+                        {showLocalVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                      {localKeys.length > 1 && (
+                        <button
+                          type="button"
+                          className="btn-icon danger"
+                          onClick={() => removeLocalKeyField(idx)}
                           disabled={!isAiActive}
                           title="Remover chave"
                         >

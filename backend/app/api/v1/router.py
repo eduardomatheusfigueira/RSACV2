@@ -14,6 +14,7 @@ from app.api.v1.extraction import (
 )
 from app.api.v1.harvest import router as harvest_router
 from app.api.v1.papers import router as papers_router
+from app.api.v1.profile import router as profile_router
 from app.api.v1.projects import router as projects_router
 from app.api.v1.protocols import router as protocols_router
 from app.api.v1.screening_ai import router as screening_ai_router
@@ -46,3 +47,5 @@ api_router.include_router(screening_ai_router)
 api_router.include_router(extraction_router)
 api_router.include_router(project_extraction_router)
 api_router.include_router(export_router)
+api_router.include_router(profile_router)
+

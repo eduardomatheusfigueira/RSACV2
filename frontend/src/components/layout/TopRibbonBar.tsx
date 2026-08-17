@@ -53,8 +53,10 @@ import {
   ShieldCheck,
   Globe,
   Key,
+  KeyRound,
   Cpu,
   Server,
+  FolderArchive,
 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import './TopRibbonBar.css'
@@ -260,6 +262,23 @@ export function TopRibbonBar(): JSX.Element {
                   </button>
                 </div>
                 <span className="ribbon-group-title">Gerenciamento</span>
+              </div>
+
+              <div className="ribbon-divider" />
+
+              {/* Group: Portabilidade */}
+              <div className="ribbon-group">
+                <div className="ribbon-group-tools">
+                  <button type="button" className="tool-btn-vertical" onClick={() => navigate('/settings')} title="Exportar ou importar perfil completo">
+                    <FolderArchive size={15} />
+                    <span>Perfil</span>
+                  </button>
+                  <button type="button" className="tool-btn-vertical" onClick={() => navigate('/settings')} title="Exportar ou importar chaves de API">
+                    <KeyRound size={15} />
+                    <span>Chaves</span>
+                  </button>
+                </div>
+                <span className="ribbon-group-title">Portabilidade</span>
               </div>
 
               <div className="ribbon-divider" />

@@ -372,6 +372,9 @@ export interface AISettings {
   model: string
   has_api_keys: boolean
   api_keys?: string[]
+  gemini_api_keys?: string[]
+  qwen_api_keys?: string[]
+  local_api_keys?: string[]
   endpoint: string | null
   temperature: number
   max_tokens: number
@@ -381,10 +384,70 @@ export interface AISettingsUpdate {
   ai_enabled: boolean
   provider: string
   model: string
-  api_keys: string[]
+  api_keys?: string[]
+  gemini_api_keys?: string[]
+  qwen_api_keys?: string[]
+  local_api_keys?: string[]
   endpoint?: string | null
   temperature: number
   max_tokens: number
+}
+
+// ── Profile & Keys Backup ─────────────────────────────────────────────
+
+export interface SourceCredentialBackupItem {
+  api_key?: string
+  inst_token?: string
+  custom_endpoint?: string | null
+}
+
+export interface KeysBackupData {
+  schema_version: string
+  exported_at: string
+  gemini_api_keys: string[]
+  qwen_api_keys: string[]
+  local_api_keys: string[]
+  sources: Record<string, SourceCredentialBackupItem>
+}
+
+export interface KeysImportResponse {
+  status: string
+  message: string
+  gemini_keys_count: number
+  qwen_keys_count: number
+  local_keys_count: number
+  sources_configured: string[]
+}
+
+export interface ProfileSessionPreferences {
+  theme: string
+  active_project_id?: string | null
+  sidebar_collapsed?: boolean
+  ai_enabled?: boolean
+}
+
+export interface ProfileBackupData {
+  schema_version: string
+  app_version: string
+  exported_at: string
+  session_preferences: ProfileSessionPreferences
+  ai_settings: Record<string, any>
+  source_credentials: Array<{
+    source_name: string
+    api_key: string
+    inst_token: string
+    custom_endpoint?: string | null
+  }>
+  projects: any[]
+}
+
+export interface ProfileImportResponse {
+  status: string
+  message: string
+  projects_imported: number
+  papers_imported: number
+  extractions_imported: number
+  restored_session: ProfileSessionPreferences
 }
 
 export interface AIScreeningSingleResult {

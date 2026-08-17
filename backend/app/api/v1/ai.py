@@ -5,7 +5,7 @@
 
 import json
 import logging
-from typing import Optional
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -25,9 +25,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+def _parse_keys_json(raw_text: Optional[str]) -> List[str]:
+    """Deserializa JSON array de chaves com fallback resiliente."""
+    if not raw_text:
+        return []
+    try:
+        data = json.loads(raw_text)
+        if isinstance(data, list):
+            return [str(k).strip() for k in data if str(k).strip()]
+        elif isinstance(data, str) and data.strip():
+            return [data.strip()]
+        return []
+    except Exception:
+        return [raw_text.strip()] if raw_text.strip() else []
+
+
 @router.get("/settings", response_model=AISettingsResponse)
 def get_ai_settings(db: Session = Depends(get_db)):
-    """Obtém as configurações de IA ativas."""
+    """Obtém as configurações de IA ativas e as chaves de cada provedor de forma isolada."""
     settings = db.query(AISettingsModel).first()
     if not settings:
         return AISettingsResponse(
@@ -36,24 +51,41 @@ def get_ai_settings(db: Session = Depends(get_db)):
             model="gemini-3.6-flash",
             has_api_keys=False,
             api_keys=[],
+            gemini_api_keys=[],
+            qwen_api_keys=[],
+            local_api_keys=[],
             endpoint=None,
             temperature=0.2,
             max_tokens=4096,
         )
 
-    try:
-        keys = json.loads(settings.api_keys_encrypted) if settings.api_keys_encrypted else []
-        if isinstance(keys, str):
-            keys = [keys]
-    except Exception:
-        keys = []
+    gemini_keys = _parse_keys_json(settings.gemini_api_keys_encrypted)
+    qwen_keys = _parse_keys_json(settings.qwen_api_keys_encrypted)
+    local_keys = _parse_keys_json(settings.local_api_keys_encrypted)
+    legacy_keys = _parse_keys_json(settings.api_keys_encrypted)
+
+    # Migração / fallback suave se as colunas novas ainda estiverem vazias
+    provider = (settings.provider or "gemini").lower()
+    if not gemini_keys and provider == "gemini" and legacy_keys:
+        gemini_keys = legacy_keys
+    if not qwen_keys and provider == "qwen" and legacy_keys:
+        qwen_keys = legacy_keys
+
+    active_keys = (
+        gemini_keys if provider == "gemini"
+        else qwen_keys if provider == "qwen"
+        else local_keys
+    )
 
     return AISettingsResponse(
         ai_enabled=settings.ai_enabled,
         provider=settings.provider,
         model=settings.model,
-        has_api_keys=len(keys) > 0,
-        api_keys=keys,
+        has_api_keys=len(active_keys) > 0,
+        api_keys=active_keys,
+        gemini_api_keys=gemini_keys,
+        qwen_api_keys=qwen_keys,
+        local_api_keys=local_keys,
         endpoint=settings.endpoint,
         temperature=settings.temperature,
         max_tokens=settings.max_tokens,
@@ -62,31 +94,71 @@ def get_ai_settings(db: Session = Depends(get_db)):
 
 @router.put("/settings", response_model=AISettingsResponse)
 def update_ai_settings(data: AISettingsUpdate, db: Session = Depends(get_db)):
-    """Atualiza as configurações e chaves dos provedores de IA."""
+    """Atualiza as configurações e chaves dos provedores de IA mantendo isolamento total."""
     settings = db.query(AISettingsModel).first()
     if not settings:
         settings = AISettingsModel()
         db.add(settings)
 
-    clean_keys = [k.strip() for k in data.api_keys if k and k.strip()]
-
+    provider = data.provider.lower()
     settings.ai_enabled = data.ai_enabled
-    settings.provider = data.provider.lower()
+    settings.provider = provider
     settings.model = data.model
-    settings.api_keys_encrypted = json.dumps(clean_keys)
     settings.endpoint = data.endpoint
     settings.temperature = data.temperature
     settings.max_tokens = data.max_tokens
 
+    # Atualizar chaves do Gemini se enviadas
+    if data.gemini_api_keys is not None:
+        clean_gemini = [k.strip() for k in data.gemini_api_keys if k and k.strip()]
+        settings.gemini_api_keys_encrypted = json.dumps(clean_gemini)
+    elif provider == "gemini" and data.api_keys is not None:
+        clean_gemini = [k.strip() for k in data.api_keys if k and k.strip()]
+        settings.gemini_api_keys_encrypted = json.dumps(clean_gemini)
+
+    # Atualizar chaves do Qwen se enviadas
+    if data.qwen_api_keys is not None:
+        clean_qwen = [k.strip() for k in data.qwen_api_keys if k and k.strip()]
+        settings.qwen_api_keys_encrypted = json.dumps(clean_qwen)
+    elif provider == "qwen" and data.api_keys is not None:
+        clean_qwen = [k.strip() for k in data.api_keys if k and k.strip()]
+        settings.qwen_api_keys_encrypted = json.dumps(clean_qwen)
+
+    # Atualizar chaves locais se enviadas
+    if data.local_api_keys is not None:
+        clean_local = [k.strip() for k in data.local_api_keys if k and k.strip()]
+        settings.local_api_keys_encrypted = json.dumps(clean_local)
+    elif provider == "local" and data.api_keys is not None:
+        clean_local = [k.strip() for k in data.api_keys if k and k.strip()]
+        settings.local_api_keys_encrypted = json.dumps(clean_local)
+
+    # Se api_keys genérico foi passado, atualizar legado para retrocompatibilidade
+    if data.api_keys is not None:
+        clean_legacy = [k.strip() for k in data.api_keys if k and k.strip()]
+        settings.api_keys_encrypted = json.dumps(clean_legacy)
+
     db.commit()
     db.refresh(settings)
+
+    gemini_keys = _parse_keys_json(settings.gemini_api_keys_encrypted)
+    qwen_keys = _parse_keys_json(settings.qwen_api_keys_encrypted)
+    local_keys = _parse_keys_json(settings.local_api_keys_encrypted)
+
+    active_keys = (
+        gemini_keys if provider == "gemini"
+        else qwen_keys if provider == "qwen"
+        else local_keys
+    )
 
     return AISettingsResponse(
         ai_enabled=settings.ai_enabled,
         provider=settings.provider,
         model=settings.model,
-        has_api_keys=len(clean_keys) > 0,
-        api_keys=clean_keys,
+        has_api_keys=len(active_keys) > 0,
+        api_keys=active_keys,
+        gemini_api_keys=gemini_keys,
+        qwen_api_keys=qwen_keys,
+        local_api_keys=local_keys,
         endpoint=settings.endpoint,
         temperature=settings.temperature,
         max_tokens=settings.max_tokens,

@@ -40,14 +40,33 @@ class OpenAICompatibleAIClient(BaseAIClient):
         self,
         provider_name: str,
         base_url: str,
-        api_key: str = "",
+        api_key: str | List[str] = "",
         model_name: str = "qwen-plus",
         temperature: float = 0.2,
     ):
         super().__init__(provider_name=provider_name, model_name=model_name)
         self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
+        if isinstance(api_key, list):
+            self.api_keys = [str(k).strip() for k in api_key if str(k).strip()]
+        elif isinstance(api_key, str) and api_key.strip():
+            self.api_keys = [api_key.strip()]
+        else:
+            self.api_keys = []
+        self.current_key_idx = 0
         self.temperature = temperature
+
+    @property
+    def api_key(self) -> str:
+        """Retorna a chave atualmente ativa na rotação."""
+        if not self.api_keys:
+            return ""
+        return self.api_keys[self.current_key_idx % len(self.api_keys)]
+
+    def _rotate_key(self) -> None:
+        """Rotaciona para a próxima chave configurada."""
+        if self.api_keys:
+            self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+            logger.info(f"[{self.provider_name}] Chave rotacionada para índice {self.current_key_idx}")
 
     def _clean_json(self, raw_text: str) -> str:
         """Extrai o bloco JSON limpo de textos gerados pela IA."""
@@ -72,11 +91,12 @@ class OpenAICompatibleAIClient(BaseAIClient):
     async def _call_chat_completion(self, prompt: str) -> dict:
         """Envia requisição para /chat/completions com retentativa sem response_format se necessário."""
         url = f"{self.base_url}/chat/completions"
+        current_k = self.api_key
         headers = {
             "Content-Type": "application/json",
         }
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        if current_k:
+            headers["Authorization"] = f"Bearer {current_k}"
 
         # 1. Tentativa com response_format json_object
         payload_with_format = {

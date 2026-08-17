@@ -11,9 +11,12 @@ class AISettingsUpdate(BaseModel):
     """Configuração dos provedores de IA."""
     ai_enabled: bool = Field(default=True, description="Chave mestra para ativar ou desativar os recursos de IA (Modo Manual)")
     provider: str = Field(..., description="gemini, qwen ou local")
-    model: str = Field(..., description="Nome do modelo, ex: gemini-3.6-flash, qwen-plus, llama3")
-    api_keys: List[str] = Field(default_factory=list, description="Lista de API Keys para rotação")
-    endpoint: Optional[str] = Field(None, description="URL do endpoint local (Ollama/vLLM)")
+    model: str = Field(..., description="Nome do modelo, ex: gemini-3.6-flash, qwen3.8-max, Llama-3.2-3B")
+    api_keys: Optional[List[str]] = Field(default=None, description="Chaves do provedor ativo atualmente")
+    gemini_api_keys: Optional[List[str]] = Field(default=None, description="Lista de API Keys dedicadas para Google Gemini")
+    qwen_api_keys: Optional[List[str]] = Field(default=None, description="Lista de API Keys dedicadas para Alibaba Qwen / DashScope")
+    local_api_keys: Optional[List[str]] = Field(default=None, description="Lista de API Keys / tokens locais ou OpenRouter")
+    endpoint: Optional[str] = Field(None, description="URL do endpoint local (Ollama/vLLM) ou DashScope/OpenRouter")
     temperature: float = Field(default=0.2, ge=0.0, le=1.0)
     max_tokens: int = Field(default=4096, ge=256, le=32768)
 
@@ -23,7 +26,10 @@ class AISettingsResponse(BaseModel):
     provider: str
     model: str
     has_api_keys: bool
-    api_keys: List[str] = Field(default_factory=list, description="Lista de API Keys cadastradas")
+    api_keys: List[str] = Field(default_factory=list, description="Lista de API Keys do provedor ativo")
+    gemini_api_keys: List[str] = Field(default_factory=list, description="Chaves cadastradas para Google Gemini")
+    qwen_api_keys: List[str] = Field(default_factory=list, description="Chaves cadastradas para Alibaba Qwen")
+    local_api_keys: List[str] = Field(default_factory=list, description="Chaves cadastradas para Local/OpenRouter")
     endpoint: Optional[str] = None
     temperature: float
     max_tokens: int

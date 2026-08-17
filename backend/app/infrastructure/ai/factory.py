@@ -27,32 +27,48 @@ class AIFactory:
             provider = settings.provider.lower()
             model = settings.model
 
-            # Descriptografar / deserializar chaves
-            try:
-                keys = json.loads(settings.api_keys_encrypted) if settings.api_keys_encrypted else []
-            except Exception:
-                keys = [settings.api_keys_encrypted] if settings.api_keys_encrypted else []
+            def _parse_keys(raw: Optional[str]) -> List[str]:
+                if not raw:
+                    return []
+                try:
+                    res = json.loads(raw)
+                    if isinstance(res, list):
+                        return [str(k).strip() for k in res if str(k).strip()]
+                    elif isinstance(res, str) and res.strip():
+                        return [res.strip()]
+                    return []
+                except Exception:
+                    return [raw.strip()] if raw.strip() else []
+
+            gemini_keys = _parse_keys(settings.gemini_api_keys_encrypted)
+            qwen_keys = _parse_keys(settings.qwen_api_keys_encrypted)
+            local_keys = _parse_keys(settings.local_api_keys_encrypted)
+            legacy_keys = _parse_keys(settings.api_keys_encrypted)
 
             if provider == AIProvider.GEMINI.value:
+                keys = gemini_keys or legacy_keys or [os.environ.get("GEMINI_API_KEY", "")]
                 return GeminiAIClient(
-                    api_keys=keys or [os.environ.get("GEMINI_API_KEY", "")],
-                    model_name=model or "gemini-2.5-flash",
+                    api_keys=keys,
+                    model_name=model or "gemini-3.6-flash",
                     temperature=settings.temperature,
                 )
             elif provider == AIProvider.QWEN.value:
+                keys = qwen_keys or legacy_keys or [os.environ.get("DASHSCOPE_API_KEY", "")]
+                base_url = settings.endpoint or "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
                 return OpenAICompatibleAIClient(
                     provider_name="qwen",
-                    base_url="https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-                    api_key=keys[0] if keys else os.environ.get("DASHSCOPE_API_KEY", ""),
-                    model_name=model or "qwen-plus",
+                    base_url=base_url,
+                    api_key=keys,
+                    model_name=model or "qwen3.8-max",
                     temperature=settings.temperature,
                 )
             elif provider == AIProvider.LOCAL.value:
+                keys = local_keys or ["ollama"]
                 return OpenAICompatibleAIClient(
                     provider_name="local",
                     base_url=settings.endpoint or "http://localhost:11434/v1",
-                    api_key=keys[0] if keys else "ollama",
-                    model_name=model or "qwen2.5:7b",
+                    api_key=keys,
+                    model_name=model or "Llama-3.2-3B",
                     temperature=settings.temperature,
                 )
 
@@ -60,5 +76,5 @@ class AIFactory:
         env_gemini_key = os.environ.get("GEMINI_API_KEY", "")
         return GeminiAIClient(
             api_keys=[env_gemini_key] if env_gemini_key else [],
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.6-flash",
         )

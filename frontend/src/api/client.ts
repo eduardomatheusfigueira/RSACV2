@@ -484,6 +484,33 @@ class APIClient {
   async getPrismaFlow(projectId: string): Promise<PrismaFlowData> {
     return this.request<PrismaFlowData>(`/projects/${projectId}/export/prisma`)
   }
+
+  // ── Profile & Keys Portability ────────────────────────────────────
+
+  async exportKeys(): Promise<import('@/types/api').KeysBackupData> {
+    return this.request<import('@/types/api').KeysBackupData>('/profile/keys/export')
+  }
+
+  async importKeys(payload: { raw_content?: string } | Record<string, any>): Promise<import('@/types/api').KeysImportResponse> {
+    return this.request<import('@/types/api').KeysImportResponse>('/profile/keys/import', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async exportProfile(sessionPrefs?: import('@/types/api').ProfileSessionPreferences): Promise<import('@/types/api').ProfileBackupData> {
+    return this.request<import('@/types/api').ProfileBackupData>('/profile/export', {
+      method: 'POST',
+      body: JSON.stringify({ session_preferences: sessionPrefs }),
+    })
+  }
+
+  async importProfile(profileData: any): Promise<import('@/types/api').ProfileImportResponse> {
+    return this.request<import('@/types/api').ProfileImportResponse>('/profile/import', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    })
+  }
 }
 
 export const api = new APIClient()
