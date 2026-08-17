@@ -35,7 +35,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
-import { PageHeader, Button } from '@/components/ui'
+import { PageHeader, Button, toast } from '@/components/ui'
 import type {
   HarvestSourceInfo,
   HarvestRun,
@@ -236,16 +236,28 @@ export function HarvestPage(): JSX.Element {
             ])
             setHarvestRuns(runsRes.items || [])
             setCollectedPapers(papersRes.items || [])
+
+            /* Uma coleta multibase leva minutos; a pessoa sai da tela. O aviso
+               é anunciado por leitor de tela e alcança quem já mudou de aba. */
+            toast.success('Coleta multibase concluída', {
+              description: `${statusRes.total_new || statusRes.total_found || 0} trabalhos novos · ${statusRes.total_duplicate || 0} duplicatas unificadas.`,
+            })
           }
         } catch (err) {
           console.error('Erro no polling de status:', err)
           clearInterval(pollInterval)
           setIsHarvesting(false)
+          toast.error('A coleta foi interrompida', {
+            description: 'Falha ao consultar o andamento. O que já foi recuperado está no acervo.',
+          })
         }
       }, 1500)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao iniciar coleta:', err)
       setIsHarvesting(false)
+      toast.error('Não foi possível iniciar a coleta', {
+        description: err?.message || 'Falha na comunicação com o backend.',
+      })
     }
   }
 

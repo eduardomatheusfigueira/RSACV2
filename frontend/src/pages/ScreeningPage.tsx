@@ -57,6 +57,7 @@ import {
   Button,
   EmptyState,
   LoadingState,
+  toast,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -175,6 +176,11 @@ export function ScreeningPage(): React.JSX.Element {
           } else if (msg.type === 'batch_screening_completed') {
             setIsBatchRunning(false)
             success('Triagem', 'Triagem em lote finalizada com sucesso!')
+            /* O modal pode ter sido minimizado e a pessoa estar em outra tela —
+               é exatamente o "sucesso fora da vista" que o aviso resolve. */
+            toast.success('Triagem em lote concluída', {
+              description: 'As decisões foram gravadas. Recarregando a fila.',
+            })
             loadStats(projectId)
             loadPapers(projectId)
           }
@@ -949,6 +955,7 @@ export function ScreeningPage(): React.JSX.Element {
                     className="btn-study-step"
                     onClick={handleSelectPrevPaper}
                     title="Estudo Anterior (Atalho: Seta Esquerda)"
+                    aria-label="Estudo Anterior (Atalho: Seta Esquerda)"
                   >
                     <ChevronLeft size={16} />
                   </button>
@@ -960,6 +967,7 @@ export function ScreeningPage(): React.JSX.Element {
                     className="btn-study-step"
                     onClick={handleSelectNextPaper}
                     title="Próximo Estudo (Atalho: Seta Direita)"
+                    aria-label="Próximo Estudo (Atalho: Seta Direita)"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -1405,11 +1413,26 @@ export function ScreeningPage(): React.JSX.Element {
             ) : (
               <div className="batch-progress-view animate-fade-in">
                 <div className="progress-top-row">
-                  <span className="progress-label">Processando com Assistência...</span>
+                  <span className="progress-label" id="batch-progress-label">
+                    Processando com Assistência…
+                  </span>
                   <span className="progress-percentage">{batchProgress?.percentage || 0}%</span>
                 </div>
 
-                <div className="progress-bar-track">
+                {/* `progressbar` e não `aria-live`: o lote emite um tique por
+                    estudo, e anunciar cada um transformaria o leitor de tela em
+                    metrônomo. Com os valores expostos, quem usa consulta o
+                    progresso quando quiser; a conclusão é anunciada pelo aviso
+                    que o log store levanta. */}
+                <div
+                  className="progress-bar-track"
+                  role="progressbar"
+                  aria-labelledby="batch-progress-label"
+                  aria-valuemin={0}
+                  aria-valuemax={batchProgress?.total || 100}
+                  aria-valuenow={batchProgress?.processed || 0}
+                  aria-valuetext={`${batchProgress?.processed || 0} de ${batchProgress?.total || 0} estudos triados`}
+                >
                   <div
                     className="progress-bar-fill"
                     style={{ width: `${batchProgress?.percentage || 0}%` }}

@@ -104,7 +104,9 @@ export function LogPanel(): JSX.Element {
           <span className="log-panel-count">{entries.length} eventos</span>
         </div>
         <div className="log-panel-actions">
-          <button type="button" className="log-action-btn" onClick={clearLogs} title="Limpar Logs">
+          <button type="button" className="log-action-btn" onClick={clearLogs} title="Limpar Logs"
+            aria-label="Limpar Logs"
+          >
             <Trash2 size={12} />
           </button>
           <button type="button" className="log-action-btn" onClick={() => setPanelOpen(false)} title="Fechar Painel">

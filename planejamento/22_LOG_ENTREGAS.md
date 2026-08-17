@@ -268,6 +268,12 @@ Quatro defeitos de raiz apareceram no caminho e foram corrigidos:
 
 Resultado: `axe-core` **sem violação** nas 8 telas × 13 paletas.
 
+A geração dos tokens vive em `frontend/scripts/derivar-tokens-de-contraste.py`,
+e a regra **R8** do verificador — que analisa por bloco, não por linha — impede
+que um par não medido volte: ela acusa `background: var(--color-X-bg)` com
+`color: var(--color-X)` na mesma regra. Foi testada contra uma regressão
+proposital antes de entrar.
+
 ---
 
 ## 22.7 O que segue aberto

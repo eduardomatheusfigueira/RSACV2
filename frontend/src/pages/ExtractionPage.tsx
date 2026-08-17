@@ -791,6 +791,7 @@ export function ExtractionPage(): JSX.Element {
                       className="btn-pdf-action danger"
                       onClick={handleDeletePDF}
                       title="Desvincular PDF deste artigo"
+                      aria-label="Desvincular PDF deste artigo"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -816,6 +817,7 @@ export function ExtractionPage(): JSX.Element {
                   className="btn-study-step"
                   onClick={handleSelectPrevPaper}
                   title="Estudo Anterior (Atalho: Seta Esquerda)"
+                  aria-label="Estudo Anterior (Atalho: Seta Esquerda)"
                 >
                   <ChevronLeft size={16} />
                 </button>
@@ -827,6 +829,7 @@ export function ExtractionPage(): JSX.Element {
                   className="btn-study-step"
                   onClick={handleSelectNextPaper}
                   title="Próximo Estudo (Atalho: Seta Direita)"
+                  aria-label="Próximo Estudo (Atalho: Seta Direita)"
                 >
                   <ChevronRight size={16} />
                 </button>
