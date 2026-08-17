@@ -14,12 +14,12 @@ primeiro.
 
 | Fase | Situação | Evidência |
 |---|:---:|---|
-| **1 — Tokens** | 🟡 parcial | Escala tipográfica e de espaçamento ampliadas; `--color-text-on-accent` e `--color-overlay` criados nas 13 paletas; `components/ui/` com **zero** cor literal. Faltam os tokens de chrome e de fonte acadêmica, e a migração das 128 cores literais restantes nas páginas |
+| **1 — Tokens** | ✅ **quase fechada** | **Zero** cor literal, `font-size` literal, `z-index` ad hoc e `border-radius` literal em todo o `src/`. Tokens de chrome, `--color-text-on-accent`, `--color-overlay` e escala nomeada de `z-index` criados. O verificador `lint:tokens` passa em `--strict`. Resta a migração dos 265 espaçamentos literais, com teto travado |
 | **2 — Componentes** | 🟡 parcial | `components/ui/` entregue com Radix (`Dialog`, `Tooltip`), `Button`, `Badge`, `Card`, `FormControls`. **Ainda não adotado por nenhuma página** — as 25 classes de botão antigas seguem em uso |
 | **3 — Proporção e comando** | ⬜ | Moldura do Protocolo continua em 41% |
 | **4 — Registro de comandos** | ✅ **concluída** | `useRibbonStore` nas 7 páginas; acionamento por DOM de 34 → **0**; botões refletem estado real |
 | **5 — Acessibilidade** | ⬜ | Sem mudança: 3 `aria-label`, 0 `aria-live`, 2 `:focus-visible` |
-| **6 — Conteúdo por diretriz** | 🟡 parcial | Ajuda e rótulos do Estúdio vêm do catálogo via `fieldKey`; contagem do checklist correta por diretriz. Falta o diagrama de fluxo |
+| **6 — Conteúdo por diretriz** | 🟡 parcial | Ajuda e rótulos do Estúdio vêm do catálogo via `fieldKey`; contagem do checklist correta; os rótulos do diagrama deixaram de citar PRISMA 2020 fixo. Restam 5 modelos de texto inseríveis que citam a diretriz na própria prosa |
 | **7 — Higiene** | 🟡 parcial | Sidebar removida (−372 linhas). Faltam as dependências não importadas e a decomposição dos arquivos grandes |
 
 **Lição registrada.** A Fase 1 foi executada redefinindo os valores dos tokens
@@ -28,7 +28,10 @@ elementos mudaram de forma e o texto encolheu em cascata sem que ninguém
 percebesse — inclusive o campo de escrita do manuscrito, que caiu para 11 px.
 Foi exatamente o risco de probabilidade **Alta** previsto em § 25.11, e a
 mitigação prevista (referência visual **antes** de começar) não foi aplicada.
-A referência de 104 imagens já existe agora; a partir daqui ela é obrigatória.
+A referência de 104 imagens já existe agora; a partir daqui ela é obrigatória —
+e provou o valor na mesma sessão: pegou as etiquetas de base acadêmica
+ilegíveis em `platinum-dusk`, que tinham recebido token de chrome numa
+superfície de conteúdo. Nenhuma leitura de código mostraria isso.
 
 ---
 
@@ -85,7 +88,7 @@ parar.
 
 ---
 
-## 25.3 Fase 1 — Tokens que descrevem o produto ⬜
+## 25.3 Fase 1 — Tokens que descrevem o produto ✅ (exceto espaçamento)
 
 **Objetivo**: `globals.css` passa a descrever a interface que existe, e o
 verificador passa a apontar quem foge dela.
@@ -116,7 +119,7 @@ verificador passa a apontar quem foge dela.
 
 ---
 
-## 25.4 Fase 2 — Biblioteca de componentes ⬜
+## 25.4 Fase 2 — Biblioteca de componentes 🟡 (entregue, não adotada)
 
 **Objetivo**: existir a peça antes de exigir que as telas a usem.
 
@@ -170,7 +173,7 @@ verificador passa a apontar quem foge dela.
 
 ---
 
-## 25.6 Fase 4 — Registro de comandos ⬜
+## 25.6 Fase 4 — Registro de comandos ✅
 
 **Objetivo**: eliminar os 34 acionamentos por DOM — o achado 🔴 A1.
 
@@ -223,7 +226,7 @@ sem comando tipado não há o que anunciar.
 
 ---
 
-## 25.8 Fase 6 — Conteúdo dependente da diretriz ⬜
+## 25.8 Fase 6 — Conteúdo dependente da diretriz 🟡 (rótulos feitos, modelos pendentes)
 
 **Objetivo**: o achado A8 — o app exibir numeração do PRISMA-ScR sob CEE/ROSES
 é erro de conteúdo metodológico, não detalhe cosmético.
@@ -244,7 +247,7 @@ sem comando tipado não há o que anunciar.
 
 ---
 
-## 25.9 Fase 7 — Higiene e refino estético ⬜
+## 25.9 Fase 7 — Higiene e refino estético 🟡 (Sidebar removida)
 
 **Objetivo**: pagar o peso morto e fazer a passada final de acabamento.
 

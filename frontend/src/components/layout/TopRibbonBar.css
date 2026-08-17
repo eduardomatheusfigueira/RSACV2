@@ -9,7 +9,7 @@
   border-bottom: 2px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  z-index: 100;
+  z-index: var(--z-chrome);
   user-select: none;
   flex-shrink: 0;
 }
@@ -23,9 +23,9 @@
   justify-content: space-between;
   height: 34px;
   padding: 0 var(--space-3);
-  background: var(--black-forest);
-  color: var(--cornsilk);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-chrome-bg);
+  color: var(--color-chrome-text);
+  border-bottom: 1px solid var(--color-chrome-hover);
 }
 
 .ribbon-brand {
@@ -40,12 +40,12 @@
 }
 
 .ribbon-brand:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--color-chrome-hover);
 }
 
 .brand-name {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-md);
   font-weight: var(--weight-bold);
   letter-spacing: 0.05em;
 }
@@ -53,7 +53,7 @@
 /* "v2" é sufixo do logotipo, não uma etiqueta: fica discreto ao lado do nome
    para não competir com o selo BETA, que é a informação de estado. */
 .brand-ver {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-medium);
   color: var(--rsac-accent, var(--sunlit-clay));
@@ -76,8 +76,8 @@
   align-items: center;
   gap: 6px;
   padding: 2px 10px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(254, 250, 224, 0.15);
+  background: var(--color-chrome-sunken);
+  border: 1px solid var(--color-chrome-border);
   border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -86,35 +86,35 @@
 }
 
 .active-project-pill:hover {
-  background: rgba(0, 0, 0, 0.45);
-  border-color: var(--sunlit-clay);
+  background: color-mix(in srgb, var(--color-chrome-sunken) 100%, var(--bevel-dark) 30%);
+  border-color: var(--rsac-accent, var(--sunlit-clay));
 }
 
 .icon-project { color: var(--sunlit-clay); flex-shrink: 0; }
 
 .project-label {
-  font-size: 0.625rem;
-  color: rgba(254, 250, 224, 0.6);
+  font-size: var(--font-size-2xs);
+  color: var(--color-chrome-text-muted);
   flex-shrink: 0;
 }
 
 .project-title {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  color: var(--cornsilk);
+  color: var(--color-chrome-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .project-methodology-tag {
-  font-size: 0.5rem;
+  font-size: var(--font-size-3xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   padding: 0 4px;
   background: var(--copperwood);
-  color: #fff;
-  border-radius: 2px;
+  color: var(--color-text-on-accent);
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
@@ -124,11 +124,11 @@
   gap: 6px;
   padding: 2px 10px;
   background: var(--copperwood);
-  color: #fff;
-  font-size: 0.6875rem;
+  color: var(--color-text-on-accent);
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   border-radius: var(--radius-xs);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--color-chrome-border);
   cursor: pointer;
   transition: filter var(--transition-fast);
 }
@@ -147,9 +147,9 @@
   align-items: center;
   gap: 3px;
   padding: 2px 7px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
   border: 1px solid transparent;
@@ -157,13 +157,13 @@
 
 .ribbon-action-pill.ai-active {
   background: var(--olive-leaf);
-  color: #fff;
+  color: var(--color-text-on-accent);
 }
 
 .ribbon-action-pill.ai-manual {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--color-chrome-hover);
   color: var(--sunlit-clay);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--color-chrome-border);
 }
 
 .ribbon-icon-btn {
@@ -172,16 +172,16 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  color: var(--cornsilk);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  color: var(--color-chrome-text);
+  background: var(--color-chrome-hover);
+  border: 1px solid var(--color-chrome-border);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.ribbon-icon-btn:hover { background: rgba(255, 255, 255, 0.18); color: #fff; }
-.ribbon-icon-btn.collapse-btn.active { background: var(--copperwood); color: #fff; }
+.ribbon-icon-btn:hover { background: var(--color-chrome-active); color: var(--color-text-on-accent); }
+.ribbon-icon-btn.collapse-btn.active { background: var(--copperwood); color: var(--color-text-on-accent); }
 
 /* ═══════════════════════════════════════════════════════════════════
    LAYER 2: TAB BAR
@@ -206,7 +206,7 @@
   align-items: center;
   gap: 5px;
   padding: 6px 14px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
   background: transparent;
@@ -232,7 +232,7 @@
   border-bottom: 1px solid var(--color-bg-secondary);
   box-shadow: none;
   margin-bottom: -1px;
-  z-index: 2;
+  z-index: var(--z-sticky);
 }
 
 .ribbon-tab-btn.disabled {
@@ -251,7 +251,7 @@
   min-width: 15px;
   height: 15px;
   padding: 0 3px;
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   background: var(--color-bg-secondary);
@@ -263,7 +263,7 @@
 .ribbon-tab-btn.active .tab-step-num {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: #fff;
+  color: var(--color-text-on-accent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -306,7 +306,7 @@
 
 /* Group title — BOTTOM of group (Office pattern) */
 .ribbon-group-title {
-  font-size: 0.5rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   font-family: var(--font-mono);
   text-transform: uppercase;
@@ -363,7 +363,7 @@
   max-width: 58px;
   height: 48px;
   padding: 2px 4px;
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
   background: var(--color-bg-primary);
@@ -390,7 +390,7 @@
 
 .tool-btn-large.tool-active {
   background: var(--copperwood);
-  color: #fff;
+  color: var(--color-text-on-accent);
   border-color: var(--copperwood);
   box-shadow: var(--shadow-neo-pressed);
 }
@@ -411,7 +411,7 @@
   min-width: 52px;
   height: 48px;
   padding: 2px 6px;
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
   background: var(--color-bg-primary);
@@ -449,12 +449,12 @@
   gap: 4px;
   height: 23px;
   padding: 0 7px;
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   box-shadow: var(--shadow-neo-raised);
   transition: all var(--transition-fast);
@@ -481,7 +481,7 @@
 
 .tool-btn-compact.active {
   background: var(--copperwood);
-  color: #fff;
+  color: var(--color-text-on-accent);
   border-color: var(--copperwood);
   box-shadow: var(--shadow-neo-pressed);
 }
@@ -496,7 +496,7 @@
   min-width: 52px;
   height: 48px;
   padding: 2px 6px;
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   border-radius: var(--radius-xs);
   cursor: pointer;
@@ -520,7 +520,7 @@
 
 .tool-btn-decision.included:hover:not(:disabled) {
   background: var(--color-included);
-  color: #fff;
+  color: var(--color-text-on-accent);
 }
 
 .tool-btn-decision.excluded {
@@ -531,7 +531,7 @@
 
 .tool-btn-decision.excluded:hover:not(:disabled) {
   background: var(--color-excluded);
-  color: #fff;
+  color: var(--color-text-on-accent);
 }
 
 .tool-btn-decision.pending {
@@ -542,7 +542,7 @@
 
 .tool-btn-decision.pending:hover:not(:disabled) {
   background: var(--color-pending);
-  color: #fff;
+  color: var(--color-text-on-accent);
 }
 
 .tool-btn-decision:disabled {
@@ -575,14 +575,14 @@
 }
 
 .ribbon-next-step .next-step-text strong {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   line-height: 1.15;
 }
 
 .ribbon-next-step .next-step-text span {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   color: var(--color-text-secondary);
   line-height: 1.25;
 }
@@ -593,9 +593,9 @@
   gap: 4px;
   height: 26px;
   padding: 0 10px;
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
-  color: #fff;
+  color: var(--color-text-on-accent);
   background: var(--copperwood);
   border: none;
   border-radius: var(--radius-xs);
@@ -624,7 +624,7 @@
 }
 
 .info-label {
-  font-size: 0.5rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-tertiary);
   text-transform: uppercase;
@@ -633,7 +633,7 @@
 }
 
 .info-value {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   white-space: nowrap;
@@ -664,26 +664,38 @@
 }
 
 .db-badge {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   padding: 0 6px;
   height: 23px;
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   display: inline-flex;
   align-items: center;
   gap: 3px;
   box-sizing: border-box;
 }
 
-.db-badge.bdtd    { background: var(--olive-leaf);  color: #fff; }
-.db-badge.scielo  { background: #c0392b;           color: #fff; }
-.db-badge.scopus  { background: #e67e22;           color: #fff; }
-.db-badge.pubmed  { background: #2980b9;           color: #fff; }
-.db-badge.openalex { background: #8e44ad;          color: #fff; }
-.db-badge.google  { background: #1e88e5;           color: #fff; }
-.db-badge.qwen    { background: #6a1b9a;           color: #fff; }
-.db-badge.local   { background: #37474f;           color: #fff; }
+/* As bases não levam mais cor de marca própria: eram 8 hexadecimais fixos
+   (vermelho SciELO, laranja Scopus, roxo OpenAlex…) que ignoravam as 13
+   paletas e destoavam até do tema padrão. O rótulo já identifica a base — cor
+   aqui era redundante e, por § 24.10 A-10, não pode ser o único portador de
+   significado. Ficam como etiqueta de engenharia sobre o chrome. */
+.db-badge.bdtd,
+.db-badge.scielo,
+.db-badge.scopus,
+.db-badge.pubmed,
+.db-badge.openalex,
+.db-badge.google,
+.db-badge.qwen,
+.db-badge.local {
+  /* Estas etiquetas vivem no TOOLSTRIP, que é superfície de CONTEÚDO — clara
+     nos temas claros. Tokens de chrome aqui deixariam texto claro sobre fundo
+     claro (visto em `platinum-dusk` na comparação visual). */
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
 
 .ribbon-provider-stack {
   display: flex;

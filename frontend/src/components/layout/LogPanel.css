@@ -6,11 +6,11 @@
   height: 100%;
   background: var(--color-bg-secondary);
   border-left: 1px solid var(--color-border);
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.25);
+  box-shadow: -4px 0 16px color-mix(in srgb, var(--bevel-dark) 28%, transparent);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  z-index: 50;
+  z-index: var(--z-sticky);
   font-family: var(--font-sans);
   animation: slideInRight var(--transition-fast) ease-out;
   min-height: 0;
@@ -45,7 +45,7 @@
 }
 
 .log-panel-title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   letter-spacing: 0.02em;
@@ -53,12 +53,12 @@
 }
 
 .log-panel-count {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   padding: 1px 6px;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   color: var(--color-text-tertiary);
 }
 
@@ -76,7 +76,7 @@
   height: 22px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -111,12 +111,12 @@
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
@@ -129,12 +129,12 @@
 
 .log-filter-btn.active {
   background: var(--copperwood);
-  color: #fff;
+  color: var(--color-text-on-accent);
   border-color: var(--copperwood);
 }
 
 .log-filter-btn .filter-count {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-family: var(--font-mono);
   opacity: 0.85;
 }
@@ -149,7 +149,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: var(--color-bg-base);
+  background: var(--color-bg-primary);
 }
 
 .log-empty {
@@ -157,7 +157,7 @@
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   text-align: center;
   font-style: italic;
@@ -178,7 +178,7 @@
 }
 
 .log-entry:hover {
-  border-color: var(--color-border-hover);
+  border-color: var(--color-border-focus);
 }
 
 .log-entry-main {
@@ -187,7 +187,7 @@
   gap: 6px;
   padding: 6px 8px;
   cursor: pointer;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   min-height: 30px;
   flex-shrink: 0;
 }
@@ -207,19 +207,19 @@
 
 .log-time {
   font-family: var(--font-mono);
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
 .log-source-tag {
   font-family: var(--font-mono);
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   padding: 0 4px;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
@@ -230,17 +230,17 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   line-height: 1.2;
 }
 
 .log-duration {
   font-family: var(--font-mono);
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   color: var(--olive-leaf);
-  background: rgba(107, 142, 35, 0.12);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
   padding: 0 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
@@ -258,7 +258,7 @@
   border-top: 1px solid var(--color-border);
   color: var(--cornsilk);
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   max-height: 200px;
   overflow-y: auto;
 }

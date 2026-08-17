@@ -99,7 +99,7 @@
 }
 
 .badge-methodology {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   padding: 2px 8px;
   background: var(--color-bg-primary);
@@ -110,11 +110,11 @@
 }
 
 .badge-active {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   padding: 2px 8px;
   background: var(--olive-leaf);
-  color: #ffffff;
+  color: var(--color-text-on-accent);
   border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
@@ -151,7 +151,7 @@
 }
 
 .card-date {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-family: var(--font-mono);
 }
@@ -209,12 +209,12 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-overlay);
   padding: var(--space-4);
 }
 
@@ -222,12 +222,12 @@
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-neo-raised), 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-neo-raised), 0 20px 25px -5px color-mix(in srgb, var(--bevel-dark) 32%, transparent);
   width: 100%;
   max-width: 580px;
   overflow: hidden;
   position: relative;
-  z-index: 1001;
+  z-index: var(--z-overlay);
   user-select: text;
   -webkit-user-select: text;
   pointer-events: auto;
@@ -235,7 +235,7 @@
 
 .modal-titlebar {
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-text-on-accent);
   padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: center;
@@ -246,10 +246,10 @@
 }
 
 .modal-titlebar-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--color-text-on-accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-on-accent) 30%, transparent);
   border-radius: var(--radius-xs);
-  color: #ffffff;
+  color: var(--color-text-on-accent);
   width: 22px;
   height: 22px;
   display: flex;
@@ -260,7 +260,7 @@
 }
 
 .modal-titlebar-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--color-text-on-accent) 30%, transparent);
 }
 
 .modal-body {
@@ -298,7 +298,7 @@
 }
 
 .modal-form .form-group label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
 }
@@ -366,29 +366,29 @@
 }
 
 .protocol-preview-badge {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   padding: 1px 6px;
   background: var(--olive-leaf);
-  color: #fff;
-  border-radius: 2px;
+  color: var(--color-text-on-accent);
+  border-radius: var(--radius-sm);
 }
 
 .protocol-preview-framework {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .protocol-preview-desc {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: 1.4;
   margin: 0;
 }
 
 .protocol-preview-focus {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   line-height: 1.3;
   padding-top: var(--space-1);

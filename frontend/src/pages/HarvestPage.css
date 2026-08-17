@@ -44,7 +44,7 @@
 
 .queue-status-chip.warning {
   color: var(--color-warning);
-  border-color: rgba(224, 159, 62, 0.4);
+  border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
 }
 
 .harvest-top-actions {
@@ -130,7 +130,7 @@
 }
 
 .live-status-pill {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   padding: 2px 8px;
   border-radius: var(--radius-xs);
@@ -196,13 +196,13 @@
 }
 
 .meta-hint {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   font-family: var(--font-mono);
 }
 
 .link-action {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-accent);
   cursor: pointer;
@@ -235,7 +235,7 @@
 
 .source-card-item.selected {
   border-color: var(--color-accent);
-  background: rgba(188, 108, 37, 0.08);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .source-card-item.disabled {
@@ -272,7 +272,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   color: var(--color-warning);
   background: var(--color-warning-bg);
@@ -282,7 +282,7 @@
 }
 
 .source-desc {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   line-height: 1.2;
 }
@@ -301,7 +301,7 @@
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   color: var(--color-accent);
   max-width: 100%;
@@ -348,7 +348,7 @@
 }
 
 .form-group-limit label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
 }
@@ -388,11 +388,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
 }
 
 .run-status {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   padding: 1px 4px;
   border-radius: var(--radius-xs);
@@ -418,13 +418,13 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   color: var(--color-text-tertiary);
 }
 
 .empty-subtext {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   margin: 0;
 }
@@ -462,7 +462,7 @@
 }
 
 .btn-feed-filter {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
   padding: 2px 6px;
   background: var(--color-bg-secondary);
@@ -510,7 +510,7 @@
 }
 
 .status-tag {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   padding: 1px 5px;
   border-radius: var(--radius-xs);
@@ -536,7 +536,7 @@
 }
 
 .source-progress-count {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   font-family: var(--font-mono);
   color: var(--color-accent);
@@ -569,7 +569,7 @@
 
 .stream-counter-badge {
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-accent);
   background: var(--color-bg-primary);
   padding: 1px 6px;
@@ -626,7 +626,7 @@
 }
 
 .feed-badge-source {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   font-family: var(--font-mono);
   color: var(--color-accent);
@@ -637,7 +637,7 @@
 }
 
 .feed-item-year {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   color: var(--color-text-tertiary);
 }
@@ -646,7 +646,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
@@ -656,17 +656,17 @@
 .feed-tag-pill.tag-new {
   color: var(--color-included);
   background: var(--color-included-bg);
-  border-color: rgba(43, 147, 72, 0.4);
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
 .feed-tag-pill.tag-dup {
   color: var(--color-warning);
   background: var(--color-warning-bg);
-  border-color: rgba(224, 159, 62, 0.4);
+  border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
 }
 
 .feed-item-title {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   line-height: 1.25;
@@ -674,7 +674,7 @@
 }
 
 .feed-item-authors {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -702,14 +702,14 @@
   padding: 6px 12px;
   background: var(--color-bg-secondary);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
 }
 
 .log-count-tag {
   font-family: var(--font-mono);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
 }
 
@@ -718,7 +718,7 @@
   overflow-y: auto;
   max-height: 380px;
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
   display: flex;
   flex-direction: column;
@@ -791,7 +791,7 @@
 }
 
 .next-phase-content p {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-top: 2px;
   margin-bottom: 0;

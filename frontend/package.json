@@ -1,7 +1,7 @@
 {
   "name": "rsac-v2",
   "version": "2.0.0",
-  "description": "RSAC V2 — Revisão Sistemática Assistida por Computador",
+  "description": "RSAC V2 \u2014 Revis\u00e3o Sistem\u00e1tica Assistida por Computador",
   "main": "out/main/index.js",
   "author": "Eduardo Matheus Figueira",
   "license": "MIT",
@@ -11,7 +11,9 @@
     "preview": "electron-vite preview",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint:tokens": "node scripts/lint-design-tokens.mjs",
+    "verify": "node scripts/lint-design-tokens.mjs --strict && tsc --noEmit"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.0",

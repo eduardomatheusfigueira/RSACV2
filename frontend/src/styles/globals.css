@@ -169,6 +169,34 @@
   --transition-base: 140ms ease-in-out;
   --transition-slow: 200ms ease-in-out;
 
+  /* ── Chrome da Aplicação ───────────────────────────────────────────────
+     Superfícies escuras de aplicação: barra de título do ribbon, painel de
+     logs, splash. São DERIVADOS: referenciam tokens que cada paleta redefine,
+     então basta declará-los uma vez aqui — a substituição de `var()` acontece
+     no elemento raiz, onde o bloco do tema já venceu a cascata. Um `rgba()`
+     literal, ao contrário, ficaria congelado em todas as 13 paletas. */
+  --color-chrome-bg: var(--black-forest);
+  --color-chrome-text: var(--color-text-sidebar-active);
+  --color-chrome-text-muted: color-mix(in srgb, var(--color-text-sidebar-active) 62%, transparent);
+  --color-chrome-border: color-mix(in srgb, var(--color-text-sidebar-active) 14%, transparent);
+  --color-chrome-hover: color-mix(in srgb, var(--color-text-sidebar-active) 9%, transparent);
+  --color-chrome-active: color-mix(in srgb, var(--color-text-sidebar-active) 20%, transparent);
+  --color-chrome-sunken: color-mix(in srgb, var(--bevel-dark) 55%, transparent);
+
+  /* ── Camadas de Empilhamento ───────────────────────────────────────────
+     Escala nomeada com folga de 100. Substitui os 8 valores escolhidos um a um
+     (2, 10, 50, 100, 1000, 1001, 1050, 1200), que não permitiam responder
+     "esse menu fica acima ou abaixo do painel de logs?" sem abrir dois
+     arquivos. */
+  --z-base: 0;
+  --z-sticky: 100;      /* cabeçalhos fixos dentro de painéis */
+  --z-chrome: 200;      /* ribbon, barra de status */
+  --z-drawer: 300;      /* painel de logs */
+  --z-overlay: 400;     /* dropdown, popover, tooltip */
+  --z-dialog: 500;      /* modal e seu véu */
+  --z-toast: 600;       /* notificações */
+  --z-splash: 700;      /* splash de inicialização */
+
   /* ── Dimensões de Layout ─────────────────────────────────────────── */
   --sidebar-width: 256px;
   --sidebar-collapsed-width: 64px;

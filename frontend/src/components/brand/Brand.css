@@ -98,17 +98,17 @@
 /* O letter-spacing sobra à direita do último caractere; o padding assimétrico
    devolve o equilíbrio óptico da etiqueta. */
 .rsac-beta--xs {
-  font-size: 0.5rem;
+  font-size: var(--font-size-3xs);
   padding: 2px 3px 2px 5px;
 }
 
 .rsac-beta--sm {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 4px 2px 6px;
 }
 
 .rsac-beta--md {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   padding: 3px 5px 3px 8px;
 }
 
@@ -154,11 +154,11 @@
   gap: 5px;
 }
 .rsac-lockup--sm .rsac-lockup-word {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-md);
   letter-spacing: 0.055em;
 }
 .rsac-lockup--sm .rsac-lockup-version {
-  font-size: 0.5rem;
+  font-size: var(--font-size-3xs);
   letter-spacing: 0.11em;
   margin-top: 3px;
 }
@@ -170,11 +170,11 @@
   gap: 7px;
 }
 .rsac-lockup--md .rsac-lockup-word {
-  font-size: 1.1875rem;
+  font-size: var(--font-size-xl);
   letter-spacing: 0.05em;
 }
 .rsac-lockup--md .rsac-lockup-version {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   letter-spacing: 0.13em;
   margin-top: 5px;
 }
@@ -186,11 +186,11 @@
   gap: 10px;
 }
 .rsac-lockup--lg .rsac-lockup-word {
-  font-size: 1.875rem;
+  font-size: var(--font-size-4xl);
   letter-spacing: 0.05em;
 }
 .rsac-lockup--lg .rsac-lockup-version {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.15em;
   margin-top: 7px;
 }

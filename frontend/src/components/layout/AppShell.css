@@ -7,7 +7,7 @@
   height: 100%;
   max-height: 100vh;
   overflow: hidden;
-  background: var(--color-bg-base);
+  background: var(--color-bg-primary);
 }
 
 .app-main {
@@ -38,5 +38,5 @@
   height: 100%;
   min-height: 0;
   min-width: 0;
-  animation: fadeIn var(--transition-normal) ease-out;
+  animation: fadeIn var(--transition-base) ease-out;
 }

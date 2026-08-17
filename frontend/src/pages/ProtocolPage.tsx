@@ -1665,7 +1665,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
             </div>
 
             <p className="section-help">
-              Conforme PRISMA-ScR Item 8 e Diretrizes RSAC: Formulação em <strong>pares de termos com AND</strong> (máximo 2 termos por expressão e sugestão de ~5 pares por idioma), garantindo perfeita compatibilidade com o motor VuFind da BDTD.
+              Conforme {getFieldItemRef('search_descriptors')} e Diretrizes RSAC: Formulação em <strong>pares de termos com AND</strong> (máximo 2 termos por expressão e sugestão de ~5 pares por idioma), garantindo perfeita compatibilidade com o motor VuFind da BDTD.
             </p>
 
             {helpOpen.descriptors && (

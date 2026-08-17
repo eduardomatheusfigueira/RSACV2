@@ -75,7 +75,7 @@
   gap: 6px;
   padding: 3px 8px;
   border-radius: var(--radius-xs);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-semibold);
   border: 1px solid var(--color-border);
   background: var(--color-bg-primary);
@@ -84,7 +84,7 @@
 
 .queue-status-chip.inc {
   color: var(--color-included);
-  border-color: rgba(43, 147, 72, 0.3);
+  border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
 }
 
 .queue-completion-chip {
@@ -93,7 +93,7 @@
   gap: 6px;
   padding: 3px 8px;
   border-radius: var(--radius-xs);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-semibold);
   border: 1px solid var(--color-border);
   background: var(--color-bg-primary);
@@ -228,23 +228,23 @@
 }
 
 .badge-decision.badge-incluído {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
   padding: 1px 5px;
   border-radius: var(--radius-xs);
   background: var(--color-included-bg);
   color: var(--color-included);
-  border: 1px solid rgba(43, 147, 72, 0.4);
+  border: 1px solid color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
 .queue-card-year {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   color: var(--color-text-secondary);
 }
 
 .queue-card-title {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
   margin: 0;
@@ -255,7 +255,7 @@
 }
 
 .queue-card-authors {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
   margin: 0;
   white-space: nowrap;
@@ -312,7 +312,7 @@
 
 .paper-reading-pane.drag-over-active {
   border: 2px dashed var(--color-accent) !important;
-  background: rgba(188, 108, 37, 0.04);
+  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
 }
 
 .reading-actions-toolbar {
@@ -325,7 +325,7 @@
   gap: var(--space-2);
   flex-wrap: wrap;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: var(--z-sticky);
 }
 
 .pdf-status-group {
@@ -339,7 +339,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   padding: 3px 7px;
   border-radius: var(--radius-xs);
@@ -349,13 +349,13 @@
 .badge-pdf.ready {
   color: var(--color-included);
   background: var(--color-included-bg);
-  border-color: rgba(43, 147, 72, 0.4);
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
 .badge-pdf.missing {
   color: var(--color-warning);
   background: var(--color-warning-bg);
-  border-color: rgba(224, 159, 62, 0.4);
+  border-color: color-mix(in srgb, var(--color-warning) 40%, transparent);
 }
 
 .view-mode-toggle-group {
@@ -371,7 +371,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
   padding: 2px 6px;
   background: transparent;
@@ -393,7 +393,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-semibold);
   padding: 3px 8px;
   background: var(--color-bg-primary);
@@ -452,7 +452,7 @@
 }
 
 .study-counter-label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   color: var(--color-text-tertiary);
   margin: 0 4px;
@@ -470,7 +470,7 @@
 }
 
 .reading-title {
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
   line-height: 1.35;
@@ -492,7 +492,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
   box-shadow: var(--shadow-neo-sunken);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
@@ -529,7 +529,7 @@
 }
 
 .word-count-badge {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   color: var(--color-text-tertiary);
   background: var(--color-bg-primary);
@@ -559,7 +559,7 @@
 
 .reader-search-input-box input {
   padding: 3px 20px 3px 22px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -580,7 +580,7 @@
   right: 5px;
   background: none;
   border: none;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-tertiary);
   cursor: pointer;
 }
@@ -613,7 +613,7 @@
 }
 
 .font-level-indicator {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   color: var(--color-text-primary);
   padding: 0 4px;
@@ -678,10 +678,10 @@
 }
 
 .text-highlight {
-  background-color: rgba(224, 159, 62, 0.35);
+  background-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
   color: var(--color-text-primary);
   padding: 0 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-weight: var(--weight-bold);
 }
 
@@ -734,7 +734,7 @@
   flex-direction: column;
   gap: 3px;
   flex-shrink: 0;
-  z-index: 10;
+  z-index: var(--z-sticky);
 }
 
 .form-pane-title-group {
@@ -768,7 +768,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
@@ -778,17 +778,17 @@
 .analysis-base-pill.pdf {
   color: var(--color-included);
   background: var(--color-included-bg);
-  border-color: rgba(43, 147, 72, 0.4);
+  border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
 }
 
 .analysis-base-pill.abstract {
   color: var(--color-accent);
   background: var(--color-bg-primary);
-  border-color: rgba(188, 108, 37, 0.4);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .form-pane-counter {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-family: var(--font-mono);
   color: var(--color-text-secondary);
 }
@@ -861,7 +861,7 @@
 
 .question-code-badge {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-accent);
   background: var(--color-bg-secondary);
@@ -880,7 +880,7 @@
 }
 
 .badge-answered {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-included);
   display: inline-flex;
   align-items: center;
@@ -892,7 +892,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
   padding: 2px 6px;
   background: var(--color-bg-secondary);
@@ -954,7 +954,7 @@
 }
 
 .evidence-badge {
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   color: var(--color-accent);
   display: inline-flex;
@@ -963,13 +963,13 @@
 }
 
 .evidence-source-tag {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   color: var(--color-text-tertiary);
   font-family: var(--font-mono);
 }
 
 .evidence-quote {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-style: italic;
   color: var(--color-text-secondary);
   margin: 0;
@@ -1006,7 +1006,7 @@
 }
 
 .bridge-content p {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-top: 2px;
   margin-bottom: 0;
@@ -1030,7 +1030,7 @@
 }
 
 .empty-questions-card p {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin: 0;
 }
@@ -1068,9 +1068,9 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--color-overlay);
   backdrop-filter: blur(2px);
-  z-index: 1000;
+  z-index: var(--z-overlay);
   display: flex;
   align-items: center;
   justify-content: center;

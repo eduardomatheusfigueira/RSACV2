@@ -234,7 +234,7 @@ export function ExportPage(): JSX.Element {
         <div className="export-prisma-pane">
           <div className="pane-header-title">
             <Layers size={16} className="icon-accent" />
-            <h3>Diagrama de Fluxo PRISMA 2020 em Tempo Real</h3>
+            <h3>Diagrama de Fluxo da Seleção de Estudos</h3>
           </div>
 
           <div className="pane-scroll-body">

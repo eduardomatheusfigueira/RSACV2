@@ -55,15 +55,32 @@ ser desligada por quem estiver com pressa.
 
 **Baseline a bater** (medido em 17/08/2026, doc 23):
 
-| Categoria | Violações hoje | Alvo |
-|---|:---:|:---:|
-| Cores literais | 143 | 0 |
-| `font-size` literais | 184 | 0 |
-| Espaçamentos literais | 309 | 0 |
-| `border-radius` literais | 21 | 0 |
-| `z-index` ad hoc | 8 | 0 |
-| Acionamento por DOM | 34 | 0 |
-| Dependências não importadas | 9 | 0 |
+| Categoria | Diagnóstico | Hoje | Teto no verificador |
+|---|:---:|:---:|:---:|
+| Cores literais | 143 | **0** | 0 · fechada |
+| `font-size` literais | 184 | **0** | 0 · fechada |
+| `border-radius` literais | 21 | **0** | 0 · fechada |
+| `z-index` ad hoc | 8 | **0** | 0 · fechada |
+| Acionamento por DOM | 34 | **0** | 0 · fechada |
+| Espaçamentos literais | 309 | 265 | 265 · dívida travada |
+| Diretriz fixa em texto visível | — | 5 | 5 · dívida travada |
+| Dependências não importadas | 9 | 9 | Fase 7 |
+
+Implementado em `frontend/scripts/lint-design-tokens.mjs`, exposto por
+`npm run lint:tokens`; `npm run verify` encadeia com o `tsc`.
+
+> **Achado do próprio verificador.** Além dos literais, ele detecta token
+> referenciado sem fallback que não existe em lugar nenhum. Eram **6
+> declarações mortas** — `--color-bg-base`, `--transition-normal`,
+> `--color-border-hover`, `--color-accent-bg`, `--weight-normal` — que não
+> pintavam nada havia meses e ninguém tinha percebido.
+
+> **Lição sobre escrever a própria regra.** As três primeiras versões dos
+> padrões de `font-size`, `z-index` e `border-radius` acusavam 326 violações
+> onde havia 189: o lookahead `(?!var\()` tem buraco de backtracking — o `\s*`
+> recua para zero e a asserção passa no espaço. As regras passaram a **capturar
+> o valor e testá-lo em código**. Verificador que dá falso positivo é
+> verificador que alguém desliga.
 
 ---
 

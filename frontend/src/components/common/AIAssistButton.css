@@ -20,7 +20,7 @@
 
 .ai-assist-btn-group:hover {
   border-color: var(--color-accent);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-xs);
 }
 
 .btn-ai-assist {
@@ -31,7 +31,7 @@
   background: transparent;
   border: none;
   color: var(--color-text-primary);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   cursor: pointer;
   outline: none;
@@ -109,7 +109,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
   color: var(--color-text-secondary);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   cursor: pointer;
@@ -132,8 +132,8 @@
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), var(--shadow-neo-raised);
-  z-index: 1050;
+  box-shadow: 0 10px 25px -5px color-mix(in srgb, var(--bevel-dark) 22%, transparent), var(--shadow-neo-raised);
+  z-index: var(--z-dialog);
   overflow: hidden;
 }
 
@@ -144,7 +144,7 @@
   padding: 6px 10px;
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
   color: var(--color-text-secondary);
@@ -189,13 +189,13 @@
 }
 
 .ai-dropdown-item .item-title {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
   color: var(--color-text-primary);
 }
 
 .ai-dropdown-item .item-desc {
-  font-size: 0.5625rem;
+  font-size: var(--font-size-3xs);
   color: var(--color-text-tertiary);
   line-height: 1.2;
 }
@@ -221,7 +221,7 @@
 .ai-custom-prompt-box input {
   width: 100%;
   padding: 6px 8px;
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -242,7 +242,7 @@
 
 .btn-custom-cancel {
   padding: 2px 6px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -252,10 +252,10 @@
 
 .btn-custom-submit {
   padding: 2px 8px;
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   background: var(--color-accent);
-  color: #ffffff;
+  color: var(--color-text-on-accent);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-xs);
   cursor: pointer;

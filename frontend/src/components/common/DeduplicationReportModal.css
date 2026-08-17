@@ -6,12 +6,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(18, 26, 12, 0.65);
+  background: var(--color-overlay);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1200;
+  z-index: var(--z-toast);
   animation: fadeIn 0.15s ease-out;
   padding: var(--space-4);
   box-sizing: border-box;
@@ -21,7 +21,7 @@
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--bevel-dark) 28%, transparent), 0 0 0 1px var(--color-chrome-border) inset;
   width: 100%;
   max-width: 820px;
   max-height: 90vh;
@@ -111,7 +111,7 @@
 }
 
 .dedup-stat-chip .stat-label {
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   font-weight: var(--weight-medium);
 }
@@ -145,7 +145,7 @@
   padding: var(--space-4) var(--space-5);
   overflow-y: auto;
   min-height: 280px;
-  background: var(--color-bg-base);
+  background: var(--color-bg-primary);
   box-sizing: border-box;
 }
 
@@ -154,7 +154,7 @@
   height: 100%;
   min-height: 320px;
   font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-md);
   line-height: 1.5;
   color: var(--color-text-primary);
   background: var(--color-bg-secondary);
@@ -165,7 +165,7 @@
   resize: none;
   white-space: pre-wrap;
   word-break: break-word;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-neo-sunken);
 }
 
 .dedup-report-textarea:focus {

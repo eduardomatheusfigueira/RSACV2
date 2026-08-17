@@ -869,7 +869,7 @@ export function TopRibbonBar(): JSX.Element {
                 <div className="ribbon-group-tools">
                   <div className="ribbon-info-box">
                     <span className="info-label">Diagrama Ativo:</span>
-                    <span className="info-value">Fluxograma PRISMA 2020</span>
+                    <span className="info-value">Fluxo de Seleção · {activeProtocol.shortLabel}</span>
                   </div>
                   <div className="ribbon-info-box">
                     <span className="info-label">Formato:</span>
