@@ -32,7 +32,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -41,7 +41,7 @@
 .log-panel-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .log-panel-title {
@@ -55,7 +55,7 @@
 .log-panel-count {
   font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
-  padding: 1px 6px;
+  padding: var(--space-px) var(--space-1-5);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -65,7 +65,7 @@
 .log-panel-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .log-action-btn {
@@ -92,8 +92,8 @@
 .log-filter-bar {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 6px 10px;
+  gap: var(--space-1);
+  padding: var(--space-1-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   overflow-x: auto;
@@ -102,15 +102,15 @@
 
 .filter-icon {
   color: var(--color-text-tertiary);
-  margin-right: 2px;
+  margin-right: var(--space-0-5);
   flex-shrink: 0;
 }
 
 .log-filter-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
+  gap: var(--space-1);
+  padding: var(--space-0-5) var(--space-1-5);
   font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
@@ -145,10 +145,10 @@
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
-  padding: 8px;
+  padding: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1-5);
   background: var(--color-bg-primary);
 }
 
@@ -156,7 +156,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: var(--space-8) var(--space-4);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
   text-align: center;
@@ -184,8 +184,8 @@
 .log-entry-main {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-2);
   cursor: pointer;
   font-size: var(--font-size-xs);
   min-height: 30px;
@@ -216,7 +216,7 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-3xs);
   font-weight: var(--weight-bold);
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -239,7 +239,7 @@
   font-size: var(--font-size-3xs);
   color: var(--olive-leaf);
   background: color-mix(in srgb, var(--color-success) 12%, transparent);
-  padding: 0 3px;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
@@ -253,7 +253,7 @@
 
 /* ── Entry Detail (Expanded JSON/Text) ─────────────────── */
 .log-entry-detail {
-  padding: 6px 8px;
+  padding: var(--space-1-5) var(--space-2);
   background: var(--black-forest);
   border-top: 1px solid var(--color-border);
   color: var(--cornsilk);

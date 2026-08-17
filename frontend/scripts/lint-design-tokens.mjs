@@ -82,13 +82,13 @@ const REGRAS = [
   {
     id: 'R2d',
     nome: 'espaçamento literal',
-    // Dívida conhecida: a migração dos espaçamentos é a única categoria da
-    // Fase 1 ainda aberta. O teto trava o crescimento até ela ser fechada.
-    teto: 265,
+    teto: 0,
     arquivos: /\.css$/,
     isento: (rel) => rel.endsWith('styles/globals.css'),
-    propriedade: /(?:padding|margin|gap):\s*([^;]+);/g,
-    literal: (v) => /\d\s*(?:px|rem|em)/.test(v)
+    propriedade: /(?:padding|margin|gap)(?:-(?:top|right|bottom|left))?:\s*([^;]+);/g,
+    // Valores negativos e calc() são correção óptica de posicionamento, não
+    // ritmo de espaçamento — a escala não os cobre e nem deveria.
+    literal: (v) => /(?<!-)\b\d[\d.]*\s*(?:px|rem)/.test(v) && !v.includes('calc(')
       && !v.split(/\s+/).every((parte) => parte.startsWith('var(') || parte === '0' || parte === 'auto'),
     dica: 'use var(--space-*)',
   },

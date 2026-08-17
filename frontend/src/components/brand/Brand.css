@@ -99,17 +99,17 @@
    devolve o equilíbrio óptico da etiqueta. */
 .rsac-beta--xs {
   font-size: var(--font-size-3xs);
-  padding: 2px 3px 2px 5px;
+  padding: var(--space-0-5) var(--space-1) var(--space-0-5) var(--space-1-5);
 }
 
 .rsac-beta--sm {
   font-size: var(--font-size-2xs);
-  padding: 2px 4px 2px 6px;
+  padding: var(--space-0-5) var(--space-1) var(--space-0-5) var(--space-1-5);
 }
 
 .rsac-beta--md {
   font-size: var(--font-size-xs);
-  padding: 3px 5px 3px 8px;
+  padding: var(--space-1) var(--space-1-5) var(--space-1) var(--space-2);
 }
 
 /* ── Assinatura horizontal ───────────────────────────────────────────── */
@@ -148,10 +148,10 @@
 }
 
 .rsac-lockup--sm {
-  gap: 7px;
+  gap: var(--space-2);
 }
 .rsac-lockup--sm .rsac-lockup-title-row {
-  gap: 5px;
+  gap: var(--space-1-5);
 }
 .rsac-lockup--sm .rsac-lockup-word {
   font-size: var(--font-size-md);
@@ -160,14 +160,14 @@
 .rsac-lockup--sm .rsac-lockup-version {
   font-size: var(--font-size-3xs);
   letter-spacing: 0.11em;
-  margin-top: 3px;
+  margin-top: var(--space-1);
 }
 
 .rsac-lockup--md {
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 .rsac-lockup--md .rsac-lockup-title-row {
-  gap: 7px;
+  gap: var(--space-2);
 }
 .rsac-lockup--md .rsac-lockup-word {
   font-size: var(--font-size-xl);
@@ -176,14 +176,14 @@
 .rsac-lockup--md .rsac-lockup-version {
   font-size: var(--font-size-3xs);
   letter-spacing: 0.13em;
-  margin-top: 5px;
+  margin-top: var(--space-1-5);
 }
 
 .rsac-lockup--lg {
-  gap: 16px;
+  gap: var(--space-4);
 }
 .rsac-lockup--lg .rsac-lockup-title-row {
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 .rsac-lockup--lg .rsac-lockup-word {
   font-size: var(--font-size-4xl);
@@ -192,5 +192,5 @@
 .rsac-lockup--lg .rsac-lockup-version {
   font-size: var(--font-size-xs);
   letter-spacing: 0.15em;
-  margin-top: 7px;
+  margin-top: var(--space-2);
 }

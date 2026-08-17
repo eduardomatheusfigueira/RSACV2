@@ -101,7 +101,7 @@
 .badge-methodology {
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  padding: 2px 8px;
+  padding: var(--space-0-5) var(--space-2);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -112,13 +112,13 @@
 .badge-active {
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  padding: 2px 8px;
+  padding: var(--space-0-5) var(--space-2);
   background: var(--olive-leaf);
   color: var(--color-text-on-accent);
   border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .card-title {
@@ -287,14 +287,14 @@
 .modal-form .form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .modal-form .form-label-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .modal-form .form-group label {
@@ -307,7 +307,7 @@
 .modal-form textarea,
 .modal-form select {
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background-color: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -369,7 +369,7 @@
   font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
-  padding: 1px 6px;
+  padding: var(--space-px) var(--space-1-5);
   background: var(--olive-leaf);
   color: var(--color-text-on-accent);
   border-radius: var(--radius-sm);

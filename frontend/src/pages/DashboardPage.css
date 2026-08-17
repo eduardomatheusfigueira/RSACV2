@@ -206,13 +206,13 @@
 .badge-active {
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  padding: 2px 8px;
+  padding: var(--space-0-5) var(--space-2);
   background: var(--olive-leaf, var(--color-success));
   color: var(--color-text-on-accent);
   border-radius: var(--radius-xs, 3px);
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .project-card-description {

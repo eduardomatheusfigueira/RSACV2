@@ -34,7 +34,7 @@
 .status-brand {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1-5);
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
@@ -51,7 +51,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 2px 10px;
+  padding: var(--space-0-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -90,7 +90,7 @@
   gap: var(--space-1);
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  padding: 2px 10px;
+  padding: var(--space-0-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -109,7 +109,7 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  padding: 2px 10px;
+  padding: var(--space-0-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -120,10 +120,10 @@
 .status-log-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1-5);
   font-size: var(--font-size-xs);
   font-weight: var(--weight-bold);
-  padding: 2px 10px;
+  padding: var(--space-0-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -159,11 +159,11 @@
   font-size: var(--font-size-3xs);
   font-family: var(--font-mono);
   font-weight: var(--weight-bold);
-  padding: 0 4px;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-lg);
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0-5);
 }
 
 .log-badge.count {

@@ -57,8 +57,16 @@ inventá-los à mão é justamente o que se quer eliminar.
 | `--space-8` | 32 px | separação entre regiões |
 | `--space-10`, `--space-12`, `--space-16` | 40 / 48 / 64 px | folgas de página e estados vazios |
 
-**Regra**: `padding`, `margin` e `gap` só aceitam token. `5px` e `3px` deixam
-de existir — arredondam para o degrau vizinho.
+**Regra**: `padding`, `margin` e `gap` só aceitam token.
+
+> **Arredondamento executado em 17/08/2026.** Os degraus ímpares que a interface
+> tinha inventado à mão foram absorvidos para cima: **3 px → 4 px** (36
+> ocorrências), **5 px → 6 px** (31) e **7 px → 8 px** (8). Subir em vez de
+> descer deixa a interface marginalmente mais arejada — os cartões da Coleta
+> ganharam ~2 px de altura cada, o que cascateia pela página. A comparação
+> visual confirmou que nada quebrou e que o orçamento de moldura não piorou.
+> Valores negativos e `calc()` ficam fora da escala de propósito: são correção
+> óptica de posicionamento, não ritmo de espaçamento.
 
 ---
 

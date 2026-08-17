@@ -62,7 +62,7 @@ ser desligada por quem estiver com pressa.
 | `border-radius` literais | 21 | **0** | 0 · fechada |
 | `z-index` ad hoc | 8 | **0** | 0 · fechada |
 | Acionamento por DOM | 34 | **0** | 0 · fechada |
-| Espaçamentos literais | 309 | 265 | 265 · dívida travada |
+| Espaçamentos literais | 309 | **0** | 0 · fechada |
 | Diretriz fixa em texto visível | — | 5 | 5 · dívida travada |
 | Dependências não importadas | 9 | 9 | Fase 7 |
 

@@ -4,7 +4,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .ai-assist-btn-group {
@@ -26,8 +26,8 @@
 .btn-ai-assist {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 8px;
+  gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
   border: none;
   color: var(--color-text-primary);
@@ -83,7 +83,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 5px;
+  padding: var(--space-1) var(--space-1-5);
   background: transparent;
   border: none;
   border-left: 1px solid var(--color-border);
@@ -103,8 +103,8 @@
 .btn-ai-undo {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-1-5);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xs);
@@ -140,8 +140,8 @@
 .ai-dropdown-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-2xs);
@@ -153,14 +153,14 @@
 .ai-dropdown-options {
   display: flex;
   flex-direction: column;
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .ai-dropdown-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-2);
   background: transparent;
   border: none;
   border-radius: var(--radius-xs);
@@ -177,7 +177,7 @@
 }
 
 .ai-dropdown-item .item-icon {
-  margin-top: 2px;
+  margin-top: var(--space-0-5);
   color: var(--color-accent);
   flex-shrink: 0;
 }
@@ -185,7 +185,7 @@
 .ai-dropdown-item .item-content {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--space-px);
 }
 
 .ai-dropdown-item .item-title {
@@ -202,25 +202,25 @@
 
 .ai-dropdown-item.custom-prompt-trigger {
   border-top: 1px dashed var(--color-border);
-  margin-top: 4px;
-  padding-top: 6px;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1-5);
 }
 
 /* Custom Prompt Box */
 .ai-custom-prompt-box {
-  padding: 6px;
+  padding: var(--space-1-5);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1-5);
   background: var(--color-bg-primary);
   border-radius: var(--radius-xs);
   border-top: 1px dashed var(--color-border);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .ai-custom-prompt-box input {
   width: 100%;
-  padding: 6px 8px;
+  padding: var(--space-1-5) var(--space-2);
   font-size: var(--font-size-xs);
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
@@ -237,11 +237,11 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .btn-custom-cancel {
-  padding: 2px 6px;
+  padding: var(--space-0-5) var(--space-1-5);
   font-size: var(--font-size-2xs);
   background: transparent;
   border: 1px solid var(--color-border);
@@ -251,7 +251,7 @@
 }
 
 .btn-custom-submit {
-  padding: 2px 8px;
+  padding: var(--space-0-5) var(--space-2);
   font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
   background: var(--color-accent);

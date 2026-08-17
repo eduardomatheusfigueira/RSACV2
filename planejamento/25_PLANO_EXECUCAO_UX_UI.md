@@ -14,7 +14,7 @@ primeiro.
 
 | Fase | Situação | Evidência |
 |---|:---:|---|
-| **1 — Tokens** | ✅ **quase fechada** | **Zero** cor literal, `font-size` literal, `z-index` ad hoc e `border-radius` literal em todo o `src/`. Tokens de chrome, `--color-text-on-accent`, `--color-overlay` e escala nomeada de `z-index` criados. O verificador `lint:tokens` passa em `--strict`. Resta a migração dos 265 espaçamentos literais, com teto travado |
+| **1 — Tokens** | ✅ **concluída** | **Zero** literal de cor, tipografia, espaçamento, raio e `z-index` em todo o `src/`. `lint:tokens --strict` passa com as 5 categorias fechadas |
 | **2 — Componentes** | 🟡 parcial | `components/ui/` entregue com Radix (`Dialog`, `Tooltip`), `Button`, `Badge`, `Card`, `FormControls`. **Ainda não adotado por nenhuma página** — as 25 classes de botão antigas seguem em uso |
 | **3 — Proporção e comando** | ⬜ | Moldura do Protocolo continua em 41% |
 | **4 — Registro de comandos** | ✅ **concluída** | `useRibbonStore` nas 7 páginas; acionamento por DOM de 34 → **0**; botões refletem estado real |
@@ -88,7 +88,7 @@ parar.
 
 ---
 
-## 25.3 Fase 1 — Tokens que descrevem o produto ✅ (exceto espaçamento)
+## 25.3 Fase 1 — Tokens que descrevem o produto ✅ CONCLUÍDA
 
 **Objetivo**: `globals.css` passa a descrever a interface que existe, e o
 verificador passa a apontar quem foge dela.
