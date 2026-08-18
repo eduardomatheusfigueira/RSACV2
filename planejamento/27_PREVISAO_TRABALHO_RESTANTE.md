@@ -42,9 +42,25 @@ Critério da Fase 3: moldura ≤ 25% a 1440 × 900. Medição de 18/08:
 Sete das oito já passam. Só o Protocolo excede, e por causa da faixa de abas do
 Estúdio — que é navegação legítima, não desperdício.
 
-**O gargalo real é o ribbon: 146 px em todas as oito.** A tarefa 3.4 pede ≤ 96 px.
-Cumprida, o Protocolo cai para ~24% e as demais para ~19%. É a única mudança
-que melhora as oito telas de uma vez.
+**O gargalo é o ribbon: 146 px em todas as oito.**
+
+> **Correção de 18/08.** Ao executar, li errado a tarefa 3.4 deste documento.
+> Ela pede o **toolstrip** ≤ 96 px, não o ribbon inteiro — e o toolstrip, que
+> media 118 px no diagnóstico (doc 23 § 23.4), já está em **80 px**. O critério
+> de altura estava cumprido antes de eu começar.
+>
+> O que restava de 3.4 era a outra metade da linha: "estado de recolhimento
+> lembrado entre sessões". Recolhido, o ribbon vai de 146 px para 66 px e o
+> Protocolo cai de 29% para **20%**. Feito.
+>
+> Com precisão sobre o que isso fecha: **no estado padrão o Protocolo continua
+> em 29%**; os 20% valem com a faixa recolhida, escolha que agora dura. Sete
+> das oito telas passam por si; a oitava passa se a pessoa quiser. Deixar o
+> ribbon recolhido POR PADRÃO no Protocolo fecharia o número, e seria pior:
+> esconder a barra de comando sem que ninguém tenha pedido é decidir pelo
+> outro. O que sobra para baixar os 29% por conta própria é a faixa de abas do
+> Estúdio (42 px), e ela é navegação — cortar ali custa orientação, não
+> desperdício.
 
 ---
 
@@ -108,12 +124,20 @@ por aba inteira, comparando a cada aba — nunca cartão avulso.
 extremos vão precisar de `children` ou de props opcionais. O bloco de 224
 linhas provavelmente não cabe e fica como está — e isso é aceitável.
 
-### 2º — Comprimir o ribbon (3.4)
+### 2º — Ribbon: recolhimento persistente e `<GrupoDoRibbon>` ✅
 
-Única mudança que melhora as oito telas ao mesmo tempo, e a que fecha o
-critério de 25% no Protocolo. Depende do 1º apenas por conveniência: com
-`<GrupoDoRibbon>` extraído, mexer na altura é mudar um componente, não 95
-lugares.
+Feito em 18/08. Duas coisas, com pesos bem diferentes do que eu previa aqui:
+
+- **Recolhimento persistido** — era a metade de 3.4 que faltava, e é o que
+  fecha o critério de 25% no Protocolo (29% → 20%). Efeito grande, mudança
+  pequena.
+- **`<GrupoDoRibbon>`** — 29 grupos convertidos, mas o ganho foi de **83
+  linhas**, não das centenas que a proporção "55% do arquivo" sugeria. A
+  previsão original justificava a extração dizendo que "mexer na altura vira
+  mudar um componente, não 95 lugares" — o que estava errado: altura é CSS, e
+  já era um lugar só. O ganho real é outro e mais modesto: a casca do grupo
+  não pode mais divergir entre abas, e o rótulo embaixo — padrão que a barra
+  herda do Office — deixa de depender de cada call site lembrar dele.
 
 Inclui persistir o estado de recolhimento — hoje `ribbonCollapsed` é
 `useState` local e se perde a cada troca de rota.
@@ -190,7 +214,7 @@ Os portões do doc 26 § 26.8, com o estado de hoje:
 |:-:|---|---|
 | 1 | `lint:tokens --strict` limpo | ✅ |
 | 2 | Galeria nas 13 paletas · teclado na galeria | ⬜ galeria não existe |
-| 3 | `test:layout` ≤ 25% nas 8 telas | 🟡 7/8 (Protocolo 29%) |
+| 3 | `test:layout` ≤ 25% nas 8 telas | 🟡 7/8 no estado padrão · 8/8 com a faixa recolhida (Protocolo 29% → 20%) |
 | 4 | R-3 limpo · roteiro R4 | ✅ automatizado · ⬜ roteiro |
 | 5 | `test:a11y` sem violação séria · contraste nas 13 paletas | ✅ 104/104 · ⬜ roteiro R1 |
 | 6 | R-7 limpo · roteiro R5 nas 11 metodologias | ✅ automatizado · ⬜ roteiro |

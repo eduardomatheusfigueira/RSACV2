@@ -22,6 +22,14 @@ interface SettingsState {
   backendVersion: string
   activeProject: Project | null
   aiEnabled: boolean
+  /**
+   * Toolstrip do ribbon recolhido. Persiste porque a escolha é sobre COMO a
+   * pessoa quer trabalhar, não sobre o que está fazendo agora: quem recolhe a
+   * faixa quer a tela para o texto, e reabri-la a cada troca de rota desfaz a
+   * decisão sem que ninguém tenha pedido. Recolhido, o Estúdio de Protocolo
+   * sai de 29% de moldura para 20%.
+   */
+  ribbonCollapsed: boolean
 
   // Actions
   setTheme: (theme: string) => void
@@ -30,6 +38,7 @@ interface SettingsState {
   setBackendVersion: (version: string) => void
   setActiveProject: (project: Project | null) => void
   setAiEnabled: (enabled: boolean) => void
+  setRibbonCollapsed: (collapsed: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -40,6 +49,7 @@ export const useSettingsStore = create<SettingsState>()(
       backendVersion: '',
       activeProject: null,
       aiEnabled: true,
+      ribbonCollapsed: false,
 
       setTheme: (theme) => {
         document.documentElement.setAttribute('data-theme', theme)
@@ -62,6 +72,7 @@ export const useSettingsStore = create<SettingsState>()(
       setBackendVersion: (backendVersion) => set({ backendVersion }),
       setActiveProject: (activeProject) => set({ activeProject }),
       setAiEnabled: (aiEnabled) => set({ aiEnabled }),
+      setRibbonCollapsed: (ribbonCollapsed) => set({ ribbonCollapsed }),
     }),
     {
       name: 'rsac-v2-settings',
@@ -70,6 +81,7 @@ export const useSettingsStore = create<SettingsState>()(
         theme: state.theme,
         aiEnabled: state.aiEnabled,
         activeProject: state.activeProject,
+        ribbonCollapsed: state.ribbonCollapsed,
       }),
       // Ao reidratar do localStorage, aplicar o tema salvo ao DOM imediatamente
       onRehydrateStorage: () => {

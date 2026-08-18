@@ -157,7 +157,7 @@ verificador passa a apontar quem foge dela.
 | 3.1 ✅ | Aplicar `<PageHeader>` nas 8 páginas | 44 px em todas (47 no Protocolo, por causa do seletor de diretriz) |
 | 3.2 ✅ | Aplicar a hierarquia do § 24.9: cabeçalho fica só com a ação primária | 1 ação por tela, medida. Os comandos que saíram já viviam no ribbon; a auditoria de duplicatas ganhou lugar na aba Triagem |
 | 3.3 | Mover os filtros de triagem do ribbon para a lista | Fim dos filtros em duplicata na mesma tela |
-| 3.4 | Comprimir o toolstrip do ribbon para ≤ 96 px | Estado de recolhimento lembrado entre sessões |
+| 3.4 ✅ | Comprimir o toolstrip do ribbon para ≤ 96 px | Toolstrip em **80 px** (era 118 no diagnóstico). Recolhimento persistido no store: ribbon 146 → 66 px, Protocolo 29% → **20%** com a faixa recolhida |
 | 3.5 | Reduzir as abas do estúdio de 114 px para uma faixa única | Grupos "a priori"/"a posteriori" por cor, não por caixa |
 | 3.6 | Redesenhar o Estúdio de Protocolo para leitura contínua | Alvo: 6+ campos visíveis a 1440 × 900 |
 | 3.7 🟡 | Aplicar `<Card>`, `<Panel>`, `<EmptyState>` nas 8 páginas | `<EmptyState>`/`<LoadingState>` adotados nas 6 telas que os desenhavam à mão; `<Card>` e `<Panel>` seguem pendentes |
