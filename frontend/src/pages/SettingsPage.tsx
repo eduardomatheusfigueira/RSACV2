@@ -894,7 +894,7 @@ export function SettingsPage(): JSX.Element {
 
         {/* ── Identidade visual: a marca acompanha a paleta ativa ── */}
         <div className="brand-identity-strip">
-          <RsacLockup size="lg" tone="auto" version="Versão 2" />
+          <RsacLockup size="lg" tone="auto" />
           <div className="brand-identity-meta">
             <p className="brand-identity-note">
               O monograma <strong>R-Lupa</strong> — cujo laço é a lente e cuja perna diagonal

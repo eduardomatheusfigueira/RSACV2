@@ -28,7 +28,7 @@ const MARK_PX: Record<NonNullable<RsacLockupProps['size']>, number> = {
 export function RsacLockup({
   size = 'md',
   tone = 'auto',
-  version = 'Versão 2',
+  version = 'v2',
   showBeta = true,
   className = '',
 }: RsacLockupProps): JSX.Element {

@@ -156,7 +156,7 @@ export function TopRibbonBar(): JSX.Element {
           type="button"
           className="ribbon-brand rsac-on-brand"
           onClick={() => navigate('/')}
-          title="RSAC — Revisão Sistemática Assistida por Computador (Versão 2, beta)"
+          title="RSAC — Revisão Sistemática Assistida por Computador (v2, beta)"
           aria-label="Ir para o início"
         >
           <RsacMark size={19} tone="brand" label={null} />

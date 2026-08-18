@@ -250,8 +250,8 @@ def lockup(on_dark: bool = True, with_beta: bool = True) -> str:
     word, _ = text_group("RSAC", cap, x_text, base, ink, track)
 
     vcap = 17.0
-    ver, _ = text_group("VERSÃO 2", vcap, x_text + 1.5, base + 26, sub, 8.0)
-    vw = text_width("VERSÃO 2", vcap, 8.0)
+    ver, _ = text_group("V2", vcap, x_text + 1.5, base + 26, sub, 8.0)
+    vw = text_width("V2", vcap, 8.0)
 
     seal, seal_w = "", 0.0
     if with_beta:
@@ -336,7 +336,7 @@ def installer_sidebar(w: int = 164, h: int = 314) -> str:
 
     inner = w - 20.0
     word = text_centered("RSAC", 22.0, w / 2, y + 40, CORNSILK, 6.0, inner)
-    ver = text_centered("VERSÃO 2", 9.5, w / 2, y + 58, MUTED_CAPTION_ON_DARK, 7.0, inner)
+    ver = text_centered("V2", 9.5, w / 2, y + 58, MUTED_CAPTION_ON_DARK, 7.0, inner)
     tag1 = text_centered("PLATAFORMA DE REVISÃO", 6.5, w / 2, h - 30, OLIVE_LEAF, 3.0, inner)
     tag2 = text_centered("SISTEMÁTICA ASSISTIDA", 6.5, w / 2, h - 20, OLIVE_LEAF, 3.0, inner)
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">
@@ -362,7 +362,7 @@ def installer_header(w: int = 150, h: int = 57) -> str:
     x_text = 12 + MARK_W * k + 10
     word, _ = text_group("RSAC", cap, x_text, 26, CORNSILK, 5.0)
     vcap = 7.0
-    ver, _ = text_group("VERSÃO 2", vcap, x_text + 1, 39, MUTED_CAPTION_ON_DARK, 5.0)
+    ver, _ = text_group("V2", vcap, x_text + 1, 39, MUTED_CAPTION_ON_DARK, 5.0)
     sh = 13.0
     sw = text_width("BETA", sh * 0.46, 14.0) + sh * 0.84
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">

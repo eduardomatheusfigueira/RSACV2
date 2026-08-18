@@ -124,7 +124,7 @@ Nos assets estáticos os contornos são **vetorizados** a partir de
 (licença SIL OFL 1.1). Assim, o resultado não depende de nenhuma fonte instalada
 na máquina que gera os arquivos.
 
-**Ordem da assinatura:** símbolo → `RSAC` → selo `BETA`, com `VERSÃO 2` na
+**Ordem da assinatura:** símbolo → `RSAC` → selo `BETA`, com `V2` na
 segunda linha, alinhado à esquerda do logotipo.
 
 Variantes disponíveis: `sm` (22 px), `md` (34 px) e `lg` (56 px) de altura de
