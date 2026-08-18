@@ -53,6 +53,9 @@ import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
+import { GUIAS_DO_PROTOCOLO } from '@/data/guiasDoProtocolo'
+import { CampoDoProtocolo } from '@/components/protocol/CampoDoProtocolo'
+import type { CampoDoProtocoloProps } from '@/components/protocol/CampoDoProtocolo'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
 import { AIAssistButton } from '@/components/common/AIAssistButton'
 import {
@@ -186,6 +189,44 @@ export function ProtocolPage(): JSX.Element {
     return item
       ? `${currentProtocolDef.shortLabel} Item ${item.id}`
       : currentProtocolDef.shortLabel
+  }
+
+  /**
+   * Liga o guia declarado em `guiasDoProtocolo.ts` ao estado desta página: o
+   * que está aberto, a referência à diretriz ativa e a inserção do modelo.
+   *
+   * A inserção fica aqui, e não no componente, porque depende do valor ATUAL do
+   * campo — a confirmação só faz sentido quando há texto a substituir. Passar
+   * `manuscript` inteiro para o componente o acoplaria ao formato do
+   * manuscrito por nada.
+   */
+  const montarGuia = (
+    campo: keyof typeof manuscript,
+    chaveDeAjuda: string
+  ): CampoDoProtocoloProps['guia'] => {
+    const conteudo = GUIAS_DO_PROTOCOLO[campo as string]
+    if (!conteudo) return undefined
+    return {
+      conteudo,
+      referencia: getFieldItemRef(campo as string),
+      aberto: Boolean(helpOpen[chaveDeAjuda]),
+      alternar: () => toggleHelp(chaveDeAjuda),
+      aoInserirModelo: conteudo.modelo
+        ? () => {
+            const { texto, confirmacao } = conteudo.modelo!
+            const resolvido =
+              typeof texto === 'function'
+                ? texto({
+                    diretriz: currentProtocolDef.name,
+                    referencia: currentProtocolDef.reference,
+                    framework: currentProtocolDef.defaultFramework,
+                  })
+                : texto
+            if (manuscript[campo] && !window.confirm(confirmacao)) return
+            updateManuscriptField(campo as string, resolvido)
+          }
+        : undefined,
+    }
   }
 
   const getFieldItemTag = (fieldKey: string, _fallbackNum: number, essential = true): string => {
@@ -905,74 +946,26 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               Defina o título preliminar do protocolo, registre seu planejamento e estabeleça a justificativa teórica <strong>antes</strong> de iniciar a busca nas bases de dados.
             </p>
           </div>
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Item 1 — Essencial</span>
-              <span className="item-section-tag">TÍTULO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Edit3 size={20} className="icon-accent" />
-                <h2>Título Oficial da Revisão de Escopo (Scoping Review)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="manuscript_title"
-                  fieldLabel="Título Oficial da Revisão"
-                  currentValue={manuscript.manuscript_title}
-                  fieldGuidelines="Identifique claramente o trabalho como uma Scoping Review / Revisão Sistemática e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional)."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('manuscript_title')}
-                  onApply={(text) => updateManuscriptField('manuscript_title', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.title ? 'active' : ''}`}
-                  onClick={() => toggleHelp('title')}
-                  title="Ver guia de elaboração do título"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia do Título (?)</span>
-                </button>
-              </div>
-            </div>
-            <p className="section-help">
-              {getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).')}
-            </p>
-
-            {helpOpen.title && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Título ({getFieldItemRef('manuscript_title')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Políticas Públicas de [Instrumento / Política] e [Conceito Central] no [Contexto Regional / Território] para [Atores Sociais / Setor Produtivo]: Uma Revisão de Escopo`
-                      if (manuscript.manuscript_title && !window.confirm('Substituir título atual pelo modelo?')) return
-                      updateManuscriptField('manuscript_title', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Identificação do Método</span>
-                    <p>O subtítulo DEVE conter explicitamente "Uma Revisão de Escopo" ou "Scoping Review".</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Elementos PCC</span>
-                    <p>Mencione o Conceito Central (ex: Arranjos Produtivos Locais), o Contexto Territorial e os Atores Sociais.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<Edit3 size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Título Oficial da Revisão de Escopo (Scoping Review)"
+            etiquetaItem={getFieldItemTag('manuscript_title', 1)}
+            secao="TÍTULO"
+            ajuda={getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).')}
+            assistencia={
+              <AIAssistButton
+                fieldId="manuscript_title"
+                fieldLabel="Título Oficial da Revisão"
+                currentValue={manuscript.manuscript_title}
+                fieldGuidelines="Identifique claramente o trabalho como uma Scoping Review / Revisão Sistemática e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional)."
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('manuscript_title')}
+                onApply={(text) => updateManuscriptField('manuscript_title', text)}
+              />
+            }
+            guia={montarGuia('manuscript_title', 'title')}
+          >
             <input
               type="text"
               className="protocol-input-large"
@@ -980,77 +973,29 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               value={manuscript.manuscript_title}
               onChange={(e) => updateManuscriptField('manuscript_title', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('protocol_registration', 5)}</span>
-              <span className="item-section-tag">MÉTODOS / REGISTRO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <ShieldCheck size={20} className="icon-accent" />
-                <h2>Registro do Protocolo a Priori (Protocol & Registration)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="protocol_registration"
-                  fieldLabel="Registro do Protocolo (OSF / Repositório)"
-                  currentValue={manuscript.protocol_registration}
-                  fieldGuidelines={getFieldGuideline('protocol_registration', 'Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('protocol_registration')}
-                  onApply={(text) => updateManuscriptField('protocol_registration', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.registration ? 'active' : ''}`}
-                  onClick={() => toggleHelp('registration')}
-                  title="Ver guia de registro do protocolo"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia de Registro (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('protocol_registration', 'Informe a plataforma de registro público (ex: Open Science Framework - OSF, Figshare, Zenodo), identificador/DOI e data de submissão do protocolo.')}
-            </p>
-
-            {helpOpen.registration && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Registro do Protocolo ({getFieldItemRef('protocol_registration')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `O protocolo desta revisão foi desenvolvido a priori em conformidade com ${currentProtocolDef.name}, registrado na plataforma Open Science Framework (OSF) sob o DOI: https://doi.org/10.17605/OSF.IO/XXXXX em DD/MM/AAAA.`
-                      if (manuscript.protocol_registration && !window.confirm('Substituir dados de registro pelo modelo?')) return
-                      updateManuscriptField('protocol_registration', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Modelo no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Plataforma Pública</span>
-                    <p>OSF (Open Science Framework), Figshare, Zenodo ou periódicos de protocolo acadêmico.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. DOI / URL Permanente</span>
-                    <p>Link direto e identificador persistente para verificação e transparência científica.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<ShieldCheck size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Registro do Protocolo a Priori (Protocol & Registration)"
+            etiquetaItem={getFieldItemTag('protocol_registration', 5)}
+            secao="MÉTODOS / REGISTRO"
+            ajuda={getFieldGuideline('protocol_registration', 'Informe a plataforma de registro público (ex: Open Science Framework - OSF, Figshare, Zenodo), identificador/DOI e data de submissão do protocolo.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="protocol_registration"
+                fieldLabel="Registro do Protocolo (OSF / Repositório)"
+                currentValue={manuscript.protocol_registration}
+                fieldGuidelines={getFieldGuideline('protocol_registration', 'Informe a plataforma de registro público (ex: OSF, Figshare, Zenodo), DOI permanente e data de depósito a priori.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('protocol_registration')}
+                onApply={(text) => updateManuscriptField('protocol_registration', text)}
+              />
+            }
+            guia={montarGuia('protocol_registration', 'registration')}
+          >
             <input
               type="text"
               className="protocol-input-large"
@@ -1058,96 +1003,29 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               value={manuscript.protocol_registration}
               onChange={(e) => updateManuscriptField('protocol_registration', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('rationale', 3)}</span>
-              <span className="item-section-tag">INTRODUÇÃO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <BookOpen size={20} className="icon-accent" />
-                <h2>Justificativa e Estado da Arte (Rationale)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="rationale"
-                  fieldLabel="Justificativa e Racional da Revisão"
-                  currentValue={manuscript.rationale}
-                  fieldGuidelines={getFieldGuideline('rationale', 'Descreva o contexto do conhecimento existente na área e fundamente a necessidade da revisão nas Ciências Sociais Aplicadas e Desenvolvimento Regional.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('rationale')}
-                  onApply={(text) => updateManuscriptField('rationale', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.rationale ? 'active' : ''}`}
-                  onClick={() => toggleHelp('rationale')}
-                  title="Ver tópicos recomendados para a justificativa"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia da Justificativa (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('rationale', 'Descreva o contexto do conhecimento existente na área e fundamente a necessidade da revisão nas Ciências Sociais Aplicadas e Desenvolvimento Regional.')}
-            </p>
-
-            {helpOpen.rationale && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para a Justificativa ({getFieldItemRef('rationale')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Contexto e Estado da Arte:
-[Apresente o panorama atual da literatura em Ciências Sociais Aplicadas / Desenvolvimento Regional e as dinâmicas recentes]
-
-Problema de Pesquisa e Lacuna Identificada:
-[Explique qual desafio persiste nas políticas públicas ou na governança e quais aspectos ainda carecem de síntese estruturada]
-
-Justificativa da Abordagem de Scoping Review:
-[Fundamente por que uma Scoping Review é o método indicado face à heterogeneidade dos estudos territoriais e organizacionais]
-
-Relevância e Contribuição Esperada:
-[Destaque a relevância acadêmica, institucional e social dos achados para apoiar tomadas de decisão e planejamento regional]`
-
-                      if (manuscript.rationale && !window.confirm('Substituir justificativa pelo modelo estruturado?')) return
-                      updateManuscriptField('rationale', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Estado da Arte</span>
-                    <p>Panorama do que já se conhece na literatura sobre o território ou setor produtivo.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Lacuna Crítica</span>
-                    <p>Por que os estudos anteriores não responderam plenamente às demandas regionais.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Por que Scoping Review</span>
-                    <p>Necessidade de mapear a amplitude conceitual e heterogeneidade empírica.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">4. Relevância Prática</span>
-                    <p>Apoio à formulação de políticas públicas e governança territorial.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<BookOpen size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Justificativa e Estado da Arte (Rationale)"
+            etiquetaItem={getFieldItemTag('rationale', 3)}
+            secao="INTRODUÇÃO"
+            ajuda={getFieldGuideline('rationale', 'Descreva o contexto do conhecimento existente na área e fundamente a necessidade da revisão nas Ciências Sociais Aplicadas e Desenvolvimento Regional.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="rationale"
+                fieldLabel="Justificativa e Racional da Revisão"
+                currentValue={manuscript.rationale}
+                fieldGuidelines={getFieldGuideline('rationale', 'Descreva o contexto do conhecimento existente na área e fundamente a necessidade da revisão nas Ciências Sociais Aplicadas e Desenvolvimento Regional.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('rationale')}
+                onApply={(text) => updateManuscriptField('rationale', text)}
+              />
+            }
+            guia={montarGuia('rationale', 'rationale')}
+          >
             <textarea
               rows={7}
               className="protocol-textarea"
@@ -1155,7 +1033,8 @@ Relevância e Contribuição Esperada:
               value={manuscript.rationale}
               onChange={(e) => updateManuscriptField('rationale', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
+
         </div>
       )}
 
@@ -1405,81 +1284,43 @@ Relevância e Contribuição Esperada:
               Estabeleça os critérios de inclusão/exclusão e as strings de busca em pares ("termo_1" AND "termo_2") compatíveis com a BDTD (VuFind) antes da coleta.
             </p>
           </div>
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">Item 6 — Essencial</span>
-              <span className="item-section-tag">MÉTODOS / ELEGIBILIDADE</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Filter size={20} className="icon-accent" />
-                <h2>Critérios de Elegibilidade (Eligibility Criteria)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="criteria"
-                  fieldLabel="Critérios de Elegibilidade (Inclusão e Exclusão)"
-                  currentValue={criteria.map((c) => (c.is_exclusion ? 'EXC: ' : 'INC: ') + c.text).join('\n')}
-                  fieldGuidelines="Gere critérios de inclusão (prefixados com 'INC: ') e de exclusão (prefixados com 'EXC: '), um por linha, alinhados com o escopo temático em Ciências Sociais Aplicadas / Desenvolvimento Regional."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('criteria')}
-                  onApply={(text) => {
-                    const lines = text
-                      .split('\n')
-                      .map((l) => l.trim())
-                      .filter(Boolean)
-                    const parsedCriteria = lines.map((l, idx) => {
-                      const isExc = l.toUpperCase().startsWith('EXC:')
-                      const cleanText = l.replace(/^(INC:|EXC:)\s*/i, '').trim()
-                      return {
-                        text: cleanText || l,
-                        is_exclusion: isExc,
-                        order: idx,
-                      }
-                    })
-                    if (parsedCriteria.length > 0) {
-                      setCriteria(parsedCriteria)
+                    <CampoDoProtocolo
+            icone={<Filter size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Critérios de Elegibilidade (Eligibility Criteria)"
+            etiquetaItem={getFieldItemTag('criteria', 6)}
+            secao="MÉTODOS / ELEGIBILIDADE"
+            ajuda={getFieldGuideline('criteria', 'Defina as regras de inclusão e exclusão com base na população/atores, conceitos avaliados, recortes territoriais, idiomas e períodos considerados.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="criteria"
+                fieldLabel="Critérios de Elegibilidade (Inclusão e Exclusão)"
+                currentValue={criteria.map((c) => (c.is_exclusion ? 'EXC: ' : 'INC: ') + c.text).join('\n')}
+                fieldGuidelines="Gere critérios de inclusão (prefixados com 'INC: ') e de exclusão (prefixados com 'EXC: '), um por linha, alinhados com o escopo temático em Ciências Sociais Aplicadas / Desenvolvimento Regional."
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('criteria')}
+                onApply={(text) => {
+                  const lines = text
+                    .split('\n')
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                  const parsedCriteria = lines.map((l, idx) => {
+                    const isExc = l.toUpperCase().startsWith('EXC:')
+                    const cleanText = l.replace(/^(INC:|EXC:)\s*/i, '').trim()
+                    return {
+                      text: cleanText || l,
+                      is_exclusion: isExc,
+                      order: idx,
                     }
-                  }}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.criteria ? 'active' : ''}`}
-                  onClick={() => toggleHelp('criteria')}
-                  title="Ver guia de formulação dos critérios"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia dos Critérios (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              {getFieldGuideline('criteria', 'Defina as regras de inclusão e exclusão com base na população/atores, conceitos avaliados, recortes territoriais, idiomas e períodos considerados.')}
-            </p>
-
-            {helpOpen.criteria && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Diretrizes de Critérios de Elegibilidade ({getFieldItemRef('criteria')})</strong>
-                  </div>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">Critérios de Inclusão (INC)</span>
-                    <p>Estudos empíricos ou teóricos que analisem políticas públicas, arranjos produtivos ou governança regional no contexto delimitado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">Critérios de Exclusão (EXC)</span>
-                    <p>Artigos de opinião sem dados, resumos simples de anais, trabalhos fora do escopo geográfico/temático ou duplicados.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                  })
+                  if (parsedCriteria.length > 0) {
+                    setCriteria(parsedCriteria)
+                  }
+                }}
+              />
+            }
+            guia={montarGuia('criteria', 'criteria')}
+          >
             <div className="criteria-list">
               {criteria.map((crit, idx) => (
                 <Card surface="primaria" relief="afundado" key={idx} className="criterion-card">
@@ -1517,96 +1358,29 @@ Relevância e Contribuição Esperada:
                 <Plus size={14} /> Adicionar Critério de Exclusão (EXC)
               </button>
             </div>
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('info_sources', 7)}</span>
-              <span className="item-section-tag">MÉTODOS / FONTES</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Search size={20} className="icon-accent" />
-                <h2>Fontes de Informação & Período de Cobertura (Information Sources)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="info_sources"
-                  fieldLabel="Fontes de Informação e Bases"
-                  currentValue={manuscript.info_sources}
-                  fieldGuidelines={getFieldGuideline('info_sources', 'Descreva todas as bases de dados bibliográficas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, recorte temporal e a data da busca mais recente.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('info_sources')}
-                  onApply={(text) => updateManuscriptField('info_sources', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.sources ? 'active' : ''}`}
-                  onClick={() => toggleHelp('sources')}
-                  title="Ver guia de reporte das fontes de informação"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia das Fontes (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('info_sources', 'Liste todas as bases consultadas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, busca manual e a data exata da busca mais recente.')}
-            </p>
-
-            {helpOpen.sources && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Fontes de Informação ({getFieldItemRef('info_sources')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Bases Bibliográficas Consultadas:
-Foram realizadas buscas sistemáticas nas bases de dados BDTD (Teses e Dissertações), SciELO, Scopus e OpenAlex.
-
-Período Cronológico de Cobertura:
-Publicações compreendidas entre 2015 e agosto de 2026.
-
-Literatura Cinzenta e Busca Manual:
-Consulta ao repositório de teses da BDTD, relatórios técnicos institucionais e varredura das listas de referências dos estudos incluídos.
-
-Data de Execução da Busca Mais Recente:
-A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
-
-                      if (manuscript.info_sources && !window.confirm('Substituir fontes pelo modelo estruturado?')) return
-                      updateManuscriptField('info_sources', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Bases Eletrônicas</span>
-                    <p>Nome de todas as bases pesquisadas (BDTD, SciELO, Scopus, OpenAlex, etc.).</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Período de Cobertura</span>
-                    <p>Janela temporal de publicação dos trabalhos considerados.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Literatura Cinzenta</span>
-                    <p>Teses, dissertações, relatórios técnicos governamentais ou de institutos de pesquisa.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">4. Data da Busca Mais Recente</span>
-                    <p>Data exata da última rodada de busca para aferir a atualidade da revisão.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<Search size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Fontes de Informação & Período de Cobertura (Information Sources)"
+            etiquetaItem={getFieldItemTag('info_sources', 7)}
+            secao="MÉTODOS / FONTES"
+            ajuda={getFieldGuideline('info_sources', 'Liste todas as bases consultadas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, busca manual e a data exata da busca mais recente.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="info_sources"
+                fieldLabel="Fontes de Informação e Bases"
+                currentValue={manuscript.info_sources}
+                fieldGuidelines={getFieldGuideline('info_sources', 'Descreva todas as bases de dados bibliográficas (BDTD, SciELO, Scopus, OpenAlex), literatura cinzenta, recorte temporal e a data da busca mais recente.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('info_sources')}
+                onApply={(text) => updateManuscriptField('info_sources', text)}
+              />
+            }
+            guia={montarGuia('info_sources', 'sources')}
+          >
             <textarea
               rows={4}
               className="protocol-textarea"
@@ -1614,7 +1388,8 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
               value={manuscript.info_sources}
               onChange={(e) => updateManuscriptField('info_sources', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
+
 
           <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
@@ -1757,87 +1532,26 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
               Planeje os procedimentos de triagem, o questionário com as variáveis que serão extraídas de cada estudo incluído e os métodos previstos de síntese.
             </p>
           </div>
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('selection_process', 9)}</span>
-              <span className="item-section-tag">MÉTODOS / TRIAGEM</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Filter size={20} className="icon-accent" />
-                <h2>Processo de Seleção de Estudos & Calibração (Selection Process)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="selection_process"
-                  fieldLabel="Processo de Seleção de Estudos"
-                  currentValue={manuscript.selection_process}
-                  fieldGuidelines={getFieldGuideline('selection_process', 'Especifique os métodos de triagem em duas etapas (títulos/resumos e texto integral), duplo-cego independente, teste piloto prévio e resolução de conflitos.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('selection_process')}
-                  onApply={(text) => updateManuscriptField('selection_process', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.selection ? 'active' : ''}`}
-                  onClick={() => toggleHelp('selection')}
-                  title="Ver guia do processo de seleção"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia da Seleção (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              {getFieldGuideline('selection_process', 'Descreva como foi realizada a triagem em duas etapas (1: Títulos e Resumos; 2: Texto Completo), o número de revisores independentes e resolução de divergências.')}
-            </p>
-
-            {helpOpen.selection && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura do Processo de Seleção ({getFieldItemRef('selection_process')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Etapas da Triagem:
-A seleção dos estudos foi conduzida no software RSAC V2 em duas fases: (1) avaliação inicial de títulos e resumos para exclusão de estudos fora do escopo temático/territorial; e (2) análise integral dos artigos pré-selecionados.
-
-Exercício Piloto de Calibração:
-Antes do início da triagem definitiva, realizou-se um teste piloto com uma amostra de 50 artigos entre os revisores para calibração e refinamento dos critérios de inclusão e exclusão.
-
-Revisores e Resolução de Divergências:
-A seleção foi realizada de forma independente por dois pesquisadores. Discrepâncias na decisão foram resolvidas por consenso; havendo persistência, um terceiro revisor sênior foi acionado para decisão final.`
-
-                      if (manuscript.selection_process && !window.confirm('Substituir seleção pelo modelo estruturado?')) return
-                      updateManuscriptField('selection_process', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Triagem em Duas Fases</span>
-                    <p>Fase 1 (Títulos/Resumos) e Fase 2 (Texto Completo).</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Teste Piloto</span>
-                    <p>Amostra prévia de calibração entre os revisores.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Duplo-Cego / Independente</span>
-                    <p>Número de pesquisadores e mecanismo de resolução de conflitos.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<Filter size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Processo de Seleção de Estudos & Calibração (Selection Process)"
+            etiquetaItem={getFieldItemTag('selection_process', 9)}
+            secao="MÉTODOS / TRIAGEM"
+            ajuda={getFieldGuideline('selection_process', 'Descreva como foi realizada a triagem em duas etapas (1: Títulos e Resumos; 2: Texto Completo), o número de revisores independentes e resolução de divergências.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="selection_process"
+                fieldLabel="Processo de Seleção de Estudos"
+                currentValue={manuscript.selection_process}
+                fieldGuidelines={getFieldGuideline('selection_process', 'Especifique os métodos de triagem em duas etapas (títulos/resumos e texto integral), duplo-cego independente, teste piloto prévio e resolução de conflitos.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('selection_process')}
+                onApply={(text) => updateManuscriptField('selection_process', text)}
+              />
+            }
+            guia={montarGuia('selection_process', 'selection')}
+          >
             <textarea
               rows={5}
               className="protocol-textarea"
@@ -1845,85 +1559,29 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
               value={manuscript.selection_process}
               onChange={(e) => updateManuscriptField('selection_process', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('data_charting_process', 10)}</span>
-              <span className="item-section-tag">MÉTODOS / EXTRAÇÃO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <HelpCircle size={20} className="icon-accent" />
-                <h2>Processo de Extração de Dados (Data Charting Process)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="data_charting_process"
-                  fieldLabel="Processo de Extração de Dados"
-                  currentValue={manuscript.data_charting_process}
-                  fieldGuidelines={getFieldGuideline('data_charting_process', 'Descreva o formulário de extração de dados calibrado, o procedimento de extração em duplicata independente e a resolução de discordâncias.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('data_charting_process')}
-                  onApply={(text) => updateManuscriptField('data_charting_process', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.charting ? 'active' : ''}`}
-                  onClick={() => toggleHelp('charting')}
-                  title="Ver guia do processo de extração"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia do Charting (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('data_charting_process', 'Descreva os procedimentos de preenchimento do formulário de mapeamento (data charting form), se foi calibrado previamente e como os dados foram checados e confirmados.')}
-            </p>
-
-            {helpOpen.charting && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura do Processo de Data Charting ({getFieldItemRef('data_charting_process')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Formulário de Extração Padronizado:
-A extração de dados foi realizada por meio de formulário padronizado no RSAC V2, pré-testado em 10 estudos pelos pesquisadores.
-
-Procedimento de Preenchimento:
-Dois revisores extraíram independentemente as informações metodológicas, atores envolvidos, instrumentos de política pública e resultados socioeconômicos observados.
-
-Consolidação e Contato com Autores:
-Os dados foram cruzados e eventuais omissões foram esclarecidas por contato direto com os autores correspondentes.`
-
-                      if (manuscript.data_charting_process && !window.confirm('Substituir processo de charting pelo modelo?')) return
-                      updateManuscriptField('data_charting_process', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Formulário Calibrado</span>
-                    <p>Instrumento estruturado pré-testado para extração uniforme.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Extração em Duplicata</span>
-                    <p>Conduzida de forma independente por pares de revisores.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<HelpCircle size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Processo de Extração de Dados (Data Charting Process)"
+            etiquetaItem={getFieldItemTag('data_charting_process', 10)}
+            secao="MÉTODOS / EXTRAÇÃO"
+            ajuda={getFieldGuideline('data_charting_process', 'Descreva os procedimentos de preenchimento do formulário de mapeamento (data charting form), se foi calibrado previamente e como os dados foram checados e confirmados.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="data_charting_process"
+                fieldLabel="Processo de Extração de Dados"
+                currentValue={manuscript.data_charting_process}
+                fieldGuidelines={getFieldGuideline('data_charting_process', 'Descreva o formulário de extração de dados calibrado, o procedimento de extração em duplicata independente e a resolução de discordâncias.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('data_charting_process')}
+                onApply={(text) => updateManuscriptField('data_charting_process', text)}
+              />
+            }
+            guia={montarGuia('data_charting_process', 'charting')}
+          >
             <textarea
               rows={4}
               className="protocol-textarea"
@@ -1931,46 +1589,41 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
               value={manuscript.data_charting_process}
               onChange={(e) => updateManuscriptField('data_charting_process', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('extraction_questions', 11)}</span>
-              <span className="item-section-tag">MÉTODOS / VARIÁVEIS</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <HelpCircle size={20} className="icon-accent" />
-                <h2>Perguntas e Variáveis de Mapeamento (Data Items)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="questions"
-                  fieldLabel="Perguntas de Mapeamento e Extração"
-                  currentValue={questions.map((q) => q.text || (q as any).question || '').join('\n')}
-                  fieldGuidelines="Gere perguntas estruturadas de extração (uma por linha) para mapear atores, conceitos, variáveis metodológicas e impactos socioeconômicos dos estudos incluídos nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('questions')}
-                  onApply={(text) => {
-                    const lines = text
-                      .split('\n')
-                      .map((l) => l.trim())
-                      .filter(Boolean)
-                    const parsedQuestions = lines.map((l, idx) => ({
-                      text: l.replace(/^Q-?\d+[:.]\s*/i, '').trim(),
-                      order: idx,
-                    }))
-                    if (parsedQuestions.length > 0) {
-                      setQuestions(parsedQuestions)
-                    }
-                  }}
-                />
-              </div>
-            </div>
-            <p className="section-help">
-              {getFieldGuideline('extraction_questions', 'Liste as perguntas estruturadas de extração que responderão aos objetivos e mapearão as variáveis de cada estudo na Triagem 2.')}
-            </p>
+
+                    <CampoDoProtocolo
+            icone={<HelpCircle size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Perguntas e Variáveis de Mapeamento (Data Items)"
+            etiquetaItem={getFieldItemTag('extraction_questions', 11)}
+            secao="MÉTODOS / VARIÁVEIS"
+            ajuda={getFieldGuideline('extraction_questions', 'Liste as perguntas estruturadas de extração que responderão aos objetivos e mapearão as variáveis de cada estudo na Triagem 2.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="questions"
+                fieldLabel="Perguntas de Mapeamento e Extração"
+                currentValue={questions.map((q) => q.text || (q as any).question || '').join('\n')}
+                fieldGuidelines="Gere perguntas estruturadas de extração (uma por linha) para mapear atores, conceitos, variáveis metodológicas e impactos socioeconômicos dos estudos incluídos nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('questions')}
+                onApply={(text) => {
+                  const lines = text
+                    .split('\n')
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                  const parsedQuestions = lines.map((l, idx) => ({
+                    text: l.replace(/^Q-?\d+[:.]\s*/i, '').trim(),
+                    order: idx,
+                  }))
+                  if (parsedQuestions.length > 0) {
+                    setQuestions(parsedQuestions)
+                  }
+                }}
+              />
+            }
+          >
+
 
             <div className="criteria-list">
               {questions.map((q, idx) => (
@@ -2000,77 +1653,30 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                 <Plus size={14} /> Adicionar Pergunta de Mapeamento
               </button>
             </div>
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag optional">{getFieldItemTag('critical_appraisal', 12, false)}</span>
-              <span className="item-section-tag">MÉTODOS / AVALIAÇÃO CRÍTICA</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <ShieldCheck size={20} className="icon-accent" />
-                <h2>Avaliação Crítica da Qualidade Metodológica (Critical Appraisal)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="critical_appraisal"
-                  fieldLabel="Avaliação Crítica e Risco de Viés"
-                  currentValue={manuscript.critical_appraisal}
-                  fieldGuidelines={getFieldGuideline('critical_appraisal', 'Em revisões de escopo, a avaliação de risco de viés é opcional. Descreva o instrumento ou justifique a dispensa metodológica formal.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('critical_appraisal')}
-                  onApply={(text) => updateManuscriptField('critical_appraisal', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.appraisal ? 'active' : ''}`}
-                  onClick={() => toggleHelp('appraisal')}
-                  title="Ver orientação sobre avaliação crítica em scoping reviews"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia da Avaliação Crítica (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('critical_appraisal', 'Caso realizada avaliação formal de risco de viés, descreva o instrumento utilizado ou justifique sua dispensa.')}
-            </p>
-
-            {helpOpen.appraisal && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Orientações sobre Avaliação Crítica ({getFieldItemRef('critical_appraisal')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Em conformidade com ${currentProtocolDef.name} (${currentProtocolDef.reference}), a avaliação formal de risco de viés e qualidade metodológica individual não foi realizada, tendo em vista que o objetivo central desta revisão é mapear abrangentemente a literatura existente, independentemente do desenho metodológico das pesquisas primárias.`
-                      if (manuscript.critical_appraisal && !window.confirm('Substituir justificativa de dispensa pelo modelo?')) return
-                      updateManuscriptField('critical_appraisal', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Justificativa Padrão
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">Dispensa Padrão em Scoping Review</span>
-                    <p>Revisões de escopo buscam amplitude temática e mapeamento abrangente.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">Se for Avaliar</span>
-                    <p>Especifique os critérios de consistência metodológica adotados.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<ShieldCheck size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Avaliação Crítica da Qualidade Metodológica (Critical Appraisal)"
+            etiquetaItem={getFieldItemTag('critical_appraisal', 12, false)}
+            essencial={false}
+            secao="MÉTODOS / AVALIAÇÃO CRÍTICA"
+            ajuda={getFieldGuideline('critical_appraisal', 'Caso realizada avaliação formal de risco de viés, descreva o instrumento utilizado ou justifique sua dispensa.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="critical_appraisal"
+                fieldLabel="Avaliação Crítica e Risco de Viés"
+                currentValue={manuscript.critical_appraisal}
+                fieldGuidelines={getFieldGuideline('critical_appraisal', 'Em revisões de escopo, a avaliação de risco de viés é opcional. Descreva o instrumento ou justifique a dispensa metodológica formal.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('critical_appraisal')}
+                onApply={(text) => updateManuscriptField('critical_appraisal', text)}
+              />
+            }
+            guia={montarGuia('critical_appraisal', 'appraisal')}
+          >
             <textarea
               rows={4}
               className="protocol-textarea"
@@ -2078,92 +1684,29 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
               value={manuscript.critical_appraisal}
               onChange={(e) => updateManuscriptField('critical_appraisal', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('synthesis_methods', 13)}</span>
-              <span className="item-section-tag">MÉTODOS / SÍNTESE</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Layers size={20} className="icon-accent" />
-                <h2>Métodos de Síntese e Mapeamento de Evidências (Synthesis of Results)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="synthesis_methods"
-                  fieldLabel="Métodos de Síntese e Mapeamento"
-                  currentValue={manuscript.synthesis_methods}
-                  fieldGuidelines={getFieldGuideline('synthesis_methods', 'Descreva os métodos de agrupamento temático, mapas de evidências tabulares, gráficos de tendências e matriz de identificação de lacunas.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('synthesis_methods')}
-                  onApply={(text) => updateManuscriptField('synthesis_methods', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.synthesis ? 'active' : ''}`}
-                  onClick={() => toggleHelp('synthesis')}
-                  title="Ver guia de métodos de síntese"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia da Síntese (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('synthesis_methods', 'Descreva como os dados serão estruturados (tabelas descritivas, gráficos de tendências temporais, mapas territoriais ou matrizes de lacunas de evidência).')}
-            </p>
-
-            {helpOpen.synthesis && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Métodos de Síntese ({getFieldItemRef('synthesis_methods')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Síntese Narrativa e Temática:
-Os dados extraídos serão agrupados por eixos temáticos (ex: tipologia de governança, setor produtivo, instrumentos de fomento) alinhados ao framework ${currentProtocolDef.defaultFramework}.
-
-Apresentação Tabular e Mapeamento:
-Elaboração de tabelas descritivas detalhando autoria, ano, território/região de estudo, metodologia empregada e principais achados socioeconômicos.
-
-Diagramas e Representações Visuais:
-Geração de gráficos de distribuição cronológica e geográfica das pesquisas, acompanhados pelo fluxograma de seleção (identificação, triagem, elegibilidade e inclusão) que o RSAC gera na Exportação.
-
-Matriz de Identificação de Lacunas (Gap Analysis):
-Construção de matriz estruturada para apontar territórios e temas com carência de evidências empíricas.`
-
-                      if (manuscript.synthesis_methods && !window.confirm('Substituir métodos de síntese pelo modelo?')) return
-                      updateManuscriptField('synthesis_methods', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Síntese Narrativa</span>
-                    <p>Descrição qualitativa dos padrões conceituais e institucionais identificados.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Mapas Tabulares</span>
-                    <p>Tabelas consolidadas com características e recortes territoriais dos estudos.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Matriz de Lacunas</span>
-                    <p>Mapeamento visual de lacunas na literatura acadêmica.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<Layers size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Métodos de Síntese e Mapeamento de Evidências (Synthesis of Results)"
+            etiquetaItem={getFieldItemTag('synthesis_methods', 13)}
+            secao="MÉTODOS / SÍNTESE"
+            ajuda={getFieldGuideline('synthesis_methods', 'Descreva como os dados serão estruturados (tabelas descritivas, gráficos de tendências temporais, mapas territoriais ou matrizes de lacunas de evidência).')}
+            assistencia={
+              <AIAssistButton
+                fieldId="synthesis_methods"
+                fieldLabel="Métodos de Síntese e Mapeamento"
+                currentValue={manuscript.synthesis_methods}
+                fieldGuidelines={getFieldGuideline('synthesis_methods', 'Descreva os métodos de agrupamento temático, mapas de evidências tabulares, gráficos de tendências e matriz de identificação de lacunas.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('synthesis_methods')}
+                onApply={(text) => updateManuscriptField('synthesis_methods', text)}
+              />
+            }
+            guia={montarGuia('synthesis_methods', 'synthesis')}
+          >
             <textarea
               rows={4}
               className="protocol-textarea"
@@ -2171,89 +1714,29 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
               value={manuscript.synthesis_methods}
               onChange={(e) => updateManuscriptField('synthesis_methods', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('funding', 17)}</span>
-              <span className="item-section-tag">FINANCIAMENTO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <ShieldCheck size={20} className="icon-accent" />
-                <h2>Financiamento & Declaração de Conflitos de Interesse (Funding)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="funding"
-                  fieldLabel="Financiamento e Declaração de Conflitos"
-                  currentValue={manuscript.funding}
-                  fieldGuidelines={getFieldGuideline('funding', 'Declare as agências de fomento, bolsas (CAPES, CNPq, FAPESP) e confirme a inexistência de conflitos de interesse.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('funding')}
-                  onApply={(text) => updateManuscriptField('funding', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.funding ? 'active' : ''}`}
-                  onClick={() => toggleHelp('funding')}
-                  title="Ver guia de financiamento e conflitos"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia do Financiamento (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('funding', 'Declare as fontes de financiamento ou bolsas e confirme a inexistência de conflitos de interesse.')}
-            </p>
-
-            {helpOpen.funding && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Financiamento e Conflitos ({getFieldItemRef('funding')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Fontes de Financiamento:
-O presente trabalho foi realizado com apoio da Coordenação de Aperfeiçoamento de Pessoal de Nível Superior - Brasil (CAPES) - Código de Financiamento 001, e do Conselho Nacional de Desenvolvimento Científico e Tecnológico (CNPq).
-
-Papel dos Financiadores:
-As entidades financiadoras não exerceram qualquer influência na formulação do protocolo, na busca, análise ou interpretação dos dados, na redação deste manuscrito ou na decisão de publicação.
-
-Declaração de Conflitos de Interesse:
-Os autores declaram expressamente a inexistência de quaisquer conflitos de interesse financeiros, profissionais ou institucionais.`
-
-                      if (manuscript.funding && !window.confirm('Substituir financiamento pelo modelo estruturado?')) return
-                      updateManuscriptField('funding', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Agências de Fomento</span>
-                    <p>Nome das agências financiadoras e números de processo / bolsas acadêmicas.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Papel dos Financiadores</span>
-                    <p>Declaração de total independência dos autores na condução da pesquisa.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Conflitos de Interesse</span>
-                    <p>Declaração formal de inexistência de conflitos.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<ShieldCheck size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Financiamento & Declaração de Conflitos de Interesse (Funding)"
+            etiquetaItem={getFieldItemTag('funding', 17)}
+            secao="FINANCIAMENTO"
+            ajuda={getFieldGuideline('funding', 'Declare as fontes de financiamento ou bolsas e confirme a inexistência de conflitos de interesse.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="funding"
+                fieldLabel="Financiamento e Declaração de Conflitos"
+                currentValue={manuscript.funding}
+                fieldGuidelines={getFieldGuideline('funding', 'Declare as agências de fomento, bolsas (CAPES, CNPq, FAPESP) e confirme a inexistência de conflitos de interesse.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('funding')}
+                onApply={(text) => updateManuscriptField('funding', text)}
+              />
+            }
+            guia={montarGuia('funding', 'funding')}
+          >
             <textarea
               rows={4}
               className="protocol-textarea"
@@ -2261,7 +1744,8 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
               value={manuscript.funding}
               onChange={(e) => updateManuscriptField('funding', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
+
         </div>
       )}
 
@@ -2404,87 +1888,29 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
               </div>
             )}
           </Card>
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('summary_evidence', 14)}</span>
-              <span className="item-section-tag">DISCUSSÃO / RESULTADOS</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Bookmark size={20} className="icon-accent" />
-                <h2>Síntese Geral das Evidências (Summary of Evidence)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="summary_evidence"
-                  fieldLabel="Síntese Geral das Evidências"
-                  currentValue={manuscript.summary_evidence}
-                  fieldGuidelines={getFieldGuideline('summary_evidence', 'Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('summary_evidence')}
-                  onApply={(text) => updateManuscriptField('summary_evidence', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.summaryEvidence ? 'active' : ''}`}
-                  onClick={() => toggleHelp('summaryEvidence')}
-                  title="Ver guia de síntese das evidências"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia dos Achados (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              {getFieldGuideline('summary_evidence', 'Resuma os principais conceitos identificados, os temas dominantes e a relevância prática dos achados para formuladores de políticas públicas e pesquisadores.')}
-            </p>
-
-            {helpOpen.summaryEvidence && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura da Síntese de Evidências ({getFieldItemRef('summary_evidence')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Panorama das Evidências Mapeadas:
-A síntese dos estudos incluídos evidenciou a evolução das pesquisas sobre [Conceito Central / Desenvolvimento Regional], concentrada principalmente em...
-
-Temas Dominantes e Padrões Identificados:
-Observou-se predominância de abordagens voltadas para..., com relativa escassez de análises longitudinais sobre sustentabilidade institucional dos arranjos territoriais.
-
-Relevância Prática e Institucional:
-Os resultados oferecem um panorama estruturado para gestores públicos, formuladores de políticas e pesquisadores sobre as potencialidades e desafios do desenvolvimento regional.`
-
-                      if (manuscript.summary_evidence && !window.confirm('Substituir síntese de evidências pelo modelo?')) return
-                      updateManuscriptField('summary_evidence', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Panorama Geral</span>
-                    <p>Volume e amplitude das evidências encontradas na literatura.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Temas Dominantes</span>
-                    <p>Principais tendências teóricas ou territoriais mapeadas.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Relevância Prática</span>
-                    <p>Utilidade para planejamento governamental e desenvolvimento local.</p>
-                  </div>
-                </div>
-              </div>
+          <CampoDoProtocolo
+            icone={<Bookmark size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Síntese Geral das Evidências (Summary of Evidence)"
+            etiquetaItem={getFieldItemTag('summary_evidence', 14)}
+            secao="DISCUSSÃO / RESULTADOS"
+            ajuda={getFieldGuideline(
+              'summary_evidence',
+              'Resuma os principais conceitos identificados, os temas dominantes e a relevância prática dos achados para formuladores de políticas públicas e pesquisadores.'
             )}
-
+            assistencia={
+              <AIAssistButton
+                fieldId="summary_evidence"
+                fieldLabel="Síntese Geral das Evidências"
+                currentValue={manuscript.summary_evidence}
+                fieldGuidelines={getFieldGuideline('summary_evidence', 'Resuma os principais conceitos, tendências territoriais e relevância prática dos achados para políticas públicas e pesquisadores.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('summary_evidence')}
+                onApply={(text) => updateManuscriptField('summary_evidence', text)}
+              />
+            }
+            guia={montarGuia('summary_evidence', 'summaryEvidence')}
+          >
             <textarea
               rows={5}
               className="protocol-textarea"
@@ -2492,89 +1918,28 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
               value={manuscript.summary_evidence}
               onChange={(e) => updateManuscriptField('summary_evidence', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('limitations', 15)}</span>
-              <span className="item-section-tag">DISCUSSÃO / LIMITAÇÕES</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <AlertTriangle size={20} className="icon-accent" />
-                <h2>Limitações da Revisão (Limitations)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="limitations"
-                  fieldLabel="Limitações da Revisão"
-                  currentValue={manuscript.limitations}
-                  fieldGuidelines={getFieldGuideline('limitations', 'Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados).')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('limitations')}
-                  onApply={(text) => updateManuscriptField('limitations', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.limitations ? 'active' : ''}`}
-                  onClick={() => toggleHelp('limitations')}
-                  title="Ver guia de limitações"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia das Limitações (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              {getFieldGuideline('limitations', 'Aponte as limitações inerentes ao processo da revisão (ex: restrições de idioma, bases indexadas, ausência de busca manual de literatura cinzenta não publicada).')}
-            </p>
-
-            {helpOpen.limitations && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Limitações da Revisão ({getFieldItemRef('limitations')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Limitações do Processo de Busca:
-A busca foi restrita a publicações em português, inglês e espanhol, o que pode ter desconsiderado estudos relevantes em outras línguas.
-
-Literatura Cinzenta e Documentos Institucionais:
-Embora teses e dissertações tenham sido consultadas na BDTD, relatórios técnicos municipais e documentos institucionais não indexados podem não ter sido integralmente capturados.
-
-Heterogeneidade dos Estudos Primários:
-A diversidade metodológica e conceitual na caracterização dos territórios limitou a comparabilidade direta entre determinadas realidades regionais.`
-
-                      if (manuscript.limitations && !window.confirm('Substituir limitações pelo modelo estruturado?')) return
-                      updateManuscriptField('limitations', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Limitações de Busca</span>
-                    <p>Filtros de idioma, bases consultadas e período considerado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Literatura Cinzenta</span>
-                    <p>Potencial não captura de relatórios governamentais não indexados.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Desvios do Protocolo</span>
-                    <p>Justifique qualquer ajuste metodológico feito durante a revisão.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<AlertTriangle size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Limitações da Revisão (Limitations)"
+            etiquetaItem={getFieldItemTag('limitations', 15)}
+            secao="DISCUSSÃO / LIMITAÇÕES"
+            ajuda={getFieldGuideline('limitations', 'Aponte as limitações inerentes ao processo da revisão (ex: restrições de idioma, bases indexadas, ausência de busca manual de literatura cinzenta não publicada).')}
+            assistencia={
+              <AIAssistButton
+                fieldId="limitations"
+                fieldLabel="Limitações da Revisão"
+                currentValue={manuscript.limitations}
+                fieldGuidelines={getFieldGuideline('limitations', 'Aponte as limitações inerentes ao processo da revisão (filtros linguísticos, bases consultadas, relatórios institucionais não capturados).')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('limitations')}
+                onApply={(text) => updateManuscriptField('limitations', text)}
+              />
+            }
+            guia={montarGuia('limitations', 'limitations')}
+          >
             <textarea
               rows={4}
               className="protocol-textarea"
@@ -2582,89 +1947,29 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
               value={manuscript.limitations}
               onChange={(e) => updateManuscriptField('limitations', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('conclusions', 16)}</span>
-              <span className="item-section-tag">CONCLUSÕES</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <CheckCircle2 size={20} className="icon-accent" />
-                <h2>Conclusões e Lacunas de Conhecimento (Conclusions)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="conclusions"
-                  fieldLabel="Conclusões e Lacunas de Conhecimento"
-                  currentValue={manuscript.conclusions}
-                  fieldGuidelines={getFieldGuideline('conclusions', 'Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('conclusions')}
-                  onApply={(text) => updateManuscriptField('conclusions', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.conclusions ? 'active' : ''}`}
-                  onClick={() => toggleHelp('conclusions')}
-                  title="Ver guia de conclusões e lacunas"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia das Conclusões (?)</span>
-                </button>
-              </div>
-            </div>
 
-            <p className="section-help">
-              {getFieldGuideline('conclusions', 'Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.')}
-            </p>
-
-            {helpOpen.conclusions && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura de Conclusões e Lacunas ({getFieldItemRef('conclusions')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Conclusão Geral:
-Esta scoping review sintetizou com rigor a produção científica sobre [Conceito Central / Desenvolvimento Regional], demonstrando que...
-
-Principais Lacunas Identificadas:
-Constatou-se escassez de pesquisas que avaliem a sustentabilidade financeira de longo prazo dos arranjos locais e a integração com políticas de inovação aberta.
-
-Recomendações para Estudos Futuros:
-Sugere-se que investigações futuras priorizem estudos longitudinais de governança territorial e análises comparadas entre diferentes recortes regionais.`
-
-                      if (manuscript.conclusions && !window.confirm('Substituir conclusões pelo modelo estruturado?')) return
-                      updateManuscriptField('conclusions', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Síntese Conclusiva</span>
-                    <p>Resposta direta aos objetivos e questão norteadora.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Lacunas Mapeadas</span>
-                    <p>O que ainda falta na literatura para avanço do conhecimento na área.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Próximos Passos</span>
-                    <p>Recomendações objetivas para futuras pesquisas e políticas públicas.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<CheckCircle2 size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Conclusões e Lacunas de Conhecimento (Conclusions)"
+            etiquetaItem={getFieldItemTag('conclusions', 16)}
+            secao="CONCLUSÕES"
+            ajuda={getFieldGuideline('conclusions', 'Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.')}
+            assistencia={
+              <AIAssistButton
+                fieldId="conclusions"
+                fieldLabel="Conclusões e Lacunas de Conhecimento"
+                currentValue={manuscript.conclusions}
+                fieldGuidelines={getFieldGuideline('conclusions', 'Forneça interpretação geral dos resultados, aponte lacunas científicas evidentes e sugira direções concretas para estudos e políticas públicas futuras.')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('conclusions')}
+                onApply={(text) => updateManuscriptField('conclusions', text)}
+              />
+            }
+            guia={montarGuia('conclusions', 'conclusions')}
+          >
             <textarea
               rows={5}
               className="protocol-textarea"
@@ -2672,7 +1977,8 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
               value={manuscript.conclusions}
               onChange={(e) => updateManuscriptField('conclusions', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
+
         </div>
       )}
 
@@ -2685,116 +1991,26 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
               O Resumo Estruturado Final deve ser fechado <strong>após a conclusão de todo o trabalho</strong>, sintetizando os quantitativos exatos do funil PRISMA, as evidências descobertas e a conclusão central da pesquisa.
             </p>
           </div>
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('structured_summary', 2)}</span>
-              <span className="item-section-tag">RESUMO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <FileText size={20} className="icon-accent" />
-                <h2>Resumo Estruturado do Artigo / Protocolo (Structured Summary)</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="structured_summary"
-                  fieldLabel="Resumo Estruturado da Revisão"
-                  currentValue={manuscript.structured_summary}
-                  fieldGuidelines="Estruture o resumo com os tópicos recomendados: Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('structured_summary')}
-                  onApply={(text) => updateManuscriptField('structured_summary', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.summary ? 'active' : ''}`}
-                  onClick={() => toggleHelp('summary')}
-                  title="Ver tópicos sugeridos e guia estruturado do resumo"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia do Resumo (?)</span>
-                </button>
-              </div>
-            </div>
-
-            <p className="section-help">
-              {getFieldGuideline('structured_summary', 'Estruture o resumo com os tópicos recomendados (Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões).')}
-            </p>
-
-            {helpOpen.summary && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Resumo ({getFieldItemRef('structured_summary')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Contexto / Introdução:
-[Descreva o panorama socioeconômico, as dinâmicas territoriais e a relevância do desenvolvimento regional no tema abordado]
-
-Objetivo:
-[Defina a questão central e o objetivo do mapeamento conceitual com base no framework PCC]
-
-Critérios de Elegibilidade:
-[Atores sociais, políticas públicas/conceitos avaliados, contextos territoriais e tipos de estudo aceitos]
-
-Fontes de Informação:
-[Bases consultadas: BDTD, SciELO, Scopus, OpenAlex, literatura cinzenta institucional e data da busca]
-
-Métodos de Charting (Extração):
-[Extração em duplicata independente com formulário padronizado no RSAC V2]
-
-Resultados Esperados:
-[Mapeamento das abordagens metodológicas, instrumentos de política pública e principais lacunas identificadas]
-
-Conclusões:
-[Síntese das implicações para a formulação de políticas públicas e direções para pesquisas futuras]`
-
-                      if (manuscript.structured_summary && !window.confirm('Substituir resumo pelo modelo estruturado?')) return
-                      updateManuscriptField('structured_summary', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Contexto / Background</span>
-                    <p>Panorama do problema socioeconômico, institucional ou territorial abordado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Objetivos / Objectives</span>
-                    <p>Questão norteadora e finalidade de mapear a extensão da literatura.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">3. Critérios de Elegibilidade</span>
-                    <p>Atores, conceitos centrais, cenários territoriais e limites temporais/idiomáticos.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">4. Fontes de Informação</span>
-                    <p>Bases consultadas (BDTD, SciELO, etc.) e data da execução da busca.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">5. Métodos de Charting</span>
-                    <p>Extração dos dados em duplicata com instrumento padronizado.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">6. Resultados Esperados</span>
-                    <p>Mapeamento das características e lacunas teóricas/empíricas identificadas.</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">7. Conclusões</span>
-                    <p>Contribuições para o desenvolvimento regional e políticas públicas.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<FileText size={20} className="icon-accent" aria-hidden="true" />}
+            titulo="Resumo Estruturado do Artigo / Protocolo (Structured Summary)"
+            etiquetaItem={getFieldItemTag('structured_summary', 2)}
+            secao="RESUMO"
+            ajuda={getFieldGuideline('structured_summary', 'Estruture o resumo com os tópicos recomendados (Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões).')}
+            assistencia={
+              <AIAssistButton
+                fieldId="structured_summary"
+                fieldLabel="Resumo Estruturado da Revisão"
+                currentValue={manuscript.structured_summary}
+                fieldGuidelines="Estruture o resumo com os tópicos recomendados: Contexto, Objetivos, Elegibilidade, Fontes, Métodos de Charting, Resultados e Conclusões nas Ciências Sociais Aplicadas e Desenvolvimento Regional."
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('structured_summary')}
+                onApply={(text) => updateManuscriptField('structured_summary', text)}
+              />
+            }
+            guia={montarGuia('structured_summary', 'summary')}
+          >
             <textarea
               rows={9}
               className="protocol-textarea"
@@ -2802,76 +2018,29 @@ Conclusões:
               value={manuscript.structured_summary}
               onChange={(e) => updateManuscriptField('structured_summary', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
 
-          <Card surface="secundaria" className="protocol-card">
-            <div className="item-header-meta">
-              <span className="item-tag essential">{getFieldItemTag('manuscript_title', 1)}</span>
-              <span className="item-section-tag">TÍTULO</span>
-            </div>
-            <div className="card-section-title-with-actions">
-              <div className="card-section-title">
-                <Edit3 size={20} className="icon-accent" />
-                <h2>Título Oficial da Revisão ({currentProtocolDef.shortLabel})</h2>
-              </div>
-              <div className="card-header-actions">
-                <AIAssistButton
-                  fieldId="manuscript_title"
-                  fieldLabel="Título Oficial da Revisão"
-                  currentValue={manuscript.manuscript_title}
-                  fieldGuidelines={getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional).')}
-                  projectTitle={activeProject?.title}
-                  methodology={activeProject?.methodology}
-                  projectContext={getFullProtocolContext('manuscript_title')}
-                  onApply={(text) => updateManuscriptField('manuscript_title', text)}
-                />
-                <button
-                  type="button"
-                  className={`btn-help-toggle ${helpOpen.title ? 'active' : ''}`}
-                  onClick={() => toggleHelp('title')}
-                  title="Ver guia de elaboração do título"
-                >
-                  <HelpCircle size={16} />
-                  <span>Guia do Título (?)</span>
-                </button>
-              </div>
-            </div>
-            <p className="section-help">
-              {getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).')}
-            </p>
 
-            {helpOpen.title && (
-              <div className="structured-guide-box animate-fade-in">
-                <div className="guide-header">
-                  <div className="guide-title">
-                    <HelpCircle size={18} className="icon-accent" />
-                    <strong>Estrutura Recomendada para o Título ({getFieldItemRef('manuscript_title')})</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-insert-template"
-                    onClick={() => {
-                      const template = `Políticas Públicas de [Instrumento / Política] e [Conceito Central] no [Contexto Regional / Território] para [Atores Sociais / Setor Produtivo]: Uma Revisão de Escopo`
-                      if (manuscript.manuscript_title && !window.confirm('Substituir título atual pelo modelo?')) return
-                      updateManuscriptField('manuscript_title', template)
-                    }}
-                  >
-                    <Plus size={14} /> Inserir Estrutura no Editor
-                  </button>
-                </div>
-                <div className="guide-grid">
-                  <div className="guide-item">
-                    <span className="guide-tag">1. Identificação do Método</span>
-                    <p>O subtítulo DEVE conter explicitamente "Uma Revisão de Escopo" ou "Scoping Review".</p>
-                  </div>
-                  <div className="guide-item">
-                    <span className="guide-tag">2. Elementos PCC</span>
-                    <p>Mencione o Conceito Central (ex: Arranjos Produtivos Locais), o Contexto Territorial e os Atores Sociais.</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
+                    <CampoDoProtocolo
+            icone={<Edit3 size={20} className="icon-accent" aria-hidden="true" />}
+            titulo={`Título Oficial da Revisão (${currentProtocolDef.shortLabel})`}
+            etiquetaItem={getFieldItemTag('manuscript_title', 1)}
+            secao="TÍTULO"
+            ajuda={getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial).')}
+            assistencia={
+              <AIAssistButton
+                fieldId="manuscript_title"
+                fieldLabel="Título Oficial da Revisão"
+                currentValue={manuscript.manuscript_title}
+                fieldGuidelines={getFieldGuideline('manuscript_title', 'Identifique claramente o trabalho e reflita os elementos centrais de elegibilidade (População/Atores, Conceito Central e Contexto Territorial no Desenvolvimento Regional).')}
+                projectTitle={activeProject?.title}
+                methodology={activeProject?.methodology}
+                projectContext={getFullProtocolContext('manuscript_title')}
+                onApply={(text) => updateManuscriptField('manuscript_title', text)}
+              />
+            }
+            guia={montarGuia('manuscript_title', 'title')}
+          >
             <input
               type="text"
               className="protocol-input-large"
@@ -2879,7 +2048,8 @@ Conclusões:
               value={manuscript.manuscript_title}
               onChange={(e) => updateManuscriptField('manuscript_title', e.target.value)}
             />
-          </Card>
+          </CampoDoProtocolo>
+
         </div>
       )}
 
