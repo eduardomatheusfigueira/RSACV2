@@ -326,9 +326,13 @@ Um cartão pode **ser** o controle — os pacotes da Exportação abrem o downlo
 ao serem clicados. Para esses, `as="button"`: a moldura sobre um elemento
 nativo, em vez de `<div role="button">` reimplementando o teclado à mão.
 
-Migradas por inteiro até aqui: **Painel, Projetos, Configurações, Coleta e
-Exportação**. Faltam Protocolo, Triagem e Extração — as três acima de 1200
-linhas, que pedem passada própria.
+**As oito páginas estão migradas.** Uma exceção declarada: `.queue-paper-card`,
+na Triagem e na Extração, fica fora. São itens de largura e altura fixas dentro
+de uma esteira de rolagem horizontal, onde o dimensionamento é o ponto e a
+moldura é incidental; passá-los pelo `<Card>` criaria dependência de ordem de
+importação do CSS entre `width: 230px` e o `width: 100%` de
+`.rsac-card--controle`, que têm a mesma especificidade. Cascata frágil por
+ganho nenhum.
 
 ---
 

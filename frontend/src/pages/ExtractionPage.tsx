@@ -48,6 +48,7 @@ import { useRibbonStore } from '@/stores/useRibbonStore'
 import {
   PageHeader,
   Button,
+  Card,
   EmptyState,
   LoadingState,
   Dialog,
@@ -1068,7 +1069,7 @@ export function ExtractionPage(): JSX.Element {
                   const evidenceData = q.id ? evidences[q.id] : undefined
 
                   return (
-                    <div
+                    <Card surface="primaria"
                       key={q.id || idx}
                       className={`question-field-card ${isFilled ? 'filled' : 'pending'}`}
                     >
@@ -1134,13 +1135,13 @@ export function ExtractionPage(): JSX.Element {
                           <p className="evidence-quote">"{evidenceData.evidence}"</p>
                         </div>
                       )}
-                    </div>
+                    </Card>
                   )
                 })
               )}
 
               {/* Synthesis Bridge Banner */}
-              <div className="synthesis-bridge-card">
+              <Card surface="primaria" className="synthesis-bridge-card">
                 <div className="bridge-content">
                   <Sparkles size={20} className="icon-accent" />
                   <div>
@@ -1157,13 +1158,13 @@ export function ExtractionPage(): JSX.Element {
                 >
                   Ver Protocolo & Síntese <ArrowRight size={13} />
                 </button>
-              </div>
+              </Card>
             </div>
           </div>
         </div>
       ) : (
         /* Empty State */
-        <div className="extraction-empty-state-card animate-fade-in">
+        <Card surface="secundaria" className="extraction-empty-state-card animate-fade-in">
           <BookOpen size={48} className="icon-accent" />
           <h3>Nenhum Estudo Incluído Selecionado</h3>
           <p>
@@ -1180,7 +1181,7 @@ export function ExtractionPage(): JSX.Element {
               Ir para Triagem 1 (Elegibilidade) <ArrowRight size={14} />
             </button>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Link direto de PDF */}

@@ -58,6 +58,7 @@ import { AIAssistButton } from '@/components/common/AIAssistButton'
 import {
   PageHeader,
   Button,
+  Card,
   LoadingState,
   Dialog,
   DialogContent,
@@ -904,7 +905,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               Defina o título preliminar do protocolo, registre seu planejamento e estabeleça a justificativa teórica <strong>antes</strong> de iniciar a busca nas bases de dados.
             </p>
           </div>
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 1 — Essencial</span>
               <span className="item-section-tag">TÍTULO</span>
@@ -979,9 +980,9 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               value={manuscript.manuscript_title}
               onChange={(e) => updateManuscriptField('manuscript_title', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('protocol_registration', 5)}</span>
               <span className="item-section-tag">MÉTODOS / REGISTRO</span>
@@ -1057,9 +1058,9 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               value={manuscript.protocol_registration}
               onChange={(e) => updateManuscriptField('protocol_registration', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('rationale', 3)}</span>
               <span className="item-section-tag">INTRODUÇÃO</span>
@@ -1154,7 +1155,7 @@ Relevância e Contribuição Esperada:
               value={manuscript.rationale}
               onChange={(e) => updateManuscriptField('rationale', e.target.value)}
             />
-          </div>
+          </Card>
         </div>
       )}
 
@@ -1167,7 +1168,7 @@ Relevância e Contribuição Esperada:
               Estruture o objetivo geral e desmembre os conceitos orientadores no framework teórico ({frameworkType}) para guiar a busca sem ambiguidades.
             </p>
           </div>
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('objective', 4)}</span>
               <span className="item-section-tag">INTRODUÇÃO / OBJETIVOS</span>
@@ -1391,7 +1392,7 @@ Relevância e Contribuição Esperada:
                 />
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -1404,7 +1405,7 @@ Relevância e Contribuição Esperada:
               Estabeleça os critérios de inclusão/exclusão e as strings de busca em pares ("termo_1" AND "termo_2") compatíveis com a BDTD (VuFind) antes da coleta.
             </p>
           </div>
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">Item 6 — Essencial</span>
               <span className="item-section-tag">MÉTODOS / ELEGIBILIDADE</span>
@@ -1481,7 +1482,7 @@ Relevância e Contribuição Esperada:
 
             <div className="criteria-list">
               {criteria.map((crit, idx) => (
-                <div key={idx} className="criterion-card">
+                <Card surface="primaria" relief="afundado" key={idx} className="criterion-card">
                   <span className={`criterion-code ${crit.is_exclusion ? 'exclusion' : 'inclusion'}`}>
                     {crit.is_exclusion ? `EXC-${idx + 1}` : `INC-${idx + 1}`}
                   </span>
@@ -1504,7 +1505,7 @@ Relevância e Contribuição Esperada:
                   >
                     <Trash2 size={16} />
                   </button>
-                </div>
+                </Card>
               ))}
             </div>
 
@@ -1516,9 +1517,9 @@ Relevância e Contribuição Esperada:
                 <Plus size={14} /> Adicionar Critério de Exclusão (EXC)
               </button>
             </div>
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('info_sources', 7)}</span>
               <span className="item-section-tag">MÉTODOS / FONTES</span>
@@ -1613,9 +1614,9 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
               value={manuscript.info_sources}
               onChange={(e) => updateManuscriptField('info_sources', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('search_descriptors', 8)}</span>
               <span className="item-section-tag">MÉTODOS / DESCRITORES</span>
@@ -1743,7 +1744,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
                 <Plus size={14} /> Adicionar Par de Descritores ({descriptors[activeLangTab].length})
               </button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -1756,7 +1757,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`
               Planeje os procedimentos de triagem, o questionário com as variáveis que serão extraídas de cada estudo incluído e os métodos previstos de síntese.
             </p>
           </div>
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('selection_process', 9)}</span>
               <span className="item-section-tag">MÉTODOS / TRIAGEM</span>
@@ -1844,9 +1845,9 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
               value={manuscript.selection_process}
               onChange={(e) => updateManuscriptField('selection_process', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('data_charting_process', 10)}</span>
               <span className="item-section-tag">MÉTODOS / EXTRAÇÃO</span>
@@ -1930,9 +1931,9 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
               value={manuscript.data_charting_process}
               onChange={(e) => updateManuscriptField('data_charting_process', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('extraction_questions', 11)}</span>
               <span className="item-section-tag">MÉTODOS / VARIÁVEIS</span>
@@ -1973,7 +1974,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
 
             <div className="criteria-list">
               {questions.map((q, idx) => (
-                <div key={q.id || idx} className="criterion-card">
+                <Card surface="primaria" relief="afundado" key={q.id || idx} className="criterion-card">
                   <span className="criterion-code inclusion">Q-{idx + 1}</span>
                   <input
                     type="text"
@@ -1990,7 +1991,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                   >
                     <Trash2 size={16} />
                   </button>
-                </div>
+                </Card>
               ))}
             </div>
 
@@ -1999,9 +2000,9 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                 <Plus size={14} /> Adicionar Pergunta de Mapeamento
               </button>
             </div>
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag optional">{getFieldItemTag('critical_appraisal', 12, false)}</span>
               <span className="item-section-tag">MÉTODOS / AVALIAÇÃO CRÍTICA</span>
@@ -2077,9 +2078,9 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
               value={manuscript.critical_appraisal}
               onChange={(e) => updateManuscriptField('critical_appraisal', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('synthesis_methods', 13)}</span>
               <span className="item-section-tag">MÉTODOS / SÍNTESE</span>
@@ -2170,9 +2171,9 @@ Construção de matriz estruturada para apontar territórios e temas com carênc
               value={manuscript.synthesis_methods}
               onChange={(e) => updateManuscriptField('synthesis_methods', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('funding', 17)}</span>
               <span className="item-section-tag">FINANCIAMENTO</span>
@@ -2260,7 +2261,7 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
               value={manuscript.funding}
               onChange={(e) => updateManuscriptField('funding', e.target.value)}
             />
-          </div>
+          </Card>
         </div>
       )}
 
@@ -2275,7 +2276,7 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
           </div>
 
           {/* Painel de Evidências Reais & Rastreabilidade */}
-          <div className="evidence-traceability-card">
+          <Card surface="secundaria" className="evidence-traceability-card">
             <div className="traceability-header">
               <div className="traceability-title">
                 <BarChart3 size={18} className="icon-accent" />
@@ -2402,8 +2403,8 @@ Os autores declaram expressamente a inexistência de quaisquer conflitos de inte
                 </div>
               </div>
             )}
-          </div>
-          <div className="protocol-card">
+          </Card>
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('summary_evidence', 14)}</span>
               <span className="item-section-tag">DISCUSSÃO / RESULTADOS</span>
@@ -2491,9 +2492,9 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
               value={manuscript.summary_evidence}
               onChange={(e) => updateManuscriptField('summary_evidence', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('limitations', 15)}</span>
               <span className="item-section-tag">DISCUSSÃO / LIMITAÇÕES</span>
@@ -2581,9 +2582,9 @@ A diversidade metodológica e conceitual na caracterização dos territórios li
               value={manuscript.limitations}
               onChange={(e) => updateManuscriptField('limitations', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('conclusions', 16)}</span>
               <span className="item-section-tag">CONCLUSÕES</span>
@@ -2671,7 +2672,7 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
               value={manuscript.conclusions}
               onChange={(e) => updateManuscriptField('conclusions', e.target.value)}
             />
-          </div>
+          </Card>
         </div>
       )}
 
@@ -2684,7 +2685,7 @@ Sugere-se que investigações futuras priorizem estudos longitudinais de governa
               O Resumo Estruturado Final deve ser fechado <strong>após a conclusão de todo o trabalho</strong>, sintetizando os quantitativos exatos do funil PRISMA, as evidências descobertas e a conclusão central da pesquisa.
             </p>
           </div>
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('structured_summary', 2)}</span>
               <span className="item-section-tag">RESUMO</span>
@@ -2801,9 +2802,9 @@ Conclusões:
               value={manuscript.structured_summary}
               onChange={(e) => updateManuscriptField('structured_summary', e.target.value)}
             />
-          </div>
+          </Card>
 
-          <div className="protocol-card">
+          <Card surface="secundaria" className="protocol-card">
             <div className="item-header-meta">
               <span className="item-tag essential">{getFieldItemTag('manuscript_title', 1)}</span>
               <span className="item-section-tag">TÍTULO</span>
@@ -2878,14 +2879,14 @@ Conclusões:
               value={manuscript.manuscript_title}
               onChange={(e) => updateManuscriptField('manuscript_title', e.target.value)}
             />
-          </div>
+          </Card>
         </div>
       )}
 
       {/* ── ABA 7: AUDITORIA E CHECKLIST DO PROTOCOLO ATIVO ───────────────── */}
       {activeStudioTab === 'checklist' && (
         <div className="tab-pane animate-fade-in">
-          <div className="protocol-card scr-checklist-card">
+          <Card surface="secundaria" className="protocol-card scr-checklist-card">
             <div className="card-section-title">
               <CheckSquare size={20} className="icon-accent" />
               <h2>{currentProtocolDef.checklistTitle}</h2>
@@ -2971,7 +2972,7 @@ Conclusões:
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 

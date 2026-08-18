@@ -55,6 +55,7 @@ import { DeduplicationReportModal } from '@/components/common/DeduplicationRepor
 import {
   PageHeader,
   Button,
+  Card,
   EmptyState,
   LoadingState,
   toast,
@@ -1114,7 +1115,7 @@ export function ScreeningPage(): React.JSX.Element {
                     />
                   </div>
                 ) : (
-                  <div className="abstract-reading-card">
+                  <Card surface="primaria" relief="afundado" className="abstract-reading-card">
                     {readingViewMode === 'pdf_text' ? (
                       loadingPdfText ? (
                         <div className="empty-abstract-state">
@@ -1145,7 +1146,7 @@ export function ScreeningPage(): React.JSX.Element {
                         )}
                       </div>
                     )}
-                  </div>
+                  </Card>
                 )}
               </div>
             </div>
