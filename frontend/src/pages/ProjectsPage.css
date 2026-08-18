@@ -61,11 +61,8 @@
   gap: var(--space-3);
 }
 
+/* Moldura no <Card> (relevo `plano`); aqui, arranjo e comportamento. */
 .project-card-full {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  box-shadow: none;
   padding: var(--space-4);
   cursor: pointer;
   display: flex;

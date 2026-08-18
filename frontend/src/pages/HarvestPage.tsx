@@ -628,6 +628,23 @@ export function HarvestPage(): JSX.Element {
                 </div>
               </div>
 
+              {/* Resumo anunciado. As linhas abaixo se atualizam a cada 1,5 s —
+                  colocar `aria-live` nelas faria o leitor de tela ler a grade
+                  inteira dez vezes por minuto. Este resumo só muda quando uma
+                  base TRANSICIONA de estado, que é o evento que interessa: são
+                  poucas mudanças por coleta, e cada uma é notícia. */}
+              <p className="sources-progress-resumo" role="status" aria-live="polite">
+                {(() => {
+                  const feitas = selectedSources.filter((s) => progress[s]?.status === 'completed').length
+                  const rodando = selectedSources.filter((s) => progress[s]?.status === 'running').length
+                  const comErro = selectedSources.filter((s) => progress[s]?.status === 'error').length
+                  const partes = [`${feitas} de ${selectedSources.length} bases concluídas`]
+                  if (rodando) partes.push(`${rodando} em execução`)
+                  if (comErro) partes.push(`${comErro} com erro`)
+                  return partes.join(' · ')
+                })()}
+              </p>
+
               <div className="sources-progress-grid">
                 {selectedSources.map((srcId) => {
                   const p = progress[srcId]

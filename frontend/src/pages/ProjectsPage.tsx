@@ -25,6 +25,7 @@ import { AIAssistButton } from '@/components/common/AIAssistButton'
 import {
   PageHeader,
   Button,
+  Card,
   EmptyState,
   LoadingState,
   toast,
@@ -197,9 +198,11 @@ export function ProjectsPage(): JSX.Element {
                  botão de excluir. Controle dentro de controle é marcação
                  inválida — então quem é clicável é o título, e a área do
                  cartão vira alvo dele por um ::after esticado. */
-              <div
+              <Card
                 key={project.id}
                 className={`project-card-full ${isActive ? 'active-card' : ''}`}
+                relief="plano"
+                accented={isActive}
               >
                 <div className="card-header">
                   <div className="card-meta">
@@ -243,7 +246,7 @@ export function ProjectsPage(): JSX.Element {
                     Acessar Etapas <ArrowRight size={14} />
                   </span>
                 </div>
-              </div>
+              </Card>
             )
           })}
         </div>

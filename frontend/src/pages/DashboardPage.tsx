@@ -15,7 +15,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { api } from '@/api/client'
-import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui'
+import { PageHeader, Button, Card, EmptyState, LoadingState } from '@/components/ui'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { Project } from '@/types/api'
 import './DashboardPage.css'
@@ -61,44 +61,27 @@ export function DashboardPage(): JSX.Element {
         }
       />
 
-      {/* Stat Cards */}
+      {/* Painel de números. Antes eram quatro blocos repetidos com o estilo
+          embutido no JSX — inclusive o par cor/tinta, que o verificador não
+          alcança dentro de `style={{}}`. Agora é uma lista de dados sobre
+          <Card>, e a cor de cada tom sai dos tokens medidos. */}
       <div className="dashboard-stats">
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}>
-            <FolderOpen size={22} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-value">{projects.length}</span>
-            <span className="stat-label">Projetos Ativos</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
-            <FileText size={22} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-value">—</span>
-            <span className="stat-label">Papers Coletados</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
-            <CheckCircle2 size={22} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-value">—</span>
-            <span className="stat-label">Papers Incluídos</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
-            <Clock size={22} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-value">—</span>
-            <span className="stat-label">Pendentes de Triagem</span>
-          </div>
-        </div>
+        {[
+          { tom: 'acento', icone: <FolderOpen size={22} />, valor: String(projects.length), rotulo: 'Projetos Ativos' },
+          { tom: 'info', icone: <FileText size={22} />, valor: '—', rotulo: 'Papers Coletados' },
+          { tom: 'sucesso', icone: <CheckCircle2 size={22} />, valor: '—', rotulo: 'Papers Incluídos' },
+          { tom: 'aviso', icone: <Clock size={22} />, valor: '—', rotulo: 'Pendentes de Triagem' },
+        ].map((n) => (
+          <Card key={n.rotulo} className="stat-card">
+            <div className={`stat-icon stat-icon--${n.tom}`} aria-hidden="true">
+              {n.icone}
+            </div>
+            <div className="stat-content">
+              <span className="stat-value">{n.valor}</span>
+              <span className="stat-label">{n.rotulo}</span>
+            </div>
+          </Card>
+        ))}
       </div>
 
       {/* Projects List */}
@@ -128,9 +111,10 @@ export function DashboardPage(): JSX.Element {
             {projects.map((project) => {
               const isActive = activeProject?.id === project.id
               return (
-                <div
+                <Card
                   key={project.id}
                   className={`project-card ${isActive ? 'active-card' : ''}`}
+                  accented={isActive}
                   onClick={() => handleOpenProject(project)}
                   role="button"
                   tabIndex={0}
@@ -164,7 +148,7 @@ export function DashboardPage(): JSX.Element {
                       Abrir Projeto <ArrowRight size={14} className="project-card-arrow" />
                     </span>
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>

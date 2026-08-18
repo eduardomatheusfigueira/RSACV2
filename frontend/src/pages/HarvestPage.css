@@ -481,6 +481,14 @@
   box-shadow: var(--shadow-neo-sunken);
 }
 
+/* O resumo é o que o leitor de tela anuncia; visualmente ele é um rótulo
+   discreto acima da grade. */
+.sources-progress-resumo {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
 .sources-progress-grid {
   display: flex;
   flex-direction: column;

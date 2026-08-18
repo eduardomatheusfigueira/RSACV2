@@ -6,18 +6,41 @@
 import React, { forwardRef } from 'react'
 import './Card.css'
 
-export type CardVariant = 'default' | 'elevated' | 'sunken' | 'accent-bordered'
+/**
+ * Superfície e relevo são escolhas INDEPENDENTES — foi assim que as 28 classes
+ * de cartão das páginas se combinaram na prática. Uma lista fechada de
+ * variantes obrigaria a nomear as seis combinações e ainda assim deixaria de
+ * fora a próxima.
+ */
+export type CardSurface = 'primaria' | 'secundaria'
+export type CardRelief = 'elevado' | 'afundado' | 'plano'
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: CardVariant
+  surface?: CardSurface
+  relief?: CardRelief
+  /** Filete de acento na borda esquerda: marca o cartão em foco ou ativo. */
+  accented?: boolean
   compact?: boolean
 }
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ variant = 'default', compact = false, className = '', children, ...props }, ref) => {
+  (
+    {
+      surface = 'secundaria',
+      relief = 'elevado',
+      accented = false,
+      compact = false,
+      className = '',
+      children,
+      ...props
+    },
+    ref
+  ) => {
     const classNames = [
       'rsac-card',
-      `rsac-card--${variant}`,
+      `rsac-card--${surface}`,
+      `rsac-card--${relief}`,
+      accented ? 'rsac-card--acentuado' : '',
       compact ? 'rsac-card--compact' : '',
       className,
     ]

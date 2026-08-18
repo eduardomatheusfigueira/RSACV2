@@ -42,14 +42,12 @@
   margin-bottom: var(--space-8);
 }
 
+/* A moldura vem do <Card>; aqui fica só o arranjo interno. */
 .stat-card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-5);
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  padding: var(--space-5);
   transition: all var(--transition-fast);
 }
 
@@ -66,6 +64,29 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* Os quatro tons saíram do `style={{}}` embutido no JSX. Lá dentro o par
+   cor/tinta escapava do verificador; aqui vale a mesma regra do resto: texto
+   sobre tinta usa o token medido contra ela. */
+.stat-icon--acento {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-text);
+}
+
+.stat-icon--info {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+}
+
+.stat-icon--sucesso {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.stat-icon--aviso {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .stat-content {
@@ -124,10 +145,8 @@
   gap: var(--space-4);
 }
 
+/* Moldura no <Card>; aqui, arranjo e comportamento. */
 .project-card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
   padding: var(--space-5);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -141,9 +160,10 @@
   transform: translateY(-2px);
 }
 
+/* O filete de acento vem de `accented` no <Card>; o que sobra aqui é a
+   mudança de superfície que marca o projeto ativo. */
 .project-card.active-card {
   border-color: var(--color-accent);
-  border-left: 3px solid var(--color-accent);
   background: var(--color-bg-tertiary);
 }
 

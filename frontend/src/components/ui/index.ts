@@ -22,7 +22,8 @@ export {
 } from './Card'
 export type {
   CardProps,
-  CardVariant,
+  CardSurface,
+  CardRelief,
   CardHeaderProps,
   CardTitleProps,
 } from './Card'

@@ -3,12 +3,33 @@
  * Structural Containers & High-Density Spacing
  */
 
+/* ═══════════════════════════════════════════════════════════════════════
+   O vocabulário de cartão, levantado do próprio código
+   ═══════════════════════════════════════════════════════════════════════
+
+   As 28 classes de cartão espalhadas pelas páginas não eram 28 desenhos
+   diferentes: eram combinações de três escolhas, feitas caso a caso e nunca
+   declaradas.
+
+     superfície  bg-primary (13×)  ·  bg-secondary (11×)
+     relevo      neo-raised (16×)  ·  neo-sunken (7×)  ·  plano (5×)
+     borda       1px solid var(--color-border), em TODAS elas
+
+   Duas propriedades independentes cobrem o que existe. O que não se manteve
+   foi o raio: `--radius-xl` aparecia em dois cartões do Painel e em nenhum
+   outro lugar — era desvio, não intenção, e some em favor do raio cirúrgico
+   que o resto usa.
+   ═══════════════════════════════════════════════════════════════════════ */
+
 .rsac-card {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
-  box-shadow: var(--shadow-xs));
+  /* Estava `var(--shadow-xs))` — um parêntese sobrando tornava a declaração
+     inválida, e o cartão canônico ficava SEM sombra nenhuma. Ninguém percebeu
+     porque o componente nunca chegou a ser usado. */
+  box-shadow: var(--shadow-neo-raised);
   box-sizing: border-box;
 }
 
@@ -16,19 +37,30 @@
   padding: var(--space-2-5);
 }
 
-/* ── Variants ──────────────────────────────────────────────────────── */
-.rsac-card--elevated {
-  background: var(--color-bg-elevated);
-  box-shadow: var(--shadow-sm));
+/* ── Superfície ────────────────────────────────────────────────────── */
+.rsac-card--primaria {
+  background: var(--color-bg-primary);
 }
 
-.rsac-card--sunken {
-  background: var(--color-bg-primary);
-  border-color: var(--color-border-subtle);
+.rsac-card--secundaria {
+  background: var(--color-bg-secondary);
+}
+
+/* ── Relevo ────────────────────────────────────────────────────────── */
+.rsac-card--elevado {
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.rsac-card--afundado {
   box-shadow: var(--shadow-neo-sunken);
 }
 
-.rsac-card--accent-bordered {
+.rsac-card--plano {
+  box-shadow: none;
+}
+
+/* ── Ênfase ────────────────────────────────────────────────────────── */
+.rsac-card--acentuado {
   border-left: 3px solid var(--color-accent);
 }
 

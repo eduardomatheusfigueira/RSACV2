@@ -266,7 +266,7 @@ foco visível, hover, ativo, desabilitado) e com o comportamento de teclado.
 | `<Tag>` | `db-badge`, `tab-pill`, `*-badge` | `tone`: neutral · accent · success · warning · danger · info |
 | `<Field>` | 35 `<label>` soltos | Associa `label`/`htmlFor`, texto de ajuda e erro via `aria-describedby` |
 | `<TextInput>`, `<TextArea>`, `<Select>` | campos por página | Altura e foco do sistema |
-| `<Card>` | `neo-card` e variantes | `header`, `footer`, `tone` |
+| `<Card>` | 28 classes de cartão nas páginas | `surface` × `relief` independentes, `accented`, `compact` — ver § 24.7.1 |
 | `<Panel>` | contêineres de coluna | Cabeçalho com título e ações |
 
 ### Composições
@@ -286,6 +286,44 @@ foco visível, hover, ativo, desabilitado) e com o comportamento de teclado.
 > foram importados (doc 23 § 23.9). Eles resolvem, prontos e acessíveis,
 > exatamente diálogo, abas, select, tooltip e menu. **Adotar** — e remover o
 > que sobrar sem uso.
+>
+> **Executado em 17–18/08/2026**: `react-dialog` adotado nos 6 modais;
+> `react-tooltip` já em uso; `react-dropdown-menu`, `react-select`,
+> `react-separator` e `@tanstack/react-table` removidos por não terem uso
+> previsto. `react-tabs` fica: doc 25 § 2.8 o prevê para as abas do Estúdio.
+
+---
+
+### 24.7.1 O vocabulário de cartão
+
+As 28 classes de cartão espalhadas pelas páginas não eram 28 desenhos: eram
+combinações de três escolhas, feitas caso a caso e nunca declaradas. O
+levantamento sobre o próprio código:
+
+| Eixo | Valores encontrados | Ocorrências |
+|---|---|:---:|
+| superfície | `--color-bg-primary` · `--color-bg-secondary` | 13 · 11 |
+| relevo | `--shadow-neo-raised` · `--shadow-neo-sunken` · sem sombra | 16 · 7 · 5 |
+| borda | `1px solid var(--color-border)` | **todas** |
+
+Duas propriedades independentes cobrem o que existe — `surface` e `relief` —,
+mais `accented` para o filete de acento. O que **não** se manteve foi o raio:
+`--radius-xl` aparecia em dois cartões do Painel e em nenhum outro lugar; era
+desvio, não intenção.
+
+**Mapa para as páginas que faltam** — cada linha é uma migração fechada, não
+um componente solto (doc 25 § 25.11, risco 2):
+
+| Classe | `surface` | `relief` |
+|---|---|---|
+| `.protocol-card`, `.evidence-traceability-card`, `.extraction-empty-state-card`, `.master-ai-toggle-card`, `.settings-card`, `.portability-card`, `.theme-card-item` | `secundaria` | `elevado` |
+| `.export-package-card`, `.export-audit-card`, `.harvest-config-card`, `.sources-progress-card`, `.harvest-next-phase-card`, `.modal-content-card`, `.question-field-card`, `.synthesis-bridge-card` | `primaria` | `elevado` |
+| `.harvest-terminal-card`, `.criterion-card`, `.question-item-card`, `.queue-paper-card`, `.abstract-reading-card` | `primaria` | `afundado` |
+| `.source-card-item`, `.feed-item-card` | `secundaria` | `afundado` |
+| `.project-card-full`, `.model-option-card` | `secundaria` | `plano` |
+
+Migrados até aqui: Painel (`.stat-card`, `.project-card`) e Projetos
+(`.project-card-full`), como referência do padrão.
 
 ---
 
@@ -294,18 +332,42 @@ foco visível, hover, ativo, desabilitado) e com o comportamento de teclado.
 Movimento serve para explicar uma mudança de estado. Movimento decorativo não
 entra.
 
+> **Implementado em 18/08/2026.** A tabela abaixo é o que está no código; a
+> versão planejada tinha `--motion-instant` a 80 ms, o que colidia com o nome —
+> instantâneo passou a ser 0 ms, e as demais desceram um degrau para caber na
+> densidade real da interface.
+
 | Token | Duração | Uso |
 |---|:---:|---|
-| `--motion-instant` | 80 ms | realimentação de toque (hover, active) |
-| `--motion-fast` | 140 ms | abrir/fechar de elemento pequeno |
-| `--motion-base` | 200 ms | transição de painel, troca de aba |
-| `--motion-slow` | 320 ms | entrada de diálogo, splash |
+| `--motion-instant` | 0 ms | sem movimento (base do modo reduzido) |
+| `--motion-fast` | 80 ms | realce sob o cursor, foco, pressionar |
+| `--motion-base` | 140 ms | abrir/fechar, trocar de aba |
+| `--motion-slow` | 200 ms | painel, gaveta, diálogo |
+| `--motion-loop` | 1 s | giro do indicador de espera |
+| `--motion-pulse` | 1,5 s | pulso do indicador de atividade |
 
-Curva única: `cubic-bezier(0.2, 0, 0.2, 1)`. Saídas usam metade da duração de
-entrada.
+Duas curvas, não uma: `--ease-standard` (`ease-in-out`) para movimento
+simétrico e `--ease-out` (`cubic-bezier(0.16, 1, 0.3, 1)`) para entradas, que
+devem chegar rápido e assentar.
 
-**`prefers-reduced-motion: reduce` desliga toda translação e escala**, mantendo
-apenas opacidade. Já respeitado na splash; passa a ser regra global.
+Duração e curva ficam em tokens **separados** porque o modo de movimento
+reduzido precisa mexer só na duração. Redefinir `--transition-fast` inteiro
+apagaria junto a curva, e uma transição sem curva volta a `ease`.
+
+### O contrato de movimento reduzido
+
+`prefers-reduced-motion: reduce` tem duas partes, e é por isso que **não** há um
+`* { animation: none }` genérico — ele apagaria as duas juntas:
+
+1. **Movimento que decora** (entradas, deslizes, escalas) é anulado. O elemento
+   aparece no lugar final, sem percurso.
+2. **Movimento que informa** continua, desacelerado. Indicador de espera parado
+   é indistinguível de tela travada; girar a 2,4 s preserva o "ainda estou
+   trabalhando" sem o efeito estroboscópico.
+
+As exceções da parte 2 são nomeadas uma a uma em `globals.css`. A regra **R2e**
+do verificador impede duração literal em CSS — literal fica fora do alcance do
+modo reduzido.
 
 ---
 
