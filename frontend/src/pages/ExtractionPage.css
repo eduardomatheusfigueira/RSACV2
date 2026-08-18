@@ -190,7 +190,8 @@
 .extraction-page .queue-paper-card {
   min-width: 220px;
   max-width: 260px;
-  height: 58px;
+  width: 240px;
+  height: 64px;
   padding: var(--space-1-5) var(--space-2-5);
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border);
@@ -205,6 +206,8 @@
   text-align: left;
   font-family: inherit;
   color: inherit;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .extraction-page .queue-paper-card:hover {
@@ -228,6 +231,9 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .extraction-page .badge-decision.badge-incluído {
@@ -244,9 +250,11 @@
   font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .extraction-page .queue-card-title {
+  display: block;
   font-size: var(--font-size-xs);
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
@@ -255,15 +263,23 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .extraction-page .queue-card-authors {
+  display: block;
   font-size: var(--font-size-2xs);
   color: var(--color-text-secondary);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 /* Idem à Triagem: a faixa inteira, não um cartão a mais. */

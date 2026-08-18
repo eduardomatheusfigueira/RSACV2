@@ -662,7 +662,9 @@ export function ExtractionPage(): JSX.Element {
                     </div>
                     <span className="queue-card-title">{paper.title}</span>
                     {paper.authors && (
-                      <span className="queue-card-authors">{paper.authors}</span>
+                      <span className="queue-card-authors" title={paper.authors}>
+                        {paper.authors}
+                      </span>
                     )}
                   </button>
                 )

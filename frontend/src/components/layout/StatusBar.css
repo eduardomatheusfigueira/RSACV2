@@ -97,6 +97,11 @@
   box-shadow: var(--shadow-neo-sunken);
 }
 
+.status-ai-mode svg {
+  color: currentColor;
+  flex-shrink: 0;
+}
+
 .status-ai-mode.active {
   color: var(--color-success-on-surface);
 }

@@ -193,7 +193,7 @@ export function TopRibbonBar(): JSX.Element {
             onClick={() => setAiEnabled(!aiEnabled)}
             title={aiEnabled ? 'Assistência Ativa — clique para modo manual' : 'Modo 100% Manual — clique para ativar assistência'}
           >
-            {aiEnabled ? <Sparkles size={12} className="icon-sparkle" /> : <Edit3 size={12} />}
+            {aiEnabled ? <Sparkles size={12} /> : <Edit3 size={12} />}
             <span>{aiEnabled ? 'Assistência' : 'Manual'}</span>
           </button>
 

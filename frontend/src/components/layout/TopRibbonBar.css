@@ -160,6 +160,11 @@
   border: 1px solid transparent;
 }
 
+.ribbon-action-pill svg {
+  color: currentColor;
+  flex-shrink: 0;
+}
+
 /* O texto aqui pousa em `--olive-leaf`, não em `--color-accent` — usar o
    token do acento dava 3.18:1 no tema padrão. `--color-text-on-olive` é medido
    contra o olive de cada paleta. */
@@ -168,10 +173,19 @@
   color: var(--color-text-on-olive);
 }
 
+.ribbon-action-pill.ai-active svg,
+.ribbon-action-pill.ai-active .icon-sparkle {
+  color: currentColor;
+}
+
 .ribbon-action-pill.ai-manual {
   background: var(--color-chrome-hover);
   color: var(--sunlit-clay);
   border-color: var(--color-chrome-border);
+}
+
+.ribbon-action-pill.ai-manual svg {
+  color: currentColor;
 }
 
 .ribbon-icon-btn {
@@ -410,6 +424,11 @@
   color: var(--color-text-on-accent);
   border-color: var(--copperwood);
   box-shadow: var(--shadow-neo-pressed);
+}
+
+.tool-btn-large.tool-active svg,
+.tool-btn-large.tool-active .icon-sparkle {
+  color: currentColor;
 }
 
 .tool-btn-large:disabled {
