@@ -62,6 +62,12 @@ dist/
 dist-electron/
 release/
 .npm/
+
+# ── Suíte de validação visual (doc 26) ───────────────────────────────
+# A referência (test-visual/baseline/) É versionada de propósito — só assim a
+# mudança visual fica revisável junto com o código que a causou (doc 26 § 26.9).
+# O diff é artefato transitório de uma execução com falha, não referência.
+frontend/test-visual/diff/
 .eslintcache
 electron.vite.config.*.mjs
 *.timestamp-*.mjs

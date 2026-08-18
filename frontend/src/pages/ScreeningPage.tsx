@@ -1030,6 +1030,11 @@ export function ScreeningPage(): React.JSX.Element {
               )}
 
               {/* Caixa de Leitura: Resumo | PDF original | Texto extraído */}
+              <Tabs.Root
+                className="view-mode-tabs-root"
+                value={readingViewMode}
+                onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_view' | 'pdf_text')}
+              >
               <div className="study-abstract-container">
                 <div className="abstract-header-row">
                   <FileText size={16} className="icon-accent" />
@@ -1042,11 +1047,6 @@ export function ScreeningPage(): React.JSX.Element {
                   </h3>
 
                   <div className="screening-pdf-tools">
-                    <Tabs.Root
-                      className="view-mode-tabs-root"
-                      value={readingViewMode}
-                      onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_view' | 'pdf_text')}
-                    >
                       <Tabs.List asChild>
                         <div className="view-mode-toggle-group">
                           <Tabs.Trigger
@@ -1071,7 +1071,6 @@ export function ScreeningPage(): React.JSX.Element {
                           </Tabs.Trigger>
                         </div>
                       </Tabs.List>
-                    </Tabs.Root>
 
                     <button
                       type="button"
@@ -1111,50 +1110,71 @@ export function ScreeningPage(): React.JSX.Element {
                   </div>
                 </div>
 
-                {readingViewMode === 'pdf_view' && selectedPaper.pdf_path && id ? (
-                  <div className="pdf-embed-container">
-                    <iframe
-                      key={selectedPaper.id}
-                      className="pdf-embed-frame"
-                      title={`PDF — ${selectedPaper.title}`}
-                      src={api.getPaperPdfUrl(id, selectedPaper.id)}
-                    />
-                  </div>
-                ) : (
-                  <Card surface="primaria" relief="afundado" className="abstract-reading-card">
-                    {readingViewMode === 'pdf_text' ? (
-                      loadingPdfText ? (
-                        <div className="empty-abstract-state">
-                          <RefreshCw size={22} className="animate-spin icon-accent" />
-                          <p>Extraindo o texto integral do PDF...</p>
-                        </div>
-                      ) : (
-                        <p className="abstract-text">{pdfExtractedText}</p>
-                      )
-                    ) : selectedPaper.abstract ? (
-                      <p className="abstract-text">{selectedPaper.abstract}</p>
-                    ) : (
-                      <div className="empty-abstract-state">
-                        <AlertCircle size={24} />
-                        <p>Resumo não disponível nos metadados coletados deste registro.</p>
-                        <p className="empty-abstract-hint">
-                          Busque ou anexe o PDF acima para ler o texto completo do estudo.
-                        </p>
-                        {selectedPaper.doi && (
-                          <a
-                            href={`https://doi.org/${selectedPaper.doi}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn-secondary small"
-                          >
-                            <ExternalLink size={13} /> Consultar via DOI
-                          </a>
+                {/* Resumo do abstract: repetido também como fallback de "pdf_view"
+                    sem pdf_path — mesmo comportamento de antes da migração
+                    para Tabs, quando um único ternário cobria os três modos. */}
+                {(() => {
+                  const conteudoResumo = selectedPaper.abstract ? (
+                    <p className="abstract-text">{selectedPaper.abstract}</p>
+                  ) : (
+                    <div className="empty-abstract-state">
+                      <AlertCircle size={24} />
+                      <p>Resumo não disponível nos metadados coletados deste registro.</p>
+                      <p className="empty-abstract-hint">
+                        Busque ou anexe o PDF acima para ler o texto completo do estudo.
+                      </p>
+                      {selectedPaper.doi && (
+                        <a
+                          href={`https://doi.org/${selectedPaper.doi}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary small"
+                        >
+                          <ExternalLink size={13} /> Consultar via DOI
+                        </a>
+                      )}
+                    </div>
+                  )
+                  return (
+                    <>
+                      <Tabs.Content value="abstract" className="tabs-content-passthrough">
+                        <Card surface="primaria" relief="afundado" className="abstract-reading-card">
+                          {conteudoResumo}
+                        </Card>
+                      </Tabs.Content>
+                      <Tabs.Content value="pdf_view" className="tabs-content-passthrough">
+                        {selectedPaper.pdf_path && id ? (
+                          <div className="pdf-embed-container">
+                            <iframe
+                              key={selectedPaper.id}
+                              className="pdf-embed-frame"
+                              title={`PDF — ${selectedPaper.title}`}
+                              src={api.getPaperPdfUrl(id, selectedPaper.id)}
+                            />
+                          </div>
+                        ) : (
+                          <Card surface="primaria" relief="afundado" className="abstract-reading-card">
+                            {conteudoResumo}
+                          </Card>
                         )}
-                      </div>
-                    )}
-                  </Card>
-                )}
+                      </Tabs.Content>
+                      <Tabs.Content value="pdf_text" className="tabs-content-passthrough">
+                        <Card surface="primaria" relief="afundado" className="abstract-reading-card">
+                          {loadingPdfText ? (
+                            <div className="empty-abstract-state">
+                              <RefreshCw size={22} className="animate-spin icon-accent" />
+                              <p>Extraindo o texto integral do PDF...</p>
+                            </div>
+                          ) : (
+                            <p className="abstract-text">{pdfExtractedText}</p>
+                          )}
+                        </Card>
+                      </Tabs.Content>
+                    </>
+                  )
+                })()}
               </div>
+              </Tabs.Root>
             </div>
           </div>
 

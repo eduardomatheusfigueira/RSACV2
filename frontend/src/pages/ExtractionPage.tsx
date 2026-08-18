@@ -687,6 +687,11 @@ export function ExtractionPage(): JSX.Element {
       {selectedPaper ? (
         <div className="extraction-workbench-grid animate-fade-in">
           {/* ── COLUNA DA ESQUERDA: LEITURA DO ARTIGO (ABSTRACT & METADATA) ── */}
+          <Tabs.Root
+            className="view-mode-tabs-root"
+            value={readingViewMode}
+            onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_text')}
+          >
           <div
             className={`paper-reading-pane ${isDragOver ? 'drag-over-active' : ''}`}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }}
@@ -712,28 +717,22 @@ export function ExtractionPage(): JSX.Element {
 
                 {/* Alternador de Visão: Resumo <-> Texto Integral */}
                 {hasPdf && (
-                  <Tabs.Root
-                    className="view-mode-tabs-root"
-                    value={readingViewMode}
-                    onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_text')}
-                  >
-                    <Tabs.List asChild>
-                      <div className="view-mode-toggle-group">
-                        <Tabs.Trigger
-                          value="abstract"
-                          className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
-                        >
-                          <BookOpen size={11} /> Resumo
-                        </Tabs.Trigger>
-                        <Tabs.Trigger
-                          value="pdf_text"
-                          className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
-                        >
-                          <FileCode size={11} /> Texto do PDF
-                        </Tabs.Trigger>
-                      </div>
-                    </Tabs.List>
-                  </Tabs.Root>
+                  <Tabs.List asChild>
+                    <div className="view-mode-toggle-group">
+                      <Tabs.Trigger
+                        value="abstract"
+                        className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
+                      >
+                        <BookOpen size={11} /> Resumo
+                      </Tabs.Trigger>
+                      <Tabs.Trigger
+                        value="pdf_text"
+                        className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
+                      >
+                        <FileCode size={11} /> Texto do PDF
+                      </Tabs.Trigger>
+                    </div>
+                  </Tabs.List>
                 )}
 
                 {/* Botão de Anexar / Substituir PDF Local */}
@@ -948,8 +947,8 @@ export function ExtractionPage(): JSX.Element {
                   className="abstract-reading-card academic-reader-body"
                   style={{ fontSize: `${fontSizeLevel}px` }}
                 >
-                  {readingViewMode === 'abstract' ? (
-                    selectedPaper.abstract ? (
+                  <Tabs.Content value="abstract">
+                    {selectedPaper.abstract ? (
                       <div className="academic-paragraphs-container">
                         {structuredParagraphs.map((p, idx) => (
                           <p key={idx} className="academic-paragraph">
@@ -981,9 +980,10 @@ export function ExtractionPage(): JSX.Element {
                           )}
                         </div>
                       </div>
-                    )
-                  ) : (
-                    /* Visualizador de Texto do PDF Formatado */
+                    )}
+                  </Tabs.Content>
+                  <Tabs.Content value="pdf_text">
+                    {/* Visualizador de Texto do PDF Formatado */}
                     <div className="pdf-text-viewer">
                       {loadingPdfText ? (
                         <div className="pdf-loading-state">
@@ -1015,11 +1015,12 @@ export function ExtractionPage(): JSX.Element {
                         </div>
                       )}
                     </div>
-                  )}
+                  </Tabs.Content>
                 </div>
               </div>
             </div>
           </div>
+          </Tabs.Root>
 
           {/* ── COLUNA DA DIREITA: FORMULÁRIO DE EXTRAÇÃO COM ASSISTÊNCIA INDIVIDUAL ── */}
           <div className="extraction-form-pane">

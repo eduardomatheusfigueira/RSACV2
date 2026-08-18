@@ -1085,8 +1085,10 @@
   margin-left: auto;
 }
 
-/* O wrapper do Radix Tabs.Root não deve virar item extra do flex row. */
-.screening-page .view-mode-tabs-root {
+/* O wrapper do Radix Tabs.Root não deve virar item extra do flex row, nem o
+   Tabs.Content virar item extra da coluna flex de .study-abstract-container. */
+.screening-page .view-mode-tabs-root,
+.screening-page .tabs-content-passthrough {
   display: contents;
 }
 
