@@ -875,12 +875,12 @@ export function SettingsPage(): JSX.Element {
                   <span className="theme-card-name">{t.name}</span>
                 </div>
                 <p className="theme-card-subtitle">{t.subtitle}</p>
-                <div className="theme-color-swatches">
-                  <span className="swatch" style={{ background: t.colors.c1 }} title={`Cor 1: ${t.colors.c1}`} />
-                  <span className="swatch" style={{ background: t.colors.c2 }} title={`Cor 2: ${t.colors.c2}`} />
-                  <span className="swatch" style={{ background: t.colors.c3 }} title={`Cor 3: ${t.colors.c3}`} />
-                  <span className="swatch" style={{ background: t.colors.c4 }} title={`Cor 4: ${t.colors.c4}`} />
-                  <span className="swatch" style={{ background: t.colors.c5 }} title={`Cor 5: ${t.colors.c5}`} />
+                <div className="theme-color-swatches" aria-label="Amostras de cores do tema">
+                  <span className="swatch" style={{ backgroundColor: t.colors.c1 }} title={`Cor 1: ${t.colors.c1}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c2 }} title={`Cor 2: ${t.colors.c2}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c3 }} title={`Cor 3: ${t.colors.c3}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c4 }} title={`Cor 4: ${t.colors.c4}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c5 }} title={`Cor 5: ${t.colors.c5}`} />
                 </div>
                 {isSelected && (
                   <div className="theme-selected-badge">
