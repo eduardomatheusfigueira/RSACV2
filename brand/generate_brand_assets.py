@@ -57,16 +57,30 @@ DIR_RESOURCES = FRONTEND / "resources"  # assets embarcados em runtime
 DIR_PUBLIC = FRONTEND / "public"     # servidos pelo Vite (favicon)
 
 # ══════════════════════════════════════════════════════════════════════════
-# PALETA DE MARCA — "Organic Earth", a paleta-mãe do RSAC V2
+# PALETA DE MARCA — "Platinum & Dusk Blue", a paleta padrão fixa dos ícones
 # ══════════════════════════════════════════════════════════════════════════
+#
+# Estes assets são estáticos (favicon, .ico/.icns do executável, arte do
+# instalador) — carregados pelo SO/navegador antes do React montar, então
+# não têm como reagir à paleta escolhida em tempo de execução como o
+# monograma dentro do app (`RsacMark`, ver Brand.css) já faz. Por não poder
+# ser dinâmico, o padrão fixo é a paleta "platinum-dusk" — ver o pedido do
+# usuário e `[data-theme='platinum-dusk']` em `frontend/src/styles/globals.css`.
+#
+# Cada constante abaixo é o valor literal do token de mesmo nome nesse bloco
+# (--black-forest, --olive-leaf, --cornsilk, --sunlit-clay, --copperwood):
+# a paleta é propositalmente mais monocromática que a Organic Earth original
+# (plataforma neutra + um único azul de acento), então algumas colapsam no
+# mesmo tom — não é engano de digitação.
 
-BLACK_FOREST = "#283618"
-FOREST_DEEP = "#171f0d"   # base do gradiente do contêiner
-FOREST_LIFT = "#3d5324"   # topo do gradiente do contêiner
-OLIVE_LEAF = "#606c38"
-CORNSILK = "#fefae0"
-SUNLIT_CLAY = "#dda15e"
-COPPERWOOD = "#bc6c25"
+BLACK_FOREST = "#274c77"
+FOREST_DEEP = "#1a3350"   # base do gradiente do contêiner (--color-bg-sidebar)
+FOREST_LIFT = "#274c77"   # topo do gradiente do contêiner (--black-forest)
+OLIVE_LEAF = "#6096ba"
+CORNSILK = "#ffffff"
+SUNLIT_CLAY = "#6096ba"
+COPPERWOOD = "#274c77"
+MUTED_CAPTION_ON_DARK = "#cbd8e4"  # legenda sobre o fundo escuro (--color-text-sidebar)
 
 # ══════════════════════════════════════════════════════════════════════════
 # GEOMETRIA CANÔNICA DO MONOGRAMA  (grade 80 × 100)
@@ -197,7 +211,10 @@ def app_icon(size: int = 1024, beta: bool = True) -> str:
     mx = (S - MARK_W * k) / 2
     my = (S - m) / 2 + S * dy
 
-    seal = beta_seal(S / 2, S * 0.836, S * 0.132) if beta else ""
+    # fg=CORNSILK (não o default BLACK_FOREST): o --sunlit-clay de platinum-dusk
+    # é um azul médio, não o dourado claro da Organic Earth — texto escuro nele
+    # mede ~2.5:1; branco mede ~4.4:1. Ver nota junto a SUNLIT_CLAY.
+    seal = beta_seal(S / 2, S * 0.836, S * 0.132, fg=CORNSILK) if beta else ""
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {S:.0f} {S:.0f}" width="{size}" height="{size}">
  <defs>
@@ -221,7 +238,7 @@ def lockup(on_dark: bool = True, with_beta: bool = True) -> str:
     linha-base do logotipo com a linha-base do monograma."""
     ink = CORNSILK if on_dark else BLACK_FOREST
     accent = SUNLIT_CLAY if on_dark else COPPERWOOD
-    sub = "#9aab6b" if on_dark else OLIVE_LEAF
+    sub = MUTED_CAPTION_ON_DARK if on_dark else OLIVE_LEAF
 
     H = MARK_H
     cap = 44.0                     # altura-de-caixa do logotipo
@@ -319,7 +336,7 @@ def installer_sidebar(w: int = 164, h: int = 314) -> str:
 
     inner = w - 20.0
     word = text_centered("RSAC", 22.0, w / 2, y + 40, CORNSILK, 6.0, inner)
-    ver = text_centered("VERSÃO 2", 9.5, w / 2, y + 58, "#9aab6b", 7.0, inner)
+    ver = text_centered("VERSÃO 2", 9.5, w / 2, y + 58, MUTED_CAPTION_ON_DARK, 7.0, inner)
     tag1 = text_centered("PLATAFORMA DE REVISÃO", 6.5, w / 2, h - 30, OLIVE_LEAF, 3.0, inner)
     tag2 = text_centered("SISTEMÁTICA ASSISTIDA", 6.5, w / 2, h - 20, OLIVE_LEAF, 3.0, inner)
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">
@@ -331,7 +348,7 @@ def installer_sidebar(w: int = 164, h: int = 314) -> str:
  <g transform="translate({mx:.2f} {my:.2f}) scale({k:.5f})">{mark_group(CORNSILK, SUNLIT_CLAY)}</g>
  {word}{ver}
  <rect x="{w*0.30:.1f}" y="{y+76:.1f}" width="{w*0.40:.1f}" height="1" fill="{OLIVE_LEAF}"/>
- {beta_seal(w / 2, y + 100, 19, SUNLIT_CLAY, BLACK_FOREST)}
+ {beta_seal(w / 2, y + 100, 19, SUNLIT_CLAY, CORNSILK)}
  {tag1}{tag2}
 </svg>'''
 
@@ -345,14 +362,14 @@ def installer_header(w: int = 150, h: int = 57) -> str:
     x_text = 12 + MARK_W * k + 10
     word, _ = text_group("RSAC", cap, x_text, 26, CORNSILK, 5.0)
     vcap = 7.0
-    ver, _ = text_group("VERSÃO 2", vcap, x_text + 1, 39, "#9aab6b", 5.0)
+    ver, _ = text_group("VERSÃO 2", vcap, x_text + 1, 39, MUTED_CAPTION_ON_DARK, 5.0)
     sh = 13.0
     sw = text_width("BETA", sh * 0.46, 14.0) + sh * 0.84
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">
  <rect width="{w}" height="{h}" fill="{FOREST_DEEP}"/>
  <g transform="translate(12 {(h - mh) / 2:.2f}) scale({k:.5f})">{mark_group(CORNSILK, SUNLIT_CLAY)}</g>
  {word}{ver}
- {beta_seal(x_text + tw + 9 + sw / 2, 21, sh, SUNLIT_CLAY, BLACK_FOREST)}
+ {beta_seal(x_text + tw + 9 + sw / 2, 21, sh, SUNLIT_CLAY, CORNSILK)}
  <rect x="0" y="{h - 2}" width="{w}" height="2" fill="{SUNLIT_CLAY}"/>
 </svg>'''
 
