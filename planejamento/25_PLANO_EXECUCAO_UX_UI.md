@@ -226,7 +226,7 @@ sem comando tipado não há o que anunciar.
 
 ---
 
-## 25.8 Fase 6 — Conteúdo dependente da diretriz 🟡 (rótulos feitos, modelos pendentes)
+## 25.8 Fase 6 — Conteúdo dependente da diretriz ✅ CONCLUÍDA
 
 **Objetivo**: o achado A8 — o app exibir numeração do PRISMA-ScR sob CEE/ROSES
 é erro de conteúdo metodológico, não detalhe cosmético.
@@ -238,7 +238,26 @@ sem comando tipado não há o que anunciar.
 | 6.3 | Substituir "Conforme PRISMA-ScR Item n" pelo texto do catálogo | Corpo do formulário correto |
 | 6.4 | Corrigir "checklist PRISMA-ScR (22 itens)" no ribbon | Nome e contagem da diretriz ativa |
 | 6.5 | Tornar o diagrama de fluxo consciente da diretriz | Rótulo e etapas conforme a metodologia |
-| 6.6 | Cobrir os rótulos "ITEM n — ESSENCIAL" | Vêm do catálogo |
+| 6.6 ✅ | Cobrir os rótulos "ITEM n — ESSENCIAL" | Vêm do catálogo |
+| 6.7 ✅ | Modelos de texto inseríveis no manuscrito | Nomeiam a diretriz ATIVA |
+
+> **Nota sobre 6.7.** Sobravam cinco modelos que o pesquisador insere no
+> manuscrito e que citavam diretriz fixa na própria prosa — o pior deles
+> oferecia, num projeto CEE/ROSES, a frase "em conformidade com as diretrizes
+> do Joanna Briggs Institute (JBI) e da extensão PRISMA-ScR". Não é rótulo
+> errado: é texto metodológico falso entrando no manuscrito do pesquisador.
+>
+> A correção não precisou de um modelo por diretriz, como se supunha. Bastou o
+> modelo **nomear a diretriz ativa** em vez de uma fixa, lendo
+> `currentProtocolDef` — o mesmo caminho que `getFieldGuideline` já usava para
+> a ajuda de campo. Onde o texto citava o framework (`PCC`), passou a ler
+> `defaultFramework`; onde citava "fluxograma PRISMA 2020", passou a descrever
+> o fluxograma que o próprio RSAC gera, que é o que de fato acontece.
+>
+> Conferido no navegador com um projeto CEE/ROSES: o modelo inserido cita
+> "CEE / ROSES — Evidências Socioambientais (Haddaway NR, Macura B, …)".
+>
+> A regra **R7** do verificador desceu de teto 5 para **0**.
 
 **Critérios de aceite**
 

@@ -1030,7 +1030,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                     type="button"
                     className="btn-insert-template"
                     onClick={() => {
-                      const template = `O protocolo desta scoping review foi desenvolvido a priori em conformidade com as diretrizes PRISMA-P e PRISMA-ScR, registrado na plataforma Open Science Framework (OSF) sob o DOI: https://doi.org/10.17605/OSF.IO/XXXXX em DD/MM/AAAA.`
+                      const template = `O protocolo desta revisão foi desenvolvido a priori em conformidade com ${currentProtocolDef.name}, registrado na plataforma Open Science Framework (OSF) sob o DOI: https://doi.org/10.17605/OSF.IO/XXXXX em DD/MM/AAAA.`
                       if (manuscript.protocol_registration && !window.confirm('Substituir dados de registro pelo modelo?')) return
                       updateManuscriptField('protocol_registration', template)
                     }}
@@ -2050,7 +2050,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                     type="button"
                     className="btn-insert-template"
                     onClick={() => {
-                      const template = `Em conformidade com as diretrizes do Joanna Briggs Institute (JBI) e da extensão PRISMA-ScR (Tricco et al., 2018), a avaliação formal de risco de viés e qualidade metodológica individual não foi realizada, tendo em vista que o objetivo central desta scoping review é mapear abrangentemente a literatura existente sobre o desenvolvimento regional e políticas públicas, independentemente do desenho metodológico das pesquisas primárias.`
+                      const template = `Em conformidade com ${currentProtocolDef.name} (${currentProtocolDef.reference}), a avaliação formal de risco de viés e qualidade metodológica individual não foi realizada, tendo em vista que o objetivo central desta revisão é mapear abrangentemente a literatura existente, independentemente do desenho metodológico das pesquisas primárias.`
                       if (manuscript.critical_appraisal && !window.confirm('Substituir justificativa de dispensa pelo modelo?')) return
                       updateManuscriptField('critical_appraisal', template)
                     }}
@@ -2074,7 +2074,7 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
             <textarea
               rows={4}
               className="protocol-textarea"
-              placeholder="Ex: Em conformidade com o framework de Arksey & O'Malley e com o PRISMA-ScR, a avaliação formal de risco de viés não foi realizada por se tratar de um mapeamento abrangente da extensão das evidências."
+              placeholder={`Ex: Em conformidade com ${currentProtocolDef.name}, a avaliação formal de risco de viés não foi realizada por se tratar de um mapeamento abrangente da extensão das evidências.`}
               value={manuscript.critical_appraisal}
               onChange={(e) => updateManuscriptField('critical_appraisal', e.target.value)}
             />
@@ -2129,13 +2129,13 @@ Os dados foram cruzados e eventuais omissões foram esclarecidas por contato dir
                     className="btn-insert-template"
                     onClick={() => {
                       const template = `Síntese Narrativa e Temática:
-Os dados extraídos serão agrupados por eixos temáticos (ex: tipologia de governança, setor produtivo, instrumentos de fomento) alinhados ao framework PCC.
+Os dados extraídos serão agrupados por eixos temáticos (ex: tipologia de governança, setor produtivo, instrumentos de fomento) alinhados ao framework ${currentProtocolDef.defaultFramework}.
 
 Apresentação Tabular e Mapeamento:
 Elaboração de tabelas descritivas detalhando autoria, ano, território/região de estudo, metodologia empregada e principais achados socioeconômicos.
 
 Diagramas e Representações Visuais:
-Geração de gráficos de distribuição cronológica e geográfica das pesquisas, acompanhados pelo fluxograma PRISMA 2020 de seleção.
+Geração de gráficos de distribuição cronológica e geográfica das pesquisas, acompanhados pelo fluxograma de seleção (identificação, triagem, elegibilidade e inclusão) que o RSAC gera na Exportação.
 
 Matriz de Identificação de Lacunas (Gap Analysis):
 Construção de matriz estruturada para apontar territórios e temas com carência de evidências empíricas.`

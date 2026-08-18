@@ -115,12 +115,11 @@ const REGRAS = [
   {
     id: 'R7',
     nome: 'diretriz metodológica fixa no JSX',
-    // Dívida conhecida (5): modelos de texto que o pesquisador INSERE no
-    // manuscrito citam PRISMA-P/ScR na própria prosa. Sob CEE/ROSES o modelo
-    // fica errado, mas corrigir exige redigir um modelo por diretriz — é
-    // conteúdo da Fase 6 (doc 25 § 25.8), não ajuste de rótulo. O teto impede
-    // que o número cresça enquanto isso.
-    teto: 5,
+    // Fechada em 18/08/2026. Os cinco modelos de texto que citavam PRISMA-P/ScR
+    // na própria prosa passaram a ler `currentProtocolDef` — o mesmo caminho
+    // que `getFieldGuideline` já usava. Não foi preciso um modelo por diretriz:
+    // bastou o modelo nomear a diretriz ATIVA em vez de uma fixa.
+    teto: 0,
     arquivos: /\.tsx$/,
     isento: (rel) => rel.includes('src/data/protocol'),
     // Só o texto VISÍVEL é violação. Uma string cujo conteúdo inteiro é o nome
