@@ -17,7 +17,7 @@ import {
 import { api } from '@/api/client'
 import { PageHeader, Button, Card, EmptyState, LoadingState } from '@/components/ui'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import type { Project } from '@/types/api'
+import type { Project, ProjectStats } from '@/types/api'
 import './DashboardPage.css'
 
 export function DashboardPage(): JSX.Element {
@@ -25,6 +25,11 @@ export function DashboardPage(): JSX.Element {
   const { backendStatus, activeProject, setActiveProject } = useSettingsStore()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  /* Os três números do acervo mostravam "—" desde sempre, e o backend já os
+     servia em `/projects/:id/stats`. Faltava ligar. O escopo é o projeto ativo:
+     somar todos exigiria uma requisição por projeto, e a pergunta que o painel
+     responde é "onde está a MINHA revisão", não "quantos artigos há no disco". */
+  const [stats, setStats] = useState<ProjectStats | null>(null)
 
   useEffect(() => {
     if (backendStatus === 'online') {
@@ -42,6 +47,27 @@ export function DashboardPage(): JSX.Element {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (backendStatus !== 'online' || !activeProject) {
+      setStats(null)
+      return
+    }
+    let cancelado = false
+    api
+      .getProjectStats(activeProject.id)
+      .then((s) => {
+        if (!cancelado) setStats(s)
+      })
+      .catch((err) => console.error('Erro ao carregar métricas do projeto ativo:', err))
+    return () => {
+      cancelado = true
+    }
+  }, [backendStatus, activeProject?.id])
+
+  /* Sem projeto ativo não há acervo a contar — "—" é a resposta honesta, e
+     diferente de "0", que afirmaria um acervo vazio. */
+  const numero = (v: number | undefined): string => (v === undefined ? '—' : String(v))
 
   const handleOpenProject = (project: Project) => {
     setActiveProject(project)
@@ -65,12 +91,20 @@ export function DashboardPage(): JSX.Element {
           embutido no JSX — inclusive o par cor/tinta, que o verificador não
           alcança dentro de `style={{}}`. Agora é uma lista de dados sobre
           <Card>, e a cor de cada tom sai dos tokens medidos. */}
+      <p className="dashboard-stats-escopo">
+        {activeProject ? (
+          <>Acervo do projeto ativo: <strong>{activeProject.title}</strong></>
+        ) : (
+          'Selecione um projeto para ver o acervo. Os números abaixo dependem dele.'
+        )}
+      </p>
+
       <div className="dashboard-stats">
         {[
           { tom: 'acento', icone: <FolderOpen size={22} />, valor: String(projects.length), rotulo: 'Projetos Ativos' },
-          { tom: 'info', icone: <FileText size={22} />, valor: '—', rotulo: 'Papers Coletados' },
-          { tom: 'sucesso', icone: <CheckCircle2 size={22} />, valor: '—', rotulo: 'Papers Incluídos' },
-          { tom: 'aviso', icone: <Clock size={22} />, valor: '—', rotulo: 'Pendentes de Triagem' },
+          { tom: 'info', icone: <FileText size={22} />, valor: numero(stats?.total_papers), rotulo: 'Artigos Coletados' },
+          { tom: 'sucesso', icone: <CheckCircle2 size={22} />, valor: numero(stats?.included_papers), rotulo: 'Artigos Incluídos' },
+          { tom: 'aviso', icone: <Clock size={22} />, valor: numero(stats?.pending_papers), rotulo: 'Pendentes de Triagem' },
         ].map((n) => (
           <Card key={n.rotulo} className="stat-card">
             <div className={`stat-icon stat-icon--${n.tom}`} aria-hidden="true">

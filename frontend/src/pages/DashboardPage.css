@@ -35,6 +35,12 @@
 }
 
 /* Stats */
+.dashboard-stats-escopo {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

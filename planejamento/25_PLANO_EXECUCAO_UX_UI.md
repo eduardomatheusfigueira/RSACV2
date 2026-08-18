@@ -260,9 +260,24 @@ sem comando tipado não há o que anunciar.
 | 7.5 | Idem para Triagem, Configurações e Extração | Regra R-5 |
 | 7.6 | Tokens de movimento e `prefers-reduced-motion` global | § 24.8 |
 | 7.7 | Esqueletos de carregamento no lugar dos spinners centrais | § 24.9 |
-| 7.8 | Toasts com `sonner` para sucesso fora da vista | Já instalado |
-| 7.9 | Gráficos reais no dashboard (pendência doc 12 § 4.9) | Decidir: `recharts` ou remover a dependência |
+| 7.8 ✅ | Toasts com `sonner` para sucesso fora da vista | Conclusão de coleta e de triagem em lote; erros de domínio do log store |
+| 7.9 ✅ | Gráficos reais no dashboard (pendência doc 12 § 4.9) | **Decidido: remover `recharts`.** Ver nota abaixo |
 | 7.10 | Passada de acabamento: alinhamento óptico, ritmo, alinhamento de ícones | Julgamento visual, tela a tela |
+
+> **Nota sobre 7.9 — por que não há gráfico.** A pendência do doc 12 § 4.9
+> pressupunha que faltavam gráficos. Ao abrir o Painel, o que faltava era
+> outra coisa: três dos quatro números mostravam `—` porque ninguém tinha
+> ligado `/projects/:id/stats`, que o backend já servia. Ligados, mostram o
+> acervo do projeto ativo — a pergunta que o Painel responde é "onde está a
+> minha revisão", não "quantos artigos há no disco"; somar todos os projetos
+> exigiria uma requisição por projeto para responder pergunta que ninguém faz.
+>
+> Com os números no lugar, `recharts` não tem o que desenhar. Quatro
+> contadores escalares não viram gráfico, e a única visualização real do
+> aplicativo — o fluxograma PRISMA — tem forma prescrita pela diretriz e já é
+> desenhada à mão na Exportação, com boa razão: uma biblioteca genérica de
+> gráficos brigaria com o formato exigido em vez de ajudar. Dependência
+> removida.
 
 **Critérios de aceite**
 
