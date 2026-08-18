@@ -35,7 +35,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
-import { PageHeader, Button, toast } from '@/components/ui'
+import { PageHeader, Button, Card, toast } from '@/components/ui'
 import type {
   HarvestSourceInfo,
   HarvestRun,
@@ -424,7 +424,7 @@ export function HarvestPage(): JSX.Element {
 
           <div className="pane-scroll-body">
             {/* Seção 1: Seleção de Bases */}
-            <div className="harvest-config-card">
+            <Card surface="primaria" className="harvest-config-card">
               <div className="card-mini-title">
                 <h4>1. Bases de Dados Acadêmicas</h4>
                 <span className="meta-hint">{selectedSources.length} ativas</span>
@@ -465,10 +465,10 @@ export function HarvestPage(): JSX.Element {
                   )
                 })}
               </div>
-            </div>
+            </Card>
 
             {/* Seção 2: Descritores Ativos do Protocolo */}
-            <div className="harvest-config-card">
+            <Card surface="primaria" className="harvest-config-card">
               <div className="card-mini-title">
                 <h4>2. Descritores em Pares ({allDescriptors.length})</h4>
                 <button
@@ -493,10 +493,10 @@ export function HarvestPage(): JSX.Element {
                   ))}
                 </div>
               )}
-            </div>
+            </Card>
 
             {/* Seção 3: Recorte Temporal & Limites */}
-            <div className="harvest-config-card">
+            <Card surface="primaria" className="harvest-config-card">
               <div className="card-mini-title">
                 <h4>3. Recorte Vigente & Limites</h4>
               </div>
@@ -535,10 +535,10 @@ export function HarvestPage(): JSX.Element {
                   </select>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Seção 4: Histórico de Execuções */}
-            <div className="harvest-config-card">
+            <Card surface="primaria" className="harvest-config-card">
               <div className="card-mini-title">
                 <h4>
                   <History size={14} className="icon-accent" /> Histórico de Execuções ({harvestRuns.length})
@@ -567,7 +567,7 @@ export function HarvestPage(): JSX.Element {
                   ))}
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         </div>
 
@@ -600,7 +600,7 @@ export function HarvestPage(): JSX.Element {
 
           <div className="pane-scroll-body">
             {/* Progresso Concorrente por Base */}
-            <div className="sources-progress-card">
+            <Card surface="primaria" className="sources-progress-card">
               <div className="sources-progress-header">
                 <h4>Progresso Concorrente por Base:</h4>
                 <div className="feed-filters-inline">
@@ -668,7 +668,7 @@ export function HarvestPage(): JSX.Element {
                   )
                 })}
               </div>
-            </div>
+            </Card>
 
             {/* Visualização de Trabalhos Coletados (Feed Stream) */}
             {feedTab === 'stream' ? (
@@ -708,7 +708,7 @@ export function HarvestPage(): JSX.Element {
               </div>
             ) : (
               /* Terminal Console de Logs */
-              <div className="harvest-terminal-card">
+              <Card surface="primaria" relief="afundado" className="harvest-terminal-card">
                 <div className="terminal-header">
                   <span>Logs de Execução da Coleta & Deduplicação</span>
                   <span className="log-count-tag">{harvestEntries.length} eventos</span>
@@ -730,11 +730,11 @@ export function HarvestPage(): JSX.Element {
                     ))
                   )}
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Banner de Avanço para a Triagem 1 */}
-            <div className="harvest-next-phase-card">
+            <Card surface="primaria" className="harvest-next-phase-card">
               <div className="next-phase-content">
                 <BookOpen size={20} className="icon-accent" />
                 <div>
@@ -751,7 +751,7 @@ export function HarvestPage(): JSX.Element {
               >
                 Avançar para Triagem 1 <ArrowRight size={14} />
               </button>
-            </div>
+            </Card>
           </div>
         </div>
       </div>

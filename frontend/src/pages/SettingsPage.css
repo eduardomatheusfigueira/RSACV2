@@ -7,11 +7,8 @@
 }
 
 /* Master AI Toggle Card */
+/* Moldura no <Card>. */
 .master-ai-toggle-card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-neo-raised);
   padding: var(--space-6);
   display: flex;
   align-items: center;
@@ -116,11 +113,8 @@
   gap: var(--space-6);
 }
 
+/* Moldura no <Card>; aqui só o respiro e o ritmo vertical. */
 .settings-card {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-neo-raised);
   padding: var(--space-6);
   margin-bottom: var(--space-6);
 }
@@ -488,11 +482,8 @@
   }
 }
 
+/* Moldura no <Card surface="primaria">. */
 .portability-card {
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-neo-raised);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;

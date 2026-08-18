@@ -73,21 +73,14 @@
 }
 
 /* Export Cards */
+/* Moldura no <Card>. */
 .export-package-card {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-neo-raised);
   cursor: pointer;
   transition: all var(--transition-fast);
-  width: 100%;
-  text-align: left;
-  font-family: inherit;
-  color: inherit;
 }
 
 .export-package-card:hover {
@@ -155,14 +148,11 @@
   color: var(--color-accent-on-surface);
 }
 
+/* Moldura no <Card>. */
 .export-audit-card {
   margin-top: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
   border-left: 3px solid var(--color-accent);
-  border-radius: var(--radius-xs);
-  box-shadow: var(--shadow-neo-raised);
 }
 
 .audit-content {

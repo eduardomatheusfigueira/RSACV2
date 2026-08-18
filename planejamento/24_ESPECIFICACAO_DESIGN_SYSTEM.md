@@ -322,8 +322,13 @@ um componente solto (doc 25 § 25.11, risco 2):
 | `.source-card-item`, `.feed-item-card` | `secundaria` | `afundado` |
 | `.project-card-full`, `.model-option-card` | `secundaria` | `plano` |
 
-Migrados até aqui: Painel (`.stat-card`, `.project-card`) e Projetos
-(`.project-card-full`), como referência do padrão.
+Um cartão pode **ser** o controle — os pacotes da Exportação abrem o download
+ao serem clicados. Para esses, `as="button"`: a moldura sobre um elemento
+nativo, em vez de `<div role="button">` reimplementando o teclado à mão.
+
+Migradas por inteiro até aqui: **Painel, Projetos, Configurações, Coleta e
+Exportação**. Faltam Protocolo, Triagem e Extração — as três acima de 1200
+linhas, que pedem passada própria.
 
 ---
 

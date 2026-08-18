@@ -59,6 +59,18 @@
   box-shadow: none;
 }
 
+/* ── Cartão que É o controle ───────────────────────────────────────── */
+/* O reset global zera borda e fundo de `button`; a moldura vem das classes
+   acima, com especificidade maior. Falta devolver a caixa de bloco que o
+   layout espera de um cartão. */
+.rsac-card--controle {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
 /* ── Ênfase ────────────────────────────────────────────────────────── */
 .rsac-card--acentuado {
   border-left: 3px solid var(--color-accent);

@@ -15,21 +15,30 @@ import './Card.css'
 export type CardSurface = 'primaria' | 'secundaria'
 export type CardRelief = 'elevado' | 'afundado' | 'plano'
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends React.HTMLAttributes<HTMLElement> {
   surface?: CardSurface
   relief?: CardRelief
   /** Filete de acento na borda esquerda: marca o cartão em foco ou ativo. */
   accented?: boolean
   compact?: boolean
+  /**
+   * Alguns cartões SÃO o controle — os pacotes da Exportação abrem o download
+   * ao serem clicados. Nesses, a moldura precisa vir sobre um `<button>`, senão
+   * o teclado não chega neles. A alternativa, `<div role="button">`, é pior:
+   * reimplementa à mão o que o elemento nativo já faz.
+   */
+  as?: 'div' | 'button' | 'li' | 'article' | 'section'
+  type?: 'button' | 'submit' | 'reset'
 }
 
-export const Card = forwardRef<HTMLDivElement, CardProps>(
+export const Card = forwardRef<HTMLElement, CardProps>(
   (
     {
       surface = 'secundaria',
       relief = 'elevado',
       accented = false,
       compact = false,
+      as: Elemento = 'div',
       className = '',
       children,
       ...props
@@ -42,15 +51,21 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       `rsac-card--${relief}`,
       accented ? 'rsac-card--acentuado' : '',
       compact ? 'rsac-card--compact' : '',
+      Elemento === 'button' ? 'rsac-card--controle' : '',
       className,
     ]
       .filter(Boolean)
       .join(' ')
 
     return (
-      <div ref={ref} className={classNames} {...props}>
+      <Elemento
+        ref={ref as never}
+        className={classNames}
+        {...(Elemento === 'button' ? { type: props.type ?? 'button' } : {})}
+        {...props}
+      >
         {children}
-      </div>
+      </Elemento>
     )
   }
 )

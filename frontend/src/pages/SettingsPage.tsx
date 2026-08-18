@@ -36,7 +36,7 @@ import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { RsacLockup } from '@/components/brand/RsacLockup'
-import { PageHeader, Button } from '@/components/ui'
+import { PageHeader, Button, Card } from '@/components/ui'
 import './SettingsPage.css'
 
 export interface ColorThemeOption {
@@ -688,7 +688,7 @@ export function SettingsPage(): JSX.Element {
       />
 
       {/* Master AI Toggle Card */}
-      <div className={`master-ai-toggle-card ${isAiActive ? 'ai-active' : 'ai-disabled'}`}>
+      <Card className={`master-ai-toggle-card ${isAiActive ? 'ai-active' : 'ai-disabled'}`}>
         <div className="master-toggle-info">
           <div className="master-toggle-icon">
             {isAiActive ? <Sparkles size={28} /> : <Edit3 size={28} />}
@@ -719,10 +719,10 @@ export function SettingsPage(): JSX.Element {
             <Edit3 size={15} /> Modo Manual
           </button>
         </div>
-      </div>
+      </Card>
 
       {/* ── SEÇÃO DE PORTABILIDADE: CHAVES & PERFIL COMPLETO ── */}
-      <div className="settings-card portability-section">
+      <Card className="settings-card portability-section">
         <div className="card-section-title">
           <FolderArchive size={20} className="icon-accent" />
           <h2>Portabilidade & Transferência entre Computadores</h2>
@@ -733,7 +733,7 @@ export function SettingsPage(): JSX.Element {
 
         <div className="portability-cards-grid">
           {/* Card 1: Chaves de API */}
-          <div className="portability-card">
+          <Card surface="primaria" className="portability-card">
             <div className="portability-header">
               <div className="portability-icon">
                 <KeyRound size={22} />
@@ -786,10 +786,10 @@ export function SettingsPage(): JSX.Element {
                 onChange={handleImportKeysFile}
               />
             </div>
-          </div>
+          </Card>
 
           {/* Card 2: Perfil Completo */}
-          <div className="portability-card">
+          <Card surface="primaria" className="portability-card">
             <div className="portability-header">
               <div className="portability-icon">
                 <FolderArchive size={22} />
@@ -842,12 +842,12 @@ export function SettingsPage(): JSX.Element {
                 onChange={handleImportProfileFile}
               />
             </div>
-          </div>
+          </Card>
         </div>
-      </div>
+      </Card>
 
       {/* ── Theme & Color Palette Selection Card ── */}
-      <div className="settings-card theme-palette-card">
+      <Card className="settings-card theme-palette-card">
         <div className="card-section-title">
           <Palette size={20} className="icon-accent" />
           <h2>Aparência & Paletas de Cores do Sistema</h2>
@@ -917,12 +917,12 @@ export function SettingsPage(): JSX.Element {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="settings-grid" style={{ opacity: isAiActive ? 1 : 0.6 }}>
         {/* Left Column: AI Provider & Models Catalog */}
         <div className="settings-col">
-          <div className="settings-card">
+          <Card className="settings-card">
             <div className="card-section-title">
               <Sparkles size={20} className="icon-accent" />
               <h2>Provedor de Assistência</h2>
@@ -1226,12 +1226,12 @@ export function SettingsPage(): JSX.Element {
                 </div>
               )}
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Right Column: Hyperparameters & Preferences */}
         <div className="settings-col">
-          <div className="settings-card">
+          <Card className="settings-card">
             <div className="card-section-title">
               <Sliders size={20} className="icon-accent" />
               <h2>Hiperparâmetros de Inferência</h2>
@@ -1274,10 +1274,10 @@ export function SettingsPage(): JSX.Element {
                 <option value={16384}>16.384 tokens (Para Extração Extensa)</option>
               </select>
             </div>
-          </div>
+          </Card>
 
           {/* Scientific Sources Credentials Card */}
-          <div className="settings-card" style={{ marginTop: 'var(--space-4)' }}>
+          <Card className="settings-card" style={{ marginTop: 'var(--space-4)' }}>
             <div className="card-section-title">
               <Globe size={20} className="icon-accent" />
               <h2>Credenciais de Bases Científicas</h2>
@@ -1369,7 +1369,7 @@ export function SettingsPage(): JSX.Element {
                 </span>
               )}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
