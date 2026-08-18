@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import * as Tabs from '@radix-ui/react-tabs'
 import {
   FileText,
   Sparkles,
@@ -711,22 +712,28 @@ export function ExtractionPage(): JSX.Element {
 
                 {/* Alternador de Visão: Resumo <-> Texto Integral */}
                 {hasPdf && (
-                  <div className="view-mode-toggle-group">
-                    <button
-                      type="button"
-                      className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
-                      onClick={() => handleToggleReadingView('abstract')}
-                    >
-                      <BookOpen size={11} /> Resumo
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
-                      onClick={() => handleToggleReadingView('pdf_text')}
-                    >
-                      <FileCode size={11} /> Texto do PDF
-                    </button>
-                  </div>
+                  <Tabs.Root
+                    className="view-mode-tabs-root"
+                    value={readingViewMode}
+                    onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_text')}
+                  >
+                    <Tabs.List asChild>
+                      <div className="view-mode-toggle-group">
+                        <Tabs.Trigger
+                          value="abstract"
+                          className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
+                        >
+                          <BookOpen size={11} /> Resumo
+                        </Tabs.Trigger>
+                        <Tabs.Trigger
+                          value="pdf_text"
+                          className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
+                        >
+                          <FileCode size={11} /> Texto do PDF
+                        </Tabs.Trigger>
+                      </div>
+                    </Tabs.List>
+                  </Tabs.Root>
                 )}
 
                 {/* Botão de Anexar / Substituir PDF Local */}

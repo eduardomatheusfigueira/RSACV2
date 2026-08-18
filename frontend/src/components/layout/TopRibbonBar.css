@@ -194,6 +194,15 @@
 /* ═══════════════════════════════════════════════════════════════════
    LAYER 2: TAB BAR
 ═══════════════════════════════════════════════════════════════════ */
+/* O Radix Tabs.Root/Tabs.Content injetam um <div> wrapper para viabilizar
+   navegação por teclado; display:contents remove esse wrapper do fluxo do
+   flexbox para que .ribbon-tabs-bar / .ribbon-toolstrip continuem tratando
+   seus filhos reais (nav, GrupoDoRibbon, divisores) como itens diretos. */
+.ribbon-tabs-root,
+.ribbon-toolstrip [role='tabpanel'] {
+  display: contents;
+}
+
 .ribbon-tabs-bar {
   display: flex;
   align-items: flex-end;

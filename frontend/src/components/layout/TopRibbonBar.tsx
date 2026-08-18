@@ -15,6 +15,7 @@
  */
 
 import { useLocation, useNavigate } from 'react-router-dom'
+import * as Tabs from '@radix-ui/react-tabs'
 import {
   LayoutDashboard,
   FolderOpen,
@@ -208,60 +209,67 @@ export function TopRibbonBar(): JSX.Element {
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          LAYER 2: WORKFLOW NAVIGATION TABS
-          The pipeline ribbon tabs (Project → Protocol → Harvest → Screen → Extract → Export)
-      ═══════════════════════════════════════════════════════════════════ */}
-      <div className="ribbon-tabs-bar">
-        <nav className="ribbon-tabs-nav" aria-label="Navegação da Revisão Sistemática">
-          {RIBBON_TABS.map((tab) => {
-            const active = isTabActive(tab)
-            const disabled = tab.requiresProject && !activeProject
+      <Tabs.Root
+        className="ribbon-tabs-root"
+        value={currentTab.id}
+        onValueChange={(id) => {
+          const tab = RIBBON_TABS.find((t) => t.id === id)
+          if (!tab) return
+          if (tab.requiresProject && !activeProject) {
+            navigate('/projects')
+            return
+          }
+          navigate(resolvePath(tab))
+        }}
+      >
+        {/* ═══════════════════════════════════════════════════════════════
+            LAYER 2: WORKFLOW NAVIGATION TABS
+            The pipeline ribbon tabs (Project → Protocol → Harvest → Screen → Extract → Export)
+        ═══════════════════════════════════════════════════════════════ */}
+        <div className="ribbon-tabs-bar">
+          <Tabs.List asChild>
+            <nav className="ribbon-tabs-nav" aria-label="Navegação da Revisão Sistemática">
+              {RIBBON_TABS.map((tab) => {
+                const active = isTabActive(tab)
+                const disabled = tab.requiresProject && !activeProject
 
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                className={`ribbon-tab-btn ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
-                disabled={disabled}
-                onClick={() => {
-                  if (tab.requiresProject && !activeProject) {
-                    navigate('/projects')
-                    return
-                  }
-                  navigate(resolvePath(tab))
-                }}
-                title={
-                  disabled
-                    ? 'Selecione ou crie um projeto primeiro'
-                    : tab.stepNumber
-                    ? `Etapa ${tab.stepNumber}: ${tab.label}`
-                    : tab.label
-                }
-              >
-                {tab.stepNumber && <span className="tab-step-num">{tab.stepNumber}</span>}
-                <span className="ribbon-tab-icon">{tab.icon}</span>
-                <span className="ribbon-tab-label">{tab.label}</span>
-              </button>
-            )
-          })}
-        </nav>
-      </div>
+                return (
+                  <Tabs.Trigger
+                    key={tab.id}
+                    value={tab.id}
+                    className={`ribbon-tab-btn ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
+                    disabled={disabled}
+                    title={
+                      disabled
+                        ? 'Selecione ou crie um projeto primeiro'
+                        : tab.stepNumber
+                        ? `Etapa ${tab.stepNumber}: ${tab.label}`
+                        : tab.label
+                    }
+                  >
+                    {tab.stepNumber && <span className="tab-step-num">{tab.stepNumber}</span>}
+                    <span className="ribbon-tab-icon">{tab.icon}</span>
+                    <span className="ribbon-tab-label">{tab.label}</span>
+                  </Tabs.Trigger>
+                )
+              })}
+            </nav>
+          </Tabs.List>
+        </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          LAYER 3: CONTEXTUAL TOOLSTRIP
-          100% dynamic — renders ONLY the tools for the active tab.
-          Every group, every button, every metric is purposeful.
-      ═══════════════════════════════════════════════════════════════════ */}
-      {!ribbonCollapsed && (
-        <div className="ribbon-toolstrip animate-fade-in">
+        {/* ═══════════════════════════════════════════════════════════════
+            LAYER 3: CONTEXTUAL TOOLSTRIP
+            100% dynamic — renders ONLY the tools for the active tab.
+            Every group, every button, every metric is purposeful.
+        ═══════════════════════════════════════════════════════════════ */}
+        {!ribbonCollapsed && (
+          <div className="ribbon-toolstrip animate-fade-in">
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: ARQUIVO (Projetos)
-              Purpose: Create, open, organize review projects
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'projects' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: ARQUIVO (Projetos)
+                Purpose: Create, open, organize review projects
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="projects" className="ribbon-tab-panel">
               {/* Group: Novo */}
               <GrupoDoRibbon titulo="Novo">
               <button
@@ -321,15 +329,13 @@ export function TopRibbonBar(): JSX.Element {
                 )}
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: INÍCIO (Dashboard)
-              Purpose: High-level overview, quick resume, pipeline status
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'dashboard' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: INÍCIO (Dashboard)
+                Purpose: High-level overview, quick resume, pipeline status
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="dashboard" className="ribbon-tab-panel">
               {/* Group: Ir Para (Etapas) */}
               <GrupoDoRibbon titulo="Ir para Etapa">
               <button
@@ -396,17 +402,15 @@ export function TopRibbonBar(): JSX.Element {
                 <span className="info-value">Ciências Sociais Aplicadas</span>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: 1. PROTOCOLO (Estúdio de Redação & Manuscrito)
-              Purpose: Formulate research question, eligibility, descriptors.
-              Primary actions: Save, Copy manuscript, AI suggestion.
-              Secondary: Navigate between the sub-sections.
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'protocol' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: 1. PROTOCOLO (Estúdio de Redação & Manuscrito)
+                Purpose: Formulate research question, eligibility, descriptors.
+                Primary actions: Save, Copy manuscript, AI suggestion.
+                Secondary: Navigate between the sub-sections.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="protocol" className="ribbon-tab-panel">
               {/* Group: Manuscrito */}
               <GrupoDoRibbon titulo="Manuscrito">
               <button
@@ -501,16 +505,14 @@ export function TopRibbonBar(): JSX.Element {
                 </button>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: 2. COLETA (Busca Federada)
-              Purpose: Execute searches across academic databases.
-              Primary: Start Harvest, Deduplicate.
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'harvest' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: 2. COLETA (Busca Federada)
+                Purpose: Execute searches across academic databases.
+                Primary: Start Harvest, Deduplicate.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="harvest" className="ribbon-tab-panel">
               {/* Group: Execução */}
               <GrupoDoRibbon titulo="Busca Federada">
               <button
@@ -581,17 +583,15 @@ export function TopRibbonBar(): JSX.Element {
                 </button>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: 3. TRIAGEM (Fase 1)
-              Purpose: Decide Include/Exclude/Pending for each paper.
-              Primary: The 3 decision buttons (the core of this tab).
-              Secondary: Filters by status, AI batch.
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'screening' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: 3. TRIAGEM (Fase 1)
+                Purpose: Decide Include/Exclude/Pending for each paper.
+                Primary: The 3 decision buttons (the core of this tab).
+                Secondary: Filters by status, AI batch.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="screening" className="ribbon-tab-panel">
               {/* Group: Decisão */}
               <GrupoDoRibbon titulo="Decisão do Estudo">
               <button
@@ -716,16 +716,14 @@ export function TopRibbonBar(): JSX.Element {
                 </button>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: 4. EXTRAÇÃO (Fase 2 / Data Charting)
-              Purpose: Fill the extraction questionnaire for included papers.
-              Primary: Save answers, AI extraction.
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'extraction' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: 4. EXTRAÇÃO (Fase 2 / Data Charting)
+                Purpose: Fill the extraction questionnaire for included papers.
+                Primary: Save answers, AI extraction.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="extraction" className="ribbon-tab-panel">
               {/* Group: Data Charting */}
               <GrupoDoRibbon titulo="Data Charting">
               <button
@@ -787,16 +785,14 @@ export function TopRibbonBar(): JSX.Element {
                 </button>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: 5. EXPORTAR (Síntese & Relatórios)
-              Purpose: Generate outputs — the deliverables of the review.
-              Primary: Download Excel, manuscript, diagrams.
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'export' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: 5. EXPORTAR (Síntese & Relatórios)
+                Purpose: Generate outputs — the deliverables of the review.
+                Primary: Download Excel, manuscript, diagrams.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="export" className="ribbon-tab-panel">
               {/* Group: Relatórios de Dados */}
               <GrupoDoRibbon titulo="Exportar Dados">
               <button
@@ -856,15 +852,13 @@ export function TopRibbonBar(): JSX.Element {
                 </button>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-          {/* ──────────────────────────────────────────────────────────────
-              TAB: FERRAMENTAS (Configurações & IA)
-              Purpose: Configure AI providers, test connections, set preferences.
-          ────────────────────────────────────────────────────────────── */}
-          {currentTab.id === 'settings' && (
-            <>
+            {/* ──────────────────────────────────────────────────────────
+                TAB: FERRAMENTAS (Configurações & IA)
+                Purpose: Configure AI providers, test connections, set preferences.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="settings" className="ribbon-tab-panel">
               {/* Group: Modo de Operação */}
               <GrupoDoRibbon titulo="Modo de Operação">
               <button
@@ -936,11 +930,11 @@ export function TopRibbonBar(): JSX.Element {
                 <span className="info-value">gemini-3.6-flash · qwen3.8-max · Qwen-3.5-27B</span>
               </div>
               </GrupoDoRibbon>
-            </>
-          )}
+            </Tabs.Content>
 
-        </div>
-      )}
+          </div>
+        )}
+      </Tabs.Root>
     </header>
   )
 }

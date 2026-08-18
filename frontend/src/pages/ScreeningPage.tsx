@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import * as Tabs from '@radix-ui/react-tabs'
 import {
   CheckCircle2,
   XCircle,
@@ -1041,31 +1042,36 @@ export function ScreeningPage(): React.JSX.Element {
                   </h3>
 
                   <div className="screening-pdf-tools">
-                    <div className="view-mode-toggle-group">
-                      <button
-                        type="button"
-                        className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
-                        onClick={() => handleToggleReadingView('abstract')}
-                      >
-                        Resumo
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn-view-mode ${readingViewMode === 'pdf_view' ? 'active' : ''}`}
-                        onClick={() => handleToggleReadingView('pdf_view')}
-                        disabled={!selectedPaper.pdf_path}
-                      >
-                        PDF
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
-                        onClick={() => handleToggleReadingView('pdf_text')}
-                        disabled={!selectedPaper.pdf_path}
-                      >
-                        Texto
-                      </button>
-                    </div>
+                    <Tabs.Root
+                      className="view-mode-tabs-root"
+                      value={readingViewMode}
+                      onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_view' | 'pdf_text')}
+                    >
+                      <Tabs.List asChild>
+                        <div className="view-mode-toggle-group">
+                          <Tabs.Trigger
+                            value="abstract"
+                            className={`btn-view-mode ${readingViewMode === 'abstract' ? 'active' : ''}`}
+                          >
+                            Resumo
+                          </Tabs.Trigger>
+                          <Tabs.Trigger
+                            value="pdf_view"
+                            className={`btn-view-mode ${readingViewMode === 'pdf_view' ? 'active' : ''}`}
+                            disabled={!selectedPaper.pdf_path}
+                          >
+                            PDF
+                          </Tabs.Trigger>
+                          <Tabs.Trigger
+                            value="pdf_text"
+                            className={`btn-view-mode ${readingViewMode === 'pdf_text' ? 'active' : ''}`}
+                            disabled={!selectedPaper.pdf_path}
+                          >
+                            Texto
+                          </Tabs.Trigger>
+                        </div>
+                      </Tabs.List>
+                    </Tabs.Root>
 
                     <button
                       type="button"

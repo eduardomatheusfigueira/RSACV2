@@ -6,6 +6,11 @@
   padding-bottom: var(--space-16);
 }
 
+/* O wrapper do Radix Tabs.Root não deve alterar o fluxo de blocos originais. */
+.studio-tabs-root {
+  display: contents;
+}
+
 
 
 .header-actions {

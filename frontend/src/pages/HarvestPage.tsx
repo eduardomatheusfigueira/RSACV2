@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import * as Tabs from '@radix-ui/react-tabs'
 import {
   Play,
   StopCircle,
@@ -573,25 +574,24 @@ export function HarvestPage(): JSX.Element {
 
         {/* ── COLUNA DA DIREITA: LISTA DE TRABALHOS COLETADOS & MONITOR ─ */}
         <div className="harvest-monitor-pane">
+        <Tabs.Root
+          className="monitor-tabs-root"
+          value={feedTab}
+          onValueChange={(v) => setFeedTab(v as 'stream' | 'terminal')}
+        >
           <div className="pane-header-title">
-            <div className="monitor-title-tabs">
-              <button
-                type="button"
-                className={`monitor-tab-btn ${feedTab === 'stream' ? 'active' : ''}`}
-                onClick={() => setFeedTab('stream')}
-              >
-                <Radio size={14} className={isHarvesting ? 'icon-live-pulse' : 'icon-accent'} />
-                Trabalhos Coletados ({filteredFeed.length})
-              </button>
-              <button
-                type="button"
-                className={`monitor-tab-btn ${feedTab === 'terminal' ? 'active' : ''}`}
-                onClick={() => setFeedTab('terminal')}
-              >
-                <Terminal size={14} />
-                Terminal de Logs ({harvestEntries.length})
-              </button>
-            </div>
+            <Tabs.List asChild>
+              <div className="monitor-title-tabs">
+                <Tabs.Trigger value="stream" className={`monitor-tab-btn ${feedTab === 'stream' ? 'active' : ''}`}>
+                  <Radio size={14} className={isHarvesting ? 'icon-live-pulse' : 'icon-accent'} />
+                  Trabalhos Coletados ({filteredFeed.length})
+                </Tabs.Trigger>
+                <Tabs.Trigger value="terminal" className={`monitor-tab-btn ${feedTab === 'terminal' ? 'active' : ''}`}>
+                  <Terminal size={14} />
+                  Terminal de Logs ({harvestEntries.length})
+                </Tabs.Trigger>
+              </div>
+            </Tabs.List>
 
             <span className={`live-status-pill ${isHarvesting ? 'running' : 'idle'}`}>
               {isHarvesting ? 'Coleta em Execução' : 'Pronto para Coleta'}
@@ -671,8 +671,7 @@ export function HarvestPage(): JSX.Element {
             </Card>
 
             {/* Visualização de Trabalhos Coletados (Feed Stream) */}
-            {feedTab === 'stream' ? (
-              <div className="harvest-stream-container">
+            <Tabs.Content value="stream" className="harvest-stream-container">
                 <div className="stream-header-info">
                   <span>Feed de Artigos Recuperados:</span>
                   <span className="stream-counter-badge">{filteredFeed.length} exibidos</span>
@@ -705,9 +704,9 @@ export function HarvestPage(): JSX.Element {
                     ))
                   )}
                 </div>
-              </div>
-            ) : (
-              /* Terminal Console de Logs */
+            </Tabs.Content>
+            <Tabs.Content value="terminal" className="tabs-content-passthrough">
+              {/* Terminal Console de Logs */}
               <Card surface="primaria" relief="afundado" className="harvest-terminal-card">
                 <div className="terminal-header">
                   <span>Logs de Execução da Coleta & Deduplicação</span>
@@ -731,7 +730,7 @@ export function HarvestPage(): JSX.Element {
                   )}
                 </div>
               </Card>
-            )}
+            </Tabs.Content>
 
             {/* Banner de Avanço para a Triagem 1 */}
             <Card surface="primaria" className="harvest-next-phase-card">
@@ -753,6 +752,7 @@ export function HarvestPage(): JSX.Element {
               </button>
             </Card>
           </div>
+        </Tabs.Root>
         </div>
       </div>
 

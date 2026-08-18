@@ -17,6 +17,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import * as Tabs from '@radix-ui/react-tabs'
 import {
   BookOpen,
   Layers,
@@ -831,115 +832,100 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
       )}
 
       {/* Studio Navigation Tabs with Clear Temporal Phase Grouping */}
-      <div className="studio-tabs-container">
-        <div className="studio-tabs-bar-grouped" role="tablist" aria-label="Seções do protocolo">
-          {/* GRUPO A PRIORI: PROTOCOLO DE PESQUISA */}
-          <div className="tabs-group a-priori-group">
-            <div className="tabs-group-header">
-              <span className="group-tag a-priori">A Priori</span>
-            </div>
-            <div className="tabs-group-buttons">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'ident_intro'}
-                className={`studio-tab ${activeStudioTab === 'ident_intro' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('ident_intro')}
-                title={sectionItemsTitle('ident_intro', '1. Identificação, Registro & Justificativa')}
-              >
-                <Edit3 size={13} className="tab-icon" />
-                <span className="tab-label">1. Identificação</span>
-                {sectionItems.ident_intro && <span className="tab-pill">{sectionItems.ident_intro}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'objectives'}
-                className={`studio-tab ${activeStudioTab === 'objectives' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('objectives')}
-                title={sectionItemsTitle('objectives', `2. Questão & Objetivos (${frameworkType})`)}
-              >
-                <BookOpen size={13} className="tab-icon" />
-                <span className="tab-label">2. Questão & Objetivos ({frameworkType})</span>
-                {sectionItems.objectives && <span className="tab-pill">{sectionItems.objectives}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'search_eligibility'}
-                className={`studio-tab ${activeStudioTab === 'search_eligibility' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('search_eligibility')}
-                title={sectionItemsTitle('search_eligibility', '3. Fontes, Descritores & Elegibilidade')}
-              >
-                <Search size={13} className="tab-icon" />
-                <span className="tab-label">3. Fontes & Elegibilidade</span>
-                {sectionItems.search_eligibility && <span className="tab-pill">{sectionItems.search_eligibility}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'methods_extraction'}
-                className={`studio-tab ${activeStudioTab === 'methods_extraction' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('methods_extraction')}
-                title={sectionItemsTitle('methods_extraction', '4. Seleção, Data Charting & Métodos de Síntese')}
-              >
-                <Filter size={13} className="tab-icon" />
-                <span className="tab-label">4. Métodos & Extração</span>
-                {sectionItems.methods_extraction && <span className="tab-pill">{sectionItems.methods_extraction}</span>}
-              </button>
-            </div>
-          </div>
+      <Tabs.Root
+        className="studio-tabs-root"
+        value={activeStudioTab}
+        onValueChange={(v) => setActiveStudioTab(v as StudioTab)}
+      >
+        <div className="studio-tabs-container">
+          <Tabs.List asChild>
+            <div className="studio-tabs-bar-grouped" aria-label="Seções do protocolo">
+              {/* GRUPO A PRIORI: PROTOCOLO DE PESQUISA */}
+              <div className="tabs-group a-priori-group">
+                <div className="tabs-group-header">
+                  <span className="group-tag a-priori">A Priori</span>
+                </div>
+                <div className="tabs-group-buttons">
+                  <Tabs.Trigger
+                    value="ident_intro"
+                    className={`studio-tab ${activeStudioTab === 'ident_intro' ? 'active' : ''}`}
+                    title={sectionItemsTitle('ident_intro', '1. Identificação, Registro & Justificativa')}
+                  >
+                    <Edit3 size={13} className="tab-icon" />
+                    <span className="tab-label">1. Identificação</span>
+                    {sectionItems.ident_intro && <span className="tab-pill">{sectionItems.ident_intro}</span>}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="objectives"
+                    className={`studio-tab ${activeStudioTab === 'objectives' ? 'active' : ''}`}
+                    title={sectionItemsTitle('objectives', `2. Questão & Objetivos (${frameworkType})`)}
+                  >
+                    <BookOpen size={13} className="tab-icon" />
+                    <span className="tab-label">2. Questão & Objetivos ({frameworkType})</span>
+                    {sectionItems.objectives && <span className="tab-pill">{sectionItems.objectives}</span>}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="search_eligibility"
+                    className={`studio-tab ${activeStudioTab === 'search_eligibility' ? 'active' : ''}`}
+                    title={sectionItemsTitle('search_eligibility', '3. Fontes, Descritores & Elegibilidade')}
+                  >
+                    <Search size={13} className="tab-icon" />
+                    <span className="tab-label">3. Fontes & Elegibilidade</span>
+                    {sectionItems.search_eligibility && <span className="tab-pill">{sectionItems.search_eligibility}</span>}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="methods_extraction"
+                    className={`studio-tab ${activeStudioTab === 'methods_extraction' ? 'active' : ''}`}
+                    title={sectionItemsTitle('methods_extraction', '4. Seleção, Data Charting & Métodos de Síntese')}
+                  >
+                    <Filter size={13} className="tab-icon" />
+                    <span className="tab-label">4. Métodos & Extração</span>
+                    {sectionItems.methods_extraction && <span className="tab-pill">{sectionItems.methods_extraction}</span>}
+                  </Tabs.Trigger>
+                </div>
+              </div>
 
-          {/* GRUPO A POSTERIORI: SÍNTESE & REDAÇÃO FINAL */}
-          <div className="tabs-group a-posteriori-group">
-            <div className="tabs-group-header">
-              <span className="group-tag a-posteriori">A Posteriori</span>
+              {/* GRUPO A POSTERIORI: SÍNTESE & REDAÇÃO FINAL */}
+              <div className="tabs-group a-posteriori-group">
+                <div className="tabs-group-header">
+                  <span className="group-tag a-posteriori">A Posteriori</span>
+                </div>
+                <div className="tabs-group-buttons">
+                  <Tabs.Trigger
+                    value="synthesis_discussion"
+                    className={`studio-tab ${activeStudioTab === 'synthesis_discussion' ? 'active' : ''}`}
+                    title={sectionItemsTitle('synthesis_discussion', '5. Síntese dos Achados, Limitações & Conclusões')}
+                  >
+                    <Bookmark size={13} className="tab-icon" />
+                    <span className="tab-label">5. Síntese & Discussão</span>
+                    {sectionItems.synthesis_discussion && <span className="tab-pill">{sectionItems.synthesis_discussion}</span>}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="final_summary"
+                    className={`studio-tab ${activeStudioTab === 'final_summary' ? 'active' : ''}`}
+                    title={sectionItemsTitle('final_summary', '6. Resumo Estruturado Final do Artigo Concluído')}
+                  >
+                    <FileText size={13} className="tab-icon" />
+                    <span className="tab-label">6. Resumo Final</span>
+                    {sectionItems.final_summary && <span className="tab-pill">{sectionItems.final_summary}</span>}
+                  </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="checklist"
+                    className={`studio-tab checklist-tab ${activeStudioTab === 'checklist' ? 'active' : ''}`}
+                    title={`Auditoria de Conformidade ${currentProtocolDef.shortLabel}`}
+                  >
+                    <CheckSquare size={13} className="tab-icon" />
+                    <span className="tab-label">Auditoria {currentProtocolDef.shortLabel}</span>
+                    <span className="tab-pill-count">{currentProtocolDef.checklistItems.length}</span>
+                  </Tabs.Trigger>
+                </div>
+              </div>
             </div>
-            <div className="tabs-group-buttons">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'synthesis_discussion'}
-                className={`studio-tab ${activeStudioTab === 'synthesis_discussion' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('synthesis_discussion')}
-                title={sectionItemsTitle('synthesis_discussion', '5. Síntese dos Achados, Limitações & Conclusões')}
-              >
-                <Bookmark size={13} className="tab-icon" />
-                <span className="tab-label">5. Síntese & Discussão</span>
-                {sectionItems.synthesis_discussion && <span className="tab-pill">{sectionItems.synthesis_discussion}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'final_summary'}
-                className={`studio-tab ${activeStudioTab === 'final_summary' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('final_summary')}
-                title={sectionItemsTitle('final_summary', '6. Resumo Estruturado Final do Artigo Concluído')}
-              >
-                <FileText size={13} className="tab-icon" />
-                <span className="tab-label">6. Resumo Final</span>
-                {sectionItems.final_summary && <span className="tab-pill">{sectionItems.final_summary}</span>}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeStudioTab === 'checklist'}
-                className={`studio-tab checklist-tab ${activeStudioTab === 'checklist' ? 'active' : ''}`}
-                onClick={() => setActiveStudioTab('checklist')}
-                title={`Auditoria de Conformidade ${currentProtocolDef.shortLabel}`}
-              >
-                <CheckSquare size={13} className="tab-icon" />
-                <span className="tab-label">Auditoria {currentProtocolDef.shortLabel}</span>
-                <span className="tab-pill-count">{currentProtocolDef.checklistItems.length}</span>
-              </button>
-            </div>
-          </div>
+          </Tabs.List>
         </div>
-      </div>
 
       {/* ── ABA 1: IDENTIFICAÇÃO & JUSTIFICATIVA (A PRIORI) ──────────────── */}
-      {activeStudioTab === 'ident_intro' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="ident_intro" className="tab-pane animate-fade-in">
           <div className="phase-indicator-banner a-priori-banner">
             <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
             <p>
@@ -1035,12 +1021,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             />
           </CampoDoProtocolo>
 
-        </div>
-      )}
+        </Tabs.Content>
 
       {/* ── ABA 2: QUESTÃO & OBJETIVOS (A PRIORI) ───────────────────────── */}
-      {activeStudioTab === 'objectives' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="objectives" className="tab-pane animate-fade-in">
           <div className="phase-indicator-banner a-priori-banner">
             <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
             <p>
@@ -1272,12 +1256,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </div>
             </div>
           </Card>
-        </div>
-      )}
+        </Tabs.Content>
 
       {/* ── ABA 3: FONTES & ELEGIBILIDADE (A PRIORI) ────────────────────── */}
-      {activeStudioTab === 'search_eligibility' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="search_eligibility" className="tab-pane animate-fade-in">
           <div className="phase-indicator-banner a-priori-banner">
             <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
             <p>
@@ -1520,12 +1502,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </button>
             </div>
           </Card>
-        </div>
-      )}
+        </Tabs.Content>
 
       {/* ── ABA 4: MÉTODOS & EXTRAÇÃO (A PRIORI) ────────────────────────── */}
-      {activeStudioTab === 'methods_extraction' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="methods_extraction" className="tab-pane animate-fade-in">
           <div className="phase-indicator-banner a-priori-banner">
             <span className="phase-badge a-priori">Fase A Priori — Planejamento do Estudo</span>
             <p>
@@ -1746,12 +1726,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             />
           </CampoDoProtocolo>
 
-        </div>
-      )}
+        </Tabs.Content>
 
       {/* ── ABA 5: SÍNTESE DOS ACHADOS & DISCUSSÃO (A POSTERIORI) ─────────── */}
-      {activeStudioTab === 'synthesis_discussion' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="synthesis_discussion" className="tab-pane animate-fade-in">
           <div className="phase-indicator-banner a-posteriori-banner">
             <span className="phase-badge a-posteriori">Fase A Posteriori — Pós-Extração / Síntese dos Resultados</span>
             <p>
@@ -1979,12 +1957,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             />
           </CampoDoProtocolo>
 
-        </div>
-      )}
+        </Tabs.Content>
 
       {/* ── ABA 6: RESUMO ESTRUTURADO FINAL (A POSTERIORI) ───────────────── */}
-      {activeStudioTab === 'final_summary' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="final_summary" className="tab-pane animate-fade-in">
           <div className="phase-indicator-banner a-posteriori-banner">
             <span className="phase-badge a-posteriori">Fase A Posteriori — Resumo Executivo Definitivo</span>
             <p>
@@ -2050,12 +2026,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             />
           </CampoDoProtocolo>
 
-        </div>
-      )}
+        </Tabs.Content>
 
       {/* ── ABA 7: AUDITORIA E CHECKLIST DO PROTOCOLO ATIVO ───────────────── */}
-      {activeStudioTab === 'checklist' && (
-        <div className="tab-pane animate-fade-in">
+      <Tabs.Content value="checklist" className="tab-pane animate-fade-in">
           <Card surface="secundaria" className="protocol-card scr-checklist-card">
             <div className="card-section-title">
               <CheckSquare size={20} className="icon-accent" />
@@ -2143,8 +2117,8 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </div>
             )}
           </Card>
-        </div>
-      )}
+        </Tabs.Content>
+      </Tabs.Root>
 
       {/* Proposta de protocolo por assistência */}
       <Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>

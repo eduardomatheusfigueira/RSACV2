@@ -1085,6 +1085,11 @@
   margin-left: auto;
 }
 
+/* O wrapper do Radix Tabs.Root não deve virar item extra do flex row. */
+.screening-page .view-mode-tabs-root {
+  display: contents;
+}
+
 .study-abstract-container .pdf-embed-container {
   display: flex;
   flex: 1;

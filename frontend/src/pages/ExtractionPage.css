@@ -333,6 +333,11 @@
   flex-wrap: wrap;
 }
 
+/* O wrapper do Radix Tabs.Root não deve virar item extra do flex row. */
+.extraction-page .view-mode-tabs-root {
+  display: contents;
+}
+
 .badge-pdf {
   display: inline-flex;
   align-items: center;
