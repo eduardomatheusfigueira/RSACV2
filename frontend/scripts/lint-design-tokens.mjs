@@ -93,6 +93,18 @@ const REGRAS = [
     dica: 'use var(--space-*)',
   },
   {
+    id: 'R2e',
+    nome: 'duração de movimento literal',
+    teto: 0,
+    arquivos: /\.css$/,
+    isento: (rel) => rel.endsWith('styles/globals.css'),
+    // Só a DURAÇÃO precisa virar token: é o que `prefers-reduced-motion`
+    // redefine. A curva pode ser literal sem quebrar nada.
+    propriedade: /(?:animation|transition)(?:-duration)?:\s*([^;]+);/g,
+    literal: (v) => /(?<![\w-])\d[\d.]*\s*m?s\b/.test(v),
+    dica: 'use var(--motion-*) — é o que o modo de movimento reduzido redefine',
+  },
+  {
     id: 'R3',
     nome: 'interface acionada pelo DOM',
     teto: 0,

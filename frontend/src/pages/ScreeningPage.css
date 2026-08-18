@@ -1046,7 +1046,7 @@
 .progress-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--color-accent), var(--copperwood));
-  transition: width 0.3s ease;
+  transition: width var(--motion-slow) var(--ease-out);
 }
 
 .batch-stats-counters {

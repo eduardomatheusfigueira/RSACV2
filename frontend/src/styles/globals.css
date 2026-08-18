@@ -192,9 +192,29 @@
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.2);
 
   /* ── Transições ──────────────────────────────────────────────────── */
-  --transition-fast: 80ms ease-in-out;
-  --transition-base: 140ms ease-in-out;
-  --transition-slow: 200ms ease-in-out;
+  /* ── Movimento ─────────────────────────────────────────────────────────
+     Duração e curva separadas em tokens próprios porque `prefers-reduced-motion`
+     precisa mexer só na duração. Redefinir `--transition-fast` inteiro para
+     zerar o movimento apagaria junto a curva, e uma transição sem curva volta a
+     `ease` — o oposto do que se queria.
+
+     A escala é curta de propósito: isto é uma ferramenta de trabalho, e a
+     animação existe para explicar de onde um elemento veio, não para enfeitar.
+     Nada acima de 200 ms, exceto os indicadores contínuos (giro, pulso), que
+     têm escala própria. */
+  --motion-instant: 0ms;
+  --motion-fast: 80ms;    /* realce sob o cursor, foco, pressionar */
+  --motion-base: 140ms;   /* abrir/fechar, trocar de aba */
+  --motion-slow: 200ms;   /* painel, gaveta, diálogo */
+  --motion-loop: 1s;      /* giro do indicador de espera */
+  --motion-pulse: 1.5s;   /* pulso do indicador de atividade */
+
+  --ease-standard: ease-in-out;   /* movimento simétrico: entra e sai igual */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);  /* entrada: rápido e assenta */
+
+  --transition-fast: var(--motion-fast) var(--ease-standard);
+  --transition-base: var(--motion-base) var(--ease-standard);
+  --transition-slow: var(--motion-slow) var(--ease-standard);
 
   /* ── Chrome da Aplicação ───────────────────────────────────────────────
      Superfícies escuras de aplicação: barra de título do ribbon, painel de
@@ -1704,7 +1724,7 @@ select {
 }
 
 .animate-spin {
-  animation: spin 1s linear infinite;
+  animation: spin var(--motion-loop) linear infinite;
 }
 
 @keyframes spin {
@@ -1717,7 +1737,7 @@ select {
 }
 
 .animate-fade-in {
-  animation: fadeIn 120ms ease-out;
+  animation: fadeIn var(--motion-base) var(--ease-out);
 }
 
 @keyframes fadeIn {
@@ -1726,6 +1746,75 @@ select {
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Usada no Painel desde sempre e nunca definida — a tela entrava sem animação
+   nenhuma, ao contrário do resto do aplicativo. */
+.animate-slide-up {
+  animation: slideUp var(--motion-slow) var(--ease-out);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MOVIMENTO REDUZIDO (prefers-reduced-motion)
+   ═══════════════════════════════════════════════════════════════════════
+
+   Quem liga essa preferência no sistema costuma fazê-lo por enxaqueca
+   vestibular ou sensibilidade a movimento — não é questão de gosto. O contrato
+   aqui tem duas partes:
+
+   1. Movimento que só decora (entradas, deslizes, escalas) é anulado. O
+      elemento aparece no lugar final, sem percurso.
+   2. Movimento que INFORMA continua, desacelerado. Um indicador de espera
+      parado é indistinguível de uma tela travada; girar devagar preserva a
+      informação "ainda estou trabalhando" sem o efeito estroboscópico.
+
+   Por isso não há um `* { animation: none }` genérico: ele apagaria os dois
+   junto. As exceções são nomeadas.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+    /* Indicadores contínuos: mais lentos, nunca parados. */
+    --motion-loop: 2.4s;
+    --motion-pulse: 3.5s;
+  }
+
+  /* Animações declaradas com duração literal, fora do alcance dos tokens. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: var(--motion-instant, 0ms) !important;
+    animation-delay: 0ms !important;
+    transition-duration: var(--motion-instant, 0ms) !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Reabilita o que informa. */
+  .animate-spin,
+  .rsac-btn__spinner,
+  .rsac-empty__spinner,
+  .ai-spin-icon {
+    animation-duration: var(--motion-loop) !important;
+  }
+
+  .icon-live-pulse {
+    animation-duration: var(--motion-pulse) !important;
   }
 }
 

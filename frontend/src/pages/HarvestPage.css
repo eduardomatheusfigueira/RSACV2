@@ -150,7 +150,7 @@
 
 .icon-live-pulse {
   color: var(--color-warning-on-surface);
-  animation: pulse 1.5s infinite ease-in-out;
+  animation: pulse var(--motion-pulse) infinite var(--ease-standard);
 }
 
 @keyframes pulse {

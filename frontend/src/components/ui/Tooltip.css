@@ -17,7 +17,7 @@
   z-index: var(--z-overlay);
   max-width: 280px;
   word-wrap: break-word;
-  animation-duration: 120ms;
+  animation-duration: var(--motion-base);
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform, opacity;
 }

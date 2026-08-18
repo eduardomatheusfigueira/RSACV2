@@ -61,7 +61,7 @@
 
 .ai-spin-icon {
   color: var(--color-accent-on-surface);
-  animation: ai-spin 1s linear infinite;
+  animation: ai-spin var(--motion-loop) linear infinite;
   flex-shrink: 0;
 }
 

@@ -84,8 +84,3 @@
   border-radius: var(--radius-xs) !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-sonner-toast] {
-    transition-duration: 1ms !important;
-  }
-}

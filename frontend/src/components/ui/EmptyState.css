@@ -54,13 +54,10 @@
 
 .rsac-empty__spinner {
   color: var(--color-accent-on-surface);
-  animation: rsac-empty-spin 1s linear infinite;
+  animation: rsac-empty-spin var(--motion-loop) linear infinite;
 }
 
 @keyframes rsac-empty-spin {
   to { transform: rotate(360deg); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .rsac-empty__spinner { animation-duration: 2.4s; }
-}

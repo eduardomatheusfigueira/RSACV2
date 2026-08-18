@@ -173,7 +173,7 @@
 
 /* ── Spinner & Icons ───────────────────────────────────────────────── */
 .rsac-btn__spinner {
-  animation: rsac-spin 1s linear infinite;
+  animation: rsac-spin var(--motion-loop) linear infinite;
 }
 
 .rsac-btn__icon {
