@@ -36,6 +36,7 @@ anteriores — diagnóstico → especificação → execução → validação.
 | **24** | [Especificação do Design System](./24_ESPECIFICACAO_DESIGN_SYSTEM.md) | Documento normativo: tokens, proporções, componentes, fluxo e acessibilidade |
 | **25** | [Plano de Execução — UX e UI](./25_PLANO_EXECUCAO_UX_UI.md) | Sete fases com dependências, critérios de aceite e riscos |
 | **26** | [Testes e Validação — UX e UI](./26_TESTES_VALIDACAO_UX_UI.md) | Quatro camadas de verificação e portões por fase |
+| **27** | [Previsão do Trabalho Restante](./27_PREVISAO_TRABALHO_RESTANTE.md) | O que falta medido no código, em que ordem fazer e o que fica de fora |
 
 > A identidade visual da marca tem documento próprio, fora desta pasta:
 > [`brand/IDENTIDADE_VISUAL.md`](../brand/IDENTIDADE_VISUAL.md).
