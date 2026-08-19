@@ -117,11 +117,9 @@ class ScreeningService:
         paper_model.decision = result.decision
         paper_model.ai_confidence = result.confidence
 
-        # Se houver justificativa, anexar às observações
-        just_entry = f"[IA - {result.model_used}]: {result.justification}"
-        if paper_model.observations:
-            paper_model.observations = f"{paper_model.observations}\n\n{just_entry}"
-        else:
+        # Salvar justificativa limpa diretamente nas observações (sem prefixo)
+        just_entry = result.justification.strip() if result.justification else ""
+        if just_entry:
             paper_model.observations = just_entry
 
         # Log de Auditoria
@@ -134,13 +132,20 @@ class ScreeningService:
         )
         db.add(audit)
 
-        # Salvar avaliações de critérios se houver correspondência
-        criteria_map = {c.text.lower().strip(): c.id for c in protocol_model.criteria}
-        all_evals = {**result.inclusion_criteria, **result.exclusion_criteria}
+        # Salvar avaliações de critérios mapeando por código (INC1, EXC1...) e por texto
+        inc_criteria_list = [c for c in protocol_model.criteria if not c.is_exclusion]
+        exc_criteria_list = [c for c in protocol_model.criteria if c.is_exclusion]
 
-        for crit_text, val in all_evals.items():
-            crit_id = criteria_map.get(crit_text.lower().strip())
+        inc_map = {f"INC{i}": c.id for i, c in enumerate(inc_criteria_list, 1)}
+        exc_map = {f"EXC{i}": c.id for i, c in enumerate(exc_criteria_list, 1)}
+        text_map = {c.text.lower().strip(): c.id for c in protocol_model.criteria}
+
+        # 1. Critérios de Inclusão
+        for key, val in (result.inclusion_criteria or {}).items():
+            clean_k = str(key).strip().upper()
+            crit_id = inc_map.get(clean_k) or text_map.get(str(key).lower().strip())
             if crit_id:
+                bool_val = bool(val)
                 eval_record = (
                     db.query(PaperCriterionModel)
                     .filter(
@@ -150,13 +155,38 @@ class ScreeningService:
                     .first()
                 )
                 if eval_record:
-                    eval_record.value = val
+                    eval_record.value = bool_val
                 else:
                     db.add(
                         PaperCriterionModel(
                             paper_id=paper_model.id,
                             criterion_id=crit_id,
-                            value=val,
+                            value=bool_val,
+                        )
+                    )
+
+        # 2. Critérios de Exclusão
+        for key, val in (result.exclusion_criteria or {}).items():
+            clean_k = str(key).strip().upper()
+            crit_id = exc_map.get(clean_k) or text_map.get(str(key).lower().strip())
+            if crit_id:
+                bool_val = bool(val)
+                eval_record = (
+                    db.query(PaperCriterionModel)
+                    .filter(
+                        PaperCriterionModel.paper_id == paper_model.id,
+                        PaperCriterionModel.criterion_id == crit_id,
+                    )
+                    .first()
+                )
+                if eval_record:
+                    eval_record.value = bool_val
+                else:
+                    db.add(
+                        PaperCriterionModel(
+                            paper_id=paper_model.id,
+                            criterion_id=crit_id,
+                            value=bool_val,
                         )
                     )
 
