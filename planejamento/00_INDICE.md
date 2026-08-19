@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–26` Vigente (Design System & Governança)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Vigente (Segurança)
 
 ---
 
@@ -15,14 +15,20 @@ de decisão, não como lista de pendências.
 O **doc 22** é a fronteira: consolida o que cada plano anterior previu, o que
 foi entregue, o que divergiu e o que segue aberto.
 
-Os documentos **23 a 26** são o **planejamento vigente**, dedicado a UX, UI e
+Os documentos **23 a 27** são o **planejamento vigente** de UX, UI e
 profissionalização da interface. Seguem a mesma gramática dos planos temáticos
 anteriores — diagnóstico → especificação → execução → validação.
+
+Os documentos **28 a 30** são o **planejamento vigente de segurança**, aberto
+quando o aplicativo passou a ter um servidor publicado na internet
+(`Iniciar_Servidor.bat`). Mesma gramática, e prioridade acima da de UX enquanto
+a Fase 0 do doc 30 não estiver entregue.
 
 ```
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
-23–26   vigente            para onde vamos agora (UX/UI)
+23–27   vigente            para onde vamos agora (UX/UI)
+28–30   vigente            o que precisa ser feito antes de expor o app 🔴
 ```
 
 ---
@@ -40,6 +46,20 @@ anteriores — diagnóstico → especificação → execução → validação.
 
 > A identidade visual da marca tem documento próprio, fora desta pasta:
 > [`brand/IDENTIDADE_VISUAL.md`](../brand/IDENTIDADE_VISUAL.md).
+
+---
+
+## 🔴 Planejamento vigente — Segurança do servidor
+
+> O modo servidor (`Iniciar_Servidor.bat`) publica o backend na internet por
+> túnel Cloudflare. O backend não tem autenticação. **Leia o doc 28 antes de
+> usar esse modo fora de rede confiável.**
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **28** | [Diagnóstico de Segurança](./28_DIAGNOSTICO_SEGURANCA.md) | Modelo de ameaça, superfície de ataque medida e 18 vulnerabilidades com evidência em `arquivo:linha` |
+| **29** | [Especificação de Segurança](./29_ESPECIFICACAO_SEGURANCA.md) | Documento normativo: perfis de implantação, autenticação, cifra de segredos, política de saída e cabeçalhos |
+| **30** | [Plano de Execução — Segurança](./30_PLANO_EXECUCAO_SEGURANCA.md) | Seis fases, critérios de aceite e a suíte de testes que impede a regressão |
 
 ---
 

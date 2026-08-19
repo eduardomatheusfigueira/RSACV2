@@ -171,18 +171,36 @@ npm run dev
 
 ## 📚 Documentação Técnica
 
-O diretório [`planejamento/`](./planejamento/) contém 27 documentos. Os de
+O diretório [`planejamento/`](./planejamento/) contém 30 documentos. Os de
 número **01 a 21** são histórico do planejamento que levou o produto ao estado
-atual; o **22** consolida o que foi entregue; e os de **23 a 26** são o
-planejamento vigente, dedicado a UX, UI e profissionalização da interface.
+atual; o **22** consolida o que foi entregue; os de **23 a 27** são o
+planejamento vigente de UX, UI e profissionalização da interface; e os de
+**28 a 30** são o planejamento vigente de segurança.
 
-**Planejamento vigente**
+> ### ⚠️ Aviso sobre o modo servidor
+>
+> O `Iniciar_Servidor.bat` publica o backend na internet por um túnel
+> Cloudflare, e **o backend ainda não tem autenticação**: quem obtiver a URL
+> tem acesso total aos projetos e às chaves de API configuradas. Até a Fase 0
+> do [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)
+> estar entregue, use esse modo apenas em rede confiável. O diagnóstico
+> completo está em
+> [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md).
+
+**Planejamento vigente — Segurança**
+
+- [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md) — modelo de ameaça, superfície de ataque e 18 vulnerabilidades com evidência no código
+- [`29_ESPECIFICACAO_SEGURANCA.md`](./planejamento/29_ESPECIFICACAO_SEGURANCA.md) — documento normativo: perfis de implantação, autenticação, cifra de segredos e política de rede
+- [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md) — seis fases, critérios de aceite e suíte de testes de regressão
+
+**Planejamento vigente — UX e UI**
 
 - [`22_LOG_ENTREGAS.md`](./planejamento/22_LOG_ENTREGAS.md) — o que cada plano previu, o que foi entregue e o que segue aberto
 - [`23_DIAGNOSTICO_UX_UI.md`](./planejamento/23_DIAGNOSTICO_UX_UI.md) — diagnóstico da interface, medido contra o código e o app em execução
 - [`24_ESPECIFICACAO_DESIGN_SYSTEM.md`](./planejamento/24_ESPECIFICACAO_DESIGN_SYSTEM.md) — documento normativo: tokens, proporções, componentes e acessibilidade
 - [`25_PLANO_EXECUCAO_UX_UI.md`](./planejamento/25_PLANO_EXECUCAO_UX_UI.md) — sete fases com dependências, critérios de aceite e riscos
 - [`26_TESTES_VALIDACAO_UX_UI.md`](./planejamento/26_TESTES_VALIDACAO_UX_UI.md) — quatro camadas de verificação e portões por fase
+- [`27_PREVISAO_TRABALHO_RESTANTE.md`](./planejamento/27_PREVISAO_TRABALHO_RESTANTE.md) — o que falta medido no código, em que ordem fazer e o que fica de fora
 
 **Histórico (01–21)**
 
