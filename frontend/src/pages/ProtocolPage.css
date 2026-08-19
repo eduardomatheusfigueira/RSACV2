@@ -1418,3 +1418,23 @@
   color: var(--color-text-secondary);
 }
 
+@media (max-width: 768px) {
+  .tabs-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabs-group-buttons {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .studio-form-row {
+    flex-direction: column;
+  }
+
+  .studio-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

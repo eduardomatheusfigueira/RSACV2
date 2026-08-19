@@ -746,3 +746,88 @@
 /* ── ICON ACCENT CLASSES ─────────────────────────────────────────── */
 .icon-accent  { color: var(--copperwood); }
 .icon-sparkle { color: var(--sunlit-clay); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE ADAPTATION (< 768px & < 480px)
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .ribbon-titlebar {
+    height: 40px;
+    padding: 0 var(--space-2);
+  }
+
+  .ribbon-active-project-bar {
+    max-width: 180px;
+    margin: 0 var(--space-1);
+  }
+
+  .project-label {
+    display: none;
+  }
+
+  .ribbon-action-pill span:not(.icon-sparkle) {
+    display: none;
+  }
+
+  .ribbon-action-pill {
+    padding: var(--space-1);
+    min-width: 32px;
+    justify-content: center;
+  }
+
+  .ribbon-tabs-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 var(--space-1);
+  }
+
+  .ribbon-tabs-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ribbon-tab-btn {
+    padding: var(--space-2) var(--space-2-5);
+    font-size: var(--font-size-2xs);
+    gap: var(--space-1);
+  }
+
+  .ribbon-toolstrip {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--space-1) var(--space-2);
+    height: auto;
+    min-height: 52px;
+  }
+
+  .ribbon-group-title {
+    display: none;
+  }
+
+  .ribbon-group {
+    padding: 0 var(--space-1);
+  }
+
+  .ribbon-btn-large {
+    min-width: 48px;
+    padding: var(--space-1);
+  }
+
+  .ribbon-btn-large .ribbon-btn-label {
+    font-size: var(--font-size-3xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .ribbon-brand .brand-ver {
+    display: none;
+  }
+
+  .ribbon-active-project-bar {
+    max-width: 120px;
+  }
+
+  .project-methodology-tag {
+    display: none;
+  }
+}

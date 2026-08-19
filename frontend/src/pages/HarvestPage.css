@@ -799,3 +799,19 @@
   margin-top: var(--space-0-5);
   margin-bottom: 0;
 }
+
+@media (max-width: 900px) {
+  .harvest-workbench-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .harvest-top-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .harvest-metrics-group {
+    justify-content: space-between;
+  }
+}

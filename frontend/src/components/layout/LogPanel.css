@@ -299,3 +299,19 @@
 .log-entry.level-debug {
   border-left: 3px solid var(--color-text-tertiary);
 }
+
+@media (max-width: 768px) {
+  .log-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    z-index: var(--z-modal);
+    border-left: none;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  }
+}

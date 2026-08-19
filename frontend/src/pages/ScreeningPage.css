@@ -1130,3 +1130,38 @@
   color: var(--color-text-tertiary);
   font-size: var(--text-xs);
 }
+
+@media (max-width: 768px) {
+  .screening-page {
+    height: auto;
+    min-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+
+  .screening-workbench-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .study-reading-pane {
+    height: auto;
+    min-height: 400px;
+  }
+
+  .screening-decision-dock {
+    height: auto;
+  }
+
+  .decision-big-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .queue-search-input-wrapper {
+    width: 100% !important;
+  }
+}

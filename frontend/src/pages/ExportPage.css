@@ -291,3 +291,19 @@
 .flow-down-arrow.stage {
   color: var(--color-accent-on-surface);
 }
+
+@media (max-width: 900px) {
+  .export-workbench-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .export-top-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .export-metrics-group {
+    justify-content: space-between;
+  }
+}

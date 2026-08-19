@@ -187,3 +187,32 @@
   background: var(--color-error);
   color: var(--color-text-on-error);
 }
+
+@media (max-width: 600px) {
+  .status-bar {
+    padding: 0 var(--space-1-5);
+    height: 32px;
+  }
+
+  .status-brand {
+    display: none;
+  }
+
+  .status-indicator {
+    padding: var(--space-0-5) var(--space-1-5);
+    font-size: var(--font-size-2xs);
+  }
+
+  .status-ai-mode {
+    padding: var(--space-0-5) var(--space-1-5);
+    font-size: var(--font-size-2xs);
+  }
+
+  .status-ai-mode span {
+    display: none;
+  }
+
+  .status-version {
+    display: none;
+  }
+}

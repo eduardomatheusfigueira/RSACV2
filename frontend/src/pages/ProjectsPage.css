@@ -374,3 +374,25 @@
   border-top: 1px dashed var(--color-border);
 }
 
+@media (max-width: 768px) {
+  .projects-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .search-input-wrapper {
+    max-width: 100%;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
