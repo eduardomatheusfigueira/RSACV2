@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–26` Vigente (Design System & Governança)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–29` Vigente (Coleta)
 
 ---
 
@@ -15,14 +15,16 @@ de decisão, não como lista de pendências.
 O **doc 22** é a fronteira: consolida o que cada plano anterior previu, o que
 foi entregue, o que divergiu e o que segue aberto.
 
-Os documentos **23 a 26** são o **planejamento vigente**, dedicado a UX, UI e
-profissionalização da interface. Seguem a mesma gramática dos planos temáticos
-anteriores — diagnóstico → especificação → execução → validação.
+Os documentos **23 a 27** são o **planejamento vigente** de UX, UI e
+profissionalização da interface, e os **28 e 29** o **planejamento vigente da
+coleta**. Todos seguem a mesma gramática dos planos temáticos anteriores —
+diagnóstico → especificação → execução → validação.
 
 ```
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
-23–26   vigente            para onde vamos agora (UX/UI)
+23–27   vigente            UX, UI e o que falta da interface
+28–29   vigente            confiabilidade e velocidade da coleta
 ```
 
 ---
@@ -37,6 +39,19 @@ anteriores — diagnóstico → especificação → execução → validação.
 | **25** | [Plano de Execução — UX e UI](./25_PLANO_EXECUCAO_UX_UI.md) | Sete fases com dependências, critérios de aceite e riscos |
 | **26** | [Testes e Validação — UX e UI](./26_TESTES_VALIDACAO_UX_UI.md) | Quatro camadas de verificação e portões por fase |
 | **27** | [Previsão do Trabalho Restante](./27_PREVISAO_TRABALHO_RESTANTE.md) | O que falta medido no código, em que ordem fazer e o que fica de fora |
+
+---
+
+## 📌 Planejamento vigente — confiabilidade e velocidade da coleta
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **28** | [Diagnóstico da Coleta — SciELO e BDTD](./28_DIAGNOSTICO_COLETA_SCIELO_BDTD.md) | Estado real dos dois coletores nacionais, com linha de base medida sem rede |
+| **29** | [Plano de Robustez e Velocidade](./29_PLANO_ROBUSTEZ_VELOCIDADE_COLETA.md) | Sete fases: verdade → correção → ritmo → paralelismo → retomada → interface → testes |
+
+> A linha de base numérica dos docs 28 e 29 é reproduzível por
+> [`backend/scripts/bench_coleta.py`](../backend/scripts/bench_coleta.py),
+> que roda sem rede e serve de portão de regressão de desempenho.
 
 > A identidade visual da marca tem documento próprio, fora desta pasta:
 > [`brand/IDENTIDADE_VISUAL.md`](../brand/IDENTIDADE_VISUAL.md).
