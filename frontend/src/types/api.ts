@@ -168,6 +168,12 @@ export interface PaperUpdate {
   observations?: string
   criteria_evaluations?: Record<string, boolean>
   extraction_answers?: Record<string, string>
+  abstract?: string
+  title?: string
+  authors?: string
+  year?: string
+  doi?: string
+  download_url?: string
 }
 
 export interface PaperListResponse {

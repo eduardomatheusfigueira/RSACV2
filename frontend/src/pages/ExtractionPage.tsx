@@ -1268,7 +1268,7 @@ export function ExtractionPage(): JSX.Element {
             variant="secondary"
             size="md"
             className="mobile-extract-btn"
-            onClick={handleExtractAllAI}
+            onClick={handleExtractWithAI}
             loading={extractingAI}
             disabled={questions.length === 0}
             leftIcon={<Sparkles size={16} />}

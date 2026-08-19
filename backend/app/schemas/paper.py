@@ -33,6 +33,12 @@ class PaperUpdate(BaseModel):
     observations: Optional[str] = None
     criteria_evaluations: Optional[Dict[str, bool]] = None
     extraction_answers: Optional[Dict[str, str]] = None
+    abstract: Optional[str] = None
+    title: Optional[str] = None
+    authors: Optional[str] = None
+    year: Optional[str] = None
+    doi: Optional[str] = None
+    download_url: Optional[str] = None
 
 
 class PaperResponse(PaperBase):

@@ -46,6 +46,11 @@ import {
   RotateCcw,
   ShieldCheck,
   ShieldAlert,
+  Globe,
+  Maximize2,
+  Edit3,
+  Save,
+  X,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -53,6 +58,11 @@ import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
 import type { DeduplicationReport, Paper, Decision, Protocol } from '@/types/api'
 import { DeduplicationReportModal } from '@/components/common/DeduplicationReportModal'
+import {
+  BatchScreeningModal,
+  type BatchScreeningItem,
+  type CurrentScreeningStudy,
+} from '@/components/common/BatchScreeningModal'
 import {
   PageHeader,
   Button,
@@ -68,6 +78,29 @@ import {
   DialogFooter,
 } from '@/components/ui'
 import './ScreeningPage.css'
+
+export function getDoiUrl(doi?: string | null): string {
+  if (!doi) return ''
+  const trimmed = doi.trim()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed
+  }
+  return `https://doi.org/${trimmed}`
+}
+
+export function getSourceUrl(paper?: Paper | null): string {
+  if (!paper) return ''
+  if (paper.download_url && (paper.download_url.startsWith('http://') || paper.download_url.startsWith('https://'))) {
+    return paper.download_url
+  }
+  if (paper.doi) {
+    return getDoiUrl(paper.doi)
+  }
+  if (paper.pdf_resolved_url && (paper.pdf_resolved_url.startsWith('http://') || paper.pdf_resolved_url.startsWith('https://'))) {
+    return paper.pdf_resolved_url
+  }
+  return ''
+}
 
 export function ScreeningPage(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -87,6 +120,11 @@ export function ScreeningPage(): React.JSX.Element {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
   const [mobileTab, setMobileTab] = useState<'article' | 'criteria' | 'queue'>('article')
+
+  // Abstract Inline Editing State
+  const [isEditingAbstract, setIsEditingAbstract] = useState(false)
+  const [editedAbstractText, setEditedAbstractText] = useState('')
+  const [savingAbstract, setSavingAbstract] = useState(false)
 
   // Deduplication Report State
   const [dedupReport, setDedupReport] = useState<DeduplicationReport | null>(null)
@@ -117,8 +155,6 @@ export function ScreeningPage(): React.JSX.Element {
 
   // AI Batch Screening Modal & Live Progress State
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false)
-  const [batchLimit, setBatchLimit] = useState(50)
-  const [batchConcurrency, setBatchConcurrency] = useState(3)
   const [isBatchRunning, setIsBatchRunning] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{
     processed: number
@@ -128,6 +164,8 @@ export function ScreeningPage(): React.JSX.Element {
     excluded: number
     pending: number
   } | null>(null)
+  const [currentScreeningStudy, setCurrentScreeningStudy] = useState<CurrentScreeningStudy | null>(null)
+  const [batchActivityFeed, setBatchActivityFeed] = useState<BatchScreeningItem[]>([])
   const wsRef = useRef<WebSocket | null>(null)
 
   // Quick add manual paper modal
@@ -136,6 +174,12 @@ export function ScreeningPage(): React.JSX.Element {
   const [manualAuthors, setManualAuthors] = useState('')
   const [manualYear, setManualYear] = useState('')
   const [manualAbstract, setManualAbstract] = useState('')
+
+  // Sync abstract text when selectedPaper changes
+  useEffect(() => {
+    setIsEditingAbstract(false)
+    setEditedAbstractText(selectedPaper?.abstract || '')
+  }, [selectedPaper?.id])
 
   useEffect(() => {
     if (id) {
@@ -165,7 +209,26 @@ export function ScreeningPage(): React.JSX.Element {
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data)
-          if (msg.type === 'batch_screening_progress') {
+          if (msg.type === 'batch_screening_started') {
+            setIsBatchRunning(true)
+            setBatchProgress({
+              processed: 0,
+              total: msg.total,
+              percentage: 0,
+              included: 0,
+              excluded: 0,
+              pending: msg.total,
+            })
+            info('Triagem', msg.message || `Iniciando triagem em lote de ${msg.total} estudos pendentes...`)
+          } else if (msg.type === 'batch_screening_item_start') {
+            setCurrentScreeningStudy({
+              paper_id: msg.paper_id,
+              title: msg.paper_title,
+              authors: msg.paper_authors,
+              year: msg.paper_year,
+              total: msg.total,
+            })
+          } else if (msg.type === 'batch_screening_progress') {
             setIsBatchRunning(true)
             setBatchProgress({
               processed: msg.processed,
@@ -175,14 +238,59 @@ export function ScreeningPage(): React.JSX.Element {
               excluded: msg.excluded_count,
               pending: msg.pending_count,
             })
-            info('Triagem', `Triagem em lote: ${msg.processed}/${msg.total} (${msg.percentage}%)`, `Incluídos: ${msg.included_count} | Excluídos: ${msg.excluded_count} | Pendentes: ${msg.pending_count}`)
+            if (msg.current_paper_id) {
+              setBatchActivityFeed((prev) => [
+                {
+                  id: msg.current_paper_id,
+                  title: msg.current_paper_title || 'Estudo',
+                  decision: msg.decision,
+                  confidence: msg.confidence,
+                  justification: msg.justification,
+                },
+                ...prev.slice(0, 49),
+              ])
+
+              // Atualiza o estudo correspondente em memória imediatamente
+              setPapers((prev) =>
+                prev.map((p) =>
+                  p.id === msg.current_paper_id
+                    ? {
+                        ...p,
+                        decision: msg.decision,
+                        ai_confidence: msg.confidence,
+                        observations: msg.justification || p.observations,
+                      }
+                    : p
+                )
+              )
+
+              setSelectedPaper((prev) => {
+                if (prev && prev.id === msg.current_paper_id) {
+                  return {
+                    ...prev,
+                    decision: msg.decision,
+                    ai_confidence: msg.confidence,
+                    observations: msg.justification || prev.observations,
+                  }
+                }
+                return prev
+              })
+            }
+            info(
+              'Triagem',
+              `Triagem em lote: ${msg.processed}/${msg.total} (${msg.percentage}%)`,
+              `Estudo: "${msg.current_paper_title}" ➔ Decisão: ${msg.decision}`
+            )
           } else if (msg.type === 'batch_screening_completed') {
             setIsBatchRunning(false)
-            success('Triagem', 'Triagem em lote finalizada com sucesso!')
-            /* O modal pode ter sido minimizado e a pessoa estar em outra tela —
-               é exatamente o "sucesso fora da vista" que o aviso resolve. */
+            setCurrentScreeningStudy(null)
+            success(
+              'Triagem',
+              'Triagem em lote finalizada com sucesso!',
+              `Total: ${msg.total_processed} | Incluídos: ${msg.included} | Excluídos: ${msg.excluded}`
+            )
             toast.success('Triagem em lote concluída', {
-              description: 'As decisões foram gravadas. Recarregando a fila.',
+              description: `${msg.total_processed} estudos processados (${msg.included} incluídos, ${msg.excluded} excluídos).`,
             })
             loadStats(projectId)
             loadPapers(projectId)
@@ -451,25 +559,58 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
-  const handleStartBatchAI = async () => {
+  const handleStartBatchAI = async (limit: number, concurrency: number) => {
     if (!id) return
     try {
       setIsBatchRunning(true)
+      setBatchActivityFeed([])
+      setCurrentScreeningStudy(null)
       setBatchProgress({
         processed: 0,
-        total: batchLimit,
+        total: limit,
         percentage: 0,
         included: 0,
         excluded: 0,
-        pending: 0,
+        pending: limit,
       })
+      info('Triagem', `Disparando triagem em lote: até ${limit} estudos com concorrência ${concurrency}x...`)
       await api.startBatchScreeningAI(id, {
-        limit: batchLimit,
-        concurrency: batchConcurrency,
+        limit,
+        concurrency,
       })
-    } catch (err) {
-      console.error('Erro ao iniciar batch screening:', err)
+    } catch (err: any) {
+      error('Triagem', `Falha ao iniciar triagem em lote: ${err.message}`)
       setIsBatchRunning(false)
+      toast.error('Erro na triagem em lote', {
+        description: err.message || 'Falha na comunicação com o backend.',
+      })
+    }
+  }
+
+  const handleSaveAbstract = async () => {
+    if (!id || !selectedPaper) return
+    try {
+      setSavingAbstract(true)
+      const trimmed = editedAbstractText.trim()
+      const updated = await api.updatePaper(id, selectedPaper.id, {
+        abstract: trimmed,
+      })
+      setSelectedPaper((prev) => (prev ? { ...prev, abstract: updated.abstract } : prev))
+      setPapers((prev) =>
+        prev.map((p) => (p.id === selectedPaper.id ? { ...p, abstract: updated.abstract } : p))
+      )
+      setIsEditingAbstract(false)
+      success('Triagem', `Resumo do estudo "${selectedPaper.title.slice(0, 40)}..." atualizado com sucesso!`)
+      toast.success('Resumo salvo', {
+        description: 'O texto do resumo foi atualizado com sucesso e está pronto para análise.',
+      })
+    } catch (err: any) {
+      error('Triagem', `Erro ao salvar resumo: ${err.message}`)
+      toast.error('Erro ao salvar resumo', {
+        description: err.message || 'Falha na comunicação com o servidor.',
+      })
+    } finally {
+      setSavingAbstract(false)
     }
   }
 
@@ -489,7 +630,16 @@ export function ScreeningPage(): React.JSX.Element {
         if (selectedPaper) handleDecision(selectedPaper.id, 'Pendente')
       },
       screenAiSingle: handleSingleAIScreening,
-      screenAiBatch: handleStartBatchAI,
+      screenAiBatch: () => setIsBatchModalOpen(true),
+      isBatchScreening: isBatchRunning,
+      batchScreeningProgressText: batchProgress
+        ? `${batchProgress.processed}/${batchProgress.total}`
+        : 'Triando...',
+      openDoiOrRepoLink: () => {
+        const url = getSourceUrl(selectedPaper)
+        if (url) window.open(url, '_blank')
+      },
+      hasDoiOrRepo: !!getSourceUrl(selectedPaper),
       /* Só captura `id` (estável na rota) e setters — a closure não envelhece,
          por isso fica fora das dependências. */
       openDedupModal: () => {
@@ -509,6 +659,10 @@ export function ScreeningPage(): React.JSX.Element {
         'decisionPending',
         'screenAiSingle',
         'screenAiBatch',
+        'isBatchScreening',
+        'batchScreeningProgressText',
+        'openDoiOrRepoLink',
+        'hasDoiOrRepo',
         'openDedupModal',
         'setDecisionFilter',
         'activeDecisionFilter',
@@ -521,7 +675,8 @@ export function ScreeningPage(): React.JSX.Element {
     selectedPaper,
     handleDecision,
     handleSingleAIScreening,
-    handleStartBatchAI,
+    isBatchRunning,
+    batchProgress,
     decisionFilter,
   ])
 
@@ -794,6 +949,26 @@ export function ScreeningPage(): React.JSX.Element {
               <span className="count-label">Excluídos</span>
               <span className="count-num">{stats.excluded}</span>
             </button>
+
+            {aiEnabled && (
+              <button
+                type="button"
+                className={`btn-queue-batch ${isBatchRunning ? 'active' : ''}`}
+                onClick={() => setIsBatchModalOpen(true)}
+                title="Abrir painel de triagem em lote com Inteligência Artificial"
+              >
+                {isBatchRunning ? (
+                  <RefreshCw size={13} className="animate-spin text-accent" />
+                ) : (
+                  <Zap size={13} />
+                )}
+                <span>
+                  {isBatchRunning
+                    ? `Triando (${batchProgress?.processed || 0}/${batchProgress?.total || stats.pending})`
+                    : 'Triar Lote'}
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="queue-search-input-wrapper">
@@ -856,11 +1031,12 @@ export function ScreeningPage(): React.JSX.Element {
             ) : (
               papers.map((paper, idx) => {
                 const isSelected = selectedPaper?.id === paper.id
+                const isBeingScreened = currentScreeningStudy?.paper_id === paper.id
                 return (
                   <button
                     type="button"
                     key={paper.id}
-                    className={`queue-paper-card ${isSelected ? 'selected' : ''} dec-${paper.decision.toLowerCase()}`}
+                    className={`queue-paper-card ${isSelected ? 'selected' : ''} ${isBeingScreened ? 'is-currently-screening' : ''} dec-${paper.decision.toLowerCase()}`}
                     onClick={() => {
                       setSelectedPaper(paper)
                       setAiLastResult(null)
@@ -872,10 +1048,16 @@ export function ScreeningPage(): React.JSX.Element {
                       <span className={`badge-decision badge-${paper.decision.toLowerCase()}`}>
                         {paper.decision}
                       </span>
-                      {paper.ai_confidence !== null && (
-                        <span className="badge-ai-conf" title="Confiança da Assistência">
-                          <Sparkles size={10} /> {Math.round(paper.ai_confidence * 100)}%
+                      {isBeingScreened ? (
+                        <span className="badge-screening-active" title="Análise da IA em andamento">
+                          <RefreshCw size={10} className="animate-spin text-accent" /> Triando...
                         </span>
+                      ) : (
+                        paper.ai_confidence !== null && (
+                          <span className="badge-ai-conf" title="Confiança da Assistência">
+                            <Sparkles size={10} /> {Math.round(paper.ai_confidence * 100)}%
+                          </span>
+                        )
                       )}
                       {paper.year && <span className="queue-card-year">{paper.year}</span>}
                     </div>
@@ -1035,11 +1217,25 @@ export function ScreeningPage(): React.JSX.Element {
                   <div className="meta-pill">
                     <ExternalLink size={13} className="icon-accent" />
                     <a
-                      href={`https://doi.org/${selectedPaper.doi}`}
+                      href={getDoiUrl(selectedPaper.doi)}
                       target="_blank"
                       rel="noreferrer"
+                      title="Abrir publicação oficial via DOI"
                     >
-                      DOI: {selectedPaper.doi}
+                      DOI: {selectedPaper.doi.replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')}
+                    </a>
+                  </div>
+                )}
+                {selectedPaper.download_url && (
+                  <div className="meta-pill">
+                    <Globe size={13} className="icon-accent" />
+                    <a
+                      href={selectedPaper.download_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Abrir no repositório institucional de origem (BDTD, SciELO, etc.)"
+                    >
+                      {selectedPaper.source ? `Repositório (${selectedPaper.source})` : 'Repositório / Fonte'}
                     </a>
                   </div>
                 )}
@@ -1103,6 +1299,32 @@ export function ScreeningPage(): React.JSX.Element {
                         </div>
                       </Tabs.List>
 
+                    {getSourceUrl(selectedPaper) && (
+                      <a
+                        href={getSourceUrl(selectedPaper)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="btn-pdf-action link"
+                        title="Abrir trabalho na página do repositório ou editora oficial"
+                      >
+                        <Globe size={12} /> {selectedPaper.doi ? 'Abrir DOI' : 'Abrir Fonte'}
+                      </a>
+                    )}
+
+                    {readingViewMode === 'abstract' && !isEditingAbstract && (
+                      <button
+                        type="button"
+                        className="btn-pdf-action"
+                        onClick={() => {
+                          setEditedAbstractText(selectedPaper.abstract || '')
+                          setIsEditingAbstract(true)
+                        }}
+                        title="Editar ou colar manualmente o resumo do artigo"
+                      >
+                        <Edit3 size={12} /> {selectedPaper.abstract ? 'Editar Resumo' : 'Colar Resumo'}
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       className="btn-pdf-action primary"
@@ -1145,27 +1367,116 @@ export function ScreeningPage(): React.JSX.Element {
                     sem pdf_path — mesmo comportamento de antes da migração
                     para Tabs, quando um único ternário cobria os três modos. */}
                 {(() => {
-                  const conteudoResumo = selectedPaper.abstract ? (
-                    <p className="abstract-text">{selectedPaper.abstract}</p>
+                  const conteudoResumo = isEditingAbstract ? (
+                    <div className="abstract-editor-card animate-fade-in">
+                      <div className="editor-top-info">
+                        <span className="editor-hint">
+                          <Edit3 size={13} className="text-accent" /> Cole ou digite o resumo recuperado do repositório/artigo:
+                        </span>
+                        <div className="editor-char-counter">
+                          <span>{editedAbstractText.length} caracteres</span>
+                          <span>•</span>
+                          <span>
+                            {editedAbstractText.trim()
+                              ? editedAbstractText.trim().split(/\s+/).length
+                              : 0}{' '}
+                            palavras
+                          </span>
+                        </div>
+                      </div>
+
+                      <textarea
+                        className="abstract-edit-textarea"
+                        rows={10}
+                        placeholder="Cole aqui o texto completo do resumo (abstract) deste estudo..."
+                        value={editedAbstractText}
+                        onChange={(e) => setEditedAbstractText(e.target.value)}
+                        autoFocus
+                      />
+
+                      <div className="abstract-editor-actions">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setIsEditingAbstract(false)
+                            setEditedAbstractText(selectedPaper.abstract || '')
+                          }}
+                          disabled={savingAbstract}
+                          leftIcon={<X size={13} />}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={handleSaveAbstract}
+                          disabled={savingAbstract}
+                          leftIcon={
+                            savingAbstract ? (
+                              <RefreshCw size={13} className="animate-spin" />
+                            ) : (
+                              <Save size={13} />
+                            )
+                          }
+                        >
+                          {savingAbstract ? 'Salvando...' : 'Salvar Resumo'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : selectedPaper.abstract ? (
+                    <div className="abstract-display-wrapper">
+                      <p className="abstract-text">{selectedPaper.abstract}</p>
+                      <div className="abstract-footer-row">
+                        <button
+                          type="button"
+                          className="btn-abstract-edit-subtle"
+                          onClick={() => {
+                            setEditedAbstractText(selectedPaper.abstract || '')
+                            setIsEditingAbstract(true)
+                          }}
+                          title="Editar ou complementar o texto do resumo"
+                        >
+                          <Edit3 size={12} /> Editar Resumo
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="empty-abstract-state">
                       <AlertCircle size={24} />
                       <p>Resumo não disponível nos metadados coletados deste registro.</p>
                       <p className="empty-abstract-hint">
-                        Busque ou anexe o PDF acima para ler o texto completo do estudo.
+                        Acesse o repositório ou página do DOI para consultar e colar o resumo, ou anexe o PDF do estudo.
                       </p>
-                      {selectedPaper.doi && (
-                        <a
-                          href={`https://doi.org/${selectedPaper.doi}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="btn-secondary small"
+                      <div className="empty-abstract-actions">
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setEditedAbstractText('')
+                            setIsEditingAbstract(true)
+                          }}
+                          leftIcon={<Edit3 size={13} />}
                         >
-                          <ExternalLink size={13} /> Consultar via DOI
-                        </a>
-                      )}
+                          Inserir Resumo Manualmente
+                        </Button>
+                        {getSourceUrl(selectedPaper) && (
+                          <a
+                            href={getSourceUrl(selectedPaper)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="btn-secondary small"
+                          >
+                            <ExternalLink size={13} /> {selectedPaper.doi ? 'Consultar via DOI' : 'Abrir no Repositório'}
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )
+
                   return (
                     <>
                       <Tabs.Content value="abstract" className="tabs-content-passthrough">
@@ -1417,119 +1728,44 @@ export function ScreeningPage(): React.JSX.Element {
         </div>
       )}
 
-      {/* Triagem em lote — enquanto roda, o modal não fecha por clique fora nem
-          por Escape: interromper por acidente custaria a execução inteira. */}
-      <Dialog open={isBatchModalOpen} onOpenChange={(o) => !isBatchRunning && setIsBatchModalOpen(o)}>
-        <DialogContent
-          size="sm"
-          onEscapeKeyDown={(e) => isBatchRunning && e.preventDefault()}
-          onPointerDownOutside={(e) => isBatchRunning && e.preventDefault()}
+      {/* Modal de Triagem em Lote com Assistência IA & Progresso ao Vivo */}
+      <BatchScreeningModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        projectId={id || ''}
+        pendingCount={stats.pending}
+        isRunning={isBatchRunning}
+        progress={batchProgress}
+        currentStudy={currentScreeningStudy}
+        activityFeed={batchActivityFeed}
+        onStartBatch={handleStartBatchAI}
+      />
+
+      {/* Floating Mini-Dock quando a triagem está em execução e o modal foi minimizado */}
+      {isBatchRunning && !isBatchModalOpen && (
+        <div
+          className="batch-floating-dock animate-fade-in"
+          onClick={() => setIsBatchModalOpen(true)}
+          role="button"
+          tabIndex={0}
+          title="Clique para abrir os detalhes da triagem em lote"
         >
-          <DialogHeader>
-            <DialogTitle>Triagem em Lote com Assistência</DialogTitle>
-            <DialogDescription>
-              Execute a avaliação automática em massa de artigos com status Pendente
-            </DialogDescription>
-          </DialogHeader>
-
-          {!isBatchRunning ? (
-              <div className="batch-config-form">
-                <div className="form-group">
-                  <label>Quantidade Máxima de Artigos Pendentes ({batchLimit})</label>
-                  <select
-                    value={batchLimit}
-                    onChange={(e) => setBatchLimit(Number(e.target.value))}
-                  >
-                    <option value={20}>20 artigos</option>
-                    <option value={50}>50 artigos (Recomendado)</option>
-                    <option value={100}>100 artigos</option>
-                    <option value={200}>200 artigos</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Concorrência / Workers ({batchConcurrency})</label>
-                  <select
-                    value={batchConcurrency}
-                    onChange={(e) => setBatchConcurrency(Number(e.target.value))}
-                  >
-                    <option value={1}>1 worker (Sequencial / Evita Rate Limit)</option>
-                    <option value={3}>3 workers paralelos (Padrão)</option>
-                    <option value={5}>5 workers paralelos (Rápido)</option>
-                  </select>
-                </div>
-
-                <DialogFooter>
-                  <Button variant="secondary" size="md" onClick={() => setIsBatchModalOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button variant="primary" size="md" onClick={handleStartBatchAI} leftIcon={<Zap size={14} />}>
-                    Iniciar Triagem em Lote
-                  </Button>
-                </DialogFooter>
-              </div>
-            ) : (
-              <div className="batch-progress-view animate-fade-in">
-                <div className="progress-top-row">
-                  <span className="progress-label" id="batch-progress-label">
-                    Processando com Assistência…
-                  </span>
-                  <span className="progress-percentage">{batchProgress?.percentage || 0}%</span>
-                </div>
-
-                {/* `progressbar` e não `aria-live`: o lote emite um tique por
-                    estudo, e anunciar cada um transformaria o leitor de tela em
-                    metrônomo. Com os valores expostos, quem usa consulta o
-                    progresso quando quiser; a conclusão é anunciada pelo aviso
-                    que o log store levanta. */}
-                <div
-                  className="progress-bar-track"
-                  role="progressbar"
-                  aria-labelledby="batch-progress-label"
-                  aria-valuemin={0}
-                  aria-valuemax={batchProgress?.total || 100}
-                  aria-valuenow={batchProgress?.processed || 0}
-                  aria-valuetext={`${batchProgress?.processed || 0} de ${batchProgress?.total || 0} estudos triados`}
-                >
-                  <div
-                    className="progress-bar-fill"
-                    style={{ width: `${batchProgress?.percentage || 0}%` }}
-                  />
-                </div>
-
-                <div className="batch-stats-counters">
-                  <div className="batch-stat-box">
-                    <span>Processados</span>
-                    <strong>
-                      {batchProgress?.processed || 0} / {batchProgress?.total || 0}
-                    </strong>
-                  </div>
-                  <div className="batch-stat-box text-success">
-                    <span>Incluídos</span>
-                    <strong>{batchProgress?.included || 0}</strong>
-                  </div>
-                  <div className="batch-stat-box text-error">
-                    <span>Excluídos</span>
-                    <strong>{batchProgress?.excluded || 0}</strong>
-                  </div>
-                  <div className="batch-stat-box text-warning">
-                    <span>Pendentes</span>
-                    <strong>{batchProgress?.pending || 0}</strong>
-                  </div>
-                </div>
-
-                <p className="batch-hint-text">
-                  A triagem continuará em segundo plano mesmo se você fechar este modal.
-                </p>
-                <div className="batch-minimize-row">
-                  <Button variant="secondary" size="md" onClick={() => setIsBatchModalOpen(false)}>
-                    Minimizar e Continuar
-                  </Button>
-                </div>
-              </div>
-            )}
-        </DialogContent>
-      </Dialog>
+          <div className="dock-icon">
+            <RefreshCw size={16} className="animate-spin text-accent" />
+          </div>
+          <div className="dock-info">
+            <strong>Triagem em Lote com IA</strong>
+            <span>
+              {batchProgress
+                ? `${batchProgress.processed} de ${batchProgress.total} (${batchProgress.percentage}%)`
+                : 'Iniciando...'}
+            </span>
+          </div>
+          <button type="button" className="btn-dock-expand" title="Expandir painel de progresso">
+            <Maximize2 size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Cadastro manual de estudo */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

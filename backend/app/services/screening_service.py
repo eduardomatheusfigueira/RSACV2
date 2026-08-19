@@ -257,13 +257,12 @@ class ScreeningService:
         db = SessionLocal()
         try:
             pending_papers = (
-                db.query(PaperModel.id)
+                db.query(PaperModel.id, PaperModel.title, PaperModel.authors, PaperModel.year)
                 .filter(PaperModel.project_id == project_id, PaperModel.decision == "Pendente")
                 .limit(limit)
                 .all()
             )
-            paper_ids = [p[0] for p in pending_papers]
-            total_papers = len(paper_ids)
+            total_papers = len(pending_papers)
 
             if total_papers == 0:
                 await ws_manager.broadcast(
@@ -274,15 +273,38 @@ class ScreeningService:
 
             logger.info(f"[BatchScreening] Iniciando triagem de {total_papers} artigos para o projeto {project_id}...")
 
+            await ws_manager.broadcast(
+                project_id,
+                {
+                    "type": "batch_screening_started",
+                    "total": total_papers,
+                    "message": f"Iniciando triagem com IA para {total_papers} artigos pendentes...",
+                },
+            )
+
             semaphore = asyncio.Semaphore(concurrency)
             processed_count = 0
             included_count = 0
             excluded_count = 0
             pending_count = 0
 
-            async def process_one(pid: str):
+            async def process_one(paper_info):
                 nonlocal processed_count, included_count, excluded_count, pending_count
+                pid, ptitle, pauthors, pyear = paper_info
                 async with semaphore:
+                    # Notificar início da análise deste estudo específico
+                    await ws_manager.broadcast(
+                        project_id,
+                        {
+                            "type": "batch_screening_item_start",
+                            "paper_id": pid,
+                            "paper_title": ptitle or "Sem título",
+                            "paper_authors": pauthors or "",
+                            "paper_year": pyear or "",
+                            "total": total_papers,
+                        },
+                    )
+
                     task_db = SessionLocal()
                     try:
                         res = await self.screen_single_paper(task_db, project_id, pid)
@@ -302,10 +324,13 @@ class ScreeningService:
                                 "total": total_papers,
                                 "percentage": round((processed_count / total_papers) * 100, 1),
                                 "current_paper_id": pid,
+                                "current_paper_title": ptitle or "Sem título",
                                 "decision": res.decision,
+                                "confidence": res.confidence,
+                                "justification": res.justification,
                                 "included_count": included_count,
                                 "excluded_count": excluded_count,
-                                "pending_count": pending_count,
+                                "pending_count": total_papers - processed_count,
                             },
                         )
                     except Exception as e:
@@ -313,7 +338,7 @@ class ScreeningService:
                     finally:
                         task_db.close()
 
-            tasks = [process_one(pid) for pid in paper_ids]
+            tasks = [process_one(p_info) for p_info in pending_papers]
             await asyncio.gather(*tasks)
 
             logger.info(f"[BatchScreening] Finalizada triagem em lote do projeto {project_id}.")
@@ -324,7 +349,7 @@ class ScreeningService:
                     "total_processed": processed_count,
                     "included": included_count,
                     "excluded": excluded_count,
-                    "pending": pending_count,
+                    "pending": total_papers - processed_count,
                 },
             )
 
