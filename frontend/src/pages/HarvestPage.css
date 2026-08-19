@@ -800,18 +800,96 @@
   margin-bottom: 0;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   DESKTOP DEFAULT (Hides mobile segmented nav)
+═══════════════════════════════════════════════════════════════════ */
+.harvest-mobile-segmented-nav {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE NATIVE REDESIGN (< 900px)
+═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {
+  .harvest-page {
+    height: auto;
+    min-height: 100%;
+    overflow-y: visible;
+  }
+
+  /* Segmented Nav Bar (Top of Screen) */
+  .harvest-mobile-segmented-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    background: var(--color-bg-secondary);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-neo-raised);
+    margin-bottom: var(--space-2);
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+
+  .harvest-mobile-segmented-nav .mobile-seg-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1-5);
+    height: 38px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--weight-bold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .harvest-mobile-segmented-nav .mobile-seg-btn.active {
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-neo-raised);
+  }
+
+  /* Mobile Tab Visibility */
+  .mobile-tab-view {
+    display: none !important;
+  }
+
+  .mobile-tab-view.mobile-show {
+    display: flex !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
   .harvest-workbench-grid {
-    grid-template-columns: 1fr;
+    display: block;
+    width: 100%;
+    min-height: auto;
+  }
+
+  .harvest-config-pane,
+  .harvest-monitor-pane {
+    width: 100% !important;
+    height: auto !important;
     min-height: auto;
   }
 
   .harvest-top-controls-bar {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--space-2);
   }
 
   .harvest-metrics-group {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-1-5);
   }
 }

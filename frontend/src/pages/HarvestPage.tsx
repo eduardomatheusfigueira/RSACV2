@@ -78,6 +78,7 @@ export function HarvestPage(): JSX.Element {
   const [harvestRuns, setHarvestRuns] = useState<HarvestRun[]>([])
   const [feedTab, setFeedTab] = useState<'stream' | 'terminal'>('stream')
   const [feedFilter, setFeedFilter] = useState<'all' | 'new' | 'dup'>('all')
+  const [mobileTab, setMobileTab] = useState<'sources' | 'monitor'>('sources')
 
   const [dedupReport, setDedupReport] = useState<DeduplicationReport | null>(null)
   const [isDedupModalOpen, setIsDedupModalOpen] = useState(false)
@@ -372,6 +373,26 @@ export function HarvestPage(): JSX.Element {
         }
       />
 
+      {/* ── NAVEGAÇÃO SEGMENTADA MOBILE (Exibida apenas em telas < 900px) ── */}
+      <div className="harvest-mobile-segmented-nav">
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'sources' ? 'active' : ''}`}
+          onClick={() => setMobileTab('sources')}
+        >
+          <Database size={15} />
+          <span>Bases & Parâmetros ({selectedSources.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'monitor' ? 'active' : ''}`}
+          onClick={() => setMobileTab('monitor')}
+        >
+          <Radio size={15} />
+          <span>Monitor & Logs ({totalFound})</span>
+        </button>
+      </div>
+
       {/* ═══════════════════════════════════════════════════════════════════
           BARRA SUPERIOR DE STATUS E MÉTRICAS DA COLETA (ACIMA)
       ═══════════════════════════════════════════════════════════════════ */}
@@ -417,7 +438,7 @@ export function HarvestPage(): JSX.Element {
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="harvest-workbench-grid">
         {/* ── COLUNA DA ESQUERDA: PARÂMETROS, BASES & HISTÓRICO ───────── */}
-        <div className="harvest-config-pane">
+        <div className={`harvest-config-pane mobile-tab-view ${mobileTab === 'sources' ? 'mobile-show' : ''}`}>
           <div className="pane-header-title">
             <Database size={16} className="icon-accent" />
             <h3>Parâmetros da Coleta Multibase</h3>
@@ -573,7 +594,7 @@ export function HarvestPage(): JSX.Element {
         </div>
 
         {/* ── COLUNA DA DIREITA: LISTA DE TRABALHOS COLETADOS & MONITOR ─ */}
-        <div className="harvest-monitor-pane">
+        <div className={`harvest-monitor-pane mobile-tab-view ${mobileTab === 'monitor' ? 'mobile-show' : ''}`}>
         <Tabs.Root
           className="monitor-tabs-root"
           value={feedTab}

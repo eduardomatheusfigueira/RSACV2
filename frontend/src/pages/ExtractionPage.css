@@ -1163,24 +1163,133 @@
   border-top: 1px solid var(--color-border);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   DESKTOP DEFAULT (Hides mobile segmented nav & sticky action dock)
+═══════════════════════════════════════════════════════════════════ */
+.extraction-mobile-segmented-nav {
+  display: none;
+}
+
+.extraction-mobile-sticky-dock {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE NATIVE REDESIGN (< 768px)
+═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .extraction-page {
     height: auto;
-    min-height: calc(100vh - 120px);
-    overflow-y: auto;
+    min-height: 100%;
+    overflow-y: visible;
+    padding-bottom: 70px;
+  }
+
+  /* Segmented Nav Bar (Top of Screen) */
+  .extraction-mobile-segmented-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    background: var(--color-bg-secondary);
+    padding: var(--space-1);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-neo-raised);
+    margin-bottom: var(--space-2);
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+
+  .extraction-mobile-segmented-nav .mobile-seg-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1-5);
+    height: 38px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xs);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--weight-bold);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .extraction-mobile-segmented-nav .mobile-seg-btn.active {
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-neo-raised);
+  }
+
+  /* Mobile Tab Visibility */
+  .mobile-tab-view {
+    display: none !important;
+  }
+
+  .mobile-tab-view.mobile-show {
+    display: flex !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
+  .extraction-workbench-grid {
+    display: block;
+    width: 100%;
+    height: auto;
   }
 
   .paper-reading-pane {
-    height: auto;
-    min-height: 380px;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto;
   }
 
-  .extraction-dock {
-    height: auto;
+  .extraction-form-pane {
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto;
   }
 
-  .extraction-actions-bar {
+  .reading-actions-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .queue-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .queue-search-input-wrapper {
+    width: 100% !important;
+  }
+
+  /* Fixed Bottom Thumb Bar (Mobile Extraction Actions) */
+  .extraction-mobile-sticky-dock {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2);
+    position: fixed;
+    bottom: 32px;
+    left: 0;
+    right: 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -4px 20px color-mix(in srgb, var(--bevel-dark) 35%, transparent);
+    z-index: var(--z-fixed);
+  }
+
+  .extraction-mobile-sticky-dock button {
+    width: 100%;
+    height: 44px;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
   }
 }

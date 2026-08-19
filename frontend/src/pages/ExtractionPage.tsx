@@ -106,6 +106,7 @@ export function ExtractionPage(): JSX.Element {
 
   // Search & Navigation in Included Papers
   const [searchTerm, setSearchTerm] = useState('')
+  const [mobileTab, setMobileTab] = useState<'document' | 'questions' | 'queue'>('document')
   const queueScrollRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -573,10 +574,38 @@ export function ExtractionPage(): JSX.Element {
         </div>
       )}
 
+      {/* ── NAVEGAÇÃO SEGMENTADA MOBILE (Exibida apenas em telas < 768px) ── */}
+      <div className="extraction-mobile-segmented-nav">
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'document' ? 'active' : ''}`}
+          onClick={() => setMobileTab('document')}
+        >
+          <BookOpen size={15} />
+          <span>Documento / PDF</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'questions' ? 'active' : ''}`}
+          onClick={() => setMobileTab('questions')}
+        >
+          <FileText size={15} />
+          <span>Extração ({answeredQuestionsCount}/{questions.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'queue' ? 'active' : ''}`}
+          onClick={() => setMobileTab('queue')}
+        >
+          <Layers size={15} />
+          <span>Artigos ({papers.length})</span>
+        </button>
+      </div>
+
       {/* ═══════════════════════════════════════════════════════════════════
           FILA HORIZONTAL DE ESTUDOS INCLUÍDOS (ACIMA)
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="extraction-queue-container">
+      <div className={`extraction-queue-container mobile-tab-view ${mobileTab === 'queue' ? 'mobile-show' : ''}`}>
         {/* Top Controls of the Queue */}
         <div className="queue-controls-bar">
           <div className="queue-filter-info">
@@ -695,7 +724,7 @@ export function ExtractionPage(): JSX.Element {
             onValueChange={(v) => handleToggleReadingView(v as 'abstract' | 'pdf_text')}
           >
           <div
-            className={`paper-reading-pane ${isDragOver ? 'drag-over-active' : ''}`}
+            className={`paper-reading-pane mobile-tab-view ${mobileTab === 'document' ? 'mobile-show' : ''} ${isDragOver ? 'drag-over-active' : ''}`}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }}
             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false) }}
             onDrop={(e) => {
@@ -1025,7 +1054,7 @@ export function ExtractionPage(): JSX.Element {
           </Tabs.Root>
 
           {/* ── COLUNA DA DIREITA: FORMULÁRIO DE EXTRAÇÃO COM ASSISTÊNCIA INDIVIDUAL ── */}
-          <div className="extraction-form-pane">
+          <div className={`extraction-form-pane mobile-tab-view ${mobileTab === 'questions' ? 'mobile-show' : ''}`}>
             <div className="form-pane-header">
               <div className="form-pane-title-group">
                 <FileText size={18} className="icon-accent" />
@@ -1231,6 +1260,33 @@ export function ExtractionPage(): JSX.Element {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── BARRA FIXA INFERIOR DE AÇÕES MOBILE ── */}
+      {selectedPaper && (
+        <div className="extraction-mobile-sticky-dock animate-fade-in">
+          <Button
+            variant="secondary"
+            size="md"
+            className="mobile-extract-btn"
+            onClick={handleExtractAllAI}
+            loading={extractingAI}
+            disabled={questions.length === 0}
+            leftIcon={<Sparkles size={16} />}
+          >
+            {extractingAI ? 'Extraindo…' : 'Preencher com IA'}
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            className="mobile-save-btn"
+            onClick={handleSaveAnswers}
+            loading={saving}
+            leftIcon={<Save size={16} />}
+          >
+            {saving ? 'Salvando…' : 'Salvar Respostas'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

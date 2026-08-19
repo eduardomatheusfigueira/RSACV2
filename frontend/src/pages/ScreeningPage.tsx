@@ -86,6 +86,7 @@ export function ScreeningPage(): React.JSX.Element {
   const [acquiringPdf, setAcquiringPdf] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
+  const [mobileTab, setMobileTab] = useState<'article' | 'criteria' | 'queue'>('article')
 
   // Deduplication Report State
   const [dedupReport, setDedupReport] = useState<DeduplicationReport | null>(null)
@@ -711,11 +712,39 @@ export function ScreeningPage(): React.JSX.Element {
         }
       />
 
+      {/* ── NAVEGAÇÃO SEGMENTADA MOBILE (Exibida apenas em telas < 768px) ── */}
+      <div className="screening-mobile-segmented-nav">
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'article' ? 'active' : ''}`}
+          onClick={() => setMobileTab('article')}
+        >
+          <FileText size={15} />
+          <span>Artigo</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'criteria' ? 'active' : ''}`}
+          onClick={() => setMobileTab('criteria')}
+        >
+          <CheckSquare size={15} />
+          <span>Critérios & IA</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-seg-btn ${mobileTab === 'queue' ? 'active' : ''}`}
+          onClick={() => setMobileTab('queue')}
+        >
+          <Layers size={15} />
+          <span>Fila ({stats.total})</span>
+        </button>
+      </div>
+
       {/* ═══════════════════════════════════════════════════════════════════
           FILA HORIZONTAL DE TRABALHOS (ACIMA)
           Controles de busca, contadores de status, paginação e faixa de cards
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="screening-queue-container">
+      <div className={`screening-queue-container mobile-tab-view ${mobileTab === 'queue' ? 'mobile-show' : ''}`}>
         {/* Top Control Bar of the Queue */}
         <div className="queue-controls-bar">
           <div className="queue-filter-buttons">
@@ -892,7 +921,7 @@ export function ScreeningPage(): React.JSX.Element {
         style={{ display: 'none' }}
       />
           <div
-            className={`study-reading-pane ${isDragOver ? 'drag-over-active' : ''}`}
+            className={`study-reading-pane mobile-tab-view ${mobileTab === 'article' ? 'mobile-show' : ''} ${isDragOver ? 'drag-over-active' : ''}`}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }}
             onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(false) }}
             onDrop={(e) => {
@@ -1181,7 +1210,7 @@ export function ScreeningPage(): React.JSX.Element {
           </div>
 
           {/* ── COLUNA DA DIREITA: CRITÉRIOS DE ELEGIBILIDADE & OBSERVAÇÕES ── */}
-          <div className="criteria-evaluation-pane">
+          <div className={`criteria-evaluation-pane mobile-tab-view ${mobileTab === 'criteria' ? 'mobile-show' : ''}`}>
             <div className="criteria-pane-header">
               <div className="criteria-pane-title">
                 <CheckSquare size={18} className="icon-accent" />
@@ -1571,6 +1600,36 @@ export function ScreeningPage(): React.JSX.Element {
         onClose={() => setIsDedupModalOpen(false)}
         projectId={id}
       />
+
+      {/* ── BARRA FIXA INFERIOR DE DECISÃO MOBILE (THUMB BAR) ── */}
+      {selectedPaper && (
+        <div className="screening-mobile-sticky-dock animate-fade-in">
+          <button
+            type="button"
+            className={`mobile-dock-btn include ${selectedPaper.decision === 'Incluído' ? 'active' : ''}`}
+            onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
+          >
+            <CheckCircle2 size={18} />
+            <span>Incluir</span>
+          </button>
+          <button
+            type="button"
+            className={`mobile-dock-btn pending ${selectedPaper.decision === 'Pendente' ? 'active' : ''}`}
+            onClick={() => handleDecision(selectedPaper.id, 'Pendente')}
+          >
+            <Clock size={18} />
+            <span>Pendente</span>
+          </button>
+          <button
+            type="button"
+            className={`mobile-dock-btn exclude ${selectedPaper.decision === 'Excluído' ? 'active' : ''}`}
+            onClick={() => handleDecision(selectedPaper.id, 'Excluído')}
+          >
+            <XCircle size={18} />
+            <span>Excluir</span>
+          </button>
+        </div>
+      )}
     </div>
   )
 }

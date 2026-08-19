@@ -48,6 +48,7 @@
   }
 
   .app-content {
-    padding: var(--space-3) var(--space-3) var(--space-6);
+    padding: var(--space-2) var(--space-2) 64px var(--space-2);
+    overflow-x: hidden;
   }
 }
