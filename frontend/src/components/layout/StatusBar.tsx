@@ -10,6 +10,7 @@ import { Sparkles, Edit3, Terminal, AlertCircle, LogOut, UserRound } from 'lucid
 import { RsacMark } from '@/components/brand/RsacMark'
 import { BetaBadge } from '@/components/brand/BetaBadge'
 import { api } from '@/api/client'
+import { analisarUrlDeBackend, mensagemDeConfirmacao } from '@/api/backendUrl'
 import './StatusBar.css'
 
 export function StatusBar(): JSX.Element {
@@ -29,10 +30,23 @@ export function StatusBar(): JSX.Element {
       'Configurar URL do Backend (ex: https://seu-tunnel.trycloudflare.com ou http://127.0.0.1:8000):',
       current
     )
-    if (input && input.trim()) {
-      api.setBaseUrl(input.trim())
-      window.location.reload()
+    if (!input || !input.trim()) return
+
+    // Mesma validação e mesma confirmação do link com `api_url`: trocar o
+    // servidor pela barra de status é a mesma decisão, e mudar de destino sem
+    // ver o host é o que a Fase 4 fecha (doc 29 §29.12).
+    let destino
+    try {
+      destino = analisarUrlDeBackend(input)
+    } catch (err: any) {
+      window.alert(err?.message ?? 'Endereço de servidor inválido.')
+      return
     }
+
+    if (!window.confirm(mensagemDeConfirmacao(destino))) return
+
+    api.setBaseUrl(destino.url)
+    window.location.reload()
   }
 
   const handleLogout = async () => {
@@ -57,6 +71,9 @@ export function StatusBar(): JSX.Element {
         >
           <span className={`status-dot ${backendStatus || 'offline'}`} />
           {statusText}
+          {/* O host fica permanentemente visível: é o que permite perceber
+              que a interface está falando com outro servidor (doc 29 §29.12). */}
+          <span className="status-backend-host">{api.getBackendHost()}</span>
         </span>
         <span className="status-divider">|</span>
         <span className={`status-ai-mode ${aiEnabled ? 'active' : 'manual'}`}>

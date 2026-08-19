@@ -28,7 +28,7 @@ a Fase 0 do doc 30 não estiver entregue.
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
 23–27   vigente            para onde vamos agora (UX/UI)
-28–30   vigente            segurança — Fases 0 a 3 entregues; 4 e 5 em aberto 🔴
+28–30   vigente            segurança — Fases 0 a 4 entregues; 5 em aberto 🔴
 ```
 
 ---

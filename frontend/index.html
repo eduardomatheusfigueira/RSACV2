@@ -3,8 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Content-Security-Policy
+      =======================
+      `connect-src` listava `https:` e `wss:` genéricos, o que autorizava
+      conexão a qualquer host da internet — e portanto não oferecia barreira
+      alguma contra o sequestro de `api_url` (doc 28 V-08).
+
+      O que fica: a própria origem (o caso do backend que serve a SPA), o
+      loopback (app de mesa e desenvolvimento) e os domínios de túnel, que são
+      os destinos que o produto realmente usa. Um endereço fora disso continua
+      configurável — mas aí o navegador exige que ele seja declarado aqui, em
+      vez de aceitar qualquer coisa em silêncio.
+    -->
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https: wss:;" />
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https://*.trycloudflare.com wss://*.trycloudflare.com https://*.cfargotunnel.com wss://*.cfargotunnel.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

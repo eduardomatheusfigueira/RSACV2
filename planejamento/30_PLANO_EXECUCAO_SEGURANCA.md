@@ -20,7 +20,7 @@ Fase 0  ▸ CONTENÇÃO          9 h   fecha o comprometimento total sem auth  �
 Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditoria  ✅ ENTREGUE
 Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave  ✅ ENTREGUE
 Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites  ✅ ENTREGUE
-Fase 4  ▸ CLIENTE & LANÇADOR 2 d   api_url, aviso, provisionamento, checksum
+Fase 4  ▸ CLIENTE & LANÇADOR 2 d   api_url, aviso, provisionamento, checksum  ✅ ENTREGUE
 Fase 5  ▸ INTEGRIDADE & CI   2 d   fórmula, prompt, lockfile, pipeline
                             ────
                             ~12 dias úteis
@@ -31,10 +31,10 @@ de "comprometimento total por quem tiver a URL" para "exige uma vulnerabilidade
 de verdade". Ela **não** entrega segurança — entrega tempo para fazer o resto
 sem estar exposto.
 
-**Estado em 19/08/2026:** Fases 0 a 3 entregues. O `Iniciar_Servidor.bat`
+**Estado em 19/08/2026:** Fases 0 a 4 entregues. O `Iniciar_Servidor.bat`
 exige conta e senha e recusa-se a publicar sem autenticação. O que continua
-aberto está nas Fases 4 e 5 — o sequestro de `api_url` no cliente web, a
-sanitização das exportações, a delimitação do prompt e a CI.
+aberto está na Fase 5 — sanitização das exportações, delimitação do prompt,
+*lockfile* e CI.
 
 ---
 
@@ -396,6 +396,43 @@ usuário e senha antes da URL pública aparecer. Abrir a SPA com
 `#/?api_url=https://evil.example` mostra o modal nomeando `evil.example` e não
 grava nada se o usuário recusar.
 
+### ✅ Fase 4 — entregue em 19/08/2026
+
+| Entrega | Estado | Onde |
+|---|---|---|
+| `api_url` só após confirmação humana nomeando o host | ✅ | `api/backendUrl.ts`, `App.tsx` |
+| Persistência migrada de `localStorage` para `sessionStorage` | ✅ | `api/client.ts` |
+| Validação de protocolo, recusa de `http://` fora do loopback | ✅ | `analisarUrlDeBackend` |
+| Host do backend permanentemente visível | ✅ | `StatusBar.tsx` |
+| CSP sem `https:`/`wss:` genéricos | ✅ | `frontend/index.html` |
+| Lançador no perfil `server` + aviso + provisionamento | ✅ | entregue nas Fases 0 e 1 |
+| Chave-mestra gerada pelo lançador | ✅ | `server_launcher.py` |
+| Verificação de integridade do `cloudflared` | ✅ | `download_cloudflared`, `verificar_cloudflared_existente` |
+
+**Suíte de testes do frontend, que não existia:** `npm test` reportava "No test
+files found". Agora há 11 testes cobrindo a validação de URL — inclusive o
+sufixo forjado (`trycloudflare.com.evil.io`), que uma verificação por
+`includes()` deixaria passar.
+
+**Um defeito que eu mesmo introduzi e peguei na verificação:** a primeira
+versão gravava a chave-mestra em `server_config.json`, que é **versionado** —
+o pesquisador enviaria a própria chave para o GitHub no commit seguinte.
+Corrigido: a chave vai para `<data_dir>/server_secret.key`, com permissão
+`0600`, fora do repositório.
+
+**O que a verificação do `cloudflared` entrega, e o que não entrega.** A URL
+deixou de ser `latest/download/` — um alvo móvel que tornava qualquer
+verificação impossível — e passou a apontar uma versão fixa. O SHA-256 é
+confirmado pelo usuário na primeira execução e registrado; da segunda em
+diante, binário diferente é recusado sem perguntar, e um binário já presente
+também é conferido. É confiança na primeira utilização: **não** protege contra
+um artefato adulterado já no primeiro download, e por isso o caminho
+recomendado, impresso pelo próprio lançador, continua sendo instalar o
+cloudflared pelo instalador oficial e apontar `cloudflared_path`. O hash não
+vem fixado no repositório porque não foi possível obter e conferir um valor
+oficial a partir do ambiente de desenvolvimento — fixar um número não
+verificado seria pior que não fixar nenhum.
+
 ---
 
 ## 30.6 Fase 5 — Integridade e CI (2 dias) 🟡
@@ -476,12 +513,13 @@ Cada fase só está pronta quando:
 | | |
 |---|---|
 | **Situação inicial** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
-| **Situação atual** | Fases 0 a 3 entregues: a API exige identidade, as chaves não trafegam nem repousam em claro, o servidor não sobe desprotegido e não pode ser usado como procurador para a rede interna |
+| **Situação atual** | Fases 0 a 4 entregues: a API exige identidade, as chaves não trafegam nem repousam em claro, o servidor não sobe desprotegido, não pode ser usado como procurador para a rede interna e o cliente web não muda de destino sem confirmação humana |
 | **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta antes destas fases |
 | **Fase 0** | ✅ entregue em 19/08/2026 — remove o comprometimento total |
 | **Fase 1** | ✅ entregue em 19/08/2026 — a API inteira exige identidade |
 | **Fase 2** | ✅ entregue em 19/08/2026 — segredos cifrados em repouso |
 | **Fase 3** | ✅ entregue em 19/08/2026 — SSRF, WebSocket, cabeçalhos e limites |
+| **Fase 4** | ✅ entregue em 19/08/2026 — cliente web e lançador |
 | **Plano completo** | ~12 dias úteis — 18 de 18 achados fechados, com testes que impedem a volta |
 
 ---

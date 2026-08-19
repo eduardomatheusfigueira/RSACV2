@@ -27,6 +27,7 @@ import type {
 } from '@/types/api'
 
 import { useLogStore } from '@/stores/useLogStore'
+import { analisarUrlDeBackend } from '@/api/backendUrl'
 
 // A forma da resposta de extração vive em `types/api.ts` (junto do estado do
 // PDF que ela carrega); aqui apenas reexportamos para quem importa do cliente.
@@ -50,6 +51,15 @@ export interface PrismaFlowData {
 
 /** Onde o token de sessão é guardado entre recarregamentos da aba. */
 const SESSION_STORAGE_KEY = 'rsac_session_token'
+
+/**
+ * Onde o endereço do backend é guardado.
+ *
+ * `sessionStorage`, não `localStorage`: era a persistência permanente que
+ * fazia o sequestro de `api_url` sobreviver ao fechamento da aba (doc 29
+ * §29.12).
+ */
+const BACKEND_URL_KEY = 'rsac_api_url'
 
 /** Chamado quando o backend responde 401 — a aplicação volta para o login. */
 type UnauthorizedHandler = () => void
@@ -77,46 +87,36 @@ class APIClient {
   })()
 
   private onUnauthorized: UnauthorizedHandler | null = null
+  /**
+   * Endereço do backend.
+   *
+   * A resolução **não** consulta mais `?api_url=` aqui: aceitar o parâmetro no
+   * construtor era o que permitia sequestrar o cliente com um link (doc 28
+   * V-08). Quem trata o parâmetro é `AuthGate`, que pede confirmação humana
+   * nomeando o host antes de gravar qualquer coisa.
+   *
+   * A persistência é em `sessionStorage`, não em `localStorage`: um sequestro
+   * que passe pela confirmação morre ao fechar a aba, em vez de ficar
+   * pendurado para sempre.
+   */
   private baseUrl: string = (() => {
-    // 1. Verificar query param direto no carregamento inicial (?api_url= ou #/?api_url=)
     if (typeof window !== 'undefined') {
       try {
-        const searchParams = new URLSearchParams(window.location.search)
-        const urlFromSearch = searchParams.get('api_url')
-        if (urlFromSearch && urlFromSearch.trim()) {
-          const clean = urlFromSearch.trim().replace(/\/+$/, '')
-          const finalUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
-          localStorage.setItem('rsac_api_url', finalUrl)
-          return finalUrl
-        }
-        if (window.location.hash.includes('?')) {
-          const hashQuery = window.location.hash.split('?')[1]
-          const hashParams = new URLSearchParams(hashQuery)
-          const urlFromHash = hashParams.get('api_url')
-          if (urlFromHash && urlFromHash.trim()) {
-            const clean = urlFromHash.trim().replace(/\/+$/, '')
-            const finalUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
-            localStorage.setItem('rsac_api_url', finalUrl)
-            return finalUrl
-          }
-        }
-        // 2. Verificar URL previamente salva no localStorage
-        const saved = localStorage.getItem('rsac_api_url')
-        if (saved && saved.trim()) {
-          const clean = saved.trim().replace(/\/+$/, '')
-          return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
-        }
+        const salva = sessionStorage.getItem(BACKEND_URL_KEY)
+        if (salva && salva.trim()) return salva.trim()
       } catch {
-        // Ignora erros de acesso a window/localStorage
+        // Armazenamento bloqueado pelo navegador: cai na detecção automática.
       }
     }
-    // 3. Verificar variável de ambiente do Vite
+
     const envUrl = (import.meta as any).env?.VITE_API_URL
     if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
       const clean = envUrl.trim().replace(/\/+$/, '')
       return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
     }
-    // 4. Detecção automática se estiver no navegador Web (servido pelo backend ou Cloudflare)
+
+    // Servida pelo próprio backend (o caso do túnel): a origem da página é o
+    // endereço da API, e não há o que confirmar — é o mesmo servidor.
     if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
       if (!window.location.host.includes(':5173')) {
         return `${window.location.origin}/api/v1`
@@ -128,15 +128,34 @@ class APIClient {
   /**
    * Configura a URL base do backend manualmente e persiste no navegador.
    */
+  /**
+   * Aponta o cliente para outro backend.
+   *
+   * Valida o endereço (protocolo e criptografia) antes de aceitar — a versão
+   * anterior gravava qualquer string. Quem chama é responsável por já ter
+   * obtido a confirmação humana; a validação aqui é a última barreira.
+   */
   setBaseUrl(url: string): void {
-    const clean = url.trim().replace(/\/+$/, '')
-    this.baseUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+    const destino = analisarUrlDeBackend(url)
+    this.baseUrl = destino.url
+
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('rsac_api_url', this.baseUrl)
+        sessionStorage.setItem(BACKEND_URL_KEY, destino.url)
+        // Remove o resquício da versão que persistia para sempre.
+        localStorage.removeItem(BACKEND_URL_KEY)
       } catch {
-        // Ignora erros
+        // Armazenamento bloqueado: o endereço vale só para esta sessão.
       }
+    }
+  }
+
+  /** Host do backend em uso, para exibição permanente na interface. */
+  getBackendHost(): string {
+    try {
+      return new URL(this.baseUrl).host
+    } catch {
+      return this.baseUrl
     }
   }
 
@@ -146,8 +165,9 @@ class APIClient {
   setPort(port: number): void {
     this.port = port
     const envUrl = (import.meta as any).env?.VITE_API_URL
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('rsac_api_url') : null
-    if (!envUrl && !saved) {
+    const salva =
+      typeof window !== 'undefined' ? sessionStorage.getItem(BACKEND_URL_KEY) : null
+    if (!envUrl && !salva) {
       this.baseUrl = `http://127.0.0.1:${port}/api/v1`
     }
   }
@@ -161,28 +181,22 @@ class APIClient {
   }
 
   /**
-   * Detecta a porta ou URL do backend a partir da query string (suporta search e hash).
+   * Detecta a porta do backend passada pelo Electron.
+   *
+   * Deixou de aceitar `api_url`: o endereço do backend só muda por
+   * confirmação humana explícita, tratada no `AuthGate` (doc 29 §29.12).
    */
   detectPort(): void {
     if (typeof window === 'undefined') return
 
-    // 1. Procurar em window.location.search (?api_url=... ou ?port=...)
     const params = new URLSearchParams(window.location.search)
-    let apiUrl = params.get('api_url')
     let port = params.get('port')
 
-    // 2. Se não achou, procurar em window.location.hash (#/.../?api_url=...)
-    if (!apiUrl && !port && window.location.hash.includes('?')) {
-      const hashQuery = window.location.hash.split('?')[1]
-      const hashParams = new URLSearchParams(hashQuery)
-      apiUrl = hashParams.get('api_url')
+    if (!port && window.location.hash.includes('?')) {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1])
       port = hashParams.get('port')
     }
 
-    if (apiUrl) {
-      this.setBaseUrl(apiUrl)
-      return
-    }
     if (port) {
       this.setPort(parseInt(port, 10))
     }

@@ -18,6 +18,11 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
+import {
+  analisarUrlDeBackend,
+  extrairApiUrlDaLocalizacao,
+  mensagemDeConfirmacao,
+} from '@/api/backendUrl'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 
@@ -38,6 +43,45 @@ function ProjectRedirect(): JSX.Element {
 }
 
 /**
+ * Trata `?api_url=` com confirmação humana explícita (doc 29 §29.12).
+ *
+ * Antes, o parâmetro era aceito em silêncio e gravado para sempre: um link
+ * como `https://rsac.netlify.app/#/?api_url=https://backend.attacker` carregava
+ * a interface real, com o certificado real, e mandava toda requisição seguinte
+ * — inclusive as chaves digitadas — para o servidor do atacante.
+ *
+ * O que fecha isso não é validar o endereço, e sim **nomear o host** para uma
+ * pessoa antes que qualquer requisição saia: é a única informação capaz de
+ * distinguir o link legítimo do hostil, e o usuário foi treinado pelo próprio
+ * lançador a clicar em links do RSAC com `api_url` embutido.
+ */
+function aplicarApiUrlDaLocalizacao(): void {
+  const bruto = extrairApiUrlDaLocalizacao()
+  if (!bruto) return
+
+  let destino
+  try {
+    destino = analisarUrlDeBackend(bruto)
+  } catch (err: any) {
+    window.alert(
+      `O link usado aponta para um endereço de servidor inválido e foi ignorado.\n\n${err?.message ?? ''}`
+    )
+    return
+  }
+
+  // Mesma origem da página: é o próprio backend que serviu a interface, não há
+  // terceiro para confirmar.
+  if (typeof window !== 'undefined' && destino.origem === window.location.origin) {
+    api.setBaseUrl(destino.url)
+    return
+  }
+
+  if (window.confirm(mensagemDeConfirmacao(destino))) {
+    api.setBaseUrl(destino.url)
+  }
+}
+
+/**
  * Portão de autenticação.
  *
  * Fica entre o health check e as rotas: enquanto a fase é `checking` não se
@@ -50,10 +94,11 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   const { phase, bootstrap, markAnonymous } = useAuthStore()
 
   useEffect(() => {
-    // A detecção de porta/URL precisa vir antes da primeira chamada: os
-    // efeitos dos filhos rodam antes dos do pai, então deixar isso só no
-    // AppContent faria o bootstrap consultar o endereço errado no Electron.
+    // A detecção de porta precisa vir antes da primeira chamada: os efeitos
+    // dos filhos rodam antes dos do pai, então deixar isso só no AppContent
+    // faria o bootstrap consultar o endereço errado no Electron.
     api.detectPort()
+    aplicarApiUrlDaLocalizacao()
     api.setUnauthorizedHandler(markAnonymous)
     void bootstrap()
     return () => api.setUnauthorizedHandler(null)

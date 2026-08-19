@@ -264,3 +264,20 @@
   color: var(--color-text-primary);
   text-decoration: underline;
 }
+
+/* Host do backend em uso.
+   Visível o tempo todo de propósito: é o que permite ao pesquisador perceber
+   que a interface passou a falar com outro servidor. */
+.status-backend-host {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-3xs);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
