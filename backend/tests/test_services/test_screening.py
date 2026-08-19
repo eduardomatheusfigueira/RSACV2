@@ -113,7 +113,15 @@ async def test_screen_single_paper_included(db_session):
     db_session.refresh(paper)
     assert paper.decision == "Incluído"
     assert paper.ai_confidence == 0.95
-    assert "[IA - mock-model]" in paper.observations
+    # A observação deve conter apenas o parecer do revisor, sem rótulo de IA/modelo
+    assert paper.observations == "Estudo atende aos critérios de inclusão."
+    assert "IA" not in paper.observations
+    assert "mock-model" not in paper.observations
+
+    # Os critérios avaliados pela triagem devem ficar marcados para o estudo
+    evaluations = {ce.criterion_id: ce.value for ce in paper.criteria_evaluations}
+    assert evaluations[crit_inc.id] is True
+    assert evaluations[crit_exc.id] is False
 
 
 @pytest.mark.anyio
@@ -143,3 +151,67 @@ async def test_screen_single_paper_excluded(db_session):
 
     db_session.refresh(paper)
     assert paper.decision == "Excluído"
+
+
+@pytest.mark.anyio
+async def test_screen_single_paper_marca_criterios_por_codigo(db_session):
+    """Códigos INC1/EXC1 devolvidos pelo modelo devem marcar os critérios do protocolo."""
+
+    class CodeAIClient(MockAIClient):
+        async def analyze_screening(self, paper: Paper, protocol: Protocol) -> ScreeningResult:
+            return ScreeningResult(
+                decision="Incluído",
+                inclusion_criteria={"INC 1": True, "inc2": False},
+                exclusion_criteria={"EXC_1": False},
+                justification="[IA - mock-model]: Estudo alinhado ao escopo da revisão.",
+                confidence=0.9,
+                model_used="mock-model",
+                provider="mock",
+            )
+
+    service = ScreeningService(ai_client=CodeAIClient())
+
+    proj = ProjectModel(title="Projeto Códigos", methodology="PRISMA-P")
+    db_session.add(proj)
+    db_session.flush()
+
+    proto = ProtocolModel(project_id=proj.id, objective="Obj")
+    db_session.add(proto)
+    db_session.flush()
+
+    inc1 = CriterionModel(protocol_id=proto.id, text="Publicado em periódico revisado", is_exclusion=False)
+    inc2 = CriterionModel(protocol_id=proto.id, text="Aborda desenvolvimento regional", is_exclusion=False)
+    exc1 = CriterionModel(protocol_id=proto.id, text="Editorial ou resenha", is_exclusion=True)
+    db_session.add_all([inc1, inc2, exc1])
+
+    paper = PaperModel(
+        project_id=proj.id,
+        title="Estudo sobre arranjos produtivos locais",
+        abstract="Resumo completo do estudo.",
+        decision="Pendente",
+    )
+    db_session.add(paper)
+    db_session.commit()
+
+    await service.screen_single_paper(db_session, proj.id, paper.id)
+    db_session.refresh(paper)
+
+    evaluations = {ce.criterion_id: ce.value for ce in paper.criteria_evaluations}
+    assert evaluations[inc1.id] is True
+    assert evaluations[inc2.id] is False
+    assert evaluations[exc1.id] is False
+
+    # O prefixo de origem automática é removido antes de gravar a observação
+    assert paper.observations == "Estudo alinhado ao escopo da revisão."
+
+
+def test_strip_ai_prefix_remove_variacoes():
+    from app.services.screening_service import _strip_ai_prefix
+
+    assert _strip_ai_prefix("[IA - gemini-3.6-flash]: Texto do parecer.") == "Texto do parecer."
+    assert _strip_ai_prefix("[I.A. gemini-3.6-flash] Texto do parecer.") == "Texto do parecer."
+    assert _strip_ai_prefix("(AI - gpt-4o): Texto do parecer.") == "Texto do parecer."
+    assert _strip_ai_prefix("IA: Texto do parecer.") == "Texto do parecer."
+    assert _strip_ai_prefix("Justificativa: Texto do parecer.") == "Texto do parecer."
+    assert _strip_ai_prefix("Texto do parecer.") == "Texto do parecer."
+    assert _strip_ai_prefix("") == ""

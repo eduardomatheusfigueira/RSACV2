@@ -20,7 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.router import api_router
 from app.config import settings
 from app.database import SessionLocal, create_tables
-from app.infrastructure.persistence.models import HarvestRunModel
+from app.infrastructure.persistence.models import HarvestRunModel, PaperModel
 from app.schemas.common import HealthResponse
 
 # ── Logging Estruturado (Console + Arquivo) ───────────────────────────
@@ -72,6 +72,29 @@ async def lifespan(app: FastAPI):
         db.close()
     except Exception as e:
         logger.error(f"[Lifespan] Erro ao reconciliar execuções de coleta: {e}")
+
+    # Limpar rótulos de origem automática herdados de versões anteriores nas observações
+    try:
+        from app.services.screening_service import _strip_ai_prefix
+
+        db = SessionLocal()
+        legacy_papers = (
+            db.query(PaperModel)
+            .filter(PaperModel.observations.ilike("[%"))
+            .all()
+        )
+        cleaned_count = 0
+        for paper in legacy_papers:
+            cleaned = _strip_ai_prefix(paper.observations)
+            if cleaned != (paper.observations or "").strip():
+                paper.observations = cleaned
+                cleaned_count += 1
+        if cleaned_count:
+            db.commit()
+            logger.info(f"[Lifespan] Removido prefixo de IA de {cleaned_count} observação(ões) antigas.")
+        db.close()
+    except Exception as e:
+        logger.error(f"[Lifespan] Erro ao limpar prefixos de IA das observações: {e}")
 
     logger.info("Backend pronto para receber requisições.")
     yield
