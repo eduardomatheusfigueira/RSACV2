@@ -9,20 +9,71 @@ e dados estruturados para o diagrama de fluxo PRISMA 2020.
 
 import io
 import re
-from typing import Dict, List
+from typing import Dict
+
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.models import (
-    CriterionModel,
     ExtractionAnswerModel,
-    ExtractionQuestionModel,
     HarvestRunModel,
     PaperCriterionModel,
     PaperModel,
     ProjectModel,
     ProtocolModel,
 )
+
+# Caracteres com que o Excel e o LibreOffice reconhecem uma célula como
+# fórmula. TAB e CR entram porque alguns leitores os tratam como separador e
+# reposicionam o conteúdo seguinte no início de uma célula.
+PREFIXOS_DE_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
+def neutralizar_formula(valor):
+    """
+    Impede que um texto vindo de base externa seja executado como fórmula
+    (doc 28 V-15, doc 29 §29.9.1).
+
+    Títulos e resumos vêm de bases indexadas que o RSAC não controla. Um
+    registro preparado com `=HYPERLINK(...)` ou `=cmd|...` vira execução na
+    máquina de quem abrir a planilha exportada — e o pesquisador abre a
+    planilha confiando que ela é produto do próprio trabalho.
+
+    O apóstrofo à frente é a convenção que o Excel entende como "isto é texto":
+    ele não aparece na célula, e o conteúdo é preservado na íntegra.
+    """
+    if not isinstance(valor, str) or not valor:
+        return valor
+    if valor.startswith(PREFIXOS_DE_FORMULA):
+        return "'" + valor
+    return valor
+
+
+def sanitizar_nome_de_arquivo(nome: str, padrao: str = "exportacao") -> str:
+    """
+    Reduz um nome a caracteres seguros para `Content-Disposition`.
+
+    O título do projeto era interpolado direto no cabeçalho: aspas ou quebra de
+    linha ali quebram o cabeçalho, e o nome legível vai no `filename*` em
+    UTF-8, que é onde acentos pertencem (§29.9.1).
+    """
+    import re
+
+    limpo = re.sub(r"[^A-Za-z0-9._-]+", "_", nome or "").strip("._-")
+    return limpo[:60] or padrao
+
+
+def cabecalho_de_download(nome_legivel: str, extensao: str) -> dict:
+    """Monta o `Content-Disposition` com nome sanitizado e nome legível."""
+    from urllib.parse import quote
+
+    ascii_seguro = f"{sanitizar_nome_de_arquivo(nome_legivel)}.{extensao}"
+    legivel = quote(f"{nome_legivel}.{extensao}".replace("\n", " ").replace("\r", " "))
+    return {
+        "Content-Disposition": (
+            f'attachment; filename="{ascii_seguro}"; filename*=UTF-8\'\'{legivel}'
+        )
+    }
 
 
 class ExportService:
@@ -131,6 +182,14 @@ class ExportService:
 
         # Gerar BytesIO
         output = io.BytesIO()
+        # Neutralização aplicada no ponto único de escrita: cobre as quatro
+        # abas de uma vez e não depende de lembrar disso a cada campo novo
+        # acrescentado às planilhas (doc 29 §29.9.1).
+        df_included = df_included.map(neutralizar_formula)
+        df_extraction = df_extraction.map(neutralizar_formula)
+        df_excluded = df_excluded.map(neutralizar_formula)
+        df_prisma = df_prisma.map(neutralizar_formula)
+
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df_included.to_excel(writer, sheet_name="Artigos Incluídos", index=False)
             df_extraction.to_excel(writer, sheet_name="Extração de Dados", index=False)

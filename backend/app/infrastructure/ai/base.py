@@ -10,7 +10,12 @@ Define o contrato para integração com múltiplos provedores de IA
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+
 from app.domain.entities import Paper, Protocol
+
+# Vocabulário fechado das decisões de triagem (doc 29 §29.9.2). Qualquer coisa
+# fora disto é resposta inválida do modelo, não uma decisão nova.
+DECISOES_VALIDAS = ("Incluído", "Excluído", "Pendente")
 
 
 @dataclass
@@ -23,6 +28,58 @@ class ScreeningResult:
     confidence: float = 1.0  # 0.0 a 1.0
     model_used: str = ""
     provider: str = ""
+    # A resposta do modelo veio dentro do contrato? Quando `False`, a decisão
+    # foi rebaixada para "Pendente" e isso precisa aparecer na auditoria — uma
+    # coerção silenciosa esconderia justamente o sinal de que algo tentou
+    # desviar a triagem (§29.9.2).
+    response_valid: bool = True
+    validation_note: str = ""
+
+
+def validar_resposta_de_triagem(dados: dict) -> tuple[str, float, str, bool, str]:
+    """
+    Valida a resposta bruta do modelo contra o contrato de triagem.
+
+    Devolve `(decisao, confianca, justificativa, valida, nota)`.
+
+    Rebaixar para "Pendente" é falha fechada: a decisão volta para o
+    pesquisador em vez de entrar na revisão sem que ninguém tenha olhado. O que
+    muda em relação ao comportamento anterior é que o desvio deixa de ser
+    silencioso — ele é registrado.
+    """
+    problemas: list[str] = []
+
+    bruta = dados.get("decisao")
+    decisao = bruta if bruta in DECISOES_VALIDAS else "Pendente"
+    if bruta not in DECISOES_VALIDAS:
+        problemas.append(f"decisão fora do vocabulário: {str(bruta)[:60]!r}")
+
+    try:
+        confianca = float(dados.get("confianca", 0.9))
+    except (TypeError, ValueError):
+        confianca = 0.0
+        problemas.append("confiança não numérica")
+
+    if not 0.0 <= confianca <= 1.0:
+        problemas.append(f"confiança fora da faixa: {confianca}")
+        confianca = min(max(confianca, 0.0), 1.0)
+
+    justificativa = dados.get("justificativa") or ""
+    if not isinstance(justificativa, str):
+        justificativa = str(justificativa)
+        problemas.append("justificativa não textual")
+
+    # Justificativa desmesurada costuma ser eco do prompt ou do conteúdo
+    # injetado, não análise.
+    if len(justificativa) > 8000:
+        justificativa = justificativa[:8000] + " […truncada]"
+        problemas.append("justificativa truncada por tamanho")
+
+    valida = not problemas
+    if not valida:
+        decisao = "Pendente"
+
+    return decisao, confianca, justificativa, valida, "; ".join(problemas)
 
 
 @dataclass

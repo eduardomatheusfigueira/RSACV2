@@ -13,8 +13,8 @@ Estratégia de 3 passes escalável com chaves de bloqueio (blocking keys):
 import re
 import unicodedata
 from typing import List, Optional, Tuple
+
 from rapidfuzz import fuzz
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.harvesters.base import RawPaperRecord
@@ -255,8 +255,9 @@ class DeduplicationService:
         Executa a etapa completa de deduplicação e consolidação de fontes para o projeto,
         marcando duplicatas, unificando metadados e gerando o Relatório de Deduplicação (.txt).
         """
-        from datetime import datetime
         import json
+        from datetime import datetime
+
         from app.infrastructure.persistence.models import DeduplicationReportModel, HarvestRunModel
 
         # 1. Carregar todos os artigos do projeto

@@ -28,7 +28,7 @@ a Fase 0 do doc 30 não estiver entregue.
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
 23–27   vigente            para onde vamos agora (UX/UI)
-28–30   vigente            segurança — Fases 0 a 4 entregues; 5 em aberto 🔴
+28–30   concluído          segurança — as seis fases entregues ✅
 ```
 
 ---
@@ -49,12 +49,12 @@ a Fase 0 do doc 30 não estiver entregue.
 
 ---
 
-## 🔴 Planejamento vigente — Segurança do servidor
+## ✅ Segurança do servidor — plano concluído
 
-> O modo servidor (`Iniciar_Servidor.bat`) publica o backend na internet por
-> túnel Cloudflare. Desde a Fase 1 o acesso exige conta e senha, e o lançador
-> recusa-se a publicar sem autenticação. **O doc 28 registra o estado que
-> motivou o plano; o doc 30 diz o que já foi entregue.**
+> O plano de segurança foi **concluído**: os 18 achados do doc 28 estão
+> fechados, e a CI (`.github/workflows/ci.yml`) impede que voltem. O doc 28
+> registra o estado que motivou o trabalho; o doc 30 registra o que foi
+> entregue em cada fase, com as divergências justificadas.
 
 | # | Documento | Descrição |
 |---|-----------|-----------|

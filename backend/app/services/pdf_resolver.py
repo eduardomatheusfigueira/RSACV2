@@ -917,7 +917,7 @@ class PDFResolver:
 
         try:
             response = await get_com_guarda(client, candidate.url, headers=headers)
-        except EgressBlocked as exc:
+        except EgressBlocked:
             # Destino interno pedido pelo usuário (ou alcançado por
             # redirecionamento). Entra na trilha como tentativa bloqueada, sem
             # revelar o que havia lá — a mensagem viraria um scanner (§29.5.4).

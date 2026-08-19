@@ -6,10 +6,11 @@ RSAC V2 — Profile & API Keys Backup and Restore Service.
 Serviço para exportação e restauração padronizada de chaves de API e perfis completos de workspace.
 """
 
-from datetime import datetime, timezone
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.models import (
@@ -19,7 +20,6 @@ from app.infrastructure.persistence.models import (
     DeduplicationReportModel,
     ExtractionAnswerModel,
     ExtractionQuestionModel,
-    HarvestRunModel,
     PaperCriterionModel,
     PaperModel,
     PaperSourceModel,

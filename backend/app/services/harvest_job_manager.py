@@ -10,7 +10,7 @@ cancelamento gracioso e prevenção de sobreposição de execuções.
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Callable, Coroutine, Dict, Optional
+from typing import Coroutine, Dict, Optional
 
 from app.database import SessionLocal
 from app.infrastructure.persistence.models import HarvestRunModel

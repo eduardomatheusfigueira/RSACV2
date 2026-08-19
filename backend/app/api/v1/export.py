@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.infrastructure.persistence.models import ProjectModel
-from app.services.export_service import ExportService
+from app.services.export_service import ExportService, cabecalho_de_download
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,11 @@ def export_to_excel(
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
     excel_stream = export_service.generate_excel(db, project_id)
-    filename = f"RSAC_Export_{project.title[:30].replace(' ', '_')}.xlsx"
 
     return StreamingResponse(
         excel_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers=cabecalho_de_download(f"RSAC_Export_{project.title[:30]}", "xlsx"),
     )
 
 
@@ -50,12 +49,11 @@ def export_to_bibtex(
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
     bib_text = export_service.generate_bibtex(db, project_id, only_included=only_included)
-    filename = f"RSAC_References_{project.title[:30].replace(' ', '_')}.bib"
 
     return Response(
         content=bib_text,
         media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers=cabecalho_de_download(f"RSAC_References_{project.title[:30]}", "bib"),
     )
 
 

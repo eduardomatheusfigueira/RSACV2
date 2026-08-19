@@ -212,10 +212,12 @@ planejamento vigente de UX, UI e profissionalização da interface; e os de
 > python -m app.cli generate-secret-key   # gere e exporte como RSAC_SECRET_KEY
 > ```
 >
-> As Fases 0, 1 e 2 do
-> [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)
-> estão entregues; o diagnóstico que as motivou está em
-> [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md).
+> O plano de segurança
+> ([`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md))
+> foi **concluído**: os 18 achados do
+> [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md)
+> estão fechados, cobertos por 263 testes de segurança e por uma CI que impede
+> que voltem.
 
 **Planejamento vigente — Segurança**
 

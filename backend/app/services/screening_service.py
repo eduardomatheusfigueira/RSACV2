@@ -8,24 +8,23 @@ de zero alucinação e persistência de auditoria.
 """
 
 import asyncio
-import json
+import hashlib
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
 from app.domain.entities import Decision, Methodology, Paper, Protocol
-from app.infrastructure.ai.base import BaseAIClient, ProtocolSuggestions, ScreeningResult
+from app.infrastructure.ai.base import BaseAIClient, ScreeningResult
 from app.infrastructure.ai.factory import AIFactory
+from app.infrastructure.ai.prompts import build_screening_prompt
 from app.infrastructure.persistence.models import (
     AuditLogModel,
-    CriterionModel,
     PaperCriterionModel,
     PaperModel,
-    ProjectModel,
     ProtocolModel,
 )
 from app.services.harvesting_service import ws_manager
@@ -136,6 +135,14 @@ class ScreeningService:
         client = self._get_client(db)
         result = await client.analyze_screening(paper_entity, protocol_entity)
 
+        # Hash do contexto que produziu a decisão (doc 29 §29.9.3). Guardar o
+        # texto inteiro inflaria o banco a cada triagem; o hash é o suficiente
+        # para provar depois que a decisão veio *daquele* conteúdo — e para
+        # detectar que o conteúdo mudou desde então.
+        contexto_hash = hashlib.sha256(
+            build_screening_prompt(paper_entity, protocol_entity).encode("utf-8")
+        ).hexdigest()
+
         # Atualizar banco de dados
         old_decision = paper_model.decision
         paper_model.decision = result.decision
@@ -156,6 +163,10 @@ class ScreeningService:
             source=f"ai:{result.provider}",
             user_id=actor.user_id if actor else None,
             username=actor.username if actor else "",
+            ai_provider=result.provider or "",
+            ai_model=result.model_used or "",
+            ai_context_sha256=contexto_hash,
+            ai_response_valid=result.response_valid,
         )
         db.add(audit)
 

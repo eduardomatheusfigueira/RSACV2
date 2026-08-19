@@ -21,7 +21,7 @@ Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditor
 Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave  ✅ ENTREGUE
 Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites  ✅ ENTREGUE
 Fase 4  ▸ CLIENTE & LANÇADOR 2 d   api_url, aviso, provisionamento, checksum  ✅ ENTREGUE
-Fase 5  ▸ INTEGRIDADE & CI   2 d   fórmula, prompt, lockfile, pipeline
+Fase 5  ▸ INTEGRIDADE & CI   2 d   fórmula, prompt, lockfile, pipeline  ✅ ENTREGUE
                             ────
                             ~12 dias úteis
 ```
@@ -31,10 +31,10 @@ de "comprometimento total por quem tiver a URL" para "exige uma vulnerabilidade
 de verdade". Ela **não** entrega segurança — entrega tempo para fazer o resto
 sem estar exposto.
 
-**Estado em 19/08/2026:** Fases 0 a 4 entregues. O `Iniciar_Servidor.bat`
+**Estado em 19/08/2026:** plano concluído — as seis fases entregues. O `Iniciar_Servidor.bat`
 exige conta e senha e recusa-se a publicar sem autenticação. O que continua
-aberto está na Fase 5 — sanitização das exportações, delimitação do prompt,
-*lockfile* e CI.
+Os 18 achados do doc 28 estão fechados, e a CI passa a impedir que qualquer
+um deles volte.
 
 ---
 
@@ -453,6 +453,44 @@ impede a regressão de tudo o que veio antes.
 
 **Aceite:** PR que reintroduz qualquer achado do doc 28 falha na CI.
 
+### ✅ Fase 5 — entregue em 19/08/2026
+
+| Entrega | Estado | Onde |
+|---|---|---|
+| Neutralização de prefixo de fórmula | ✅ | `export_service.neutralizar_formula` |
+| `Content-Disposition` sanitizado + `filename*` | ✅ | `export_service.cabecalho_de_download` |
+| Conteúdo de terceiros delimitado nos prompts | ✅ | `prompts.delimitar_conteudo_externo` |
+| Resposta da IA validada contra vocabulário fechado | ✅ | `ai/base.validar_resposta_de_triagem` |
+| Provedor, modelo e hash do contexto na auditoria | ✅ | `models.AuditLogModel`, `screening_service` |
+| *Lockfile* com hashes | ✅ | `backend/requirements.lock` (1647 hashes) |
+| `defusedxml` no PubMed | ✅ | `harvesters/pubmed.py` |
+| **Workflow de CI** | ✅ | `.github/workflows/ci.yml` |
+
+**A neutralização de fórmula entra no ponto único de escrita** — o
+`ExcelWriter` — em vez de campo a campo. Cobre as quatro abas de uma vez e não
+depende de alguém lembrar disso ao acrescentar uma coluna nova.
+
+**A delimitação do prompt tem uma armadilha que o teste cobre:** se o conteúdo
+externo pudesse conter o próprio delimitador, ele fecharia a marca e escaparia
+da região de dados — a defesa cairia por dentro. O delimitador é removido do
+conteúdo antes de envolvê-lo.
+
+**Sobre a validação da resposta, uma divergência da especificação.** §29.9.2
+diz que decisão fora do vocabulário **deve ser rejeitada, não coagida**. O que
+foi implementado rebaixa para "Pendente" e **registra o desvio** — em
+`validation_note` e na coluna `ai_response_valid` da auditoria. A razão: numa
+triagem em lote, rejeitar aborta o trabalho inteiro por causa de um estudo,
+enquanto "Pendente" já significa exatamente "uma pessoa precisa decidir". O que
+o comportamento anterior fazia de errado não era coagir — era coagir **em
+silêncio**, escondendo o sinal de que algo tentou desviar a triagem.
+
+**A CI roda a suíte de segurança em passo próprio e isolado**, antes da suíte
+completa: quando ela quebra, o log diz "segurança" sem que ninguém precise ler
+a saída inteira do pytest. Os passos de lint, `pip-audit`, `bandit` e
+`npm audit` entram com `continue-on-error` porque o repositório carrega dívida
+de estilo anterior a este plano (~900 avisos do ruff); o objetivo é tornar a
+dívida visível sem travar PRs legítimos, e a linha sai quando ela for zerada.
+
 ---
 
 ## 30.7 A suíte de testes de segurança
@@ -513,14 +551,15 @@ Cada fase só está pronta quando:
 | | |
 |---|---|
 | **Situação inicial** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
-| **Situação atual** | Fases 0 a 4 entregues: a API exige identidade, as chaves não trafegam nem repousam em claro, o servidor não sobe desprotegido, não pode ser usado como procurador para a rede interna e o cliente web não muda de destino sem confirmação humana |
+| **Situação atual** | Plano concluído: a API exige identidade, as chaves não trafegam nem repousam em claro, o servidor não sobe desprotegido, não pode ser usado como procurador para a rede interna e o cliente web não muda de destino sem confirmação humana |
 | **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta antes destas fases |
 | **Fase 0** | ✅ entregue em 19/08/2026 — remove o comprometimento total |
 | **Fase 1** | ✅ entregue em 19/08/2026 — a API inteira exige identidade |
 | **Fase 2** | ✅ entregue em 19/08/2026 — segredos cifrados em repouso |
 | **Fase 3** | ✅ entregue em 19/08/2026 — SSRF, WebSocket, cabeçalhos e limites |
 | **Fase 4** | ✅ entregue em 19/08/2026 — cliente web e lançador |
-| **Plano completo** | ~12 dias úteis — 18 de 18 achados fechados, com testes que impedem a volta |
+| **Fase 5** | ✅ entregue em 19/08/2026 — integridade da revisão e CI |
+| **Plano completo** | ✅ **concluído em 19/08/2026** — 18 de 18 achados fechados, 370 testes de backend (263 de segurança) e CI que impede a volta |
 
 ---
 

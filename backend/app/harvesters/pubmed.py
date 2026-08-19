@@ -12,7 +12,11 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from typing import Any, Dict, List, Optional, Set
-import xml.etree.ElementTree as ET
+# `defusedxml` em vez de `xml.etree`: o ElementTree não resolve entidades
+# externas (não há XXE aqui), mas continua sujeito a expansão de entidades
+# aninhadas. A origem é o NCBI sobre TLS, então o risco real é baixo — a troca
+# custa uma linha e fecha a categoria (doc 29 §29.10).
+import defusedxml.ElementTree as ET
 import httpx
 
 from app.domain.enums import to_canonical_doc_type

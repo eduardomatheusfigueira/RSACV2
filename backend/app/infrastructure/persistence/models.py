@@ -299,6 +299,13 @@ class AuditLogModel(Base):
     # cujo produto é a reprodutibilidade precisa saber de quem foi a decisão.
     user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     username: Mapped[str] = mapped_column(String(64), default="")
+    # Proveniência da decisão assistida (doc 29 §29.9.3): provedor, modelo e o
+    # hash do contexto enviado. É o que permite refazer a conta depois —
+    # inclusive descobrir que uma decisão veio de conteúdo adulterado.
+    ai_provider: Mapped[str] = mapped_column(String(40), default="")
+    ai_model: Mapped[str] = mapped_column(String(80), default="")
+    ai_context_sha256: Mapped[str] = mapped_column(String(64), default="")
+    ai_response_valid: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="audit_logs")
