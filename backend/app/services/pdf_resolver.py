@@ -43,6 +43,9 @@ from urllib.parse import quote, urljoin, urlparse
 
 import httpx
 
+from app.security.egress import EgressBlocked, detalhe_publico
+from app.security.safe_http import get_com_guarda
+
 logger = logging.getLogger(__name__)
 
 # ── Constantes de rede ────────────────────────────────────────────────
@@ -130,12 +133,23 @@ class ResolutionAttempt:
     http_status: Optional[int] = None
 
     def to_dict(self) -> dict:
+        """
+        Retrato da tentativa para a interface.
+
+        No perfil `server`, `detail` e `http_status` de host desconhecido são
+        reduzidos a categoria (§29.5.4): sem isso, a correção do SSRF ainda
+        deixaria o atacante aprender pela mensagem de erro o que não conseguiu
+        alcançar — SSRF cego vira scanner com retorno completo.
+        """
+        publico = detalhe_publico(self.url, self.detail)
+        detalhado = publico == self.detail
+
         return {
             "strategy": self.strategy,
             "url": self.url,
             "status": self.status,
-            "detail": self.detail,
-            "http_status": self.http_status,
+            "detail": publico,
+            "http_status": self.http_status if detalhado else None,
         }
 
 
@@ -425,7 +439,11 @@ class PDFResolver:
         if client is None:
             client = httpx.AsyncClient(
                 timeout=httpx.Timeout(self.request_timeout, connect=10.0),
-                follow_redirects=True,
+                # Redirecionamento é seguido manualmente por `get_com_guarda`,
+                # que revalida cada salto. Com `follow_redirects=True` um host
+                # público responderia `302` para 169.254.169.254 e contornaria
+                # o guarda de saída inteiro (doc 29 §29.5.3).
+                follow_redirects=False,
                 headers=HTML_HEADERS,
             )
 
@@ -502,7 +520,11 @@ class PDFResolver:
         if client is None:
             client = httpx.AsyncClient(
                 timeout=httpx.Timeout(self.request_timeout, connect=10.0),
-                follow_redirects=True,
+                # Redirecionamento é seguido manualmente por `get_com_guarda`,
+                # que revalida cada salto. Com `follow_redirects=True` um host
+                # público responderia `302` para 169.254.169.254 e contornaria
+                # o guarda de saída inteiro (doc 29 §29.5.3).
+                follow_redirects=False,
                 headers=HTML_HEADERS,
             )
         try:
@@ -811,11 +833,16 @@ class PDFResolver:
     async def _get_json(self, client: httpx.AsyncClient, url: str) -> Optional[dict]:
         """GET com tolerância a falha — APIs externas nunca derrubam a busca."""
         try:
-            response = await client.get(url, headers={**HTML_HEADERS, "Accept": "application/json"})
+            response = await get_com_guarda(
+                client, url, headers={**HTML_HEADERS, "Accept": "application/json"}
+            )
             if response.status_code != 200:
                 logger.debug("[PDFResolver] %s respondeu HTTP %s", url, response.status_code)
                 return None
             return response.json()
+        except EgressBlocked as exc:
+            logger.warning("[PDFResolver] Consulta bloqueada pelo guarda de saída: %s", exc.motivo)
+            return None
         except (httpx.HTTPError, ValueError) as exc:
             logger.debug("[PDFResolver] Falha ao consultar %s: %s", url, exc)
             return None
@@ -825,7 +852,10 @@ class PDFResolver:
     ) -> list[PDFCandidate]:
         """Baixa a landing page e extrai links de PDF que estejam nela."""
         try:
-            response = await client.get(url, headers=HTML_HEADERS)
+            response = await get_com_guarda(client, url, headers=HTML_HEADERS)
+        except EgressBlocked as exc:
+            logger.warning("[PDFResolver] Landing page bloqueada pelo guarda: %s", exc.motivo)
+            return []
         except httpx.HTTPError as exc:
             logger.debug("[PDFResolver] Landing page inacessível (%s): %s", url, exc)
             return []
@@ -886,7 +916,17 @@ class PDFResolver:
             headers["Referer"] = f"https://{_domain(candidate.url)}/"
 
         try:
-            response = await client.get(candidate.url, headers=headers)
+            response = await get_com_guarda(client, candidate.url, headers=headers)
+        except EgressBlocked as exc:
+            # Destino interno pedido pelo usuário (ou alcançado por
+            # redirecionamento). Entra na trilha como tentativa bloqueada, sem
+            # revelar o que havia lá — a mensagem viraria um scanner (§29.5.4).
+            return None, ResolutionAttempt(
+                strategy=candidate.strategy,
+                url=candidate.url,
+                status="bloqueado",
+                detail="Destino não elegível: endereço interno ou protocolo não permitido.",
+            )
         except httpx.TimeoutException:
             return None, ResolutionAttempt(
                 strategy=candidate.strategy,

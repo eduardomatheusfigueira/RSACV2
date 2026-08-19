@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.v1.router import api_router, public_router
 from app.config import settings
@@ -24,6 +25,11 @@ from app.infrastructure.persistence.models import HarvestRunModel, UserModel
 from app.security.crypto import MasterKeyError, obter_chave_mestra
 from app.security.local_token import descrever_para_log, ensure_local_token
 from app.security.log_filter import instalar_filtro_de_segredos
+from app.security.middleware import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+    instalar_tratamento_de_erro,
+)
 from app.security.migration import cifrar_segredos_legados
 from app.schemas.common import HealthResponse
 
@@ -209,6 +215,20 @@ def create_app() -> FastAPI:
     if origin_regex:
         cors_kwargs["allow_origin_regex"] = origin_regex
     app.add_middleware(CORSMiddleware, **cors_kwargs)
+
+    # Middlewares de segurança (doc 29 §29.6, §29.7). A ordem de registro é a
+    # inversa da execução no Starlette: o limitador roda antes dos cabeçalhos,
+    # de modo que uma resposta 429 também sai com eles.
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RateLimitMiddleware)
+
+    # No perfil `server` o backend fica atrás de um túnel: recusar Host
+    # inesperado limita envenenamento de cabeçalho e uso do servidor como
+    # ponte para outro nome.
+    if settings.is_server_profile and settings.trusted_hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+
+    instalar_tratamento_de_erro(app)
 
     # Health check no root
     @app.get("/health", response_model=HealthResponse, tags=["system"], include_in_schema=False)

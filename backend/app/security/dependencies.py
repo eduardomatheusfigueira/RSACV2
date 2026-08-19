@@ -16,6 +16,7 @@ A exceção é uma lista curta e explícita, em `app/api/v1/public.py`.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional
 
 from fastapi import Depends, HTTPException, WebSocket, status
@@ -23,6 +24,7 @@ from sqlalchemy.orm import Session
 from starlette.requests import HTTPConnection
 
 from app.api.deps import get_db
+from app.config import settings
 from app.infrastructure.persistence.models import UserModel
 from app.security.local_token import matches_local_token
 from app.security.sessions import SESSION_COOKIE, resolve_session
@@ -130,6 +132,36 @@ def require_owner(usuario: Optional[UserModel] = Depends(require_session)) -> Us
     return usuario
 
 
+def origem_do_websocket_e_permitida(websocket: WebSocket) -> bool:
+    """
+    O `Origin` do handshake está entre as origens autorizadas? (§29.3.6)
+
+    Metade indispensável da defesa contra sequestro entre sítios: a política de
+    mesma origem **não** vale para WebSocket, então a sessão sozinha não basta
+    — o navegador do pesquisador enviaria o cookie de sessão junto com uma
+    conexão aberta por qualquer página. É o `Origin` que distingue a aplicação
+    de um sítio hostil usando as credenciais dela.
+
+    Cliente que não é navegador (o `TestClient`, um script) não manda `Origin`.
+    Aceitar essa ausência é correto: o vetor que se está fechando existe apenas
+    dentro do navegador, e é lá que o cabeçalho é obrigatório.
+    """
+    origem = websocket.headers.get("origin")
+    if not origem:
+        return True
+
+    origem = origem.rstrip("/")
+
+    if origem in {o.rstrip("/") for o in settings.effective_cors_origins}:
+        return True
+
+    regex = settings.cors_allow_origin_regex
+    if regex and re.match(regex, origem):
+        return True
+
+    return False
+
+
 async def require_websocket_session(websocket: WebSocket, db: Session) -> Optional[UserModel]:
     """
     Valida a sessão no handshake do WebSocket.
@@ -139,7 +171,8 @@ async def require_websocket_session(websocket: WebSocket, db: Session) -> Option
     aceito na query string. Não é vazamento equivalente ao de uma URL comum: o
     endereço do WebSocket não vai para histórico nem para `Referer`.
 
-    A checagem de `Origin` — contra o sequestro entre sítios — entra na Fase 3.
+    A checagem de `Origin` é feita antes, pela rota, via
+    `origem_do_websocket_e_permitida`.
     """
     token = websocket.query_params.get("token")
     if not token:

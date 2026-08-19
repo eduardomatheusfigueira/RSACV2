@@ -5,14 +5,15 @@
 
 import logging
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.harvesters.factory import HarvesterFactory
 from app.infrastructure.persistence.models import SourceCredentialModel, UserModel
-from app.security.dependencies import require_owner
 from app.schemas.settings import SourceCredentialResponse, SourceCredentialUpdate
+from app.security.dependencies import require_owner
 
 logger = logging.getLogger(__name__)
 

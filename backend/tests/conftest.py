@@ -21,6 +21,50 @@ OWNER_USERNAME = "dono_teste"
 RESEARCHER_USERNAME = "pesquisador_teste"
 
 
+@pytest.fixture(autouse=True)
+def dns_de_teste(monkeypatch, request):
+    """
+    Resolve qualquer host de teste para um IP público fictício.
+
+    Os testes usam `httpx.MockTransport` com hosts que não existem
+    (`repositorio.br`, `revista.org`). Como o guarda de saída valida o **IP
+    resolvido**, e não o nome, sem isto todo teste de rede falharia por DNS —
+    e ficaria a impressão errada de que o guarda está barrando o que deveria
+    passar.
+
+    A suíte `test_security/test_egress_guard.py` marca-se com `dns_real` e
+    fica de fora, porque lá o objetivo é justamente exercitar a resolução de
+    verdade.
+    """
+    if request.node.get_closest_marker("dns_real"):
+        return
+
+    import socket
+
+    import app.security.egress as egress
+
+    def _fake_getaddrinfo(host, porta, *args, **kwargs):
+        # IP literal resolve para ele mesmo. Sem isto, `http://10.0.0.5` seria
+        # "resolvido" para um endereço público e o teste do guarda passaria
+        # sem exercitar nada — o fixture mascararia justamente o que verifica.
+        import ipaddress
+
+        try:
+            ip = ipaddress.ip_address(host)
+            familia = socket.AF_INET6 if ip.version == 6 else socket.AF_INET
+            return [(familia, socket.SOCK_STREAM, 6, "", (host, porta))]
+        except ValueError:
+            pass
+
+        if host == "localhost":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", porta))]
+
+        # Nome fictício de teste resolve para um endereço público.
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", porta))]
+
+    monkeypatch.setattr(egress, "_resolver_enderecos", _fake_getaddrinfo)
+
+
 @pytest.fixture
 def anyio_backend():
     return "asyncio"

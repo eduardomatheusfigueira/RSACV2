@@ -22,6 +22,8 @@ from app.schemas.ai import (
 )
 from app.security import mask_secret_list
 from app.security.dependencies import require_owner
+from app.security.egress import EgressBlocked, validar_url
+from app.security.middleware import erro_interno
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +125,23 @@ def update_ai_settings(
         db.add(settings)
 
     provider = data.provider.lower()
+
+    # O `endpoint` vira `base_url` do cliente OpenAI-compatível, e o servidor
+    # passa a fazer POST **com a chave de API no cabeçalho** para esse host.
+    # Sem validação, é exfiltração de credencial e SSRF na mesma requisição
+    # (doc 28 V-05b). Loopback é aceito só onde é legítimo: LLM local.
+    if data.endpoint and data.endpoint.strip():
+        try:
+            validar_url(data.endpoint.strip(), permitir_loopback=(provider == "local"))
+        except EgressBlocked as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "O endereço informado não é um destino válido para o provedor de IA. "
+                    "Endereços de rede interna e protocolos fora de http/https não são aceitos."
+                ),
+            ) from exc
+
     settings.ai_enabled = data.ai_enabled
     settings.provider = provider
     settings.model = data.model
@@ -239,8 +258,10 @@ async def suggest_protocol(data: ProtocolSuggestRequest, db: Session = Depends(g
         )
         return suggestions
     except Exception as e:
-        logger.error(f"[AI] Erro ao sugerir protocolo: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        mensagem, _ = erro_interno(
+            "Falha ao gerar as sugestões de protocolo.", e, contexto="[AI] sugestão de protocolo"
+        )
+        raise HTTPException(status_code=500, detail=mensagem) from e
 
 
 @router.post("/assist-field", response_model=FieldAssistResponse)
@@ -273,6 +294,9 @@ async def assist_field(data: FieldAssistRequest, db: Session = Depends(get_db)):
             provider=result.get("provider", client.provider_name),
         )
     except Exception as e:
-        logger.error(f"[AI] Erro ao processar assistente de campo para '{data.field_label}': {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        mensagem, _ = erro_interno(
+            "Falha ao processar o assistente de campo.", e,
+            contexto=f"[AI] assistente do campo '{data.field_label}'",
+        )
+        raise HTTPException(status_code=500, detail=mensagem) from e
 

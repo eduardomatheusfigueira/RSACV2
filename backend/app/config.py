@@ -42,6 +42,21 @@ class Settings(BaseSettings):
     # ── Perímetro de confiança ────────────────────────────────────────
     deployment_profile: DeploymentProfile = DeploymentProfile.DESKTOP
 
+    # ── Rede de saída (doc 29 §29.5.3) ────────────────────────────────
+    # Libera destinos em loopback para o caso legítimo do LLM local
+    # (Ollama, LM Studio). Ignorado no perfil `server`, onde loopback é a rede
+    # interna de quem hospeda, não a máquina do usuário.
+    allow_private_egress: bool = True
+
+    # Limites de recurso (doc 29 §29.7)
+    max_upload_mb: int = 100
+    rate_limit_enabled: bool = True
+
+    # Hosts aceitos no cabeçalho `Host` (perfil `server`). Vazio = sem
+    # restrição, porque o nome do túnel Cloudflare muda a cada execução e
+    # exigir configuração aqui inviabilizaria o uso normal.
+    trusted_hosts: list[str] = []
+
     # ── Chave-mestra da cifra de segredos (doc 29 §29.4.1) ────────────
     # Obrigatória no perfil `server`: lá um arquivo de chave ao lado do banco
     # seria lido pela mesma falha que leria o banco. Fora do `server`, a

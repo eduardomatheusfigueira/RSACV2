@@ -19,7 +19,7 @@ dela.
 Fase 0  ▸ CONTENÇÃO          9 h   fecha o comprometimento total sem auth  ✅ ENTREGUE
 Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditoria  ✅ ENTREGUE
 Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave  ✅ ENTREGUE
-Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites
+Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites  ✅ ENTREGUE
 Fase 4  ▸ CLIENTE & LANÇADOR 2 d   api_url, aviso, provisionamento, checksum
 Fase 5  ▸ INTEGRIDADE & CI   2 d   fórmula, prompt, lockfile, pipeline
                             ────
@@ -31,10 +31,10 @@ de "comprometimento total por quem tiver a URL" para "exige uma vulnerabilidade
 de verdade". Ela **não** entrega segurança — entrega tempo para fazer o resto
 sem estar exposto.
 
-**Estado em 19/08/2026:** Fases 0, 1 e 2 entregues. O `Iniciar_Servidor.bat`
+**Estado em 19/08/2026:** Fases 0 a 3 entregues. O `Iniciar_Servidor.bat`
 exige conta e senha e recusa-se a publicar sem autenticação. O que continua
-aberto está nas Fases 3 a 5 — SSRF, limites de recurso, cabeçalhos e a
-sanitização das exportações.
+aberto está nas Fases 4 e 5 — o sequestro de `api_url` no cliente web, a
+sanitização das exportações, a delimitação do prompt e a CI.
 
 ---
 
@@ -324,6 +324,52 @@ No perfil `server`, onde essa distinção importa, a chave vem do ambiente.
 - Upload de 200 MB devolve `413` sem crescimento de memória do processo.
 - Nenhuma resposta de erro contém `/home/`, `C:\`, `Traceback` ou `sqlalchemy`.
 
+### ✅ Fase 3 — entregue em 19/08/2026
+
+| Entrega | Estado | Onde |
+|---|---|---|
+| Guarda de saída com validação pós-DNS | ✅ | `app/security/egress.py` |
+| Seguimento manual de redirecionamento, revalidado por salto | ✅ | `app/security/safe_http.py` |
+| Guarda aplicado ao `endpoint` de IA, loopback só para LLM local | ✅ | `app/api/v1/ai.py` |
+| Trilha de tentativas reduzida a categoria no perfil `server` | ✅ | `egress.detalhe_publico`, `pdf_resolver` |
+| `Origin` verificado antes de `accept()` nos dois WebSockets | ✅ | `dependencies.py`, `harvest.py`, `screening_ai.py` |
+| Upload em blocos com teto e checagem de espaço | ✅ | `pdf_service.save_uploaded_stream` |
+| Limitador de taxa por sessão, com famílias de rota | ✅ | `app/security/middleware.py` |
+| Cabeçalhos de segurança em todas as respostas | ✅ | `SecurityHeadersMiddleware` |
+| `TrustedHostMiddleware` no perfil `server` | ✅ | `app/main.py` |
+| Manipulador global de erro com identificador de correlação | ✅ | `middleware.instalar_tratamento_de_erro` |
+
+**Verificação contra servidor real:** os cinco cabeçalhos presentes; os três
+endpoints internos de IA recusados com `400`; `download_url` apontando para
+`169.254.169.254` resultando em falha sem vazar nada; `429` após 24 chamadas às
+rotas de IA.
+
+**Evidência de regressão:** restaurando `follow_redirects=True` com validação
+apenas na URL inicial, quatro testes falham — inclusive o do host público que
+redireciona para os metadados de nuvem, que é o caso que uma implementação
+ingênua deixa passar.
+
+**Três decisões que valem registro:**
+
+1. **A regra de porta é aplicada depois da resolução, não antes.** Aplicá-la
+   primeiro bloqueava o Ollama (`:11434`), que é uso legítimo. Para destino
+   externo — o que importa contra varredura — a regra continua valendo.
+2. **O limitador chaveia por sessão, não por IP.** Pesquisadores atrás do NAT
+   de uma universidade compartilham endereço; limitar por IP transformaria o
+   uso normal de um laboratório em bloqueio mútuo. Antes do login não há
+   sessão, e aí o IP é o que existe — exatamente o caso das tentativas de
+   autenticação, onde limitar por origem é o que se quer.
+3. **A resolução de nomes virou ponto de injeção.** Os testes de unidade do
+   resolvedor usam `MockTransport` com hosts fictícios; com DNS real, todos
+   falhariam e ficaria a impressão errada de que o guarda barra o que deveria
+   passar. A suíte de segurança marca-se com `dns_real` e exercita a resolução
+   de verdade — que é onde o *DNS rebinding* é fechado.
+
+**Um defeito encontrado na própria verificação:** o fixture de DNS de teste
+resolvia **qualquer** host para um IP público, inclusive literais como
+`10.0.0.5`. Isso fazia os testes do endpoint de IA passarem sem exercitar
+nada. Corrigido para que IP literal resolva para ele mesmo.
+
 ---
 
 ## 30.5 Fase 4 — Cliente e lançador (2 dias) 🟠
@@ -430,11 +476,12 @@ Cada fase só está pronta quando:
 | | |
 |---|---|
 | **Situação inicial** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
-| **Situação atual** | Fases 0, 1 e 2 entregues: a API exige identidade, as chaves não trafegam nem repousam em claro, e o servidor não sobe desprotegido |
+| **Situação atual** | Fases 0 a 3 entregues: a API exige identidade, as chaves não trafegam nem repousam em claro, o servidor não sobe desprotegido e não pode ser usado como procurador para a rede interna |
 | **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta antes destas fases |
 | **Fase 0** | ✅ entregue em 19/08/2026 — remove o comprometimento total |
 | **Fase 1** | ✅ entregue em 19/08/2026 — a API inteira exige identidade |
 | **Fase 2** | ✅ entregue em 19/08/2026 — segredos cifrados em repouso |
+| **Fase 3** | ✅ entregue em 19/08/2026 — SSRF, WebSocket, cabeçalhos e limites |
 | **Plano completo** | ~12 dias úteis — 18 de 18 achados fechados, com testes que impedem a volta |
 
 ---

@@ -5,7 +5,7 @@
 
 import json
 import logging
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
@@ -20,9 +20,11 @@ from app.schemas.harvest import (
     HarvestRunListResponse,
     HarvestRunResponse,
     HarvestStartRequest,
-    SourceCapabilityResponse,
 )
-from app.security.dependencies import require_websocket_session
+from app.security.dependencies import (
+    origem_do_websocket_e_permitida,
+    require_websocket_session,
+)
 from app.services.harvest_job_manager import harvest_job_manager
 from app.services.harvesting_service import HarvestingService, ws_manager
 
@@ -242,6 +244,12 @@ async def harvest_websocket(
     não vale para WebSocket, então aceitar primeiro e checar depois já teria
     entregado o canal a quem abriu a conexão de outro sítio.
     """
+    # `Origin` antes da sessão: sem essa checagem, o cookie do pesquisador
+    # abriria o canal para qualquer página aberta no navegador dele (§29.3.6).
+    if not origem_do_websocket_e_permitida(websocket):
+        await websocket.close(code=1008, reason="Origem não autorizada.")
+        return
+
     usuario = await require_websocket_session(websocket, db)
     if not usuario:
         await websocket.close(code=1008, reason="Autenticação necessária.")

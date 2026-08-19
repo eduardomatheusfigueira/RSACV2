@@ -64,3 +64,6 @@ warn_unused_configs = true
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+markers = [
+    "dns_real: exercita a resolução de nomes de verdade (guarda de saída)",
+]

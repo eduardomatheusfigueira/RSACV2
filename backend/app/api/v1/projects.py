@@ -23,6 +23,7 @@ from app.infrastructure.persistence.models import (
     ProtocolModel,
 )
 from app.schemas.project import ProjectCreate, ProjectListResponse, ProjectResponse, ProjectUpdate
+from app.security.middleware import erro_interno
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ def delete_project(
     try:
         # 1. Coleta IDs de Papers vinculados ao projeto
         paper_ids = [r[0] for r in db.query(PaperModel.id).filter(PaperModel.project_id == project_id).all()]
-        
+
         # 2. Deleta entidades filhas dos papers
         if paper_ids:
             db.query(PaperSourceModel).filter(PaperSourceModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
@@ -154,7 +155,10 @@ def delete_project(
     except Exception as e:
         db.rollback()
         logger.error(f"Erro ao excluir projeto {project_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Falha ao excluir projeto: {str(e)}")
+        mensagem, _ = erro_interno(
+            "Falha ao excluir o projeto.", e, contexto="[Projects] exclusão"
+        )
+        raise HTTPException(status_code=500, detail=mensagem) from e
 
 
 @router.get("/{project_id}/stats")
@@ -167,8 +171,9 @@ def get_project_stats(
     if not project:
         raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
 
-    from app.infrastructure.persistence.models import PaperModel
     from sqlalchemy import func, or_
+
+    from app.infrastructure.persistence.models import PaperModel
 
     papers = db.query(PaperModel).filter(
         PaperModel.project_id == project_id,
