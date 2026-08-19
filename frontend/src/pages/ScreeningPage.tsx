@@ -441,8 +441,8 @@ export function ScreeningPage(): React.JSX.Element {
       success('Assistência', `Parecer da Assistência: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.justification || (res as any).reasoning}\nCritérios atendidos: ${(res as any).criteria_met?.join(', ') || 'Nenhum'}`)
 
       const updatedPaper = await api.getPaper(id, selectedPaper.id)
-      setSelectedPaper(updatedPaper)
-      setPapers(papers.map((p) => (p.id === selectedPaper.id ? updatedPaper : p)))
+      setSelectedPaper({ ...updatedPaper })
+      setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? { ...updatedPaper } : p)))
       loadStats(id)
     } catch (err: any) {
       error('Assistência', `Falha na triagem com assistência: ${err.message}`)

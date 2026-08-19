@@ -117,10 +117,11 @@ class ScreeningService:
         paper_model.decision = result.decision
         paper_model.ai_confidence = result.confidence
 
-        # Salvar justificativa limpa diretamente nas observações (sem prefixo)
-        just_entry = result.justification.strip() if result.justification else ""
-        if just_entry:
-            paper_model.observations = just_entry
+        # Salvar justificativa limpa diretamente nas observações (removendo qualquer prefixo de IA)
+        raw_just = result.justification.strip() if result.justification else ""
+        clean_just = re.sub(r"^\[\s*IA\s*-\s*[^\]]+\]:\s*", "", raw_just).strip()
+        if clean_just:
+            paper_model.observations = clean_just
 
         # Log de Auditoria
         audit = AuditLogModel(
@@ -132,18 +133,32 @@ class ScreeningService:
         )
         db.add(audit)
 
-        # Salvar avaliações de critérios mapeando por código (INC1, EXC1...) e por texto
+        # Salvar avaliações de critérios mapeando por código (INC1, EXC1...), índice numérico e por texto
         inc_criteria_list = [c for c in protocol_model.criteria if not c.is_exclusion]
         exc_criteria_list = [c for c in protocol_model.criteria if c.is_exclusion]
 
-        inc_map = {f"INC{i}": c.id for i, c in enumerate(inc_criteria_list, 1)}
-        exc_map = {f"EXC{i}": c.id for i, c in enumerate(exc_criteria_list, 1)}
-        text_map = {c.text.lower().strip(): c.id for c in protocol_model.criteria}
+        # Mapas com variações de chaves possíveis
+        inc_map = {}
+        for i, c in enumerate(inc_criteria_list, 1):
+            inc_map[f"INC{i}"] = c.id
+            inc_map[f"INC_{i}"] = c.id
+            inc_map[f"INC {i}"] = c.id
+            inc_map[str(i)] = c.id
+            inc_map[c.text.lower().strip()] = c.id
+
+        exc_map = {}
+        for i, c in enumerate(exc_criteria_list, 1):
+            exc_map[f"EXC{i}"] = c.id
+            exc_map[f"EXC_{i}"] = c.id
+            exc_map[f"EXC {i}"] = c.id
+            exc_map[str(i)] = c.id
+            exc_map[c.text.lower().strip()] = c.id
 
         # 1. Critérios de Inclusão
         for key, val in (result.inclusion_criteria or {}).items():
-            clean_k = str(key).strip().upper()
-            crit_id = inc_map.get(clean_k) or text_map.get(str(key).lower().strip())
+            k_clean = str(key).strip().upper()
+            k_norm = re.sub(r"[\s_\-]+", "", k_clean)
+            crit_id = inc_map.get(k_clean) or inc_map.get(k_norm) or inc_map.get(str(key).lower().strip())
             if crit_id:
                 bool_val = bool(val)
                 eval_record = (
@@ -167,8 +182,9 @@ class ScreeningService:
 
         # 2. Critérios de Exclusão
         for key, val in (result.exclusion_criteria or {}).items():
-            clean_k = str(key).strip().upper()
-            crit_id = exc_map.get(clean_k) or text_map.get(str(key).lower().strip())
+            k_clean = str(key).strip().upper()
+            k_norm = re.sub(r"[\s_\-]+", "", k_clean)
+            crit_id = exc_map.get(k_clean) or exc_map.get(k_norm) or exc_map.get(str(key).lower().strip())
             if crit_id:
                 bool_val = bool(val)
                 eval_record = (
