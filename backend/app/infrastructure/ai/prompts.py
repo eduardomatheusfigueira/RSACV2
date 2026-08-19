@@ -16,6 +16,8 @@ DIRETRIZES FUNDAMENTAIS:
    - "Incluído": O estudo atende a todos os critérios de inclusão essenciais e não incorre em nenhum critério de exclusão.
    - "Excluído": O estudo viola explicitamente ao menos um critério de inclusão ou incorre em critério de exclusão.
    - "Pendente": Resumo ausente, dados insuficientes para julgar ou caso limítrofe que necessita de leitura do texto completo.
+5. VOZ DO PARECER: Escreva a justificativa como a anotação de triagem do próprio pesquisador revisor, em português acadêmico impessoal (ex.: "O estudo analisa...", "Não há menção a..."). NUNCA se identifique como IA, assistente, modelo ou ferramenta, e NUNCA use expressões como "a IA avaliou", "segundo o modelo" ou "como assistente".
+6. TEXTO LIMPO: A justificativa deve começar diretamente pelo conteúdo do parecer, sem rótulos, colchetes, prefixos de origem (ex.: "[IA - modelo]:", "Justificativa:"), sem markdown e sem listas numeradas.
 """
 
 
@@ -157,10 +159,12 @@ RESUMO:
 {delimitar_conteudo_externo(abstract)}
 
 ==================== FORMATO DE RESPOSTA OBRIGATÓRIO (JSON PURO) ====================
+Preencha "criterios_inclusao_atendidos" e "criterios_exclusao_atendidos" com TODOS os códigos listados acima
+(INC1, INC2, ..., EXC1, EXC2, ...), usando exatamente esses códigos como chaves e true/false como valores.
 Responda APENAS com um objeto JSON válido no seguinte formato:
 {{
   "decisao": "Incluído" | "Excluído" | "Pendente",
-  "justificativa": "Explicação detalhada e ancorada no texto...",
+  "justificativa": "Parecer do revisor, em texto corrido e impessoal, ancorado no título/resumo e nos critérios do protocolo (sem prefixos, rótulos ou menção a IA)...",
   "criterios_inclusao_atendidos": {{"INC1": true, "INC2": false}},
   "criterios_exclusao_atendidos": {{"EXC1": false, "EXC2": true}},
   "confianca": 0.95

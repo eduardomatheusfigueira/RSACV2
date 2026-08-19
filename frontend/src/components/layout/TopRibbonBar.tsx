@@ -651,18 +651,36 @@ export function TopRibbonBar(): JSX.Element {
                         type="button"
                         className="tool-btn-vertical"
                         onClick={() => actions.screenAiSingle?.()}
-                        disabled={!actions.canScreenSingle}
+                        disabled={!actions.canScreenSingle || actions.isBatchScreening}
                       >
                         <Sparkles size={15} className="icon-sparkle" />
                         <span>Triar Estudo</span>
                       </button>
                       <button
                         type="button"
-                        className="tool-btn-vertical"
+                        className={`tool-btn-vertical ${actions.isBatchScreening ? 'active' : ''}`}
                         onClick={() => actions.screenAiBatch?.()}
+                        title={actions.isBatchScreening ? 'Ver andamento da triagem em lote' : 'Iniciar triagem automatizada em lote'}
                       >
-                        <Zap size={15} />
-                        <span>Triar Lote</span>
+                        {actions.isBatchScreening ? (
+                          <RefreshCw size={15} className="animate-spin text-accent" />
+                        ) : (
+                          <Zap size={15} />
+                        )}
+                        <span>{actions.isBatchScreening ? (actions.batchScreeningProgressText || 'Triando...') : 'Triar Lote'}</span>
+                      </button>
+                  </GrupoDoRibbon>
+                  <div className="ribbon-divider" />
+                  <GrupoDoRibbon titulo="Acesso ao Estudo">
+                      <button
+                        type="button"
+                        className="tool-btn-vertical"
+                        onClick={() => actions.openDoiOrRepoLink?.()}
+                        disabled={!actions.hasDoiOrRepo}
+                        title="Abrir página oficial do DOI ou Repositório Institucional (BDTD, SciELO)"
+                      >
+                        <Globe size={15} />
+                        <span>Abrir Fonte</span>
                       </button>
                   </GrupoDoRibbon>
                   <div className="ribbon-divider" />

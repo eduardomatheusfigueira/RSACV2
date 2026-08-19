@@ -48,7 +48,7 @@
   }
 
   .app-content {
-    padding: var(--space-2) var(--space-2) 64px var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-16) var(--space-2);
     overflow-x: hidden;
   }
 }

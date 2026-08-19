@@ -153,10 +153,21 @@ async def test_project_crud(async_client):
     assert patched_paper["criteria_evaluations"][crit_1_id] is True
     assert patched_paper["criteria_evaluations"][crit_2_id] is False
 
+    # 5.1 Atualizar Resumo Manualmente (quando ausente ou complementado pelo usuário)
+    patch_abstract_res = await async_client.patch(
+        f"/api/v1/projects/{project_id}/papers/{paper_id}",
+        json={
+            "abstract": "Este é o resumo coletado e colado manualmente a partir do repositório.",
+        },
+    )
+    assert patch_abstract_res.status_code == 200
+    assert patch_abstract_res.json()["abstract"] == "Este é o resumo coletado e colado manualmente a partir do repositório."
+
     # Get paper by ID
     get_res = await async_client.get(f"/api/v1/projects/{project_id}/papers/{paper_id}")
     assert get_res.status_code == 200
     assert get_res.json()["criteria_evaluations"][crit_1_id] is True
+    assert get_res.json()["abstract"] == "Este é o resumo coletado e colado manualmente a partir do repositório."
 
     # 6. Check Stats
     stats_res = await async_client.get(f"/api/v1/projects/{project_id}/stats")

@@ -44,7 +44,7 @@ interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      theme: 'dark',
+      theme: 'platinum-dusk',
       backendStatus: 'connecting',
       backendVersion: '',
       activeProject: null,
@@ -62,8 +62,9 @@ export const useSettingsStore = create<SettingsState>()(
             state.theme === 'dark' ||
             state.theme === 'organic-dark' ||
             state.theme === 'lava-steel' ||
-            state.theme === 'stormy-tangerine'
-          const newTheme = isDark ? 'light' : 'dark'
+            state.theme === 'stormy-tangerine' ||
+            state.theme === 'platinum-dusk'
+          const newTheme = isDark ? 'light' : 'platinum-dusk'
           document.documentElement.setAttribute('data-theme', newTheme)
           return { theme: newTheme }
         }),
@@ -86,9 +87,8 @@ export const useSettingsStore = create<SettingsState>()(
       // Ao reidratar do localStorage, aplicar o tema salvo ao DOM imediatamente
       onRehydrateStorage: () => {
         return (state) => {
-          if (state?.theme) {
-            document.documentElement.setAttribute('data-theme', state.theme)
-          }
+          const activeTheme = state?.theme || 'platinum-dusk'
+          document.documentElement.setAttribute('data-theme', activeTheme)
         }
       },
     }

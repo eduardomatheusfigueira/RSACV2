@@ -21,7 +21,11 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.api.v1.router import api_router, public_router
 from app.config import settings
 from app.database import SessionLocal, create_tables
-from app.infrastructure.persistence.models import HarvestRunModel, UserModel
+from app.infrastructure.persistence.models import (
+    HarvestRunModel,
+    PaperModel,
+    UserModel,
+)
 from app.security.crypto import MasterKeyError, obter_chave_mestra
 from app.security.local_token import descrever_para_log, ensure_local_token
 from app.security.log_filter import instalar_filtro_de_segredos
@@ -144,6 +148,29 @@ async def lifespan(app: FastAPI):
         db.close()
     except Exception as e:
         logger.error(f"[Lifespan] Erro ao reconciliar execuções de coleta: {e}")
+
+    # Limpar rótulos de origem automática herdados de versões anteriores nas observações
+    try:
+        from app.services.screening_service import _strip_ai_prefix
+
+        db = SessionLocal()
+        legacy_papers = (
+            db.query(PaperModel)
+            .filter(PaperModel.observations.ilike("[%"))
+            .all()
+        )
+        cleaned_count = 0
+        for paper in legacy_papers:
+            cleaned = _strip_ai_prefix(paper.observations)
+            if cleaned != (paper.observations or "").strip():
+                paper.observations = cleaned
+                cleaned_count += 1
+        if cleaned_count:
+            db.commit()
+            logger.info(f"[Lifespan] Removido prefixo de IA de {cleaned_count} observação(ões) antigas.")
+        db.close()
+    except Exception as e:
+        logger.error(f"[Lifespan] Erro ao limpar prefixos de IA das observações: {e}")
 
     logger.info("Backend pronto para receber requisições.")
     yield
@@ -271,6 +298,35 @@ def create_app() -> FastAPI:
             # ou tentativa de travessia — cai no index. Devolver 403 no caso da
             # travessia confirmaria a existência do alvo ao atacante.
             return FileResponse(spa_index)
+    else:
+        @app.get("/", include_in_schema=False)
+        async def fallback_root():
+            from fastapi.responses import HTMLResponse
+            return HTMLResponse("""
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="utf-8">
+                <title>RSAC V2 — Backend Ativo</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc; }
+                    .card { max-width: 520px; padding: 2.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+                    h2 { color: #38bdf8; margin-top: 0; }
+                    p { color: #94a3b8; line-height: 1.6; font-size: 15px; }
+                    code { background: #0f172a; padding: 0.25rem 0.5rem; border-radius: 4px; color: #4ade80; font-family: monospace; }
+                    .btn { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>🚀 RSAC V2 — Servidor Backend Online</h2>
+                    <p>O backend FastAPI está operando normalmente. A interface gráfica compilada não foi encontrada em <code>frontend/dist</code>.</p>
+                    <p>Execute <code>npm run build:web</code> dentro da pasta <code>frontend</code> ou utilize os inicializadores automáticos.</p>
+                    <a href="/api/docs" class="btn">Documentação da API (Swagger)</a>
+                </div>
+            </body>
+            </html>
+            """)
 
     return app
 

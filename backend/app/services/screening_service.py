@@ -12,7 +12,8 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -23,6 +24,7 @@ from app.infrastructure.ai.factory import AIFactory
 from app.infrastructure.ai.prompts import build_screening_prompt
 from app.infrastructure.persistence.models import (
     AuditLogModel,
+    CriterionModel,
     PaperCriterionModel,
     PaperModel,
     ProtocolModel,
@@ -45,6 +47,77 @@ class AuditActor:
 
     user_id: str
     username: str
+
+
+# Prefixos de origem automática que jamais devem aparecer nas observações do revisor
+# (ex.: "[IA - gemini-3.6-flash]:", "[I.A. gemini]:", "(AI) ", "IA:", "Assistente:").
+_AI_PREFIX_PATTERNS = [
+    re.compile(r"^\s*[\[\(]\s*(?:I\.?\s*A\.?|A\.?\s*I\.?|IA|AI)\b[^\]\)]*[\]\)]\s*[:\-–—]?\s*", re.IGNORECASE),
+    re.compile(r"^\s*(?:I\.?\s*A\.?|A\.?\s*I\.?|IA|AI|Assistente(?:\s+de\s+IA)?|Modelo|Gemini|OpenAI|GPT|Claude)\s*[:\-–—]\s+", re.IGNORECASE),
+    re.compile(r"^\s*(?:Justificativa|Parecer|An[áa]lise)\s*[:\-–—]\s+", re.IGNORECASE),
+]
+
+
+def _strip_ai_prefix(text: str) -> str:
+    """Remove rótulos de origem automática do início do texto, de forma iterativa.
+
+    A observação deve soar como a anotação de um pesquisador que triou o estudo,
+    sem qualquer marca de ferramenta, modelo ou provedor.
+    """
+    cleaned = (text or "").strip()
+    changed = True
+    while changed and cleaned:
+        changed = False
+        for pattern in _AI_PREFIX_PATTERNS:
+            new_text = pattern.sub("", cleaned, count=1).strip()
+            if new_text != cleaned:
+                cleaned = new_text
+                changed = True
+    return cleaned
+
+
+def _normalize_key(value: str) -> str:
+    """Normaliza uma chave de critério para comparação (maiúsculas, sem separadores)."""
+    return re.sub(r"[\s_\-\.\:]+", "", str(value or "")).upper()
+
+
+def _build_criterion_map(criteria_list: List[CriterionModel], prefixes: List[str]) -> Dict[str, str]:
+    """Monta um mapa tolerante de chaves possíveis do modelo -> id do critério.
+
+    Cobre as variações usuais devolvidas pelos provedores: "INC1", "INC_1",
+    "Critério 1", "C1", o índice puro ("1") e o próprio texto do critério.
+    """
+    mapping: Dict[str, str] = {}
+    for idx, crit in enumerate(criteria_list, 1):
+        for prefix in prefixes:
+            mapping[_normalize_key(f"{prefix}{idx}")] = crit.id
+        mapping[_normalize_key(str(idx))] = crit.id
+        if crit.text:
+            mapping[_normalize_key(crit.text)] = crit.id
+    return mapping
+
+
+def _iter_criteria_flags(raw) -> List[tuple]:
+    """Converte a resposta de critérios em pares (chave, booleano).
+
+    Aceita tanto o dicionário previsto no prompt ({"INC1": true}) quanto listas
+    de códigos atendidos (["INC1", "INC3"]) devolvidas por alguns modelos.
+    """
+    if isinstance(raw, dict):
+        return [(k, bool(v)) for k, v in raw.items()]
+    if isinstance(raw, (list, tuple, set)):
+        pairs = []
+        for item in raw:
+            if isinstance(item, dict):
+                code = item.get("code") or item.get("codigo") or item.get("id")
+                if code is None:
+                    continue
+                value = item.get("atendido", item.get("value", item.get("met", True)))
+                pairs.append((code, bool(value)))
+            elif isinstance(item, str) and item.strip():
+                pairs.append((item, True))
+        return pairs
+    return []
 
 
 def _to_paper_entity(model: PaperModel) -> Paper:
@@ -148,9 +221,8 @@ class ScreeningService:
         paper_model.decision = result.decision
         paper_model.ai_confidence = result.confidence
 
-        # Salvar justificativa limpa diretamente nas observações (removendo qualquer prefixo de IA)
-        raw_just = result.justification.strip() if result.justification else ""
-        clean_just = re.sub(r"^\[\s*IA\s*-\s*[^\]]+\]:\s*", "", raw_just).strip()
+        # Observações do revisor: apenas o parecer, sem rótulo de modelo ou provedor
+        clean_just = _strip_ai_prefix(result.justification)
         if clean_just:
             paper_model.observations = clean_just
 
@@ -170,60 +242,26 @@ class ScreeningService:
         )
         db.add(audit)
 
-        # Salvar avaliações de critérios mapeando por código (INC1, EXC1...), índice numérico e por texto
-        inc_criteria_list = [c for c in protocol_model.criteria if not c.is_exclusion]
-        exc_criteria_list = [c for c in protocol_model.criteria if c.is_exclusion]
+        # Persistir avaliações de critérios, tolerando as variações de chave dos provedores
+        inc_map = _build_criterion_map(
+            [c for c in protocol_model.criteria if not c.is_exclusion],
+            ["INC", "I", "CI", "CRIT", "CRITERIO", "CRITÉRIO", "C"],
+        )
+        exc_map = _build_criterion_map(
+            [c for c in protocol_model.criteria if c.is_exclusion],
+            ["EXC", "E", "CE", "CRIT", "CRITERIO", "CRITÉRIO", "C"],
+        )
 
-        # Mapas com variações de chaves possíveis
-        inc_map = {}
-        for i, c in enumerate(inc_criteria_list, 1):
-            inc_map[f"INC{i}"] = c.id
-            inc_map[f"INC_{i}"] = c.id
-            inc_map[f"INC {i}"] = c.id
-            inc_map[str(i)] = c.id
-            inc_map[c.text.lower().strip()] = c.id
+        for raw_criteria, crit_map in (
+            (result.inclusion_criteria, inc_map),
+            (result.exclusion_criteria, exc_map),
+        ):
+            for key, bool_val in _iter_criteria_flags(raw_criteria):
+                crit_id = crit_map.get(_normalize_key(key))
+                if not crit_id:
+                    logger.debug(f"[ScreeningAI] Critério '{key}' não corresponde a nenhum critério do protocolo.")
+                    continue
 
-        exc_map = {}
-        for i, c in enumerate(exc_criteria_list, 1):
-            exc_map[f"EXC{i}"] = c.id
-            exc_map[f"EXC_{i}"] = c.id
-            exc_map[f"EXC {i}"] = c.id
-            exc_map[str(i)] = c.id
-            exc_map[c.text.lower().strip()] = c.id
-
-        # 1. Critérios de Inclusão
-        for key, val in (result.inclusion_criteria or {}).items():
-            k_clean = str(key).strip().upper()
-            k_norm = re.sub(r"[\s_\-]+", "", k_clean)
-            crit_id = inc_map.get(k_clean) or inc_map.get(k_norm) or inc_map.get(str(key).lower().strip())
-            if crit_id:
-                bool_val = bool(val)
-                eval_record = (
-                    db.query(PaperCriterionModel)
-                    .filter(
-                        PaperCriterionModel.paper_id == paper_model.id,
-                        PaperCriterionModel.criterion_id == crit_id,
-                    )
-                    .first()
-                )
-                if eval_record:
-                    eval_record.value = bool_val
-                else:
-                    db.add(
-                        PaperCriterionModel(
-                            paper_id=paper_model.id,
-                            criterion_id=crit_id,
-                            value=bool_val,
-                        )
-                    )
-
-        # 2. Critérios de Exclusão
-        for key, val in (result.exclusion_criteria or {}).items():
-            k_clean = str(key).strip().upper()
-            k_norm = re.sub(r"[\s_\-]+", "", k_clean)
-            crit_id = exc_map.get(k_clean) or exc_map.get(k_norm) or exc_map.get(str(key).lower().strip())
-            if crit_id:
-                bool_val = bool(val)
                 eval_record = (
                     db.query(PaperCriterionModel)
                     .filter(
@@ -258,13 +296,12 @@ class ScreeningService:
         db = SessionLocal()
         try:
             pending_papers = (
-                db.query(PaperModel.id)
+                db.query(PaperModel.id, PaperModel.title, PaperModel.authors, PaperModel.year)
                 .filter(PaperModel.project_id == project_id, PaperModel.decision == "Pendente")
                 .limit(limit)
                 .all()
             )
-            paper_ids = [p[0] for p in pending_papers]
-            total_papers = len(paper_ids)
+            total_papers = len(pending_papers)
 
             if total_papers == 0:
                 await ws_manager.broadcast(
@@ -275,15 +312,38 @@ class ScreeningService:
 
             logger.info(f"[BatchScreening] Iniciando triagem de {total_papers} artigos para o projeto {project_id}...")
 
+            await ws_manager.broadcast(
+                project_id,
+                {
+                    "type": "batch_screening_started",
+                    "total": total_papers,
+                    "message": f"Iniciando triagem com IA para {total_papers} artigos pendentes...",
+                },
+            )
+
             semaphore = asyncio.Semaphore(concurrency)
             processed_count = 0
             included_count = 0
             excluded_count = 0
             pending_count = 0
 
-            async def process_one(pid: str):
+            async def process_one(paper_info):
                 nonlocal processed_count, included_count, excluded_count, pending_count
+                pid, ptitle, pauthors, pyear = paper_info
                 async with semaphore:
+                    # Notificar início da análise deste estudo específico
+                    await ws_manager.broadcast(
+                        project_id,
+                        {
+                            "type": "batch_screening_item_start",
+                            "paper_id": pid,
+                            "paper_title": ptitle or "Sem título",
+                            "paper_authors": pauthors or "",
+                            "paper_year": pyear or "",
+                            "total": total_papers,
+                        },
+                    )
+
                     task_db = SessionLocal()
                     try:
                         res = await self.screen_single_paper(task_db, project_id, pid, actor=actor)
@@ -303,10 +363,13 @@ class ScreeningService:
                                 "total": total_papers,
                                 "percentage": round((processed_count / total_papers) * 100, 1),
                                 "current_paper_id": pid,
+                                "current_paper_title": ptitle or "Sem título",
                                 "decision": res.decision,
+                                "confidence": res.confidence,
+                                "justification": res.justification,
                                 "included_count": included_count,
                                 "excluded_count": excluded_count,
-                                "pending_count": pending_count,
+                                "pending_count": total_papers - processed_count,
                             },
                         )
                     except Exception as e:
@@ -314,7 +377,7 @@ class ScreeningService:
                     finally:
                         task_db.close()
 
-            tasks = [process_one(pid) for pid in paper_ids]
+            tasks = [process_one(p_info) for p_info in pending_papers]
             await asyncio.gather(*tasks)
 
             logger.info(f"[BatchScreening] Finalizada triagem em lote do projeto {project_id}.")
@@ -325,7 +388,7 @@ class ScreeningService:
                     "total_processed": processed_count,
                     "included": included_count,
                     "excluded": excluded_count,
-                    "pending": pending_count,
+                    "pending": total_papers - processed_count,
                 },
             )
 

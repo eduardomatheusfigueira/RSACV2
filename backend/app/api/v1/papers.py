@@ -242,6 +242,25 @@ def update_paper(
     if data.observations is not None:
         paper.observations = data.observations
 
+    if data.abstract is not None:
+        paper.abstract = data.abstract
+
+    if data.title is not None:
+        paper.title = data.title
+        paper.title_normalized = _normalize_title(data.title)
+
+    if data.authors is not None:
+        paper.authors = data.authors
+
+    if data.year is not None:
+        paper.year = data.year
+
+    if data.doi is not None:
+        paper.doi = data.doi
+
+    if data.download_url is not None:
+        paper.download_url = data.download_url
+
     if data.criteria_evaluations is not None:
         for crit_id, val in data.criteria_evaluations.items():
             eval_record = (

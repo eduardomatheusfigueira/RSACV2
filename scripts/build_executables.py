@@ -111,8 +111,12 @@ def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
     src_exe = DIST_DIR / f"{output_name}.exe"
     dst_exe = ROOT_DIR / f"{output_name}.exe"
     if src_exe.exists():
-        shutil.copy2(src_exe, dst_exe)
-        print(f"[✓] Executável criado e movido para: {dst_exe}")
+        try:
+            shutil.copy2(src_exe, dst_exe)
+            print(f"[✓] Executável criado e movido para: {dst_exe}")
+        except PermissionError:
+            print(f"[!] Aviso: Não foi possível sobrescrever {dst_exe} pois o processo está em execução.")
+            print(f"[✓] Novo executável disponível em: {src_exe}")
         return True
 
     return False
