@@ -22,6 +22,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.security.encrypted_type import EncryptedText
+
 
 class Base(DeclarativeBase):
     """Base declarativa para todos os modelos ORM."""
@@ -382,8 +384,8 @@ class SourceCredentialModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     source_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    api_key: Mapped[str] = mapped_column(Text, default="")
-    inst_token: Mapped[str] = mapped_column(Text, default="")
+    api_key: Mapped[str] = mapped_column(EncryptedText, default="")
+    inst_token: Mapped[str] = mapped_column(EncryptedText, default="")
     custom_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -399,10 +401,14 @@ class AISettingsModel(Base):
     ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     provider: Mapped[str] = mapped_column(String(50), nullable=False, default="gemini")
     model: Mapped[str] = mapped_column(String(100), nullable=False, default="gemini-3.6-flash")
-    api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
-    gemini_api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
-    qwen_api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
-    local_api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
+    # O sufixo `_encrypted` era falso até a Fase 2 do plano de segurança: o que
+    # se gravava era `json.dumps(lista)` puro. `EncryptedText` torna o nome
+    # verdadeiro — e o nome mentiroso era pior que a ausência da cifra, porque
+    # desarmava quem revisasse o código.
+    api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
+    gemini_api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
+    qwen_api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
+    local_api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
     endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     temperature: Mapped[float] = mapped_column(Float, default=0.2)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096)

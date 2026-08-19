@@ -21,7 +21,10 @@ from app.api.v1.router import api_router, public_router
 from app.config import settings
 from app.database import SessionLocal, create_tables
 from app.infrastructure.persistence.models import HarvestRunModel, UserModel
+from app.security.crypto import MasterKeyError, obter_chave_mestra
 from app.security.local_token import descrever_para_log, ensure_local_token
+from app.security.log_filter import instalar_filtro_de_segredos
+from app.security.migration import cifrar_segredos_legados
 from app.schemas.common import HealthResponse
 
 # ── Logging Estruturado (Console + Arquivo) ───────────────────────────
@@ -39,6 +42,9 @@ logging.basicConfig(
         logging.FileHandler(log_file, encoding="utf-8"),
     ],
 )
+# Rede de segurança contra credencial escrita em log por engano (§29.4.4).
+instalar_filtro_de_segredos()
+
 logger = logging.getLogger("rsac")
 
 
@@ -67,6 +73,25 @@ async def lifespan(app: FastAPI):
     # processo recusa-se a subir — em vez de subir aberto, como acontecia.
     ensure_local_token()
     logger.info(f"Autenticação: {descrever_para_log()}")
+
+    # ── Chave-mestra da cifra (doc 29 §29.4.1) ────────────────────────
+    #
+    # Resolvida aqui, e não na primeira gravação: a chave é preguiçosa por
+    # desenho, e no perfil `server` sem `RSAC_SECRET_KEY` isso deixava o
+    # backend subir para só falhar quando alguém tentasse salvar uma chave —
+    # com a exceção engolida pela migração. Um servidor que não consegue
+    # cifrar segredos não deve atender requisição nenhuma.
+    try:
+        obter_chave_mestra()
+    except MasterKeyError as exc:
+        logger.critical("[Segurança] %s", exc)
+        raise RuntimeError(str(exc)) from exc
+
+    # Cifra o que ainda estiver em texto claro nas colunas de segredo. Roda a
+    # cada partida e é idempotente: valor já cifrado é reconhecido e ignorado.
+    from app.database import engine
+
+    cifrar_segredos_legados(engine)
 
     db_boot = SessionLocal()
     try:

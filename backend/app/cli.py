@@ -113,6 +113,30 @@ def reset_password(args: argparse.Namespace) -> int:
         db.close()
 
 
+def generate_secret_key(args: argparse.Namespace) -> int:
+    """
+    Gera uma chave-mestra para o perfil `server`.
+
+    No modo servidor a chave precisa vir do ambiente — um arquivo ao lado do
+    banco seria lido pela mesma falha que leria o banco (doc 29 §29.4.1).
+    """
+    import base64
+    import os
+
+    chave = base64.urlsafe_b64encode(os.urandom(32)).decode("ascii")
+
+    print()
+    print("=" * 72)
+    print("  CHAVE-MESTRA GERADA — exporte-a antes de subir o servidor")
+    print("=" * 72)
+    print(f"  RSAC_SECRET_KEY={chave}")
+    print("=" * 72)
+    print("  Sem esta chave os segredos gravados não podem ser decifrados.")
+    print("  Guarde-a fora do computador que hospeda o banco.")
+    print()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
@@ -137,6 +161,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_reset.add_argument("username", help="Nome de usuário")
     p_reset.add_argument("--password", default=None, help="Nova senha (omita para sortear)")
     p_reset.set_defaults(func=reset_password)
+
+    p_key = sub.add_parser(
+        "generate-secret-key", help="Gera a chave-mestra da cifra (perfil server)"
+    )
+    p_key.set_defaults(func=generate_secret_key)
 
     return parser
 

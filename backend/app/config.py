@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     # ── Perímetro de confiança ────────────────────────────────────────
     deployment_profile: DeploymentProfile = DeploymentProfile.DESKTOP
 
+    # ── Chave-mestra da cifra de segredos (doc 29 §29.4.1) ────────────
+    # Obrigatória no perfil `server`: lá um arquivo de chave ao lado do banco
+    # seria lido pela mesma falha que leria o banco. Fora do `server`, a
+    # ausência faz o backend gerar `<data_dir>/master.key` com permissão 0600.
+    secret_key: Optional[str] = None
+
     # ── Sessões (doc 29 §29.3.3) ──────────────────────────────────────
     # Validade da sessão, renovada por atividade: quem está triando não é
     # deslogado no meio do trabalho, mas uma aba esquecida aberta expira.

@@ -18,7 +18,7 @@ dela.
 ```
 Fase 0  ▸ CONTENÇÃO          9 h   fecha o comprometimento total sem auth  ✅ ENTREGUE
 Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditoria  ✅ ENTREGUE
-Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave
+Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave  ✅ ENTREGUE
 Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites
 Fase 4  ▸ CLIENTE & LANÇADOR 2 d   api_url, aviso, provisionamento, checksum
 Fase 5  ▸ INTEGRIDADE & CI   2 d   fórmula, prompt, lockfile, pipeline
@@ -31,7 +31,7 @@ de "comprometimento total por quem tiver a URL" para "exige uma vulnerabilidade
 de verdade". Ela **não** entrega segurança — entrega tempo para fazer o resto
 sem estar exposto.
 
-**Estado em 19/08/2026:** Fases 0 e 1 entregues. O `Iniciar_Servidor.bat`
+**Estado em 19/08/2026:** Fases 0, 1 e 2 entregues. O `Iniciar_Servidor.bat`
 exige conta e senha e recusa-se a publicar sem autenticação. O que continua
 aberto está nas Fases 3 a 5 — SSRF, limites de recurso, cabeçalhos e a
 sanitização das exportações.
@@ -260,6 +260,38 @@ chave-mestra e a sessão compartilham a origem do segredo).
 retorna nada num banco com chaves configuradas. Banco de versão anterior sobe,
 migra e continua funcionando (teste de migração com *fixture* em claro).
 
+### ✅ Fase 2 — entregue em 19/08/2026
+
+| Entrega | Estado | Onde |
+|---|---|---|
+| `crypto.py` — Fernet + HKDF, chave do ambiente ou arquivo `0600` | ✅ | `app/security/crypto.py` |
+| `EncryptedText` — cifra/decifra transparente na coluna | ✅ | `app/security/encrypted_type.py` |
+| Aplicado às 4 colunas de IA e às 2 de credenciais de fonte | ✅ | `persistence/models.py` |
+| Migração idempotente com prefixo `v1:` | ✅ | `app/security/migration.py` |
+| Filtro de log que mascara `AIza…`, `sk-…`, `Bearer …` | ✅ | `app/security/log_filter.py` |
+| Perfil `server` recusa chave-mestra em arquivo | ✅ | `crypto.py`, portão no `main.py` |
+| `python -m app.cli generate-secret-key` | ✅ | `app/cli.py` |
+
+**Verificação do critério de aceite**, contra servidor real no perfil `server`:
+gravadas duas credenciais pelas rotas normais, a busca binária no banco **e no
+journal WAL** devolveu zero ocorrências de `AIzaSy` e do token do Scopus, e
+duas ocorrências do prefixo `v1:gAAAAA`. Revertendo as colunas para `Text`, dois
+testes falham — o que confirma que a suíte pega a regressão.
+
+**Um defeito encontrado pela própria verificação.** A chave-mestra é resolvida
+preguiçosamente, e a migração captura exceções de forma ampla para não impedir
+o app de subir. O efeito combinado: no perfil `server` sem `RSAC_SECRET_KEY` o
+backend **subia normalmente** e só falharia quando alguém tentasse salvar uma
+chave — com o erro engolido. Corrigido com um portão explícito no `lifespan`,
+na mesma forma do portão de contas: um servidor que não consegue cifrar
+segredos não atende requisição nenhuma.
+
+**O que a cifra não protege.** A chave-mestra do perfil `desktop` fica em
+`<data_dir>/master.key`, ao lado do banco. Quem já tem leitura do sistema de
+arquivos do usuário obtém as duas coisas — a cifra ali protege contra cópia do
+banco (backup, pasta sincronizada, anexo de suporte), não contra acesso local.
+No perfil `server`, onde essa distinção importa, a chave vem do ambiente.
+
 ---
 
 ## 30.4 Fase 3 — Rede e recursos (2 dias) 🟠
@@ -398,11 +430,11 @@ Cada fase só está pronta quando:
 | | |
 |---|---|
 | **Situação inicial** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
-| **Situação atual** | Fases 0 e 1 entregues: a API exige identidade, as chaves não trafegam em claro e o servidor não sobe desprotegido |
+| **Situação atual** | Fases 0, 1 e 2 entregues: a API exige identidade, as chaves não trafegam nem repousam em claro, e o servidor não sobe desprotegido |
 | **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta antes destas fases |
 | **Fase 0** | ✅ entregue em 19/08/2026 — remove o comprometimento total |
 | **Fase 1** | ✅ entregue em 19/08/2026 — a API inteira exige identidade |
-| **Fase 2** | ~2 dias — cifra dos segredos em repouso |
+| **Fase 2** | ✅ entregue em 19/08/2026 — segredos cifrados em repouso |
 | **Plano completo** | ~12 dias úteis — 18 de 18 achados fechados, com testes que impedem a volta |
 
 ---

@@ -205,7 +205,14 @@ planejamento vigente de UX, UI e profissionalização da interface; e os de
 > credenciais e usuários; contas `researcher` operam a revisão sem alcançar as
 > chaves de API.
 >
-> As Fases 0 e 1 do
+> As chaves de API ficam **cifradas em repouso** no banco. No modo servidor,
+> exporte a chave-mestra antes de publicar:
+>
+> ```bash
+> python -m app.cli generate-secret-key   # gere e exporte como RSAC_SECRET_KEY
+> ```
+>
+> As Fases 0, 1 e 2 do
 > [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)
 > estão entregues; o diagnóstico que as motivou está em
 > [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md).
