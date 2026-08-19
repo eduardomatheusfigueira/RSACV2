@@ -31,8 +31,14 @@ async def _client_for(settings_obj, db_session, monkeypatch):
     return httpx.AsyncClient(transport=transport, base_url="http://testserver")
 
 
-def test_perfil_padrao_e_desktop():
-    """Quem não configura nada fica no perfil mais restrito de rede."""
+def test_perfil_padrao_e_desktop(monkeypatch):
+    """Quem não configura nada fica no perfil mais restrito de rede.
+
+    A CI roda com `RSAC_DEPLOYMENT_PROFILE=ci` no ambiente — sem limpar a
+    variável aqui, o teste do "sem configuração nenhuma" passaria a testar
+    o ambiente da CI, não o valor padrão real da aplicação.
+    """
+    monkeypatch.delenv("RSAC_DEPLOYMENT_PROFILE", raising=False)
     assert Settings().deployment_profile is DeploymentProfile.DESKTOP
 
 
