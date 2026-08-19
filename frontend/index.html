@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="platinum-dusk">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,8 +19,7 @@
       do React montar. A Content-Security-Policy proíbe script inline, então
       quem remove esta camada é o main.tsx, assim que a aplicação monta.
 
-      As cores aqui são literais (o design system ainda não foi carregado) e
-      correspondem à paleta-mãe "Organic Earth", a mesma dos ícones gerados.
+      As cores aqui correspondem ao tema padrão "Platinum & Dusk Blue".
     -->
     <style>
       #boot-splash {
@@ -32,19 +31,19 @@
         align-items: center;
         justify-content: center;
         gap: 26px;
-        background: linear-gradient(160deg, #3d5324 0%, #171f0d 100%);
+        background: linear-gradient(160deg, #1a3350 0%, #0d1b2a 100%);
         font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
         transition: opacity 260ms ease-out;
       }
       #boot-splash.is-leaving { opacity: 0; }
       .boot-mark { width: 92px; height: 92px; }
-      .boot-mark .boot-leg { stroke: #dda15e; }
-      .boot-mark .boot-ink { stroke: #fefae0; }
+      .boot-mark .boot-leg { stroke: #a3cef1; }
+      .boot-mark .boot-ink { stroke: #ffffff; }
       .boot-word {
         display: flex;
         align-items: center;
         gap: 10px;
-        color: #fefae0;
+        color: #ffffff;
         font-size: 21px;
         font-weight: 700;
         letter-spacing: 0.18em;
@@ -54,8 +53,8 @@
         font-weight: 700;
         letter-spacing: 0.16em;
         text-transform: uppercase;
-        color: #dda15e;
-        border: 1px solid #dda15e;
+        color: #a3cef1;
+        border: 1px solid #a3cef1;
         border-radius: 2px;
         padding: 2px 4px 2px 6px;
       }
@@ -63,7 +62,7 @@
         display: flex;
         align-items: center;
         gap: 9px;
-        color: #9aab6b;
+        color: #cbd8e4;
         font-size: 10px;
         letter-spacing: 0.14em;
         text-transform: uppercase;
@@ -72,7 +71,7 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #dda15e;
+        background: #6096ba;
         animation: boot-pulse 1.15s ease-in-out infinite;
       }
       @keyframes boot-pulse {

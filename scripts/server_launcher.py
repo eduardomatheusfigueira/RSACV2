@@ -150,6 +150,33 @@ def download_cloudflared(dest_path: Path) -> bool:
         return False
 
 
+def ensure_frontend_build() -> bool:
+    """Garante que a interface web compilada exista antes de iniciar."""
+    dist_index = FRONTEND_DIR / "dist" / "index.html"
+    if dist_index.exists():
+        return True
+
+    print("\033[93m[*] Interface estática não encontrada. Compilando frontend Web SPA...\033[0m")
+    try:
+        npm_bin = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
+        proc = subprocess.run(
+            f'"{npm_bin}" run build:web',
+            cwd=str(FRONTEND_DIR),
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        if dist_index.exists():
+            print("\033[92m[✓] Build do frontend concluído com sucesso!\033[0m\n")
+            return True
+        else:
+            print(f"\033[91m[X] Falha no build do frontend:\n{proc.stderr or proc.stdout}\033[0m\n")
+            return False
+    except Exception as e:
+        print(f"\033[91m[X] Erro ao invocar build do frontend: {e}\033[0m\n")
+        return False
+
+
 def is_port_in_use(port: int) -> bool:
     """Verifica se o backend já está respondendo na porta especificada."""
     try:
@@ -270,6 +297,8 @@ def main():
     print("\033[92m" + "=" * 70)
     print("        🚀 RSAC V2 — SERVIDOR WEB & ACESSO REMOTO (CLOUDFLARE)")
     print("=" * 70 + "\033[0m\n")
+
+    ensure_frontend_build()
 
     # 1. Iniciar Backend
     if not start_backend(port):

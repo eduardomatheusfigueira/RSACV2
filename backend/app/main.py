@@ -157,6 +157,35 @@ def create_app() -> FastAPI:
             if file_path.is_file():
                 return FileResponse(file_path)
             return FileResponse(frontend_dist / "index.html")
+    else:
+        @app.get("/", include_in_schema=False)
+        async def fallback_root():
+            from fastapi.responses import HTMLResponse
+            return HTMLResponse("""
+            <!DOCTYPE html>
+            <html lang="pt-BR">
+            <head>
+                <meta charset="utf-8">
+                <title>RSAC V2 — Backend Ativo</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc; }
+                    .card { max-width: 520px; padding: 2.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+                    h2 { color: #38bdf8; margin-top: 0; }
+                    p { color: #94a3b8; line-height: 1.6; font-size: 15px; }
+                    code { background: #0f172a; padding: 0.25rem 0.5rem; border-radius: 4px; color: #4ade80; font-family: monospace; }
+                    .btn { display: inline-block; margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h2>🚀 RSAC V2 — Servidor Backend Online</h2>
+                    <p>O backend FastAPI está operando normalmente. A interface gráfica compilada não foi encontrada em <code>frontend/dist</code>.</p>
+                    <p>Execute <code>npm run build:web</code> dentro da pasta <code>frontend</code> ou utilize os inicializadores automáticos.</p>
+                    <a href="/api/docs" class="btn">Documentação da API (Swagger)</a>
+                </div>
+            </body>
+            </html>
+            """)
 
     return app
 

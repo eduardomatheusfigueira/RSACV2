@@ -54,9 +54,21 @@ export interface ColorThemeOption {
 
 const COLOR_THEMES: ColorThemeOption[] = [
   {
+    id: 'platinum-dusk',
+    name: 'Platinum & Dusk Blue',
+    subtitle: 'Platina, azul crepúsculo, azul aço, azul gelo e oliva acinzentada (Padrão)',
+    colors: {
+      c1: '#e7ecef',
+      c2: '#274c77',
+      c3: '#6096ba',
+      c4: '#a3cef1',
+      c5: '#8b8c89',
+    },
+  },
+  {
     id: 'dark',
     name: 'Organic Earth (Florestal)',
-    subtitle: 'Black Forest, Olive Leaf, Cornsilk & Copperwood (Padrão)',
+    subtitle: 'Black Forest, Olive Leaf, Cornsilk & Copperwood',
     colors: {
       c1: '#283618',
       c2: '#606c38',
@@ -111,18 +123,6 @@ const COLOR_THEMES: ColorThemeOption[] = [
       c3: '#ffecd1',
       c4: '#ff7d00',
       c5: '#78290f',
-    },
-  },
-  {
-    id: 'platinum-dusk',
-    name: 'Platinum & Dusk Blue',
-    subtitle: 'Platina, azul crepúsculo, azul aço, azul gelo e oliva acinzentada',
-    colors: {
-      c1: '#e7ecef',
-      c2: '#274c77',
-      c3: '#6096ba',
-      c4: '#a3cef1',
-      c5: '#8b8c89',
     },
   },
   {
