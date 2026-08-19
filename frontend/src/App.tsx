@@ -51,9 +51,10 @@ function AppContent(): JSX.Element {
         const health = await api.health()
         setBackendStatus('online')
         setBackendVersion(health.version)
-        console.log(`[App] Backend conectado na porta ${api.getPort()} — v${health.version}`)
+        console.log(`[App] Backend conectado: ${api.getBaseUrl()} — v${health.version}`)
       } catch (error) {
-        if (api.getPort() !== 8000) {
+        const envUrl = (import.meta as any).env?.VITE_API_URL
+        if (!envUrl && api.getPort() !== 8000) {
           console.warn(`[App] Backend não respondeu na porta ${api.getPort()}, tentando porta padrão 8000...`)
           api.setPort(8000)
           try {

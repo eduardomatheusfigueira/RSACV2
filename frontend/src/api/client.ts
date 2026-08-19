@@ -50,37 +50,71 @@ export interface PrismaFlowData {
 
 class APIClient {
   private port: number = 8000
-  private baseUrl: string = 'http://127.0.0.1:8000/api/v1'
+  private baseUrl: string = (() => {
+    const envUrl = (import.meta as any).env?.VITE_API_URL
+    if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
+      const clean = envUrl.trim().replace(/\/+$/, '')
+      return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+    }
+    return 'http://127.0.0.1:8000/api/v1'
+  })()
 
   /**
-   * Configura a URL base do backend (chamado após receber a porta do Electron).
+   * Configura a URL base do backend manualmente.
+   */
+  setBaseUrl(url: string): void {
+    const clean = url.trim().replace(/\/+$/, '')
+    this.baseUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+  }
+
+  /**
+   * Configura a URL base a partir da porta (chamado pelo Electron ou ambiente local).
    */
   setPort(port: number): void {
     this.port = port
-    this.baseUrl = `http://127.0.0.1:${port}/api/v1`
+    const envUrl = (import.meta as any).env?.VITE_API_URL
+    if (!envUrl) {
+      this.baseUrl = `http://127.0.0.1:${port}/api/v1`
+    }
   }
 
   getPort(): number {
     return this.port
   }
 
+  getBaseUrl(): string {
+    return this.baseUrl
+  }
+
   /**
-   * Detecta a porta do backend a partir da query string (passada pelo Electron).
+   * Detecta a porta ou URL do backend a partir da query string.
    */
   detectPort(): void {
     const params = new URLSearchParams(window.location.search)
+    const apiUrl = params.get('api_url')
+    if (apiUrl) {
+      this.setBaseUrl(apiUrl)
+      return
+    }
     const port = params.get('port')
     if (port) {
       this.setPort(parseInt(port, 10))
     }
   }
 
+  private getWsBaseUrl(): string {
+    const isSecure = this.baseUrl.startsWith('https://')
+    const protocol = isSecure ? 'wss://' : 'ws://'
+    const hostAndPath = this.baseUrl.replace(/^https?:\/\//, '')
+    return `${protocol}${hostAndPath}`
+  }
+
   getWebSocketUrl(projectId: string): string {
-    return `ws://127.0.0.1:${this.port}/api/v1/projects/${projectId}/harvest/ws`
+    return `${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`
   }
 
   getScreeningWebSocketUrl(projectId: string): string {
-    return `ws://127.0.0.1:${this.port}/api/v1/projects/${projectId}/screening/ai/ws`
+    return `${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`
   }
 
   getExcelExportUrl(projectId: string): string {
@@ -136,8 +170,9 @@ class APIClient {
       logStore.success(source, `${method} ${path} [${response.status} OK]`, `Resposta:\n${JSON.stringify(data, null, 2).slice(0, 1000)}`, duration)
       return data
     } catch (err: any) {
-      // Se deu erro de rede (Failed to fetch) e a porta configurada não for 8000, tenta fallback para 8000
-      if (this.port !== 8000 && err.message?.includes('fetch')) {
+      // Se deu erro de rede (Failed to fetch) e a porta configurada não for 8000, tenta fallback para 8000 (apenas em dev local)
+      const envUrl = (import.meta as any).env?.VITE_API_URL
+      if (!envUrl && this.port !== 8000 && err.message?.includes('fetch')) {
         this.setPort(8000)
         return this.request<T>(path, options)
       }
