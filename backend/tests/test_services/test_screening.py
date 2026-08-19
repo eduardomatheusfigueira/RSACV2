@@ -113,7 +113,10 @@ async def test_screen_single_paper_included(db_session):
     db_session.refresh(paper)
     assert paper.decision == "Incluído"
     assert paper.ai_confidence == 0.95
-    assert "[IA - mock-model]" in paper.observations
+    # O commit ebccbc5 removeu de propósito o prefixo "[IA - modelo]" das
+    # observações; a justificativa é gravada limpa.
+    assert paper.observations == "Estudo atende aos critérios de inclusão."
+    assert "[IA -" not in paper.observations
 
 
 @pytest.mark.anyio

@@ -258,6 +258,151 @@ const LOCAL_ENDPOINTS = [
   { url: 'http://localhost:8000/v1', label: 'vLLM (Porta 8000)' },
 ]
 
+interface ProviderKeysFieldProps {
+  label: string
+  hint: React.ReactNode
+  placeholder: string
+  /** Máscaras das chaves já guardadas no backend. */
+  previews: string[]
+  /** Chaves novas sendo digitadas (só existem em modo de substituição). */
+  keys: string[]
+  editing: boolean
+  visibility: Record<number, boolean>
+  disabled: boolean
+  onStartEditing: () => void
+  onCancelEditing: () => void
+  onAdd: () => void
+  onUpdate: (index: number, value: string) => void
+  onRemoveField: (index: number) => void
+  onToggleVisibility: (index: number) => void
+  onRemoveAll: () => void
+}
+
+/**
+ * Campo de chaves de API de um provedor, em duas faces.
+ *
+ * O backend deixou de devolver a chave em texto claro, então não há o que
+ * "editar": ou se olha a máscara do que está guardado, ou se digita uma chave
+ * nova por inteiro para substituir. As duas faces deste componente são
+ * exatamente esses dois estados — e o caminho de apagar é separado dos dois,
+ * porque salvar o formulário nunca mais destrói credencial por engano.
+ */
+function ProviderKeysField({
+  label,
+  hint,
+  placeholder,
+  previews,
+  keys,
+  editing,
+  visibility,
+  disabled,
+  onStartEditing,
+  onCancelEditing,
+  onAdd,
+  onUpdate,
+  onRemoveField,
+  onToggleVisibility,
+  onRemoveAll,
+}: ProviderKeysFieldProps): JSX.Element {
+  const temChavesGuardadas = previews.length > 0
+  const mostrandoFormulario = editing || !temChavesGuardadas
+
+  return (
+    <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
+      <div className="label-with-action">
+        <label>{label}</label>
+        {mostrandoFormulario ? (
+          <button type="button" className="btn-text-action" onClick={onAdd} disabled={disabled}>
+            <Plus size={13} /> Adicionar outra chave
+          </button>
+        ) : (
+          <button type="button" className="btn-text-action" onClick={onStartEditing} disabled={disabled}>
+            <Edit3 size={13} /> Substituir chaves
+          </button>
+        )}
+      </div>
+
+      <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
+        {hint}
+      </p>
+
+      {!mostrandoFormulario && (
+        <>
+          <div className="keys-list">
+            {previews.map((preview, idx) => (
+              <div key={idx} className="key-input-row">
+                <ShieldCheck size={16} className="key-icon" />
+                <input type="text" value={preview} readOnly disabled aria-label={`Chave ${idx + 1} configurada`} />
+              </div>
+            ))}
+          </div>
+          <div className="keys-stored-actions">
+            <span className="range-hint">
+              {previews.length === 1
+                ? '1 chave configurada e guardada no servidor.'
+                : `${previews.length} chaves configuradas e guardadas no servidor.`}{' '}
+              O valor completo não é exibido nem devolvido pela API.
+            </span>
+            <button type="button" className="btn-text-action danger" onClick={onRemoveAll} disabled={disabled}>
+              <Trash2 size={13} /> Remover todas
+            </button>
+          </div>
+        </>
+      )}
+
+      {mostrandoFormulario && (
+        <>
+          <div className="keys-list">
+            {keys.map((k, idx) => (
+              <div key={idx} className="key-input-row">
+                <Key size={16} className="key-icon" />
+                <input
+                  type={visibility[idx] ? 'text' : 'password'}
+                  disabled={disabled}
+                  placeholder={placeholder}
+                  value={k}
+                  onChange={(e) => onUpdate(idx, e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-icon"
+                  onClick={() => onToggleVisibility(idx)}
+                  disabled={disabled}
+                  title={visibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
+                >
+                  {visibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+                {keys.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn-icon danger"
+                    onClick={() => onRemoveField(idx)}
+                    disabled={disabled}
+                    title="Remover chave"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {temChavesGuardadas && (
+            <div className="keys-stored-actions">
+              <span className="range-hint">
+                Ao salvar, as {previews.length} chave(s) atuais serão substituídas pelo que estiver acima.
+              </span>
+              <button type="button" className="btn-text-action" onClick={onCancelEditing} disabled={disabled}>
+                Cancelar substituição
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+
 export function SettingsPage(): JSX.Element {
   const { theme, setTheme, activeProject, setActiveProject, aiEnabled, setAiEnabled, backendVersion } = useSettingsStore()
 
@@ -272,10 +417,23 @@ export function SettingsPage(): JSX.Element {
   const [provider, setProvider] = useState<'gemini' | 'qwen' | 'local'>('gemini')
   const [model, setModel] = useState('gemini-3.6-flash')
 
-  // Chaves Separadas por Provedor (Isolamento Estrito)
+  // Chaves Separadas por Provedor (Isolamento Estrito).
+  //
+  // O backend não devolve mais a chave em texto claro — devolve a máscara
+  // (`••••••••abcd`). Por isso cada provedor tem dois estados: `*Previews`, o
+  // que já está guardado, e `*Keys`, o que o usuário está digitando para
+  // substituir. Só o segundo é enviado, e só quando ele resolve substituir.
+  const [geminiPreviews, setGeminiPreviews] = useState<string[]>([])
+  const [qwenPreviews, setQwenPreviews] = useState<string[]>([])
+  const [localPreviews, setLocalPreviews] = useState<string[]>([])
+
   const [geminiKeys, setGeminiKeys] = useState<string[]>([''])
   const [qwenKeys, setQwenKeys] = useState<string[]>([''])
   const [localKeys, setLocalKeys] = useState<string[]>([''])
+
+  const [editingGeminiKeys, setEditingGeminiKeys] = useState(false)
+  const [editingQwenKeys, setEditingQwenKeys] = useState(false)
+  const [editingLocalKeys, setEditingLocalKeys] = useState(false)
 
   const [showGeminiVisibility, setShowGeminiVisibility] = useState<Record<number, boolean>>({})
   const [showQwenVisibility, setShowQwenVisibility] = useState<Record<number, boolean>>({})
@@ -323,28 +481,8 @@ export function SettingsPage(): JSX.Element {
       setProvider(data.provider)
       setModel(data.model)
 
-      // Preencher chaves isoladas
-      if (data.gemini_api_keys && data.gemini_api_keys.length > 0) {
-        setGeminiKeys(data.gemini_api_keys)
-      } else if (data.provider === 'gemini' && data.api_keys && data.api_keys.length > 0) {
-        setGeminiKeys(data.api_keys)
-      } else {
-        setGeminiKeys([''])
-      }
-
-      if (data.qwen_api_keys && data.qwen_api_keys.length > 0) {
-        setQwenKeys(data.qwen_api_keys)
-      } else if (data.provider === 'qwen' && data.api_keys && data.api_keys.length > 0) {
-        setQwenKeys(data.api_keys)
-      } else {
-        setQwenKeys([''])
-      }
-
-      if (data.local_api_keys && data.local_api_keys.length > 0) {
-        setLocalKeys(data.local_api_keys)
-      } else {
-        setLocalKeys([''])
-      }
+      // Preencher as máscaras das chaves guardadas e sair do modo de edição
+      applyKeyPreviews(data)
 
       setEndpoint(data.endpoint || (data.provider === 'qwen' ? QWEN_REGIONS[0].id : 'http://localhost:11434/v1'))
       setTemperature(data.temperature)
@@ -415,6 +553,40 @@ export function SettingsPage(): JSX.Element {
     setModel(presetId)
   }
 
+  /**
+   * Reflete o estado das chaves vindo do backend: exibe as máscaras e encerra
+   * o modo de substituição, limpando o que estava digitado.
+   */
+  const applyKeyPreviews = (data: import('@/types/api').AISettings) => {
+    setGeminiPreviews(data.gemini_key_previews || [])
+    setQwenPreviews(data.qwen_key_previews || [])
+    setLocalPreviews(data.local_key_previews || [])
+
+    setGeminiKeys([''])
+    setQwenKeys([''])
+    setLocalKeys([''])
+
+    setEditingGeminiKeys(false)
+    setEditingQwenKeys(false)
+    setEditingLocalKeys(false)
+
+    setShowGeminiVisibility({})
+    setShowQwenVisibility({})
+    setShowLocalVisibility({})
+  }
+
+  /** Remoção explícita — o salvamento comum nunca apaga chave. */
+  const handleRemoveProviderKeys = async (target: 'gemini' | 'qwen' | 'local') => {
+    const rotulo = target === 'gemini' ? 'Google Gemini' : target === 'qwen' ? 'Alibaba Qwen' : 'Local/OpenRouter'
+    if (!window.confirm(`Remover todas as chaves de ${rotulo}? Esta ação não pode ser desfeita.`)) return
+    try {
+      const updated = await api.deleteProviderKeys(target)
+      applyKeyPreviews(updated)
+    } catch (err) {
+      console.error('Erro ao remover chaves do provedor:', err)
+    }
+  }
+
   // ── Gemini Key Handlers ─────────────────────────────────────────────
   const addGeminiKeyField = () => setGeminiKeys([...geminiKeys, ''])
   const updateGeminiKeyField = (index: number, val: string) => {
@@ -464,9 +636,14 @@ export function SettingsPage(): JSX.Element {
     if (e) e.preventDefault()
     try {
       setSaving(true)
-      const cleanGemini = geminiKeys.map((k) => k.trim()).filter(Boolean)
-      const cleanQwen = qwenKeys.map((k) => k.trim()).filter(Boolean)
-      const cleanLocal = localKeys.map((k) => k.trim()).filter(Boolean)
+      // Só sobe a chave que o usuário digitou de propósito. Provedor que não
+      // entrou em modo de substituição nem vai no corpo da requisição — é
+      // assim que salvar o formulário deixa de poder apagar credencial.
+      const keysToSend = (editing: boolean, fields: string[]): string[] | undefined => {
+        if (!editing) return undefined
+        const clean = fields.map((k) => k.trim()).filter(Boolean)
+        return clean.length > 0 ? clean : undefined
+      }
 
       const finalModel = model || (provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'qwen' ? 'qwen3.8-max' : 'Llama-3.2-3B')
 
@@ -474,23 +651,15 @@ export function SettingsPage(): JSX.Element {
         ai_enabled: isAiActive,
         provider,
         model: finalModel,
-        gemini_api_keys: cleanGemini,
-        qwen_api_keys: cleanQwen,
-        local_api_keys: cleanLocal,
+        gemini_api_keys: keysToSend(editingGeminiKeys, geminiKeys),
+        qwen_api_keys: keysToSend(editingQwenKeys, qwenKeys),
+        local_api_keys: keysToSend(editingLocalKeys, localKeys),
         endpoint: provider !== 'gemini' ? endpoint.trim() : null,
         temperature,
         max_tokens: maxTokens,
       })
 
-      if (updated.gemini_api_keys && updated.gemini_api_keys.length > 0) {
-        setGeminiKeys(updated.gemini_api_keys)
-      }
-      if (updated.qwen_api_keys && updated.qwen_api_keys.length > 0) {
-        setQwenKeys(updated.qwen_api_keys)
-      }
-      if (updated.local_api_keys && updated.local_api_keys.length > 0) {
-        setLocalKeys(updated.local_api_keys)
-      }
+      applyKeyPreviews(updated)
 
       setAiEnabled(isAiActive)
       setSaveSuccess(true)
@@ -564,14 +733,43 @@ export function SettingsPage(): JSX.Element {
   }
 
   // ── Exportação & Importação de Chaves de API ────────────────────────
+
+  /**
+   * O arquivo de chaves passou a ser cifrado com uma senha escolhida na hora.
+   * Sem a senha o backup é inútil — inclusive para quem o encontrar na pasta
+   * de downloads ou numa pasta sincronizada com a nuvem.
+   */
   const handleExportKeys = async () => {
+    const senha = window.prompt(
+      'Defina uma senha para proteger o arquivo de chaves (mínimo 8 caracteres).\n' +
+        'Você precisará dela para restaurar este backup — guarde-a em local seguro.'
+    )
+    if (senha === null) return
+    if (senha.trim().length < 8) {
+      setKeysImportResult({
+        success: false,
+        message: 'A senha de exportação precisa ter ao menos 8 caracteres.',
+      })
+      return
+    }
+
     try {
       setExportingKeys(true)
-      const data = await api.exportKeys()
+      setKeysImportResult(null)
+      const data = await api.exportKeys(senha.trim())
       const dateStr = new Date().toISOString().slice(0, 10)
-      downloadJsonFile(`rsac-chaves-api-${dateStr}.json`, data)
+      downloadJsonFile(`rsac-chaves-api-${dateStr}.rsackeys.json`, data)
+      setKeysImportResult({
+        success: true,
+        message: 'Arquivo de chaves exportado e cifrado com a senha informada.',
+        details: 'Guarde a senha: sem ela o arquivo não pode ser restaurado.',
+      })
     } catch (err: any) {
       console.error('Erro ao exportar chaves:', err)
+      setKeysImportResult({
+        success: false,
+        message: err.message || 'Falha ao exportar as chaves de API.',
+      })
     } finally {
       setExportingKeys(false)
     }
@@ -584,14 +782,27 @@ export function SettingsPage(): JSX.Element {
       setImportingKeys(true)
       setKeysImportResult(null)
       const text = await file.text()
-      let payload: any = {}
+      let payload: any = null
+      let rawContent: string | undefined
       try {
         payload = JSON.parse(text)
       } catch {
-        payload = { raw_content: text }
+        rawContent = text
       }
 
-      const res = await api.importKeys(payload)
+      // Arquivo cifrado pede a senha usada na exportação.
+      let exportPassword: string | undefined
+      if (payload?.schema_version === 'rsac_encrypted_envelope_v1') {
+        const senha = window.prompt('Este arquivo está protegido. Informe a senha usada na exportação:')
+        if (senha === null) {
+          setImportingKeys(false)
+          e.target.value = ''
+          return
+        }
+        exportPassword = senha
+      }
+
+      const res = await api.importKeys(payload, { rawContent, exportPassword })
       await loadSettings()
       setKeysImportResult({
         success: true,
@@ -1053,151 +1264,86 @@ export function SettingsPage(): JSX.Element {
               </div>
             )}
 
-            {/* ── GOOGLE GEMINI API KEYS (DEDICADAS) ── */}
+            {/* ── CHAVES DO PROVEDOR ATIVO ── */}
             {provider === 'gemini' && (
-              <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                <div className="label-with-action">
-                  <label>Chaves de API do Google Gemini (AI Studio)</label>
-                  <button type="button" className="btn-text-action" onClick={addGeminiKeyField} disabled={!isAiActive}>
-                    <Plus size={13} /> Adicionar outra chave
-                  </button>
-                </div>
-                <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
-                  Chaves do Google AI Studio (iniciam com <code>AIzaSy...</code>). Permite rotação entre múltiplas chaves.
-                </p>
-                <div className="keys-list">
-                  {geminiKeys.map((k, idx) => (
-                    <div key={idx} className="key-input-row">
-                      <Key size={16} className="key-icon" />
-                      <input
-                        type={showGeminiVisibility[idx] ? 'text' : 'password'}
-                        disabled={!isAiActive}
-                        placeholder="Cole sua API Key do Google AI Studio (AIzaSy...)"
-                        value={k}
-                        onChange={(e) => updateGeminiKeyField(idx, e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => toggleGeminiKeyVisibility(idx)}
-                        disabled={!isAiActive}
-                        title={showGeminiVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
-                      >
-                        {showGeminiVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
-                      {geminiKeys.length > 1 && (
-                        <button
-                          type="button"
-                          className="btn-icon danger"
-                          onClick={() => removeGeminiKeyField(idx)}
-                          disabled={!isAiActive}
-                          title="Remover chave"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ProviderKeysField
+                label="Chaves de API do Google Gemini (AI Studio)"
+                hint={
+                  <>
+                    Chaves do Google AI Studio (iniciam com <code>AIzaSy...</code>). Permite rotação entre múltiplas chaves.
+                  </>
+                }
+                placeholder="Cole sua API Key do Google AI Studio (AIzaSy...)"
+                previews={geminiPreviews}
+                keys={geminiKeys}
+                editing={editingGeminiKeys}
+                visibility={showGeminiVisibility}
+                disabled={!isAiActive}
+                onStartEditing={() => setEditingGeminiKeys(true)}
+                onCancelEditing={() => {
+                  setEditingGeminiKeys(false)
+                  setGeminiKeys([''])
+                }}
+                onAdd={addGeminiKeyField}
+                onUpdate={updateGeminiKeyField}
+                onRemoveField={removeGeminiKeyField}
+                onToggleVisibility={toggleGeminiKeyVisibility}
+                onRemoveAll={() => handleRemoveProviderKeys('gemini')}
+              />
             )}
 
-            {/* ── ALIBABA QWEN API KEYS (DEDICADAS) ── */}
             {provider === 'qwen' && (
-              <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                <div className="label-with-action">
-                  <label>Chaves de API do Alibaba Qwen (DashScope / OpenRouter)</label>
-                  <button type="button" className="btn-text-action" onClick={addQwenKeyField} disabled={!isAiActive}>
-                    <Plus size={13} /> Adicionar outra chave
-                  </button>
-                </div>
-                <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
-                  Chaves do Alibaba Cloud DashScope (iniciam com <code>sk-...</code>) ou chave do OpenRouter.
-                </p>
-                <div className="keys-list">
-                  {qwenKeys.map((k, idx) => (
-                    <div key={idx} className="key-input-row">
-                      <Key size={16} className="key-icon" />
-                      <input
-                        type={showQwenVisibility[idx] ? 'text' : 'password'}
-                        disabled={!isAiActive}
-                        placeholder="Cole sua API Key do DashScope (sk-...) ou OpenRouter"
-                        value={k}
-                        onChange={(e) => updateQwenKeyField(idx, e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => toggleQwenKeyVisibility(idx)}
-                        disabled={!isAiActive}
-                        title={showQwenVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
-                      >
-                        {showQwenVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
-                      {qwenKeys.length > 1 && (
-                        <button
-                          type="button"
-                          className="btn-icon danger"
-                          onClick={() => removeQwenKeyField(idx)}
-                          disabled={!isAiActive}
-                          title="Remover chave"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ProviderKeysField
+                label="Chaves de API do Alibaba Qwen (DashScope / OpenRouter)"
+                hint={
+                  <>
+                    Chaves do Alibaba Cloud DashScope (iniciam com <code>sk-...</code>) ou chave do OpenRouter.
+                  </>
+                }
+                placeholder="Cole sua API Key do DashScope ou OpenRouter (sk-...)"
+                previews={qwenPreviews}
+                keys={qwenKeys}
+                editing={editingQwenKeys}
+                visibility={showQwenVisibility}
+                disabled={!isAiActive}
+                onStartEditing={() => setEditingQwenKeys(true)}
+                onCancelEditing={() => {
+                  setEditingQwenKeys(false)
+                  setQwenKeys([''])
+                }}
+                onAdd={addQwenKeyField}
+                onUpdate={updateQwenKeyField}
+                onRemoveField={removeQwenKeyField}
+                onToggleVisibility={toggleQwenKeyVisibility}
+                onRemoveAll={() => handleRemoveProviderKeys('qwen')}
+              />
             )}
 
-            {/* ── LOCAL AUTH TOKENS (OPCIONAL) ── */}
             {provider === 'local' && (
-              <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
-                <div className="label-with-action">
-                  <label>Token / Chave de Autenticação Local (Opcional)</label>
-                  <button type="button" className="btn-text-action" onClick={addLocalKeyField} disabled={!isAiActive}>
-                    <Plus size={13} /> Adicionar chave
-                  </button>
-                </div>
-                <p className="range-hint" style={{ marginTop: '2px', marginBottom: '6px' }}>
-                  Geralmente não exigido para Ollama/LM Studio padrão, mas pode ser configurado para servidores protegidos por Bearer Token.
-                </p>
-                <div className="keys-list">
-                  {localKeys.map((k, idx) => (
-                    <div key={idx} className="key-input-row">
-                      <Key size={16} className="key-icon" />
-                      <input
-                        type={showLocalVisibility[idx] ? 'text' : 'password'}
-                        disabled={!isAiActive}
-                        placeholder="Bearer token local ou deixe em branco para Ollama"
-                        value={k}
-                        onChange={(e) => updateLocalKeyField(idx, e.target.value)}
-                      />
-                      <button
-                        type="button"
-                        className="btn-icon"
-                        onClick={() => toggleLocalKeyVisibility(idx)}
-                        disabled={!isAiActive}
-                        title={showLocalVisibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
-                      >
-                        {showLocalVisibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
-                      </button>
-                      {localKeys.length > 1 && (
-                        <button
-                          type="button"
-                          className="btn-icon danger"
-                          onClick={() => removeLocalKeyField(idx)}
-                          disabled={!isAiActive}
-                          title="Remover chave"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ProviderKeysField
+                label="Token / Chave de Autenticação Local (Opcional)"
+                hint={
+                  <>
+                    Geralmente não exigido para Ollama/LM Studio padrão, mas pode ser configurado para servidores protegidos por Bearer Token.
+                  </>
+                }
+                placeholder="Bearer token local ou deixe em branco para Ollama"
+                previews={localPreviews}
+                keys={localKeys}
+                editing={editingLocalKeys}
+                visibility={showLocalVisibility}
+                disabled={!isAiActive}
+                onStartEditing={() => setEditingLocalKeys(true)}
+                onCancelEditing={() => {
+                  setEditingLocalKeys(false)
+                  setLocalKeys([''])
+                }}
+                onAdd={addLocalKeyField}
+                onUpdate={updateLocalKeyField}
+                onRemoveField={removeLocalKeyField}
+                onToggleVisibility={toggleLocalKeyVisibility}
+                onRemoveAll={() => handleRemoveProviderKeys('local')}
+              />
             )}
 
             {/* Connection Test Bar */}

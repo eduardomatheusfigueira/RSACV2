@@ -366,15 +366,25 @@ export interface DeduplicationReport {
 
 // ── AI ────────────────────────────────────────────────────────────────
 
+/**
+ * Estado das configurações de IA vindo do backend.
+ *
+ * As chaves NÃO trafegam mais em texto claro: o que chega são máscaras
+ * (`••••••••abcd`) e contagens. Para trocar uma chave envia-se a nova por
+ * inteiro; para apagar, `deleteProviderKeys`.
+ */
 export interface AISettings {
   ai_enabled: boolean
   provider: 'gemini' | 'qwen' | 'local'
   model: string
   has_api_keys: boolean
-  api_keys?: string[]
-  gemini_api_keys?: string[]
-  qwen_api_keys?: string[]
-  local_api_keys?: string[]
+  key_previews: string[]
+  gemini_key_previews: string[]
+  qwen_key_previews: string[]
+  local_key_previews: string[]
+  gemini_keys_count: number
+  qwen_keys_count: number
+  local_keys_count: number
   endpoint: string | null
   temperature: number
   max_tokens: number
@@ -384,6 +394,8 @@ export interface AISettingsUpdate {
   ai_enabled: boolean
   provider: string
   model: string
+  // Omitir o campo mantém as chaves gravadas; enviar uma lista as substitui.
+  // Lista vazia é ignorada pelo backend — apagar exige deleteProviderKeys.
   api_keys?: string[]
   gemini_api_keys?: string[]
   qwen_api_keys?: string[]
@@ -401,6 +413,7 @@ export interface SourceCredentialBackupItem {
   custom_endpoint?: string | null
 }
 
+/** Backup legado, em claro — ainda aceito na importação. */
 export interface KeysBackupData {
   schema_version: string
   exported_at: string
@@ -408,6 +421,17 @@ export interface KeysBackupData {
   qwen_api_keys: string[]
   local_api_keys: string[]
   sources: Record<string, SourceCredentialBackupItem>
+}
+
+/** Envelope cifrado devolvido pela exportação de credenciais. */
+export interface EncryptedEnvelope {
+  schema_version: string
+  encrypted: boolean
+  kdf: string
+  iterations: number
+  salt: string
+  ciphertext: string
+  exported_at: string
 }
 
 export interface KeysImportResponse {

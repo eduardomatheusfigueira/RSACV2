@@ -28,7 +28,7 @@ a Fase 0 do doc 30 não estiver entregue.
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
 23–27   vigente            para onde vamos agora (UX/UI)
-28–30   vigente            o que precisa ser feito antes de expor o app 🔴
+28–30   vigente            segurança — Fase 0 entregue, Fase 1 (login) em aberto 🔴
 ```
 
 ---

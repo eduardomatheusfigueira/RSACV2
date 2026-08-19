@@ -181,10 +181,15 @@ planejamento vigente de UX, UI e profissionalização da interface; e os de
 >
 > O `Iniciar_Servidor.bat` publica o backend na internet por um túnel
 > Cloudflare, e **o backend ainda não tem autenticação**: quem obtiver a URL
-> tem acesso total aos projetos e às chaves de API configuradas. Até a Fase 0
-> do [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)
-> estar entregue, use esse modo apenas em rede confiável. O diagnóstico
-> completo está em
+> lê e altera seus projetos e consome sua cota de IA. Use esse modo **apenas em
+> rede confiável** até a Fase 1 do
+> [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)
+> estar entregue.
+>
+> A **Fase 0 já foi entregue**: as chaves de API não trafegam mais em texto
+> claro, a leitura arbitrária de arquivos do host foi fechada, o CORS deixou de
+> aceitar qualquer origem e a documentação da API não fica exposta no modo
+> servidor. O diagnóstico completo está em
 > [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md).
 
 **Planejamento vigente — Segurança**

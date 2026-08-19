@@ -10,6 +10,7 @@ de zero alucinação e persistência de auditoria.
 import asyncio
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session

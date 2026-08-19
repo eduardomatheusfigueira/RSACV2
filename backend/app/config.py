@@ -7,11 +7,28 @@ Utiliza Pydantic BaseSettings para gerenciamento centralizado de configurações
 com suporte a variáveis de ambiente e valores padrão.
 """
 
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
 import platformdirs
 from pydantic_settings import BaseSettings
+
+
+class DeploymentProfile(str, Enum):
+    """
+    Perfil de exposição em que o backend está rodando (doc 29 §29.2).
+
+    O RSAC nasceu assumindo que o único cliente era o Electron na mesma
+    máquina. Quando o `server_launcher.py` passou a publicar o backend na
+    internet, essa premissa deixou de valer sem que nada no código soubesse.
+    O perfil torna o perímetro explícito: todo controle de segurança deriva
+    dele, em vez de suposição implícita.
+    """
+
+    DESKTOP = "desktop"   # Electron ou navegador local falando com loopback
+    SERVER = "server"     # publicado (túnel, rede local, Netlify)
+    CI = "ci"             # testes automatizados
 
 
 class Settings(BaseSettings):
@@ -22,6 +39,9 @@ class Settings(BaseSettings):
     app_version: str = "2.0.0"
     debug: bool = False
 
+    # ── Perímetro de confiança ────────────────────────────────────────
+    deployment_profile: DeploymentProfile = DeploymentProfile.DESKTOP
+
     # ── Servidor ──────────────────────────────────────────────────────
     host: str = "127.0.0.1"
     port: int = 8000
@@ -30,7 +50,10 @@ class Settings(BaseSettings):
     database_url: Optional[str] = None
 
     # ── CORS ──────────────────────────────────────────────────────────
-    cors_origins: list[str] = ["http://localhost:*", "http://127.0.0.1:*"]
+    # Origens extras autorizadas no perfil `server`. Aceita lista JSON ou
+    # valores separados por vírgula em RSAC_CORS_ORIGINS. No perfil `desktop`
+    # o loopback já é liberado por `cors_allow_origin_regex`.
+    cors_origins: list[str] = []
 
     # ── Aquisição de PDFs ─────────────────────────────────────────────
     # E-mail de contato usado nas APIs acadêmicas de acesso aberto.
@@ -48,6 +71,36 @@ class Settings(BaseSettings):
     # Orçamento de caracteres do texto do estudo enviado à IA na extração.
     # ~28k caracteres ≈ 7–9k tokens, folgado para janelas de 32k em diante.
     ai_context_budget_chars: int = 28000
+
+    # ── Perímetro derivado do perfil ──────────────────────────────────
+
+    @property
+    def is_server_profile(self) -> bool:
+        """Verdadeiro quando o backend está publicado fora do loopback."""
+        return self.deployment_profile is DeploymentProfile.SERVER
+
+    @property
+    def cors_allow_origin_regex(self) -> Optional[str]:
+        """
+        Regex de origem permitida — apenas loopback, e apenas fora do perfil
+        `server`. A porta é variável (Vite escolhe a que estiver livre), por
+        isso o regex; o que ele não faz é aceitar host arbitrário.
+        """
+        if self.is_server_profile:
+            return None
+        return r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|file://)$"
+
+    @property
+    def effective_cors_origins(self) -> list[str]:
+        """Lista finita de origens autorizadas, derivada do perfil."""
+        if self.deployment_profile is DeploymentProfile.CI:
+            return ["http://testserver"]
+        return [o.strip().rstrip("/") for o in self.cors_origins if o and o.strip()]
+
+    @property
+    def expose_api_docs(self) -> bool:
+        """A documentação OpenAPI mapeia a API inteira — fechada quando exposta."""
+        return not self.is_server_profile
 
     @property
     def data_dir(self) -> Path:

@@ -331,6 +331,33 @@
   text-decoration: underline;
 }
 
+.btn-text-action.danger {
+  color: var(--color-error-on-surface);
+}
+
+/* Linha de estado das chaves guardadas: o backend só devolve a máscara, então
+   é aqui que o usuário lê quantas existem e de onde parte para substituir. */
+.keys-stored-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.keys-stored-actions .range-hint {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.key-input-row input[readonly] {
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
 /* Test Connection Section */
 .test-connection-section {
   margin-top: var(--space-6);

@@ -64,6 +64,10 @@ def load_config() -> dict:
         "auto_open_browser": False,
         "netlify_url": "",
         "cloudflared_path": "",
+        # Origens de navegador autorizadas a falar com a API neste servidor.
+        # Vazio = só o próprio túnel (a SPA servida pelo backend). Inclua aqui
+        # o endereço do Netlify se for usar a interface hospedada lá.
+        "cors_origins": [],
     }
     if CONFIG_FILE.exists():
         try:
@@ -163,9 +167,11 @@ def is_port_in_use(port: int) -> bool:
     return False
 
 
-def start_backend(port: int) -> bool:
+def start_backend(port: int, config: dict | None = None) -> bool:
     """Inicia o backend Python em segundo plano se ainda não estiver ativo."""
     global _backend_proc
+
+    config = config or {}
 
     if is_port_in_use(port):
         print(f"\033[92m[✓] Backend já está em execução na porta {port}.\033[0m")
@@ -201,9 +207,20 @@ def start_backend(port: int) -> bool:
         str(port),
     ]
 
+    # Este lançador publica o backend na internet, então ele sobe no perfil
+    # `server`: CORS restrito à lista declarada e documentação OpenAPI fechada
+    # (doc 29 §29.2.2). Sem isto o processo assumiria o perfil `desktop` e
+    # liberaria loopback e docs num endereço público.
+    env = os.environ.copy()
+    env["RSAC_DEPLOYMENT_PROFILE"] = "server"
+    cors_origins = config.get("cors_origins") or []
+    if cors_origins:
+        env["RSAC_CORS_ORIGINS"] = json.dumps(cors_origins)
+
     _backend_proc = subprocess.Popen(
         cmd,
         cwd=str(BACKEND_DIR),
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
@@ -272,7 +289,7 @@ def main():
     print("=" * 70 + "\033[0m\n")
 
     # 1. Iniciar Backend
-    if not start_backend(port):
+    if not start_backend(port, config):
         print("\033[91m[X] Não foi possível iniciar o backend. Pressione Enter para sair.\033[0m")
         input()
         sys.exit(1)
@@ -356,6 +373,13 @@ def main():
     print("  \033[92m[✓]\033[0m Interface Web SPA:   \033[92mIntegrada ao Servidor\033[0m")
     print(f"  \033[92m[✓]\033[0m Túnel Cloudflare:    \033[92mSeguro (HTTPS Ativo)\033[0m")
     print("  \033[92m[✓]\033[0m Banco de Dados:      \033[92mSQLite Conectado\033[0m\n")
+
+    print("\033[91m" + "─" * 70 + "\033[0m")
+    print("  \033[91m⚠  ATENÇÃO — ESTE LINK PUBLICA SEUS DADOS NA INTERNET\033[0m")
+    print("  \033[93m   O backend ainda NÃO tem login (doc 30, Fase 1). Quem tiver o link")
+    print("     acessa seus projetos e dispara buscas com IA usando sua cota.")
+    print("     Não divulgue o endereço e encerre o servidor ao terminar.\033[0m")
+    print("\033[91m" + "─" * 70 + "\033[0m\n")
 
     print("\033[92m" + "─" * 70 + "\033[0m")
     print("  \033[93m🌐 ACESSE O RSAC V2 DE QUALQUER LUGAR (PC, CELULAR, TABLET):\033[0m\n")

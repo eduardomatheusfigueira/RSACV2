@@ -415,6 +415,18 @@ class APIClient {
     })
   }
 
+  /**
+   * Remove todas as chaves de um provedor.
+   *
+   * Contrapartida da gravação write-only: salvar o formulário com o campo
+   * vazio não apaga nada, então apagar precisa de um pedido explícito.
+   */
+  async deleteProviderKeys(provider: 'gemini' | 'qwen' | 'local'): Promise<AISettings> {
+    return this.request<AISettings>(`/ai/settings/keys/${provider}`, {
+      method: 'DELETE',
+    })
+  }
+
   async testAIConnection(): Promise<any> {
     return this.request<any>('/ai/test', {
       method: 'POST',
@@ -581,14 +593,32 @@ class APIClient {
 
   // ── Profile & Keys Portability ────────────────────────────────────
 
-  async exportKeys(): Promise<import('@/types/api').KeysBackupData> {
-    return this.request<import('@/types/api').KeysBackupData>('/profile/keys/export')
+  /**
+   * Exporta as credenciais em um arquivo cifrado com a senha informada.
+   *
+   * Era um GET que devolvia as chaves em texto claro — acionável por simples
+   * navegação. Virou POST com senha, e o que volta é um envelope inútil sem
+   * ela.
+   */
+  async exportKeys(exportPassword: string): Promise<import('@/types/api').EncryptedEnvelope> {
+    return this.request<import('@/types/api').EncryptedEnvelope>('/profile/keys/export', {
+      method: 'POST',
+      body: JSON.stringify({ export_password: exportPassword }),
+    })
   }
 
-  async importKeys(payload: { raw_content?: string } | Record<string, any>): Promise<import('@/types/api').KeysImportResponse> {
+  /** Importa backup cifrado (com senha) ou arquivo legado em texto claro. */
+  async importKeys(
+    payload: Record<string, any> | null,
+    options?: { rawContent?: string; exportPassword?: string }
+  ): Promise<import('@/types/api').KeysImportResponse> {
     return this.request<import('@/types/api').KeysImportResponse>('/profile/keys/import', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        payload,
+        raw_content: options?.rawContent,
+        export_password: options?.exportPassword,
+      }),
     })
   }
 

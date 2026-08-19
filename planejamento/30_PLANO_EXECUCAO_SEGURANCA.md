@@ -16,7 +16,7 @@ trabalho**, com uma restrição: nada que dependa de autenticação pode vir ant
 dela.
 
 ```
-Fase 0  ▸ CONTENÇÃO          9 h   fecha o comprometimento total sem auth
+Fase 0  ▸ CONTENÇÃO          9 h   fecha o comprometimento total sem auth  ✅ ENTREGUE
 Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditoria
 Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave
 Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites
@@ -118,6 +118,33 @@ o registro do perfil no log de inicialização.
 > **Portão da Fase 0:** os quatro testes de aceite passam; o log de
 > inicialização declara o perfil; `curl` anônimo contra um túnel não obtém nem
 > arquivo do host, nem chave, nem mapa da API.
+
+### ✅ Fase 0 — entregue em 19/08/2026
+
+Verificado contra servidor real nos dois perfis, além da suíte automatizada:
+
+| Item | Estado | Onde |
+|---|---|---|
+| Perfil de implantação (`desktop`/`server`/`ci`) | ✅ | `backend/app/config.py` |
+| Confinamento do catch-all da SPA | ✅ | `backend/app/main.py` (`_resolve_within`) |
+| CORS derivado do perfil, sem regex aberto | ✅ | `backend/app/main.py` |
+| `/ai/settings` devolve máscara, nunca a chave | ✅ | `backend/app/api/v1/ai.py` |
+| `GET /profile/keys/export` removido; `POST` cifrado | ✅ | `backend/app/api/v1/profile.py`, `app/security/secret_box.py` |
+| Perfil completo sem credencial por padrão | ✅ | `app/services/profile_service.py` |
+| Salvar formulário não apaga chave; `DELETE` explícito | ✅ | `ai.py`, `SettingsPage.tsx` |
+| OpenAPI fechada no perfil `server` | ✅ | `backend/app/main.py` |
+| Lançador sobe o backend no perfil `server` + aviso | ✅ | `scripts/server_launcher.py` |
+| Suíte de regressão de segurança | ✅ | `backend/tests/test_security/` (50 testes) |
+
+**Evidência de que os testes pegam a regressão:** reintroduzindo a
+concatenação de caminho anterior, `test_path_traversal.py` falha em 4 casos —
+o que também confirma que a travessia era explorável de verdade.
+
+O que a Fase 0 **não** entrega, e continua valendo o aviso de §28.7: a API
+segue sem autenticação. Quem tiver a URL do túnel continua lendo e apagando
+projetos e consumindo a cota de IA. O que deixou de ser possível é levar as
+chaves de API, ler arquivos do disco e usar o navegador de terceiros como
+ponte para o `127.0.0.1` do pesquisador.
 
 ---
 
@@ -326,8 +353,8 @@ Cada fase só está pronta quando:
 | | |
 |---|---|
 | **Situação** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
-| **Ação imediata** | Não usar `Iniciar_Servidor.bat` fora de rede confiável; rotacionar as chaves de API se ele já foi usado em rede aberta |
-| **Fase 0** | 9 horas — remove o comprometimento total |
+| **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta; com a Fase 0 entregue, o uso segue restrito a rede confiável até a Fase 1 (autenticação) |
+| **Fase 0** | ✅ entregue em 19/08/2026 — remove o comprometimento total |
 | **Fases 0–2** | ~7 dias — sistema defensável na internet |
 | **Plano completo** | ~12 dias úteis — 18 de 18 achados fechados, com testes que impedem a volta |
 
