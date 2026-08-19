@@ -51,6 +51,39 @@ export interface PrismaFlowData {
 class APIClient {
   private port: number = 8000
   private baseUrl: string = (() => {
+    // 1. Verificar query param direto no carregamento inicial (?api_url= ou #/?api_url=)
+    if (typeof window !== 'undefined') {
+      try {
+        const searchParams = new URLSearchParams(window.location.search)
+        const urlFromSearch = searchParams.get('api_url')
+        if (urlFromSearch && urlFromSearch.trim()) {
+          const clean = urlFromSearch.trim().replace(/\/+$/, '')
+          const finalUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+          localStorage.setItem('rsac_api_url', finalUrl)
+          return finalUrl
+        }
+        if (window.location.hash.includes('?')) {
+          const hashQuery = window.location.hash.split('?')[1]
+          const hashParams = new URLSearchParams(hashQuery)
+          const urlFromHash = hashParams.get('api_url')
+          if (urlFromHash && urlFromHash.trim()) {
+            const clean = urlFromHash.trim().replace(/\/+$/, '')
+            const finalUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+            localStorage.setItem('rsac_api_url', finalUrl)
+            return finalUrl
+          }
+        }
+        // 2. Verificar URL previamente salva no localStorage
+        const saved = localStorage.getItem('rsac_api_url')
+        if (saved && saved.trim()) {
+          const clean = saved.trim().replace(/\/+$/, '')
+          return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+        }
+      } catch {
+        // Ignora erros de acesso a window/localStorage
+      }
+    }
+    // 3. Verificar variável de ambiente do Vite
     const envUrl = (import.meta as any).env?.VITE_API_URL
     if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
       const clean = envUrl.trim().replace(/\/+$/, '')
@@ -60,11 +93,18 @@ class APIClient {
   })()
 
   /**
-   * Configura a URL base do backend manualmente.
+   * Configura a URL base do backend manualmente e persiste no navegador.
    */
   setBaseUrl(url: string): void {
     const clean = url.trim().replace(/\/+$/, '')
     this.baseUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('rsac_api_url', this.baseUrl)
+      } catch {
+        // Ignora erros
+      }
+    }
   }
 
   /**
@@ -73,7 +113,8 @@ class APIClient {
   setPort(port: number): void {
     this.port = port
     const envUrl = (import.meta as any).env?.VITE_API_URL
-    if (!envUrl) {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('rsac_api_url') : null
+    if (!envUrl && !saved) {
       this.baseUrl = `http://127.0.0.1:${port}/api/v1`
     }
   }
@@ -87,16 +128,28 @@ class APIClient {
   }
 
   /**
-   * Detecta a porta ou URL do backend a partir da query string.
+   * Detecta a porta ou URL do backend a partir da query string (suporta search e hash).
    */
   detectPort(): void {
+    if (typeof window === 'undefined') return
+
+    // 1. Procurar em window.location.search (?api_url=... ou ?port=...)
     const params = new URLSearchParams(window.location.search)
-    const apiUrl = params.get('api_url')
+    let apiUrl = params.get('api_url')
+    let port = params.get('port')
+
+    // 2. Se não achou, procurar em window.location.hash (#/.../?api_url=...)
+    if (!apiUrl && !port && window.location.hash.includes('?')) {
+      const hashQuery = window.location.hash.split('?')[1]
+      const hashParams = new URLSearchParams(hashQuery)
+      apiUrl = hashParams.get('api_url')
+      port = hashParams.get('port')
+    }
+
     if (apiUrl) {
       this.setBaseUrl(apiUrl)
       return
     }
-    const port = params.get('port')
     if (port) {
       this.setPort(parseInt(port, 10))
     }

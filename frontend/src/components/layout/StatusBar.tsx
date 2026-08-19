@@ -8,6 +8,7 @@ import { useLogStore } from '@/stores/useLogStore'
 import { Sparkles, Edit3, Terminal, AlertCircle } from 'lucide-react'
 import { RsacMark } from '@/components/brand/RsacMark'
 import { BetaBadge } from '@/components/brand/BetaBadge'
+import { api } from '@/api/client'
 import './StatusBar.css'
 
 export function StatusBar(): JSX.Element {
@@ -20,6 +21,18 @@ export function StatusBar(): JSX.Element {
     backendStatus === 'online' ? 'Backend Online' :
     backendStatus === 'connecting' ? 'Conectando...' : 'Backend Offline'
 
+  const handleConfigureBackend = () => {
+    const current = api.getBaseUrl().replace(/\/api\/v1\/?$/, '')
+    const input = window.prompt(
+      'Configurar URL do Backend (ex: https://seu-tunnel.trycloudflare.com ou http://127.0.0.1:8000):',
+      current
+    )
+    if (input && input.trim()) {
+      api.setBaseUrl(input.trim())
+      window.location.reload()
+    }
+  }
+
   return (
     <footer className="status-bar">
       <div className="status-bar-left">
@@ -29,7 +42,12 @@ export function StatusBar(): JSX.Element {
           <BetaBadge tone="auto" size="xs" />
         </span>
         <span className="status-divider">|</span>
-        <span className="status-indicator">
+        <span
+          className="status-indicator"
+          onClick={handleConfigureBackend}
+          style={{ cursor: 'pointer' }}
+          title={`Backend: ${api.getBaseUrl()} (Clique para alterar URL)`}
+        >
           <span className={`status-dot ${backendStatus || 'offline'}`} />
           {statusText}
         </span>
