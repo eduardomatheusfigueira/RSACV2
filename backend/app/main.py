@@ -90,13 +90,14 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
 
-    # CORS — aceita apenas origens locais
+    # CORS — suporte completo para navegadores, Netlify e ambientes locais
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Permissivo em dev; Electron usa localhost
+        allow_origin_regex=r"^https?://.*",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
     )
 
     # Incluir routers
