@@ -89,6 +89,12 @@ class APIClient {
       const clean = envUrl.trim().replace(/\/+$/, '')
       return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
     }
+    // 4. Detecção automática se estiver no navegador Web (servido pelo backend ou Cloudflare)
+    if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+      if (!window.location.host.includes(':5173')) {
+        return `${window.location.origin}/api/v1`
+      }
+    }
     return 'http://127.0.0.1:8000/api/v1'
   })()
 

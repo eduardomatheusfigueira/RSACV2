@@ -163,10 +163,17 @@ class OpenAICompatibleAIClient(BaseAIClient):
         if decisao not in ("Incluído", "Excluído", "Pendente"):
             decisao = "Pendente"
 
+        inc = data.get("criterios_inclusao_atendidos") or data.get("criterios_inclusao") or {}
+        exc = data.get("criterios_exclusao_atendidos") or data.get("criterios_exclusao") or {}
+        if not isinstance(inc, dict):
+            inc = {}
+        if not isinstance(exc, dict):
+            exc = {}
+
         return ScreeningResult(
             decision=decisao,
-            inclusion_criteria=data.get("criterios_inclusao", {}),
-            exclusion_criteria=data.get("criterios_exclusao", {}),
+            inclusion_criteria=inc,
+            exclusion_criteria=exc,
             justification=data.get("justificativa", ""),
             confidence=float(data.get("confianca", 0.9)),
             model_used=self.model_name,

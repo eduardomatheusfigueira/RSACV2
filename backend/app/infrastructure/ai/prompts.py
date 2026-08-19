@@ -3,6 +3,8 @@
 
 """RSAC V2 — Prompts do Sistema e de Triagem/Protocolo com IA (Ciências Sociais Aplicadas & Desenvolvimento Regional)."""
 
+from typing import Any
+
 SYSTEM_SCREENING_PROMPT = """Você é um revisor acadêmico sênior com rigor metodológico em Revisões Sistemáticas e Scoping Reviews (PRISMA 2020 / PRISMA-ScR / JBI), com foco no campo de Ciências Sociais Aplicadas, Políticas Públicas e Desenvolvimento Regional.
 Sua função é avaliar metadados de artigos científicos e publicações acadêmicas (Título, Resumo, Palavras-chave) com base estrita no Protocolo da Revisão (PCC/PICO e Critérios de Inclusão/Exclusão).
 
@@ -17,26 +19,86 @@ DIRETRIZES FUNDAMENTAIS:
 """
 
 
-def build_screening_prompt(protocol_data: dict, paper_data: dict) -> str:
-    """Constrói o prompt de triagem para um artigo específico."""
-    inclusion_crit_text = "\n".join(
-        [f"- [{c.get('code', 'INC')}] {c.get('description', '')}" for c in protocol_data.get("inclusion_criteria", [])]
-    ) or "Nenhum critério de inclusão cadastrado."
+def build_screening_prompt(paper_or_protocol: Any, protocol_or_paper: Any) -> str:
+    """
+    Constrói o prompt de triagem para um artigo específico.
+    Aceita instâncias de Paper/Protocol ou dicionários em qualquer ordem de parâmetros.
+    """
+    # Identificar qual argumento é o Paper e qual é o Protocol
+    arg1, arg2 = paper_or_protocol, protocol_or_paper
+    
+    # Se arg1 parecer Protocol ou arg2 parecer Paper
+    if (hasattr(arg1, "inclusion_criteria") and not hasattr(arg1, "abstract")) or \
+       (isinstance(arg1, dict) and "inclusion_criteria" in arg1 and "abstract" not in arg1):
+        protocol_obj, paper_obj = arg1, arg2
+    else:
+        paper_obj, protocol_obj = arg1, arg2
 
-    exclusion_crit_text = "\n".join(
-        [f"- [{c.get('code', 'EXC')}] {c.get('description', '')}" for c in protocol_data.get("exclusion_criteria", [])]
-    ) or "Nenhum critério de exclusão cadastrado."
+    # Normalizar Paper para dict
+    if hasattr(paper_obj, "to_dict"):
+        p_data = paper_obj.to_dict()
+    elif isinstance(paper_obj, dict):
+        p_data = paper_obj
+    else:
+        p_data = {
+            "title": getattr(paper_obj, "title", "Sem título"),
+            "authors": getattr(paper_obj, "authors", "Não informados"),
+            "year": getattr(paper_obj, "year", "Não informado"),
+            "abstract": getattr(paper_obj, "abstract", ""),
+        }
 
-    pico = protocol_data.get("pico", {})
+    # Normalizar Protocol para dict
+    if hasattr(protocol_obj, "to_dict"):
+        prot_data = protocol_obj.to_dict()
+    elif isinstance(protocol_obj, dict):
+        prot_data = protocol_obj
+    else:
+        prot_data = {
+            "objective": getattr(protocol_obj, "objective", "Não informado"),
+            "inclusion_criteria": getattr(protocol_obj, "inclusion_criteria", []),
+            "exclusion_criteria": getattr(protocol_obj, "exclusion_criteria", []),
+            "pico_framework": getattr(protocol_obj, "pico_framework", {}),
+        }
+
+    # Formatar critérios de inclusão (suporta lista de strings ou lista de dicts)
+    raw_inc = prot_data.get("inclusion_criteria") or []
+    inc_items = []
+    for i, c in enumerate(raw_inc, 1):
+        if isinstance(c, dict):
+            code = c.get("code", f"INC{i}")
+            desc = c.get("description", c.get("text", str(c)))
+            inc_items.append(f"- [{code}] {desc}")
+        elif isinstance(c, str) and c.strip():
+            inc_items.append(f"- [INC{i}] {c.strip()}")
+    inclusion_crit_text = "\n".join(inc_items) or "Nenhum critério de inclusão cadastrado."
+
+    # Formatar critérios de exclusão (suporta lista de strings ou lista de dicts)
+    raw_exc = prot_data.get("exclusion_criteria") or []
+    exc_items = []
+    for i, c in enumerate(raw_exc, 1):
+        if isinstance(c, dict):
+            code = c.get("code", f"EXC{i}")
+            desc = c.get("description", c.get("text", str(c)))
+            exc_items.append(f"- [{code}] {desc}")
+        elif isinstance(c, str) and c.strip():
+            exc_items.append(f"- [EXC{i}] {c.strip()}")
+    exclusion_crit_text = "\n".join(exc_items) or "Nenhum critério de exclusão cadastrado."
+
+    pico = prot_data.get("pico_framework") or prot_data.get("pico") or {}
+
+    title = p_data.get("title") or "Sem título"
+    authors = p_data.get("authors") or "Não informados"
+    year = p_data.get("year") or "Não informado"
+    abstract = p_data.get("abstract") or "RESUMO NÃO DISPONÍVEL (Marcar como Pendente se o título não for suficiente para exclusão óbvia)."
 
     return f"""AVALIE A PUBLICAÇÃO CIENTÍFICA ABAIXO CONFORME O PROTOCOLO DESTA REVISÃO:
 
 ==================== PROTOCOLO DE REVISÃO ====================
-OBJETIVO: {protocol_data.get('objective', 'Não informado')}
-POPULAÇÃO / CONTEXTO SOCIAL / ATORES: {pico.get('population', 'Não informado')}
-CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO: {pico.get('intervention', 'Não informado')}
-CONTEXTO TERRITORIAL / REGIONAL / COMPARADOR: {pico.get('comparison', 'Não informado')}
-DESFECHO / MAPEAMENTO DE RESULTADOS: {pico.get('outcome', 'Não informado')}
+OBJETIVO: {prot_data.get('objective', 'Não informado')}
+POPULAÇÃO / CONTEXTO SOCIAL / ATORES: {pico.get('population', pico.get('pico_population', 'Não informado'))}
+CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO: {pico.get('intervention', pico.get('pico_intervention', 'Não informado'))}
+CONTEXTO TERRITORIAL / REGIONAL / COMPARADOR: {pico.get('comparison', pico.get('pico_comparison', 'Não informado'))}
+DESFECHO / MAPEAMENTO DE RESULTADOS: {pico.get('outcome', pico.get('pico_outcome', 'Não informado'))}
 
 CRITÉRIOS DE INCLUSÃO:
 {inclusion_crit_text}
@@ -45,11 +107,11 @@ CRITÉRIOS DE EXCLUSÃO:
 {exclusion_crit_text}
 
 ==================== ESTUDO PARA AVALIAÇÃO ====================
-TÍTULO: {paper_data.get('title', 'Sem título')}
-AUTORES: {paper_data.get('authors', 'Não informados')}
-ANO: {paper_data.get('year', 'Não informado')}
+TÍTULO: {title}
+AUTORES: {authors}
+ANO: {year}
 RESUMO:
-{paper_data.get('abstract') or 'RESUMO NÃO DISPONÍVEL (Marcar como Pendente se o título não for suficiente para exclusão óbvia).'}
+{abstract}
 
 ==================== FORMATO DE RESPOSTA OBRIGATÓRIO (JSON PURO) ====================
 Responda APENAS com um objeto JSON válido no seguinte formato:
