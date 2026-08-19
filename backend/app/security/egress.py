@@ -72,6 +72,14 @@ def _ip_e_permitido(ip: ipaddress._BaseAddress) -> tuple[bool, str]:
     escritas à mão: `is_private` cobre 10/8, 172.16/12, 192.168/16 e os
     equivalentes IPv6 sem que ninguém precise lembrar de cada um.
     """
+    # IPv6 mapeando IPv4 (`::ffff:127.0.0.1`) precisa ser desembrulhado antes
+    # de qualquer outra checagem: `is_loopback`/`is_private` do IPv6Address
+    # não reconhecem o endereço IPv4 por trás do mapeamento, e classificam
+    # `::ffff:127.0.0.1` como "rede privada" em vez de "loopback".
+    mapeado = getattr(ip, "ipv4_mapped", None)
+    if mapeado is not None:
+        return _ip_e_permitido(mapeado)
+
     if ip.is_loopback:
         return False, "loopback"
     if ip.is_link_local:
@@ -81,12 +89,6 @@ def _ip_e_permitido(ip: ipaddress._BaseAddress) -> tuple[bool, str]:
         return False, "rede privada"
     if ip.is_reserved or ip.is_multicast or ip.is_unspecified:
         return False, "faixa reservada"
-
-    # IPv6 mapeando IPv4 (`::ffff:127.0.0.1`) contorna as checagens acima se
-    # avaliado como IPv6 puro.
-    mapeado = getattr(ip, "ipv4_mapped", None)
-    if mapeado is not None:
-        return _ip_e_permitido(mapeado)
 
     return True, ""
 
