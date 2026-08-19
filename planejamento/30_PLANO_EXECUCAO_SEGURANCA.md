@@ -17,7 +17,7 @@ dela.
 
 ```
 Fase 0  ▸ CONTENÇÃO          9 h   fecha o comprometimento total sem auth  ✅ ENTREGUE
-Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditoria
+Fase 1  ▸ IDENTIDADE         3 d   autenticação, papéis, autoria na auditoria  ✅ ENTREGUE
 Fase 2  ▸ SEGREDOS           2 d   cifra em repouso, API deixa de devolver chave
 Fase 3  ▸ REDE               2 d   SSRF, WebSocket, cabeçalhos, limites
 Fase 4  ▸ CLIENTE & LANÇADOR 2 d   api_url, aviso, provisionamento, checksum
@@ -31,8 +31,10 @@ de "comprometimento total por quem tiver a URL" para "exige uma vulnerabilidade
 de verdade". Ela **não** entrega segurança — entrega tempo para fazer o resto
 sem estar exposto.
 
-**Regra de operação enquanto a Fase 1 não estiver pronta:** o
-`Iniciar_Servidor.bat` não deve ser usado fora de rede confiável (§28.7).
+**Estado em 19/08/2026:** Fases 0 e 1 entregues. O `Iniciar_Servidor.bat`
+exige conta e senha e recusa-se a publicar sem autenticação. O que continua
+aberto está nas Fases 3 a 5 — SSRF, limites de recurso, cabeçalhos e a
+sanitização das exportações.
 
 ---
 
@@ -194,6 +196,49 @@ diferença entre corrigir V-01 e corrigir V-01 **de forma durável**.
   mensagem diz qual comando executar.
 - Alteração de decisão de triagem grava `username` na auditoria.
 
+### ✅ Fase 1 — entregue em 19/08/2026
+
+| Entrega | Estado | Onde |
+|---|---|---|
+| `UserModel`, `SessionModel`, `LoginAttemptModel` | ✅ | `infrastructure/persistence/models.py` |
+| Hash Argon2id | ✅ | `app/security/passwords.py` |
+| `/auth/status`, `/login`, `/local`, `/logout`, `/me`, `/password`, `/users` | ✅ | `app/api/v1/auth.py` |
+| Dependência global de sessão no agregador | ✅ | `app/api/v1/router.py` |
+| Token local do perfil desktop (arquivo `0600`) | ✅ | `app/security/local_token.py` |
+| Papéis `owner`/`researcher` nas rotas de credencial | ✅ | `ai.py`, `settings.py`, `profile.py` |
+| Autoria (`user_id`, `username`) na trilha de auditoria | ✅ | `papers.py`, `screening_service.py` |
+| Limite de 5 tentativas em 15 min, com estado no banco | ✅ | `app/security/sessions.py` |
+| `python -m app.cli create-user` | ✅ | `app/cli.py` |
+| Tela de login, portão de sessão e identidade na barra de status | ✅ | `LoginPage.tsx`, `App.tsx`, `StatusBar.tsx` |
+| Backend recusa subir em `server` sem conta | ✅ | `app/main.py` (lifespan) |
+| Lançador provisiona conta antes de abrir o túnel | ✅ | `scripts/server_launcher.py` |
+
+**Além do previsto:** os dois WebSockets passaram a exigir sessão no
+handshake (V-06 estava planejado para a Fase 3). Aceitar a conexão e checar
+depois já teria entregado o canal, e a metade da defesa que faltava — a
+verificação de `Origin` — continua na Fase 3.
+
+**Duas decisões que divergem do previsto, e por quê:**
+
+1. **`sessionStorage` em vez de só cookie.** §29.3.2 pede cookie `HttpOnly`, e
+   é o que o backend emite. Mas o cookie `SameSite=Strict` não viaja quando a
+   interface está no Netlify e a API no túnel — origens diferentes. O token
+   também vai num cabeçalho `Bearer` guardado em `sessionStorage`: sobrevive ao
+   recarregar a aba e morre ao fechá-la. `localStorage`, que a especificação
+   proíbe, não é usado.
+2. **`require_session` recebe `HTTPConnection`, não `Request`.** A dependência
+   é declarada no router agregador, que carrega também as rotas de WebSocket —
+   e essas não têm requisição HTTP. Declarar `Request` derrubava o handshake
+   com `TypeError`. No escopo de WebSocket a dependência sai de lado e quem
+   decide é a checagem dentro da rota, que consegue fechar com o código 1008;
+   `test_websocket_auth.py` cobre cada canal para que a exceção não vire
+   brecha.
+
+**O que a Fase 1 muda na prática:** a exploração de quatro `curl` do doc 28
+responde `401` em todas as rotas. Um `researcher` opera a revisão e recebe
+`403` em qualquer rota de credencial. O `logout` mata o token no servidor. E o
+app de mesa continua abrindo sem pedir senha, pelo token local.
+
 ---
 
 ## 30.3 Fase 2 — Segredos (2 dias) 🟠
@@ -352,10 +397,12 @@ Cada fase só está pronta quando:
 
 | | |
 |---|---|
-| **Situação** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
-| **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta; com a Fase 0 entregue, o uso segue restrito a rede confiável até a Fase 1 (autenticação) |
+| **Situação inicial** | Backend sem autenticação publicado na internet; chaves de API legíveis anonimamente; leitura arbitrária de arquivos do host; CORS permite que qualquer site acesse a instalação local |
+| **Situação atual** | Fases 0 e 1 entregues: a API exige identidade, as chaves não trafegam em claro e o servidor não sobe desprotegido |
+| **Ação imediata** | Rotacionar as chaves de API se o `Iniciar_Servidor.bat` já foi usado em rede aberta antes destas fases |
 | **Fase 0** | ✅ entregue em 19/08/2026 — remove o comprometimento total |
-| **Fases 0–2** | ~7 dias — sistema defensável na internet |
+| **Fase 1** | ✅ entregue em 19/08/2026 — a API inteira exige identidade |
+| **Fase 2** | ~2 dias — cifra dos segredos em repouso |
 | **Plano completo** | ~12 dias úteis — 18 de 18 achados fechados, com testes que impedem a volta |
 
 ---

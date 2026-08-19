@@ -364,6 +364,46 @@ export interface DeduplicationReport {
   created_at: string
 }
 
+// ── Autenticação ──────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string
+  username: string
+  role: 'owner' | 'researcher'
+  is_active: boolean
+  created_at: string
+  last_login_at?: string | null
+}
+
+export interface LoginResponse {
+  user: AuthUser
+  access_token: string
+  token_type: string
+  expires_in_hours: number
+}
+
+/** Única resposta que o backend dá antes do login. */
+export interface AuthStatus {
+  authentication_enabled: boolean
+  deployment_profile: 'desktop' | 'server' | 'ci'
+  has_accounts: boolean
+  /** O perfil desktop aceita o token local em vez de usuário e senha. */
+  local_token_accepted: boolean
+  authenticated: boolean
+  user?: AuthUser | null
+}
+
+export interface UserListResponse {
+  items: AuthUser[]
+  total: number
+}
+
+export interface UserCreatedResponse {
+  user: AuthUser
+  /** Devolvida apenas na criação, e nunca mais. */
+  generated_password?: string | null
+}
+
 // ── AI ────────────────────────────────────────────────────────────────
 
 /**

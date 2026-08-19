@@ -3,9 +3,10 @@
 
 """RSAC V2 — Router agregador da API v1."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 from app.api.v1.ai import router as ai_router
+from app.api.v1.auth import public_auth_router, router as auth_router
 from app.api.v1.deduplication import router as deduplication_router
 from app.api.v1.export import router as export_router
 from app.api.v1.extraction import (
@@ -21,13 +22,23 @@ from app.api.v1.screening_ai import router as screening_ai_router
 from app.api.v1.settings import router as settings_router
 from app.config import settings
 from app.schemas.common import HealthResponse
+from app.security.dependencies import require_session
 
-api_router = APIRouter()
+# ── As duas metades da API ────────────────────────────────────────────
+#
+# `public_router` é a lista **completa** de exceções de §29.3.1 — health,
+# status da autenticação, login e troca do token local. Nada mais entra aqui.
+#
+# `api_router` exige sessão por dependência do próprio router, e não por
+# decorador em cada rota. É essa escolha que torna a proteção durável: uma rota
+# nova nasce autenticada, e esquecer de protegê-la deixou de ser possível.
+public_router = APIRouter()
+api_router = APIRouter(dependencies=[Depends(require_session)])
 
 
-@api_router.get("/health", response_model=HealthResponse, tags=["system"])
+@public_router.get("/health", response_model=HealthResponse, tags=["system"])
 def health_check():
-    """Health check do backend."""
+    """Health check do backend. Não expõe dado de negócio."""
     return HealthResponse(
         status="ok",
         version=settings.app_version,
@@ -35,7 +46,11 @@ def health_check():
     )
 
 
+public_router.include_router(public_auth_router)
+
+
 # Incluir sub-routers
+api_router.include_router(auth_router)
 api_router.include_router(projects_router)
 api_router.include_router(protocols_router)
 api_router.include_router(papers_router)

@@ -19,6 +19,8 @@ from app.schemas.profile import (
     ProfileExportRequest,
     ProfileImportResponse,
 )
+from app.infrastructure.persistence.models import UserModel
+from app.security.dependencies import require_owner
 from app.security.secret_box import (
     SecretBoxError,
     decrypt_envelope,
@@ -37,6 +39,7 @@ profile_service = ProfileService()
 def export_keys(
     request: KeysExportRequest = Body(...),
     db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
 ):
     """
     Exporta as credenciais cadastradas em um arquivo **cifrado com senha**.
@@ -60,6 +63,7 @@ def export_keys(
 def import_keys(
     request: KeysImportRequest = Body(...),
     db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
 ):
     """
     Importa um arquivo de chaves — envelope cifrado ou backup legado em claro.
@@ -96,6 +100,7 @@ def import_keys(
 def export_full_profile(
     request: ProfileExportRequest = Body(default_factory=ProfileExportRequest),
     db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
 ):
     """
     Exporta o perfil completo de sessão, preferências, configurações de IA,
@@ -122,6 +127,7 @@ def export_full_profile(
 def import_full_profile(
     profile_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
 ):
     """
     Restaura um perfil completo de sessão e workspace.

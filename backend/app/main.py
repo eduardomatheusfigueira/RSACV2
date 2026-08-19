@@ -17,10 +17,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1.router import api_router
+from app.api.v1.router import api_router, public_router
 from app.config import settings
 from app.database import SessionLocal, create_tables
-from app.infrastructure.persistence.models import HarvestRunModel
+from app.infrastructure.persistence.models import HarvestRunModel, UserModel
+from app.security.local_token import descrever_para_log, ensure_local_token
 from app.schemas.common import HealthResponse
 
 # ── Logging Estruturado (Console + Arquivo) ───────────────────────────
@@ -52,12 +53,45 @@ async def lifespan(app: FastAPI):
     if settings.is_server_profile:
         logger.warning(
             "[Segurança] Perfil 'server': o backend está exposto fora do loopback. "
-            "A autenticação ainda não foi implementada (doc 30, Fase 1) — "
-            "publique apenas em rede confiável."
+            "O acesso exige conta e senha; publique o endereço apenas para quem "
+            "deve operar a revisão."
         )
     logger.info(f"Banco de dados: {settings.effective_database_url}")
     logger.info(f"Arquivo de log: {log_file}")
     create_tables()
+
+    # ── Portão de partida segura (doc 29 §29.2.4) ─────────────────────
+    #
+    # Um servidor público sem autenticação não deve ser um estado alcançável
+    # do sistema. Se o perfil é `server` e não há conta provisionada, o
+    # processo recusa-se a subir — em vez de subir aberto, como acontecia.
+    ensure_local_token()
+    logger.info(f"Autenticação: {descrever_para_log()}")
+
+    db_boot = SessionLocal()
+    try:
+        contas_ativas = (
+            db_boot.query(UserModel).filter(UserModel.is_active == True).count()  # noqa: E712
+        )
+    finally:
+        db_boot.close()
+
+    if settings.is_server_profile and contas_ativas == 0:
+        mensagem = (
+            "Nenhuma conta de acesso provisionada e o perfil é 'server'. "
+            "Publicar o backend sem autenticação daria controle total a quem "
+            "obtivesse a URL. Crie a primeira conta com:\n"
+            "    python -m app.cli create-user <usuario> --role owner"
+        )
+        logger.critical("[Segurança] %s", mensagem)
+        raise RuntimeError(mensagem)
+
+    if contas_ativas == 0:
+        logger.warning(
+            "[Segurança] Nenhuma conta provisionada. No perfil desktop o app usa o "
+            "token local, mas crie uma conta antes de publicar o servidor: "
+            "python -m app.cli create-user <usuario> --role owner"
+        )
 
     # Reconciliar execuções pendentes interrompidas por queda/reinício do processo
     try:
@@ -160,7 +194,9 @@ def create_app() -> FastAPI:
             database="connected",
         )
 
-    # Incluir routers
+    # Incluir routers — o público antes, para que as rotas de exceção sejam
+    # resolvidas sem passar pela dependência de sessão do agregador.
+    app.include_router(public_router, prefix="/api/v1")
     app.include_router(api_router, prefix="/api/v1")
 
     # Servir Frontend Web Estático (SPA) se construído

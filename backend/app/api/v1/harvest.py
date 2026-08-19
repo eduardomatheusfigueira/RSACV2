@@ -22,6 +22,7 @@ from app.schemas.harvest import (
     HarvestStartRequest,
     SourceCapabilityResponse,
 )
+from app.security.dependencies import require_websocket_session
 from app.services.harvest_job_manager import harvest_job_manager
 from app.services.harvesting_service import HarvestingService, ws_manager
 
@@ -229,8 +230,23 @@ def list_available_sources(db: Session = Depends(get_db)):
 
 
 @router.websocket("/ws")
-async def harvest_websocket(project_id: str, websocket: WebSocket):
-    """Canal WebSocket para streaming de progresso em tempo real da coleta."""
+async def harvest_websocket(
+    project_id: str,
+    websocket: WebSocket,
+    db: Session = Depends(get_db),
+):
+    """
+    Canal WebSocket para streaming de progresso em tempo real da coleta.
+
+    A sessão é conferida **antes** de `accept()`: a política de mesma origem
+    não vale para WebSocket, então aceitar primeiro e checar depois já teria
+    entregado o canal a quem abriu a conexão de outro sítio.
+    """
+    usuario = await require_websocket_session(websocket, db)
+    if not usuario:
+        await websocket.close(code=1008, reason="Autenticação necessária.")
+        return
+
     await ws_manager.connect(project_id, websocket)
     try:
         while True:

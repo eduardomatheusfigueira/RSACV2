@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
@@ -30,6 +31,21 @@ from app.infrastructure.persistence.models import (
 from app.services.harvesting_service import ws_manager
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class AuditActor:
+    """
+    Quem acionou uma operação assistida por IA.
+
+    Existe como valor imutável, e não como o objeto ORM do usuário, porque a
+    triagem em lote roda em segundo plano com outra sessão de banco — carregar
+    o modelo para lá o deixaria destacado (`DetachedInstanceError`) na primeira
+    leitura de atributo.
+    """
+
+    user_id: str
+    username: str
 
 
 def _to_paper_entity(model: PaperModel) -> Paper:
@@ -89,8 +105,15 @@ class ScreeningService:
         db: Session,
         project_id: str,
         paper_id: str,
+        actor: Optional["AuditActor"] = None,
     ) -> ScreeningResult:
-        """Executa a triagem com IA para um único artigo."""
+        """
+        Executa a triagem com IA para um único artigo.
+
+        `actor` é quem pediu a triagem. A decisão é da IA, mas a
+        responsabilidade por tê-la acionado é de uma pessoa — e é isso que a
+        auditoria precisa registrar (doc 29 §29.3.5).
+        """
         paper_model = (
             db.query(PaperModel)
             .filter(PaperModel.project_id == project_id, PaperModel.id == paper_id)
@@ -131,6 +154,8 @@ class ScreeningService:
             old_value=old_decision,
             new_value=result.decision,
             source=f"ai:{result.provider}",
+            user_id=actor.user_id if actor else None,
+            username=actor.username if actor else "",
         )
         db.add(audit)
 
@@ -216,6 +241,7 @@ class ScreeningService:
         project_id: str,
         limit: int = 50,
         concurrency: int = 3,
+        actor: Optional["AuditActor"] = None,
     ):
         """Executa a triagem em lote em segundo plano com controle de concorrência."""
         db = SessionLocal()
@@ -249,7 +275,7 @@ class ScreeningService:
                 async with semaphore:
                     task_db = SessionLocal()
                     try:
-                        res = await self.screen_single_paper(task_db, project_id, pid)
+                        res = await self.screen_single_paper(task_db, project_id, pid, actor=actor)
                         processed_count += 1
                         if res.decision == "Incluído":
                             included_count += 1

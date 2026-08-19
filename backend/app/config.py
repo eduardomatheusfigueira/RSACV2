@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     # ── Perímetro de confiança ────────────────────────────────────────
     deployment_profile: DeploymentProfile = DeploymentProfile.DESKTOP
 
+    # ── Sessões (doc 29 §29.3.3) ──────────────────────────────────────
+    # Validade da sessão, renovada por atividade: quem está triando não é
+    # deslogado no meio do trabalho, mas uma aba esquecida aberta expira.
+    session_ttl_hours: int = 12
+
     # ── Servidor ──────────────────────────────────────────────────────
     host: str = "127.0.0.1"
     port: int = 8000

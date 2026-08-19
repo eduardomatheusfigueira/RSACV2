@@ -17,7 +17,9 @@ from app.infrastructure.persistence.models import (
     PaperModel,
     PaperSourceModel,
     ProjectModel,
+    UserModel,
 )
+from app.security.dependencies import require_session
 from app.schemas.paper import (
     PaperCreate,
     PaperListResponse,
@@ -203,6 +205,7 @@ def update_paper(
     paper_id: str,
     data: PaperUpdate,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
 ):
     """Atualiza decisão, observações e critérios de triagem do artigo."""
     paper = (
@@ -220,13 +223,18 @@ def update_paper(
     if data.decision is not None:
         dec_val = data.decision.value if hasattr(data.decision, "value") else data.decision
         if dec_val != paper.decision:
-            # Registrar no log de auditoria
+            # Registrar no log de auditoria, com autoria (doc 29 §29.3.5).
+            # `source="manual"` sozinho não distinguia o pesquisador do coautor
+            # — e numa revisão sistemática saber de quem foi a decisão é parte
+            # do produto, não um detalhe operacional.
             audit = AuditLogModel(
                 paper_id=paper.id,
                 action="decision_changed",
                 old_value=paper.decision,
                 new_value=dec_val,
                 source="manual",
+                user_id=usuario.id,
+                username=usuario.username,
             )
             db.add(audit)
             paper.decision = dec_val

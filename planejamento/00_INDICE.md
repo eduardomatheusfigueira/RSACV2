@@ -28,7 +28,7 @@ a Fase 0 do doc 30 não estiver entregue.
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
 23–27   vigente            para onde vamos agora (UX/UI)
-28–30   vigente            segurança — Fase 0 entregue, Fase 1 (login) em aberto 🔴
+28–30   vigente            segurança — Fases 0 e 1 entregues; 2–5 em aberto 🔴
 ```
 
 ---
@@ -52,8 +52,9 @@ a Fase 0 do doc 30 não estiver entregue.
 ## 🔴 Planejamento vigente — Segurança do servidor
 
 > O modo servidor (`Iniciar_Servidor.bat`) publica o backend na internet por
-> túnel Cloudflare. O backend não tem autenticação. **Leia o doc 28 antes de
-> usar esse modo fora de rede confiável.**
+> túnel Cloudflare. Desde a Fase 1 o acesso exige conta e senha, e o lançador
+> recusa-se a publicar sem autenticação. **O doc 28 registra o estado que
+> motivou o plano; o doc 30 diz o que já foi entregue.**
 
 | # | Documento | Descrição |
 |---|-----------|-----------|

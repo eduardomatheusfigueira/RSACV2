@@ -8,10 +8,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, WebSocke
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.infrastructure.persistence.models import AISettingsModel, ProjectModel
+from app.infrastructure.persistence.models import AISettingsModel, ProjectModel, UserModel
 from app.schemas.ai import BatchScreeningRequest
+from app.security.dependencies import require_websocket_session
 from app.services.harvesting_service import ws_manager
-from app.services.screening_service import ScreeningService
+from app.security.dependencies import require_session
+from app.services.screening_service import AuditActor, ScreeningService
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +35,15 @@ async def screen_single_paper(
     project_id: str,
     paper_id: str,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
 ):
     """Executa a triagem com IA para um único artigo e retorna a decisão estruturada."""
     _check_ai_enabled(db)
+    ator = AuditActor(user_id=usuario.id, username=usuario.username)
     try:
-        result = await screening_service.screen_single_paper(db, project_id, paper_id)
+        result = await screening_service.screen_single_paper(
+            db, project_id, paper_id, actor=ator
+        )
         return {
             "status": "success",
             "paper_id": paper_id,
@@ -60,6 +66,7 @@ async def start_batch_screening(
     data: BatchScreeningRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
 ):
     """Inicia a triagem em lote de artigos pendentes em segundo plano."""
     _check_ai_enabled(db)
@@ -72,6 +79,7 @@ async def start_batch_screening(
         project_id,
         limit=data.limit,
         concurrency=data.concurrency,
+        actor=AuditActor(user_id=usuario.id, username=usuario.username),
     )
 
     return {
@@ -84,8 +92,18 @@ async def start_batch_screening(
 async def screening_websocket(
     websocket: WebSocket,
     project_id: str,
+    db: Session = Depends(get_db),
 ):
-    """Canal WebSocket para streaming de progresso em tempo real da triagem em lote."""
+    """
+    Canal WebSocket para streaming de progresso em tempo real da triagem.
+
+    Mesma regra do canal de coleta: sessão conferida antes de `accept()`.
+    """
+    usuario = await require_websocket_session(websocket, db)
+    if not usuario:
+        await websocket.close(code=1008, reason="Autenticação necessária.")
+        return
+
     await ws_manager.connect(project_id, websocket)
     try:
         while True:

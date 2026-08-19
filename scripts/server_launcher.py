@@ -237,6 +237,55 @@ def start_backend(port: int, config: dict | None = None) -> bool:
     return False
 
 
+def auth_status(port: int) -> dict | None:
+    """Consulta o estado da autenticação no backend já em execução."""
+    try:
+        url = f"http://127.0.0.1:{port}/api/v1/auth/status"
+        req = urllib.request.Request(url, headers={"User-Agent": "RSAC-Launcher"})
+        with urllib.request.urlopen(req, timeout=5) as res:
+            return json.loads(res.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def provisionar_conta_interativa() -> bool:
+    """
+    Cria a primeira conta administradora antes de publicar o servidor.
+
+    A alternativa — publicar e deixar o usuário criar a conta pela interface —
+    exigiria uma rota de "primeiro administrador" aberta na internet, que é
+    justamente o buraco que a autenticação fecha.
+    """
+    print("\033[93m[!] Nenhuma conta de acesso provisionada nesta instalação.\033[0m")
+    print("\033[96m[*] O servidor não pode ser publicado sem autenticação.\033[0m\n")
+
+    try:
+        usuario = input("    Nome de usuário da conta administradora: ").strip()
+    except (KeyboardInterrupt, EOFError):
+        return False
+
+    if not usuario:
+        print("\033[91m[X] Nome de usuário vazio.\033[0m")
+        return False
+
+    cmd = [sys.executable, "-m", "app.cli", "create-user", usuario, "--role", "owner"]
+    try:
+        resultado = subprocess.run(cmd, cwd=str(BACKEND_DIR), text=True)
+        if resultado.returncode != 0:
+            print("\033[91m[X] Falha ao criar a conta.\033[0m")
+            return False
+    except Exception as exc:
+        print(f"\033[91m[X] Falha ao criar a conta: {exc}\033[0m")
+        return False
+
+    print("\033[92m[✓] Conta criada. Anote a senha exibida acima — ela não será mostrada de novo.\033[0m")
+    try:
+        input("\n    Pressione Enter depois de anotar a senha para continuar...")
+    except (KeyboardInterrupt, EOFError):
+        return False
+    return True
+
+
 def cleanup():
     """Encerra com segurança todos os processos filhos."""
     global _is_shutting_down, _backend_proc, _cloudflared_proc
@@ -294,7 +343,32 @@ def main():
         input()
         sys.exit(1)
 
-    # 2. Localizar Cloudflared
+    # 2. Portão de publicação (doc 29 §29.11.6)
+    #
+    # O túnel não sobe se o backend não exigir autenticação ou se não houver
+    # conta provisionada. É a diferença entre publicar um ambiente de pesquisa
+    # e publicar o controle dele.
+    estado = auth_status(port)
+    if estado is None:
+        print("\033[91m[X] Não foi possível verificar o estado da autenticação do backend.\033[0m")
+        input()
+        cleanup()
+        sys.exit(1)
+
+    if not estado.get("authentication_enabled", False):
+        print("\033[91m[X] O backend está com a autenticação desativada. Túnel cancelado.\033[0m")
+        input()
+        cleanup()
+        sys.exit(1)
+
+    if not estado.get("has_accounts", False):
+        if not provisionar_conta_interativa():
+            print("\033[91m[X] Sem conta de acesso o servidor não será publicado.\033[0m")
+            input()
+            cleanup()
+            sys.exit(1)
+
+    # 3. Localizar Cloudflared
     cloudflared_bin = find_cloudflared(config.get("cloudflared_path", ""))
     if not cloudflared_bin:
         download_target = BASE_DIR / "cloudflared.exe"
@@ -307,7 +381,7 @@ def main():
 
     print(f"\033[96m[*] Iniciando túnel seguro Cloudflare na porta {port}...\033[0m")
 
-    # 3. Iniciar Cloudflared e capturar URL
+    # 4. Iniciar Cloudflared e capturar URL
     tunnel_cmd = [
         cloudflared_bin,
         "tunnel",
@@ -375,10 +449,9 @@ def main():
     print("  \033[92m[✓]\033[0m Banco de Dados:      \033[92mSQLite Conectado\033[0m\n")
 
     print("\033[91m" + "─" * 70 + "\033[0m")
-    print("  \033[91m⚠  ATENÇÃO — ESTE LINK PUBLICA SEUS DADOS NA INTERNET\033[0m")
-    print("  \033[93m   O backend ainda NÃO tem login (doc 30, Fase 1). Quem tiver o link")
-    print("     acessa seus projetos e dispara buscas com IA usando sua cota.")
-    print("     Não divulgue o endereço e encerre o servidor ao terminar.\033[0m")
+    print("  \033[93m⚠  ESTE LINK PUBLICA O SERVIDOR NA INTERNET\033[0m")
+    print("  \033[93m   O acesso exige usuário e senha — compartilhe as credenciais apenas")
+    print("     com quem deve operar a revisão, e encerre o servidor ao terminar.\033[0m")
     print("\033[91m" + "─" * 70 + "\033[0m\n")
 
     print("\033[92m" + "─" * 70 + "\033[0m")

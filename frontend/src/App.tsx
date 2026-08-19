@@ -15,9 +15,11 @@ import { HarvestPage } from '@/pages/HarvestPage'
 import { ExtractionPage } from '@/pages/ExtractionPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 // TanStack Query client
 const queryClient = new QueryClient({
@@ -33,6 +35,41 @@ const queryClient = new QueryClient({
 function ProjectRedirect(): JSX.Element {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/projects/${id}/protocol`} replace />
+}
+
+/**
+ * Portão de autenticação.
+ *
+ * Fica entre o health check e as rotas: enquanto a fase é `checking` não se
+ * mostra nem login nem conteúdo, porque qualquer um dos dois piscaria para
+ * metade dos usuários. `unavailable` é distinto de `anonymous` de propósito —
+ * pedir a senha contra um backend fora do ar faria o usuário concluir que a
+ * senha está errada.
+ */
+function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
+  const { phase, bootstrap, markAnonymous } = useAuthStore()
+
+  useEffect(() => {
+    // A detecção de porta/URL precisa vir antes da primeira chamada: os
+    // efeitos dos filhos rodam antes dos do pai, então deixar isso só no
+    // AppContent faria o bootstrap consultar o endereço errado no Electron.
+    api.detectPort()
+    api.setUnauthorizedHandler(markAnonymous)
+    void bootstrap()
+    return () => api.setUnauthorizedHandler(null)
+  }, [])
+
+  if (phase === 'checking' || phase === 'unavailable') {
+    // A splash do index.html continua na tela até a aplicação montar; devolver
+    // um fragmento vazio aqui a mantém visível enquanto se decide.
+    return <></>
+  }
+
+  if (phase === 'anonymous') {
+    return <LoginPage />
+  }
+
+  return <>{children}</>
 }
 
 function AppContent(): JSX.Element {
@@ -85,20 +122,22 @@ function AppContent(): JSX.Element {
   }, [])
 
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:id" element={<ProjectRedirect />} />
-        <Route path="/projects/:id/protocol" element={<ProtocolPage />} />
-        <Route path="/projects/:id/harvest" element={<HarvestPage />} />
-        <Route path="/projects/:id/screening" element={<ScreeningPage />} />
-        <Route path="/projects/:id/extraction" element={<ExtractionPage />} />
-        <Route path="/projects/:id/export" element={<ExportPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <AuthGate>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:id" element={<ProjectRedirect />} />
+          <Route path="/projects/:id/protocol" element={<ProtocolPage />} />
+          <Route path="/projects/:id/harvest" element={<HarvestPage />} />
+          <Route path="/projects/:id/screening" element={<ScreeningPage />} />
+          <Route path="/projects/:id/extraction" element={<ExtractionPage />} />
+          <Route path="/projects/:id/export" element={<ExportPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </AuthGate>
   )
 }
 

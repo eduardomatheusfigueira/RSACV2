@@ -48,8 +48,35 @@ export interface PrismaFlowData {
   }
 }
 
+/** Onde o token de sessão é guardado entre recarregamentos da aba. */
+const SESSION_STORAGE_KEY = 'rsac_session_token'
+
+/** Chamado quando o backend responde 401 — a aplicação volta para o login. */
+type UnauthorizedHandler = () => void
+
 class APIClient {
   private port: number = 8000
+
+  /**
+   * Token de sessão.
+   *
+   * Fica em `sessionStorage`, não em `localStorage`: sobrevive ao recarregar a
+   * página, que é o que o uso normal exige, e morre ao fechar a aba — de modo
+   * que um computador compartilhado não deixa a sessão pendurada. Quando a SPA
+   * é servida pelo próprio backend, o cookie `HttpOnly` já resolve e este
+   * token é apenas redundância; ele existe para o cliente hospedado em outra
+   * origem (Netlify, Vite em desenvolvimento), que não recebe o cookie.
+   */
+  private sessionToken: string | null = (() => {
+    if (typeof window === 'undefined') return null
+    try {
+      return sessionStorage.getItem(SESSION_STORAGE_KEY)
+    } catch {
+      return null
+    }
+  })()
+
+  private onUnauthorized: UnauthorizedHandler | null = null
   private baseUrl: string = (() => {
     // 1. Verificar query param direto no carregamento inicial (?api_url= ou #/?api_url=)
     if (typeof window !== 'undefined') {
@@ -168,12 +195,24 @@ class APIClient {
     return `${protocol}${hostAndPath}`
   }
 
+  /**
+   * O navegador não deixa mandar cabeçalho ao abrir um WebSocket, e o cookie
+   * não viaja entre origens diferentes — por isso o token vai na query. O
+   * endereço de um WebSocket não entra em histórico nem em `Referer`, então
+   * não é o mesmo risco de pôr credencial numa URL comum.
+   */
+  private withSessionToken(url: string): string {
+    if (!this.sessionToken) return url
+    const separador = url.includes('?') ? '&' : '?'
+    return `${url}${separador}token=${encodeURIComponent(this.sessionToken)}`
+  }
+
   getWebSocketUrl(projectId: string): string {
-    return `${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`
+    return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`)
   }
 
   getScreeningWebSocketUrl(projectId: string): string {
-    return `${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`
+    return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`)
   }
 
   getExcelExportUrl(projectId: string): string {
@@ -182,6 +221,27 @@ class APIClient {
 
   getBibtexExportUrl(projectId: string): string {
     return `${this.baseUrl}/projects/${projectId}/export/bibtex`
+  }
+
+  setSessionToken(token: string | null): void {
+    this.sessionToken = token
+    if (typeof window === 'undefined') return
+    try {
+      if (token) sessionStorage.setItem(SESSION_STORAGE_KEY, token)
+      else sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    } catch {
+      // Navegador com armazenamento bloqueado: o cookie ainda cobre o caso
+      // de mesma origem, então não há por que interromper o fluxo.
+    }
+  }
+
+  getSessionToken(): string | null {
+    return this.sessionToken
+  }
+
+  /** Registra o que fazer quando o backend recusar a sessão. */
+  setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+    this.onUnauthorized = handler
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -204,8 +264,12 @@ class APIClient {
     try {
       const response = await fetch(url, {
         ...options,
+        // `include` faz o cookie de sessão viajar quando a SPA é servida pelo
+        // próprio backend; o Bearer cobre o caso de origem diferente.
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          ...(this.sessionToken ? { Authorization: `Bearer ${this.sessionToken}` } : {}),
           ...options.headers,
         },
       })
@@ -216,6 +280,13 @@ class APIClient {
         const error = await response.json().catch(() => ({ detail: response.statusText }))
         const errorMsg = error.detail || `HTTP ${response.status}`
         logStore.error(source, `${method} ${path} falhou (${response.status})`, `Erro: ${errorMsg}\nTempo: ${duration}ms`)
+
+        // Sessão expirada ou revogada: descarta o token e devolve o usuário ao
+        // login em vez de deixar a interface tentando de novo em silêncio.
+        if (response.status === 401 && !path.startsWith('/auth/')) {
+          this.setSessionToken(null)
+          this.onUnauthorized?.()
+        }
         throw new Error(errorMsg)
       }
 
@@ -403,6 +474,78 @@ class APIClient {
   }
 
   // ── AI ────────────────────────────────────────────────────────────
+
+  // ── Autenticação ──────────────────────────────────────────────────
+
+  async getAuthStatus(): Promise<import('@/types/api').AuthStatus> {
+    return this.request<import('@/types/api').AuthStatus>('/auth/status')
+  }
+
+  async login(username: string, password: string): Promise<import('@/types/api').LoginResponse> {
+    const res = await this.request<import('@/types/api').LoginResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    })
+    this.setSessionToken(res.access_token)
+    return res
+  }
+
+  /**
+   * Troca o token local do app de mesa por uma sessão.
+   *
+   * É o que mantém o uso desktop sem tela de login: o Electron lê o arquivo
+   * `runtime_token` e passa o conteúdo adiante.
+   */
+  async loginWithLocalToken(token: string): Promise<import('@/types/api').LoginResponse> {
+    const res = await this.request<import('@/types/api').LoginResponse>('/auth/local', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    })
+    this.setSessionToken(res.access_token)
+    return res
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.request<{ status: string }>('/auth/logout', { method: 'POST' })
+    } finally {
+      // O token local morre mesmo se a chamada falhar: manter a sessão do lado
+      // do cliente depois de um pedido de saída seria o pior dos dois mundos.
+      this.setSessionToken(null)
+    }
+  }
+
+  async getCurrentUser(): Promise<import('@/types/api').AuthUser> {
+    return this.request<import('@/types/api').AuthUser>('/auth/me')
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>('/auth/password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    })
+  }
+
+  async listUsers(): Promise<import('@/types/api').UserListResponse> {
+    return this.request<import('@/types/api').UserListResponse>('/auth/users')
+  }
+
+  async createUser(
+    username: string,
+    role: 'owner' | 'researcher',
+    password?: string
+  ): Promise<import('@/types/api').UserCreatedResponse> {
+    return this.request<import('@/types/api').UserCreatedResponse>('/auth/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, role, password }),
+    })
+  }
+
+  async deactivateUser(userId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/auth/users/${userId}`, {
+      method: 'DELETE',
+    })
+  }
 
   async getAISettings(): Promise<AISettings> {
     return this.request<AISettings>('/ai/settings')

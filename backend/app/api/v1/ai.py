@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.infrastructure.ai.factory import AIFactory
-from app.infrastructure.persistence.models import AISettingsModel
+from app.infrastructure.persistence.models import AISettingsModel, UserModel
 from app.schemas.ai import (
     AISettingsResponse,
     AISettingsUpdate,
@@ -21,6 +21,7 @@ from app.schemas.ai import (
     ProtocolSuggestRequest,
 )
 from app.security import mask_secret_list
+from app.security.dependencies import require_owner
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,10 @@ def _build_settings_response(settings: AISettingsModel) -> AISettingsResponse:
 
 
 @router.get("/settings", response_model=AISettingsResponse)
-def get_ai_settings(db: Session = Depends(get_db)):
+def get_ai_settings(
+    db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
+):
     """Configurações de IA ativas e a máscara das chaves de cada provedor."""
     settings = db.query(AISettingsModel).first()
     if not settings:
@@ -107,7 +111,11 @@ def get_ai_settings(db: Session = Depends(get_db)):
 
 
 @router.put("/settings", response_model=AISettingsResponse)
-def update_ai_settings(data: AISettingsUpdate, db: Session = Depends(get_db)):
+def update_ai_settings(
+    data: AISettingsUpdate,
+    db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
+):
     """Atualiza as configurações e chaves dos provedores de IA mantendo isolamento total."""
     settings = db.query(AISettingsModel).first()
     if not settings:
@@ -152,7 +160,11 @@ def update_ai_settings(data: AISettingsUpdate, db: Session = Depends(get_db)):
 
 
 @router.delete("/settings/keys/{provider}", response_model=AISettingsResponse)
-def delete_provider_keys(provider: str, db: Session = Depends(get_db)):
+def delete_provider_keys(
+    provider: str,
+    db: Session = Depends(get_db),
+    _: UserModel = Depends(require_owner),
+):
     """
     Remove todas as chaves de um provedor.
 

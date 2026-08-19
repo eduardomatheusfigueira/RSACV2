@@ -152,7 +152,16 @@ As APIs de acesso aberto usadas na localização de PDFs (Unpaywall, OpenAlex, C
 RSAC_CONTACT_EMAIL=seu-email@instituicao.br
 ```
 
-### 5. Iniciar a Aplicação
+### 5. Criar a Conta de Acesso
+A API exige autenticação. No app de mesa o token local resolve sozinho, mas o
+modo servidor precisa de uma conta:
+```bash
+cd backend
+python -m app.cli create-user seu_usuario --role owner
+```
+A senha aparece uma única vez — anote-a.
+
+### 6. Iniciar a Aplicação
 ```bash
 # Opção 1: Usando o script unificado (Windows PowerShell)
 .\scripts\dev.ps1
@@ -177,19 +186,28 @@ atual; o **22** consolida o que foi entregue; os de **23 a 27** são o
 planejamento vigente de UX, UI e profissionalização da interface; e os de
 **28 a 30** são o planejamento vigente de segurança.
 
-> ### ⚠️ Aviso sobre o modo servidor
+> ### 🔐 Acesso e modo servidor
 >
-> O `Iniciar_Servidor.bat` publica o backend na internet por um túnel
-> Cloudflare, e **o backend ainda não tem autenticação**: quem obtiver a URL
-> lê e altera seus projetos e consome sua cota de IA. Use esse modo **apenas em
-> rede confiável** até a Fase 1 do
+> A API exige autenticação. No **app de mesa** nada muda para o usuário: o
+> backend grava um token local legível só pelo dono da máquina, e a interface
+> abre direto. No **modo servidor** (`Iniciar_Servidor.bat`) o acesso é por
+> usuário e senha, e o lançador se recusa a publicar o túnel enquanto não
+> houver conta provisionada.
+>
+> Crie a primeira conta com:
+>
+> ```bash
+> cd backend
+> python -m app.cli create-user seu_usuario --role owner
+> ```
+>
+> A senha é exibida **uma única vez** no terminal. Contas `owner` administram
+> credenciais e usuários; contas `researcher` operam a revisão sem alcançar as
+> chaves de API.
+>
+> As Fases 0 e 1 do
 > [`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)
-> estar entregue.
->
-> A **Fase 0 já foi entregue**: as chaves de API não trafegam mais em texto
-> claro, a leitura arbitrária de arquivos do host foi fechada, o CORS deixou de
-> aceitar qualquer origem e a documentação da API não fica exposta no modo
-> servidor. O diagnóstico completo está em
+> estão entregues; o diagnóstico que as motivou está em
 > [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md).
 
 **Planejamento vigente — Segurança**
