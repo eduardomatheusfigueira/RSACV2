@@ -11,6 +11,8 @@ import { AlertCircle, KeyRound, LogIn, ShieldCheck, User } from 'lucide-react'
 import { Button, FormGroup, Input } from '@/components/ui'
 import { RsacLockup } from '@/components/brand/RsacLockup'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { api } from '@/api/client'
+import { analisarUrlDeBackend } from '@/api/backendUrl'
 import './LoginPage.css'
 
 export function LoginPage(): JSX.Element {
@@ -112,6 +114,39 @@ export function LoginPage(): JSX.Element {
             </Button>
           </form>
         )}
+
+        <div className="login-server-info" style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <span>Servidor: <strong style={{ color: '#cbd8e4' }}>{api.getBackendHost()}</strong></span>
+          <button
+            type="button"
+            onClick={() => {
+              const current = api.getBaseUrl().replace(/\/api\/v1\/?$/, '')
+              const input = window.prompt(
+                'Configurar URL do Backend / Túnel (ex: https://seu-tunnel.trycloudflare.com ou http://127.0.0.1:8000):',
+                current
+              )
+              if (!input || !input.trim()) return
+              try {
+                const destino = analisarUrlDeBackend(input)
+                api.setBaseUrl(destino.url)
+                window.location.reload()
+              } catch (err: any) {
+                window.alert(err?.message ?? 'Endereço inválido.')
+              }
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#38bdf8',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              padding: 0
+            }}
+          >
+            Alterar URL do Servidor
+          </button>
+        </div>
 
         {status?.deployment_profile === 'server' && (
           <p className="login-footnote">
