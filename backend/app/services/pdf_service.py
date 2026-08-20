@@ -84,6 +84,27 @@ class PDFAcquisition:
         }
 
 
+def _mensagem_de_recusa(amostra: bytes) -> str:
+    """
+    Por que o arquivo foi recusado, na linguagem de quem enviou.
+
+    A frase "não é um PDF válido" é o contrato — a interface e os testes
+    dependem dela. O complemento sobre HTML é o que de fato ajuda: o caso
+    comum não é malícia, é o navegador ter salvo a página do repositório em
+    vez do arquivo. Um ponto único para os dois caminhos de upload (em fluxo
+    e em memória), que antes divergiam.
+    """
+    base = "O arquivo enviado não é um PDF válido (assinatura %PDF ausente)."
+    cabeca = amostra[:1024].lower().lstrip()
+    if cabeca.startswith((b"<!doctype", b"<html", b"<?xml", b"<head", b"<body")):
+        return (
+            f"{base} O conteúdo é uma página HTML — isso costuma acontecer quando o "
+            "navegador salva a página de visualização do repositório em vez do "
+            "arquivo PDF em si."
+        )
+    return base
+
+
 class PDFService:
     """Serviço de download, armazenamento e extração de texto de PDFs."""
 
@@ -166,7 +187,12 @@ class PDFService:
                         )
 
                     if not primeiro_bloco:
-                        primeiro_bloco = pedaco[:8]
+                        # 2048 bytes, não 8: é a janela que `is_pdf_bytes`
+                        # inspeciona (BOM, lixo inicial e `%PDF-` até 2 KB).
+                        # Guardar só 8 bytes anulava essa tolerância no upload
+                        # em fluxo e não dava material para reconhecer um HTML
+                        # enviado como PDF.
+                        primeiro_bloco = pedaco[:2048]
 
                     digest.update(pedaco)
                     temporario.write(pedaco)
@@ -178,7 +204,7 @@ class PDFService:
         if not is_pdf_bytes(primeiro_bloco):
             Path(caminho_temporario).unlink(missing_ok=True)
             raise ValueError(
-                "O arquivo enviado não é um PDF válido (assinatura %PDF ausente)."
+                _mensagem_de_recusa(primeiro_bloco)
             )
 
         destino = self.get_pdf_path(project_id, paper_id)
@@ -190,15 +216,7 @@ class PDFService:
     def save_uploaded_pdf(self, project_id: str, paper_id: str, file_bytes: bytes) -> str:
         """Salva um PDF enviado manualmente pelo usuário (com validação)."""
         if not is_pdf_bytes(file_bytes):
-            head_sample = file_bytes[:1024].lower()
-            if b"<html" in head_sample or b"<!doctype" in head_sample:
-                raise ValueError(
-                    "O arquivo enviado é uma página HTML e não um documento PDF. "
-                    "Isso geralmente ocorre quando o navegador salva a página de visualização/repositório em vez do arquivo PDF direto."
-                )
-            raise ValueError(
-                "O arquivo enviado não é um PDF válido (assinatura %PDF ausente ou arquivo corrompido)."
-            )
+            raise ValueError(_mensagem_de_recusa(file_bytes))
         return self.save_pdf_bytes(project_id, paper_id, file_bytes)
 
     def delete_pdf(self, project_id: str, paper_id: str, pdf_path: Optional[str] = None) -> bool:

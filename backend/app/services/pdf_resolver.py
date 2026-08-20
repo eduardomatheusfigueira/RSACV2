@@ -1036,6 +1036,20 @@ def is_pdf_bytes(content: bytes) -> bool:
     if b"%PDF-" in content[:2048]:
         return True
 
+    # HTML/XML é reprovado ANTES dos motores. Sem isto, o fallback do PyMuPDF
+    # abaixo devolve `True` para uma página HTML — o PyMuPDF também lê HTML e,
+    # mesmo com `filetype="pdf"`, recupera o conteúdo e informa página, de modo
+    # que "o motor conseguiu abrir" deixa de ser prova de que aquilo é um PDF.
+    #
+    # Este é exatamente o caso que o upload precisa recusar: o navegador salva
+    # a página do repositório em vez do arquivo, e o usuário anexa um .pdf que
+    # é HTML. Deixar passar grava lixo como se fosse o texto completo do
+    # estudo — e a extração assistida passa a ler a página do repositório como
+    # se fosse o artigo.
+    amostra = prefix[:1024].lower()
+    if amostra.startswith((b"<!doctype", b"<html", b"<?xml", b"<head", b"<body")):
+        return False
+
     # 2. Fallback: verificar se PyMuPDF consegue abrir o documento
     try:
         try:
