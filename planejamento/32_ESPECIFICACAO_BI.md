@@ -81,9 +81,12 @@ Para os rankings de autor, periódico e instituição, o serviço de agregação
 DEVE:
 
 1. Dividir `authors` em nomes individuais pelo separador `"; "` — o padrão
-   usado por todos os harvesters (doc 31 §3.1) — com *fallback* para `","`
-   quando o texto não contém `"; "`, para não quebrar em registros
-   importados manualmente.
+   usado por todos os harvesters (doc 31 §3.1). Vírgula NÃO é um separador
+   seguro de fallback: o formato "Sobrenome, Inicial" já usa vírgula dentro
+   de um único nome, e dividir por ela fragmentaria "Silva, J." em dois
+   autores fantasmas. Sem `"; "` no campo, o valor inteiro DEVE ser tratado
+   como um único autor — inclusive em registros importados manualmente que
+   não seguem a convenção dos harvesters.
 2. Normalizar cada nome/periódico/instituição para chave de agrupamento via
    `trim` + colapso de espaços + `casefold()` — SEM alterar o texto exibido,
    que DEVE ser a forma mais frequente entre as variantes agrupadas.

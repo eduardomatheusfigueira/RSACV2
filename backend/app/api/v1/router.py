@@ -1,19 +1,22 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Router agregador da API v1."""
 
 from fastapi import APIRouter, Depends
 
 from app.api.v1.ai import router as ai_router
-from app.api.v1.auth import public_auth_router, router as auth_router
+from app.api.v1.auth import public_auth_router
+from app.api.v1.auth import router as auth_router
 from app.api.v1.deduplication import router as deduplication_router
 from app.api.v1.export import router as export_router
 from app.api.v1.extraction import (
     project_extraction_router,
+)
+from app.api.v1.extraction import (
     router as extraction_router,
 )
 from app.api.v1.harvest import router as harvest_router
+from app.api.v1.insights import router as insights_router
 from app.api.v1.papers import router as papers_router
 from app.api.v1.profile import router as profile_router
 from app.api.v1.projects import router as projects_router
@@ -62,5 +65,6 @@ api_router.include_router(screening_ai_router)
 api_router.include_router(extraction_router)
 api_router.include_router(project_extraction_router)
 api_router.include_router(export_router)
+api_router.include_router(insights_router)
 api_router.include_router(profile_router)
 
