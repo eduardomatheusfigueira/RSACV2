@@ -177,6 +177,28 @@ class APIClient {
     return this.port
   }
 
+  /**
+   * A página tem chance real de alcançar um backend em `127.0.0.1`?
+   *
+   * Só quando ela mesma foi carregada do loopback (dev, ou o backend servindo
+   * a SPA) ou de `file://` (app de mesa). Numa origem remota — sobretudo em
+   * https, como a build publicada — apontar para loopback é impossível por
+   * conteúdo misto e CORS: o recuo não pode dar certo, e ainda troca a causa
+   * real ("nenhum servidor configurado") por uma parede de erros que aponta
+   * para o endereço errado, inclusive no diagnóstico mostrado ao usuário.
+   */
+  podeAlcancarLoopback(): boolean {
+    if (typeof window === 'undefined') return true
+    const { protocol, hostname } = window.location
+    if (protocol === 'file:') return true
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '[::1]' ||
+      hostname === '::1'
+    )
+  }
+
   getBaseUrl(): string {
     return this.baseUrl
   }
@@ -315,9 +337,16 @@ class APIClient {
       logStore.success(source, `${method} ${path} [${response.status} OK]`, `Resposta:\n${JSON.stringify(data, null, 2).slice(0, 1000)}`, duration)
       return data
     } catch (err: any) {
-      // Se deu erro de rede (Failed to fetch) e a porta configurada não for 8000, tenta fallback para 8000 (apenas em dev local)
+      // Erro de rede: recuar para a porta padrão 8000 só faz sentido onde o
+      // backend poderia estar na máquina de quem abriu a página. O comentário
+      // aqui dizia "apenas em dev local", mas o código não impunha isso.
       const envUrl = (import.meta as any).env?.VITE_API_URL
-      if (!envUrl && this.port !== 8000 && err.message?.includes('fetch')) {
+      if (
+        !envUrl &&
+        this.podeAlcancarLoopback() &&
+        this.port !== 8000 &&
+        err.message?.includes('fetch')
+      ) {
         this.setPort(8000)
         return this.request<T>(path, options)
       }

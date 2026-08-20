@@ -3,7 +3,7 @@
  * Configura roteamento, TanStack Query e inicializa conexão com backend.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
@@ -86,6 +86,14 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
   const [customUrl, setCustomUrl] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
+  // Reconexão automática: o servidor pode simplesmente ainda não ter subido, e
+  // sem isto quem deixasse a aba aberta esperando continuaria nesta tela mesmo
+  // depois de ele voltar.
+  useEffect(() => {
+    const id = window.setInterval(onRetry, 5000)
+    return () => window.clearInterval(id)
+  }, [onRetry])
+
   const handleConnect = (targetUrl: string) => {
     setErrorMsg('')
     const trimmed = targetUrl.trim()
@@ -95,6 +103,12 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
     }
     try {
       const destino = analisarUrlDeBackend(trimmed)
+      // Confirmação nomeando o host antes de apontar o app para outro
+      // servidor (doc 29 §29.12). Validar o formato não basta: o endereço
+      // pode ser válido e hostil, e é para ele que a senha digitada em
+      // seguida vai. `StatusBar` e o caminho do `?api_url=` já confirmam;
+      // aqui a etapa faltava.
+      if (!window.confirm(mensagemDeConfirmacao(destino))) return
       api.setBaseUrl(destino.url)
       onRetry()
     } catch (err: any) {

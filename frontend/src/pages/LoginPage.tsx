@@ -12,7 +12,7 @@ import { Button, FormGroup, Input } from '@/components/ui'
 import { RsacLockup } from '@/components/brand/RsacLockup'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { api } from '@/api/client'
-import { analisarUrlDeBackend } from '@/api/backendUrl'
+import { analisarUrlDeBackend, mensagemDeConfirmacao } from '@/api/backendUrl'
 import './LoginPage.css'
 
 export function LoginPage(): JSX.Element {
@@ -128,6 +128,10 @@ export function LoginPage(): JSX.Element {
               if (!input || !input.trim()) return
               try {
                 const destino = analisarUrlDeBackend(input)
+                // Confirmação nomeando o host (doc 29 §29.12). É desta tela
+                // que sai a senha do usuário: trocar o destino sem ver para
+                // onde ela vai é justamente o que a Fase 4 fechou.
+                if (!window.confirm(mensagemDeConfirmacao(destino))) return
                 api.setBaseUrl(destino.url)
                 window.location.reload()
               } catch (err: any) {

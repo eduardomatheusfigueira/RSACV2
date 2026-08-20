@@ -82,8 +82,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         status = await api.getAuthStatus()
       } catch (err) {
-        // Se falhou e a URL não era localhost, tenta o fallback local
-        if (!api.getBaseUrl().includes('127.0.0.1') && !api.getBaseUrl().includes('localhost')) {
+        // Recuar para o backend local: útil quando o túnel salvo expirou e o
+        // servidor está na própria máquina.
+        //
+        // `podeAlcancarLoopback()` é o que impede o recuo de acontecer onde
+        // ele não pode dar certo: numa página https publicada, apontar para
+        // `http://127.0.0.1` é barrado por conteúdo misto e CORS, e o único
+        // efeito é a tela de diagnóstico passar a acusar `127.0.0.1` em vez do
+        // endereço que o usuário de fato configurou — mandando-o depurar o
+        // lugar errado.
+        const eraRemoto =
+          !api.getBaseUrl().includes('127.0.0.1') && !api.getBaseUrl().includes('localhost')
+        if (eraRemoto && api.podeAlcancarLoopback()) {
           console.warn('[Auth] Falha ao conectar na URL remota configurada, tentando localhost:8000...')
           api.setBaseUrl('http://127.0.0.1:8000/api/v1')
           status = await api.getAuthStatus()
