@@ -78,7 +78,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    */
   bootstrap: async () => {
     try {
-      const status = await api.getAuthStatus()
+      let status: import('@/types/api').AuthStatus
+      try {
+        status = await api.getAuthStatus()
+      } catch (err) {
+        // Se falhou e a URL não era localhost, tenta o fallback local
+        if (!api.getBaseUrl().includes('127.0.0.1') && !api.getBaseUrl().includes('localhost')) {
+          console.warn('[Auth] Falha ao conectar na URL remota configurada, tentando localhost:8000...')
+          api.setBaseUrl('http://127.0.0.1:8000/api/v1')
+          status = await api.getAuthStatus()
+        } else {
+          throw err
+        }
+      }
       set({ status })
 
       if (status.authenticated && status.user) {

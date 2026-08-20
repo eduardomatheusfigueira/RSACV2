@@ -105,10 +105,69 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
     return () => api.setUnauthorizedHandler(null)
   }, [])
 
-  if (phase === 'checking' || phase === 'unavailable') {
+  if (phase === 'checking') {
     // A splash do index.html continua na tela até a aplicação montar; devolver
     // um fragmento vazio aqui a mantém visível enquanto se decide.
     return <></>
+  }
+
+  if (phase === 'unavailable') {
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1rem',
+        background: '#0d1b2a',
+        color: '#f8fafc',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        padding: '2rem',
+        textAlign: 'center',
+        zIndex: 10000
+      }}>
+        <h2 style={{ color: '#38bdf8', margin: 0 }}>Servidor Backend Indisponível</h2>
+        <p style={{ color: '#94a3b8', maxWidth: '480px', lineHeight: 1.5, margin: 0 }}>
+          O endereço configurado (<code>{api.getBackendHost()}</code>) não respondeu.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <button
+            onClick={() => {
+              sessionStorage.clear()
+              localStorage.removeItem('rsac_api_url')
+              api.setBaseUrl('http://127.0.0.1:8000/api/v1')
+              window.location.href = window.location.origin
+            }}
+            style={{
+              padding: '0.6rem 1.25rem',
+              background: '#2563eb',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Redefinir para Localhost:8000
+          </button>
+          <button
+            onClick={() => void bootstrap()}
+            style={{
+              padding: '0.6rem 1.25rem',
+              background: '#334155',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (phase === 'anonymous') {
