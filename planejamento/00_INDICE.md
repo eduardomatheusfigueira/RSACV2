@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–35` Vigente (Coleta)
 
 ---
 
@@ -27,12 +27,17 @@ Os documentos **31 a 33** registram o **planejamento de B.I. e
 bibliometria**, aberto para dar à revisão uma aba de indicadores após a
 Extração, e **concluído** — as quatro fases estão entregues.
 
+Os documentos **34 e 35** são o **planejamento vigente da coleta**:
+diagnóstico medido dos coletores SciELO e BDTD, e o plano de robustez e
+velocidade que dele decorre. Mesma gramática — diagnóstico → execução.
+
 ```
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
 23–27   vigente            design system e UX/UI
 28–30   concluído          segurança — as seis fases entregues ✅
 31–33   concluído          B.I. e bibliometria — as quatro fases entregues ✅
+34–35   vigente            confiabilidade e velocidade da coleta
 ```
 
 ---
@@ -83,6 +88,19 @@ Extração, e **concluído** — as quatro fases estão entregues.
 | **31** | [Diagnóstico de B.I.](./31_DIAGNOSTICO_BI.md) | Inventário do que o modelo de dados já sustenta, qualidade do dado e lacunas para bibliometria de citação |
 | **32** | [Especificação de B.I.](./32_ESPECIFICACAO_BI.md) | Documento normativo: contrato da API, normalização de texto livre, biblioteca de gráficos e métricas da v1 |
 | **33** | [Plano de Execução — B.I.](./33_PLANO_EXECUCAO_BI.md) | Quatro fases, do endpoint de agregação à aba navegável com filtros e proveniência de IA |
+
+---
+
+## 📌 Planejamento vigente — confiabilidade e velocidade da coleta
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **34** | [Diagnóstico da Coleta — SciELO e BDTD](./34_DIAGNOSTICO_COLETA_SCIELO_BDTD.md) | Estado real dos dois coletores nacionais, com linha de base medida sem rede |
+| **35** | [Plano de Robustez e Velocidade](./35_PLANO_ROBUSTEZ_VELOCIDADE_COLETA.md) | Sete fases: verdade → correção → ritmo → paralelismo → retomada → interface → testes |
+
+> A linha de base numérica dos docs 34 e 35 é reproduzível por
+> [`backend/scripts/bench_coleta.py`](../backend/scripts/bench_coleta.py),
+> que roda sem rede e serve de portão de regressão de desempenho.
 
 ---
 
