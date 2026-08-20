@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Vigente (Segurança)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Vigente (B.I. e Bibliometria)
 
 ---
 
@@ -19,16 +19,21 @@ Os documentos **23 a 27** são o **planejamento vigente** de UX, UI e
 profissionalização da interface. Seguem a mesma gramática dos planos temáticos
 anteriores — diagnóstico → especificação → execução → validação.
 
-Os documentos **28 a 30** são o **planejamento vigente de segurança**, aberto
+Os documentos **28 a 30** registram o **planejamento de segurança**, aberto
 quando o aplicativo passou a ter um servidor publicado na internet
-(`Iniciar_Servidor.bat`). Mesma gramática, e prioridade acima da de UX enquanto
-a Fase 0 do doc 30 não estiver entregue.
+(`Iniciar_Servidor.bat`) e **concluído** — as seis fases estão entregues.
+
+Os documentos **31 a 33** são o **planejamento vigente de B.I. e
+bibliometria**: uma aba de indicadores após a Extração, fundamentada no que o
+modelo de dados atual já sustenta. Mesma gramática — diagnóstico →
+especificação → execução.
 
 ```
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
-23–27   vigente            para onde vamos agora (UX/UI)
+23–27   vigente            design system e UX/UI
 28–30   concluído          segurança — as seis fases entregues ✅
+31–33   vigente            B.I. e bibliometria
 ```
 
 ---
@@ -61,6 +66,16 @@ a Fase 0 do doc 30 não estiver entregue.
 | **28** | [Diagnóstico de Segurança](./28_DIAGNOSTICO_SEGURANCA.md) | Modelo de ameaça, superfície de ataque medida e 18 vulnerabilidades com evidência em `arquivo:linha` |
 | **29** | [Especificação de Segurança](./29_ESPECIFICACAO_SEGURANCA.md) | Documento normativo: perfis de implantação, autenticação, cifra de segredos, política de saída e cabeçalhos |
 | **30** | [Plano de Execução — Segurança](./30_PLANO_EXECUCAO_SEGURANCA.md) | Seis fases, critérios de aceite e a suíte de testes que impede a regressão |
+
+---
+
+## 📊 Planejamento vigente — B.I. e Bibliometria
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **31** | [Diagnóstico de B.I.](./31_DIAGNOSTICO_BI.md) | Inventário do que o modelo de dados já sustenta, qualidade do dado e lacunas para bibliometria de citação |
+| **32** | [Especificação de B.I.](./32_ESPECIFICACAO_BI.md) | Documento normativo: contrato da API, normalização de texto livre, biblioteca de gráficos e métricas da v1 |
+| **33** | [Plano de Execução — B.I.](./33_PLANO_EXECUCAO_BI.md) | Quatro fases, do endpoint de agregação à aba navegável com filtros e proveniência de IA |
 
 ---
 
