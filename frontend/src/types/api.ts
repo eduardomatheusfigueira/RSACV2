@@ -86,7 +86,9 @@ export interface SearchFilters {
   year_end?: number | null
   languages?: string[]
   document_types?: string[]
+  institutions?: string[]
   open_access_only?: boolean
+  target_databases?: string[]
 }
 
 export interface Protocol {
@@ -194,6 +196,8 @@ export interface HarvestStartRequest {
   year_end?: number | null
   languages?: string[]
   document_types?: string[]
+  institutions?: string[]
+  open_access_only?: boolean
   fetch_details?: boolean
 }
 

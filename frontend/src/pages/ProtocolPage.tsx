@@ -49,6 +49,13 @@ import {
   BookMarked,
   ListChecks,
   Check,
+  Calendar,
+  Globe,
+  Sliders,
+  Lock,
+  Unlock,
+  Building2,
+  Info,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -58,6 +65,77 @@ import { GUIAS_DO_PROTOCOLO } from '@/data/guiasDoProtocolo'
 import { CampoDoProtocolo } from '@/components/protocol/CampoDoProtocolo'
 import type { CampoDoProtocoloProps } from '@/components/protocol/CampoDoProtocolo'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
+
+export const AVAILABLE_LANGUAGES = [
+  { code: 'pt', label: 'Português', flag: '🇧🇷' },
+  { code: 'en', label: 'Inglês', flag: '🇺🇸' },
+  { code: 'es', label: 'Espanhol', flag: '🇪🇸' },
+  { code: 'fr', label: 'Francês', flag: '🇫🇷' },
+  { code: 'de', label: 'Alemão', flag: '🇩🇪' },
+  { code: 'it', label: 'Italiano', flag: '🇮🇹' },
+]
+
+export const AVAILABLE_DOC_TYPES = [
+  { id: 'Artigo de Periódico', label: 'Artigo de Periódico', icon: '📄' },
+  { id: 'Tese', label: 'Tese de Doutorado', icon: '🎓' },
+  { id: 'Dissertação', label: 'Dissertação de Mestrado', icon: '📜' },
+  { id: 'Preprint', label: 'Preprint', icon: '⚡' },
+  { id: 'Livro', label: 'Livro', icon: '📚' },
+  { id: 'Capítulo de Livro', label: 'Capítulo de Livro', icon: '📑' },
+  { id: 'Trabalho em Anais/Conferência', label: 'Trabalho em Anais', icon: '🏛️' },
+  { id: 'Relatório Técnico', label: 'Relatório Técnico', icon: '📊' },
+]
+
+export const AVAILABLE_DATABASES = [
+  { id: 'BDTD', name: 'BDTD (IBICT)', desc: 'Teses e dissertações brasileiras com orientador e instituição', badge: 'Nacional / Aberto' },
+  { id: 'SciELO', name: 'SciELO', desc: 'Periódicos científicos de Acesso Aberto (América Latina e Caribe)', badge: 'Regional / 100% OA' },
+  { id: 'OpenAlex', name: 'OpenAlex', desc: 'Grafo científico global aberto com +250M de trabalhos', badge: 'Global / Aberto' },
+  { id: 'PubMed', name: 'PubMed (NCBI)', desc: 'Literatura biomédica e ciências da saúde pública', badge: 'Biomédica / NCBI' },
+  { id: 'Scopus', name: 'Scopus (Elsevier)', desc: 'Base multidisciplinar internacional indexada com peer review', badge: 'Multidisciplinar / API' },
+]
+
+export const FILTER_BEHAVIOR_MATRIX = [
+  {
+    db: 'BDTD (IBICT)',
+    years: { mode: 'Nativo', note: 'publishDate:[ini TO fim]' },
+    languages: { mode: 'Pós-filtro local', note: 'Filtrado após download (limitação de WAF máx 2 filtros na API)' },
+    types: { mode: 'Nativo', note: 'format:"masterThesis" / "doctoralThesis"' },
+    institutions: { mode: 'Nativo / Pós-filtro', note: 'institution:... e refinamento local' },
+    oa: { mode: 'Nativo (100%)', note: '100% Repositórios Públicos Abertos' },
+  },
+  {
+    db: 'SciELO',
+    years: { mode: 'Pós-filtro local', note: 'Filtrado após raspagem das páginas' },
+    languages: { mode: 'Pós-filtro local', note: 'Filtrado após raspagem das páginas' },
+    types: { mode: 'Nativo', note: 'Artigos de Periódicos' },
+    institutions: { mode: 'Pós-filtro local', note: 'Filtrado por afiliação autoral' },
+    oa: { mode: 'Nativo (100%)', note: '100% Acesso Aberto (Gold OA)' },
+  },
+  {
+    db: 'OpenAlex',
+    years: { mode: 'Nativo', note: 'publication_year:ini-fim' },
+    languages: { mode: 'Nativo', note: 'language:pt|en|es' },
+    types: { mode: 'Nativo', note: 'type:article|dissertation|book...' },
+    institutions: { mode: 'Nativo', note: 'institutions.ror' },
+    oa: { mode: 'Nativo', note: 'is_oa:true' },
+  },
+  {
+    db: 'PubMed (NCBI)',
+    years: { mode: 'Nativo', note: 'Filtro de data [dp]' },
+    languages: { mode: 'Nativo', note: 'Filtro de idioma [la]' },
+    types: { mode: 'Nativo', note: 'Tipo de publicação [pt]' },
+    institutions: { mode: 'Nativo', note: 'Afiliação institucional [ad]' },
+    oa: { mode: 'Nativo', note: 'free full text[filter]' },
+  },
+  {
+    db: 'Scopus (Elsevier)',
+    years: { mode: 'Nativo', note: 'PUBYEAR' },
+    languages: { mode: 'Nativo', note: 'LANGUAGE' },
+    types: { mode: 'Nativo', note: 'DOCTYPE' },
+    institutions: { mode: 'Nativo', note: 'AF-ID / AFFIL' },
+    oa: { mode: 'Nativo', note: 'OPENACCESS(1)' },
+  },
+]
 import { AIAssistButton } from '@/components/common/AIAssistButton'
 import {
   PageHeader,
@@ -123,7 +201,9 @@ export function ProtocolPage(): JSX.Element {
     year_end: null,
     languages: ['pt', 'en', 'es'],
     document_types: ['Tese', 'Dissertação', 'Artigo de Periódico'],
+    institutions: [],
     open_access_only: false,
+    target_databases: ['BDTD', 'SciELO', 'OpenAlex', 'Scopus'],
   })
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [questions, setQuestions] = useState<ExtractionQuestion[]>([])
@@ -311,7 +391,9 @@ export function ProtocolPage(): JSX.Element {
           year_end: proto.search_filters.year_end ?? null,
           languages: proto.search_filters.languages ?? ['pt', 'en', 'es'],
           document_types: proto.search_filters.document_types ?? ['Tese', 'Dissertação', 'Artigo de Periódico'],
+          institutions: proto.search_filters.institutions ?? [],
           open_access_only: proto.search_filters.open_access_only ?? false,
+          target_databases: proto.search_filters.target_databases ?? ['BDTD', 'SciELO', 'OpenAlex', 'Scopus'],
         })
       }
 
@@ -391,6 +473,26 @@ export function ProtocolPage(): JSX.Element {
       }
     }
 
+    // Injeção dos filtros estruturados de busca
+    if (searchFilters.year_start || searchFilters.year_end) {
+      ctx['search_years'] = `${searchFilters.year_start || 'Início'} a ${searchFilters.year_end || 'Atual'}`
+    }
+    if (searchFilters.languages?.length) {
+      ctx['search_languages'] = searchFilters.languages.join(', ')
+    }
+    if (searchFilters.document_types?.length) {
+      ctx['search_document_types'] = searchFilters.document_types.join(', ')
+    }
+    if (searchFilters.open_access_only) {
+      ctx['search_open_access'] = 'Apenas Acesso Aberto (Open Access)'
+    }
+    if (searchFilters.institutions?.length) {
+      ctx['search_institutions'] = searchFilters.institutions.join(', ')
+    }
+    if (searchFilters.target_databases?.length) {
+      ctx['search_target_databases'] = searchFilters.target_databases.join(', ')
+    }
+
     Object.entries(manuscript).forEach(([k, v]) => {
       if (v && v.trim() && k !== excludeFieldId) {
         ctx[k] = v.trim()
@@ -461,6 +563,59 @@ export function ProtocolPage(): JSX.Element {
       ...descriptors,
       [lang]: list.length ? list : [''],
     })
+  }
+
+  // ── Handlers de Filtros Estruturados de Busca (PRISMA Scope) ──────
+
+  const updateSearchFilter = <K extends keyof import('@/types/api').SearchFilters>(
+    key: K,
+    value: import('@/types/api').SearchFilters[K]
+  ) => {
+    setSearchFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }))
+  }
+
+  const toggleFilterLanguage = (langCode: string) => {
+    const current = searchFilters.languages || []
+    const next = current.includes(langCode)
+      ? current.filter((l) => l !== langCode)
+      : [...current, langCode]
+    updateSearchFilter('languages', next)
+  }
+
+  const toggleFilterDocType = (docType: string) => {
+    const current = searchFilters.document_types || []
+    const next = current.includes(docType)
+      ? current.filter((t) => t !== docType)
+      : [...current, docType]
+    updateSearchFilter('document_types', next)
+  }
+
+  const toggleTargetDatabase = (dbName: string) => {
+    const current = searchFilters.target_databases || ['BDTD', 'SciELO', 'OpenAlex', 'Scopus']
+    const next = current.includes(dbName)
+      ? current.filter((d) => d !== dbName)
+      : [...current, dbName]
+    updateSearchFilter('target_databases', next)
+  }
+
+  const applyYearPreset = (yearsBack: number | null) => {
+    if (yearsBack === null) {
+      setSearchFilters((prev) => ({
+        ...prev,
+        year_start: null,
+        year_end: null,
+      }))
+    } else {
+      const currentYear = new Date().getFullYear()
+      setSearchFilters((prev) => ({
+        ...prev,
+        year_start: currentYear - yearsBack + 1,
+        year_end: currentYear,
+      }))
+    }
   }
 
   // ── Handlers de Perguntas de Extração / Mapeamento ─────────────────
@@ -589,6 +744,14 @@ ${manuscript.info_sources || 'Não preenchido.'}
 - **Português:** ${descriptors.pt.filter(Boolean).join(' ; ') || 'Nenhum'}
 - **Inglês:** ${descriptors.en.filter(Boolean).join(' ; ') || 'Nenhum'}
 - **Espanhol:** ${descriptors.es.filter(Boolean).join(' ; ') || 'Nenhum'}
+
+### Recorte Temporal e Filtros Estruturados
+- **Período de Cobertura:** ${searchFilters.year_start || searchFilters.year_end ? `${searchFilters.year_start || 'Início'} a ${searchFilters.year_end || 'Atual'}` : 'Sem restrição temporal (Todos os anos)'}
+- **Idiomas Elegíveis:** ${searchFilters.languages?.length ? searchFilters.languages.join(', ') : 'Todos os idiomas'}
+- **Tipos de Documento Aceitos:** ${searchFilters.document_types?.length ? searchFilters.document_types.join(', ') : 'Todos os tipos'}
+- **Instituições / Afiliações:** ${searchFilters.institutions?.length ? searchFilters.institutions.join(', ') : 'Sem restrição (Todas as instituições)'}
+- **Acesso Aberto:** ${searchFilters.open_access_only ? 'Restrito estritamente a Acesso Aberto (Open Access)' : 'Sem restrição de modelo de acesso'}
+- **Bases de Dados Alvo:** ${searchFilters.target_databases?.length ? searchFilters.target_databases.join(', ') : 'BDTD, SciELO, OpenAlex, Scopus'}
 
 ### Critérios de Inclusão
 ${criteria.filter((c) => !c.is_exclusion).map((c, i) => `${i + 1}. ${c.text}`).join('\n') || 'Nenhum'}
@@ -1500,6 +1663,342 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               >
                 <Plus size={14} /> Adicionar Par de Descritores ({descriptors[activeLangTab].length})
               </button>
+            </div>
+          </Card>
+
+          {/* Seção 4: Recorte & Filtros Estruturados da Busca */}
+          <Card surface="secundaria" className="protocol-card search-filters-card">
+            <div className="item-header-meta">
+              <span className="item-tag essential">{getFieldItemTag('search_filters', 7)}</span>
+              <span className="item-section-tag">MÉTODOS / RECORTE & FILTROS ESTRUTURADOS</span>
+            </div>
+            <div className="card-section-title-with-actions">
+              <div className="card-section-title">
+                <Sliders size={20} className="icon-accent" />
+                <h2>Recorte Temporal, Idiomas, Tipos de Documento & Bases Alvo</h2>
+              </div>
+              <div className="card-header-actions">
+                <button
+                  type="button"
+                  className={`btn-help-toggle ${helpOpen.searchFilters ? 'active' : ''}`}
+                  onClick={() => toggleHelp('searchFilters')}
+                  title="Ver orientações metodológicas para filtros de busca"
+                >
+                  <HelpCircle size={16} />
+                  <span>Guia dos Filtros (?)</span>
+                </button>
+              </div>
+            </div>
+
+            <p className="section-help">
+              Conforme PRISMA-ScR (Item 7 e 8) e PRISMA 2020: Estabeleça explicitamente todos os limites de busca (período temporal, restrições linguísticas, tipos de publicação aceitos e bases de dados alvo) antes de iniciar a coleta.
+            </p>
+
+            {helpOpen.searchFilters && (
+              <div className="structured-guide-box animate-fade-in">
+                <div className="guide-header">
+                  <div className="guide-title">
+                    <HelpCircle size={18} className="icon-accent" />
+                    <strong>Orientações Metodológicas para Filtros Estruturados</strong>
+                  </div>
+                </div>
+                <div className="guide-grid">
+                  <div className="guide-item">
+                    <span className="guide-tag">1. Recorte Temporal</span>
+                    <p>Delimite o ano inicial e final com base na evolução histórica do tema ou marcos regulatórios/conceituais em Ciências Sociais Aplicadas.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">2. Restrições Linguísticas</span>
+                    <p>Documente os idiomas elegíveis (ex: Português, Inglês e Espanhol) para evitar viés de publicação não justificado.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">3. Tipos de Produção</span>
+                    <p>Especifique se a revisão inclui literatura cinzenta (Teses e Dissertações na BDTD) e artigos revisados por pares.</p>
+                  </div>
+                  <div className="guide-item">
+                    <span className="guide-tag">4. Bases Alvo</span>
+                    <p>Selecione as bases que serão consultadas na etapa de Coleta para manter o alinhamento rigoroso entre protocolo e execução.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="search-filters-form-grid">
+              {/* 1. Recorte Temporal */}
+              <div className="filter-section-block">
+                <div className="filter-block-header">
+                  <Calendar size={16} className="icon-accent" />
+                  <h4>1. Recorte Temporal (Anos de Publicação)</h4>
+                </div>
+                <div className="temporal-controls-container">
+                  <div className="temporal-inputs-row">
+                    <div className="temporal-input-group">
+                      <label htmlFor="filter-year-start">Ano Inicial (De):</label>
+                      <input
+                        id="filter-year-start"
+                        type="number"
+                        min="1900"
+                        max="2100"
+                        placeholder="Ex: 2015"
+                        value={searchFilters.year_start ?? ''}
+                        onChange={(e) =>
+                          updateSearchFilter('year_start', e.target.value ? Number(e.target.value) : null)
+                        }
+                      />
+                    </div>
+                    <span className="temporal-separator">até</span>
+                    <div className="temporal-input-group">
+                      <label htmlFor="filter-year-end">Ano Final (Até):</label>
+                      <input
+                        id="filter-year-end"
+                        type="number"
+                        min="1900"
+                        max="2100"
+                        placeholder="Ex: 2026"
+                        value={searchFilters.year_end ?? ''}
+                        onChange={(e) =>
+                          updateSearchFilter('year_end', e.target.value ? Number(e.target.value) : null)
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="temporal-presets-row">
+                    <span className="presets-label">Atalhos:</span>
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => applyYearPreset(5)}
+                    >
+                      Últimos 5 Anos
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => applyYearPreset(10)}
+                    >
+                      Últimos 10 Anos
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => applyYearPreset(null)}
+                    >
+                      Sem Limite Temporal
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Restrição de Acesso Aberto */}
+              <div className="filter-section-block">
+                <div className="filter-block-header">
+                  <Lock size={16} className="icon-accent" />
+                  <h4>2. Modelo de Acesso</h4>
+                </div>
+                <label className={`oa-toggle-card ${searchFilters.open_access_only ? 'active' : ''}`}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(searchFilters.open_access_only)}
+                    onChange={(e) => updateSearchFilter('open_access_only', e.target.checked)}
+                  />
+                  <div className="oa-toggle-info">
+                    <div className="oa-toggle-title">
+                      {searchFilters.open_access_only ? <Unlock size={14} className="text-success" /> : <Lock size={14} />}
+                      <strong>Restringir apenas a publicações de Acesso Aberto (Open Access)</strong>
+                    </div>
+                    <p>Quando ativado, filtra somente trabalhos disponíveis publicamente e sem paywall nas bases compatíveis.</p>
+                  </div>
+                </label>
+              </div>
+
+              {/* 3. Idiomas Elegíveis */}
+              <div className="filter-section-block">
+                <div className="filter-block-header">
+                  <Globe size={16} className="icon-accent" />
+                  <h4>3. Idiomas Elegíveis ({searchFilters.languages?.length || 0} selecionados)</h4>
+                </div>
+                <div className="filter-chips-grid">
+                  {AVAILABLE_LANGUAGES.map((lang) => {
+                    const isSelected = searchFilters.languages?.includes(lang.code)
+                    return (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        className={`filter-chip-btn ${isSelected ? 'active' : ''}`}
+                        onClick={() => toggleFilterLanguage(lang.code)}
+                      >
+                        <span className="chip-flag">{lang.flag}</span>
+                        <span className="chip-label">{lang.label}</span>
+                        {isSelected ? <Check size={13} className="chip-check" /> : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Tipos de Documento Aceitos */}
+              <div className="filter-section-block">
+                <div className="filter-block-header">
+                  <FileText size={16} className="icon-accent" />
+                  <h4>4. Tipos de Documento Aceitos ({searchFilters.document_types?.length || 0} selecionados)</h4>
+                </div>
+                <div className="filter-chips-grid doc-types-grid">
+                  {AVAILABLE_DOC_TYPES.map((dt) => {
+                    const isSelected = searchFilters.document_types?.includes(dt.id)
+                    return (
+                      <button
+                        key={dt.id}
+                        type="button"
+                        className={`filter-chip-btn ${isSelected ? 'active' : ''}`}
+                        onClick={() => toggleFilterDocType(dt.id)}
+                      >
+                        <span className="chip-icon">{dt.icon}</span>
+                        <span className="chip-label">{dt.label}</span>
+                        {isSelected ? <Check size={13} className="chip-check" /> : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 5. Instituições / Afiliações Alvo (Opcional) */}
+              <div className="filter-section-block full-width">
+                <div className="filter-block-header">
+                  <Building2 size={16} className="icon-accent" />
+                  <h4>5. Instituições / Afiliações de Origem (Opcional)</h4>
+                </div>
+                <div className="institutions-input-container">
+                  <input
+                    type="text"
+                    className="form-control institution-text-input"
+                    placeholder="Ex: USP, UFMS, UFRJ, UNICAMP, IPEA (deixe em branco para incluir todas as instituições)"
+                    value={(searchFilters.institutions || []).join(', ')}
+                    onChange={(e) => {
+                      const list = e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                      updateSearchFilter('institutions', list)
+                    }}
+                  />
+                  <span className="meta-hint">
+                    {searchFilters.institutions?.length
+                      ? `Filtrando por ${searchFilters.institutions.length} instituição(ões): ${searchFilters.institutions.join(', ')}`
+                      : 'Nenhuma restrição institucional (todas as instituições aceitas).'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 6. Bases de Dados Alvo do Protocolo */}
+              <div className="filter-section-block full-width">
+                <div className="filter-block-header">
+                  <Database size={16} className="icon-accent" />
+                  <h4>6. Bases de Dados Acadêmicas Alvo do Protocolo ({searchFilters.target_databases?.length || 0} selecionadas)</h4>
+                </div>
+                <div className="target-dbs-grid">
+                  {AVAILABLE_DATABASES.map((db) => {
+                    const isSelected = (searchFilters.target_databases || ['BDTD', 'SciELO', 'OpenAlex', 'Scopus']).includes(db.id)
+                    return (
+                      <div
+                        key={db.id}
+                        className={`target-db-card ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleTargetDatabase(db.id)}
+                      >
+                        <div className="target-db-header">
+                          <label className="target-db-checkbox-label" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleTargetDatabase(db.id)}
+                            />
+                            <span className="target-db-name">{db.name}</span>
+                          </label>
+                          <span className="target-db-badge">{db.badge}</span>
+                        </div>
+                        <p className="target-db-desc">{db.desc}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 7. Matriz de Transparência & Comportamento dos Filtros por Base */}
+              <div className="filter-section-block full-width filter-matrix-block">
+                <div className="filter-block-header">
+                  <Info size={16} className="icon-accent" />
+                  <h4>7. Transparência Metodológica: Comportamento dos Filtros por Base</h4>
+                </div>
+                <p className="matrix-description">
+                  Cada base de dados acadêmica possui regras de API e limitações de servidor distintas.
+                  A tabela abaixo detalha quando cada filtro é aplicado diretamente na consulta remota (<strong>Filtro Nativo</strong>)
+                  ou após o download dos registros brutos em memória local (<strong>Pós-Filtro Local</strong>):
+                </p>
+
+                <div className="filter-matrix-table-wrapper">
+                  <table className="filter-matrix-table">
+                    <thead>
+                      <tr>
+                        <th>Base de Dados</th>
+                        <th>Período</th>
+                        <th>Idioma</th>
+                        <th>Tipos de Documento</th>
+                        <th>Instituições</th>
+                        <th>Acesso Aberto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {FILTER_BEHAVIOR_MATRIX.map((row) => (
+                        <tr key={row.db}>
+                          <td className="matrix-db-cell">
+                            <strong>{row.db}</strong>
+                          </td>
+                          <td>
+                            <span className={`matrix-mode-badge ${row.years.mode.includes('Nativo') ? 'native' : 'post'}`}>
+                              {row.years.mode}
+                            </span>
+                            <span className="matrix-note">{row.years.note}</span>
+                          </td>
+                          <td>
+                            <span className={`matrix-mode-badge ${row.languages.mode.includes('Nativo') ? 'native' : 'post'}`}>
+                              {row.languages.mode}
+                            </span>
+                            <span className="matrix-note">{row.languages.note}</span>
+                          </td>
+                          <td>
+                            <span className={`matrix-mode-badge ${row.types.mode.includes('Nativo') ? 'native' : 'post'}`}>
+                              {row.types.mode}
+                            </span>
+                            <span className="matrix-note">{row.types.note}</span>
+                          </td>
+                          <td>
+                            <span className={`matrix-mode-badge ${row.institutions.mode.includes('Nativo') ? 'native' : 'post'}`}>
+                              {row.institutions.mode}
+                            </span>
+                            <span className="matrix-note">{row.institutions.note}</span>
+                          </td>
+                          <td>
+                            <span className={`matrix-mode-badge ${row.oa.mode.includes('Nativo') ? 'native' : 'post'}`}>
+                              {row.oa.mode}
+                            </span>
+                            <span className="matrix-note">{row.oa.note}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="matrix-info-alert">
+                  <Info size={16} className="text-info" />
+                  <div className="matrix-info-alert-content">
+                    <strong>Por que o Pós-Filtro Local é necessário?</strong>
+                    <p>
+                      Em servidores como o da <strong>BDTD (VuFind)</strong>, o envio de múltiplos filtros combinados aciona o Firewall de Aplicação Web (WAF) retornando erro <code>429 (Too Many Requests)</code>.
+                      Ao aplicar o filtro de idioma localmente em memória após a recuperação, o RSAC V2 garante 100% de conformidade com o protocolo sem risco de sobrecarga ou bloqueio.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </Card>
         </Tabs.Content>

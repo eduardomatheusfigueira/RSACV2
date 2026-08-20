@@ -90,6 +90,8 @@ async def start_harvest(
             year_end=data.year_end,
             languages=data.languages,
             document_types=data.document_types,
+            institutions=data.institutions,
+            open_access_only=data.open_access_only,
             fetch_details=data.fetch_details,
         ),
         sources=data.sources,

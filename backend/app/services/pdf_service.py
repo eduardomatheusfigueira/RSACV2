@@ -190,8 +190,14 @@ class PDFService:
     def save_uploaded_pdf(self, project_id: str, paper_id: str, file_bytes: bytes) -> str:
         """Salva um PDF enviado manualmente pelo usuário (com validação)."""
         if not is_pdf_bytes(file_bytes):
+            head_sample = file_bytes[:1024].lower()
+            if b"<html" in head_sample or b"<!doctype" in head_sample:
+                raise ValueError(
+                    "O arquivo enviado é uma página HTML e não um documento PDF. "
+                    "Isso geralmente ocorre quando o navegador salva a página de visualização/repositório em vez do arquivo PDF direto."
+                )
             raise ValueError(
-                "O arquivo enviado não é um PDF válido (assinatura %PDF ausente)."
+                "O arquivo enviado não é um PDF válido (assinatura %PDF ausente ou arquivo corrompido)."
             )
         return self.save_pdf_bytes(project_id, paper_id, file_bytes)
 

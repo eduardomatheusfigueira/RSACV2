@@ -280,6 +280,8 @@ class HarvestingService:
         year_end: Optional[int] = None,
         languages: Optional[List[str]] = None,
         document_types: Optional[List[str]] = None,
+        institutions: Optional[List[str]] = None,
+        open_access_only: Optional[bool] = None,
         fetch_details: bool = True,
     ):
         """Orquestra a coleta de múltiplos coletores em paralelo."""
@@ -324,6 +326,8 @@ class HarvestingService:
             effective_year_end = year_end if year_end is not None else proto_filters.get("year_end")
             effective_languages = languages if languages is not None else proto_filters.get("languages", [])
             effective_doc_types = document_types if document_types is not None else proto_filters.get("document_types", [])
+            effective_institutions = institutions if institutions is not None else proto_filters.get("institutions", [])
+            effective_oa = open_access_only if open_access_only is not None else proto_filters.get("open_access_only", False)
 
             harvest_query = HarvestQuery(
                 descriptors=descriptors,
@@ -331,6 +335,8 @@ class HarvestingService:
                 year_end=effective_year_end,
                 languages=effective_languages,
                 document_types=effective_doc_types,
+                institutions=effective_institutions,
+                open_access_only=bool(effective_oa),
                 max_records_per_descriptor=max_records_per_descriptor,
                 fetch_details=fetch_details,
             )

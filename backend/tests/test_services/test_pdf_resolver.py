@@ -54,6 +54,9 @@ def test_normalize_doi(raw, expected):
 def test_is_pdf_bytes_tolera_lixo_inicial():
     assert is_pdf_bytes(b"%PDF-1.4 conteudo")
     assert is_pdf_bytes(b"\n\r  %PDF-1.4")
+    assert is_pdf_bytes(b"\xef\xbb\xbf%PDF-1.4 com BOM")
+    assert is_pdf_bytes(b"\x00\x00 %PDF-1.5")
+    assert is_pdf_bytes(b"Header lixo ... %PDF-1.7")
     assert not is_pdf_bytes(b"<!DOCTYPE html><html>")
     assert not is_pdf_bytes(b"")
 

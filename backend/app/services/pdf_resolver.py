@@ -1017,8 +1017,45 @@ class PDFResolver:
 
 
 def is_pdf_bytes(content: bytes) -> bool:
-    """Valida a assinatura do arquivo (`%PDF`), tolerando lixo inicial."""
-    if not content:
+    """
+    Valida se o conteúdo é um PDF válido.
+    Tolera BOM, bytes nulos/espaços no início e localização do marcador
+    %PDF nos primeiros 2048 bytes (conforme ISO 32000-1), com fallback para
+    os motores PyMuPDF e pypdf.
+    """
+    if not content or len(content) < 4:
         return False
-    head = content[:1024].lstrip()
-    return head.startswith(b"%PDF")
+
+    # 1. Checagem de assinatura %PDF nos primeiros 2048 bytes (com remoção de BOM e nulos)
+    prefix = content[:2048]
+    if prefix.startswith(b"\xef\xbb\xbf"):
+        prefix = prefix[3:]
+    prefix = prefix.lstrip(b" \t\r\n\x00\x0b\x0c")
+    if prefix.startswith(b"%PDF"):
+        return True
+    if b"%PDF-" in content[:2048]:
+        return True
+
+    # 2. Fallback: verificar se PyMuPDF consegue abrir o documento
+    try:
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
+        with fitz.open(stream=content, filetype="pdf") as doc:
+            if doc.page_count > 0:
+                return True
+    except Exception:
+        pass
+
+    # 3. Fallback: verificar se pypdf consegue abrir o documento
+    try:
+        import io
+        import pypdf
+        reader = pypdf.PdfReader(io.BytesIO(content))
+        if len(reader.pages) > 0:
+            return True
+    except Exception:
+        pass
+
+    return False

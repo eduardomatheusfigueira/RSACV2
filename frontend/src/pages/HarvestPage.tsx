@@ -165,7 +165,15 @@ export function HarvestPage(): JSX.Element {
       setProtocol(protoRes)
       const srcList = sourcesRes.sources || []
       setSources(srcList)
-      setSelectedSources(srcList.filter((s: HarvestSourceInfo) => s.enabled).map((s: HarvestSourceInfo) => s.id))
+      const targetDbs = protoRes.search_filters?.target_databases
+      if (targetDbs && targetDbs.length > 0) {
+        const matching = srcList
+          .filter((s: HarvestSourceInfo) => targetDbs.includes(s.id) && s.enabled)
+          .map((s: HarvestSourceInfo) => s.id)
+        setSelectedSources(matching.length > 0 ? matching : srcList.filter((s: HarvestSourceInfo) => s.enabled).map((s: HarvestSourceInfo) => s.id))
+      } else {
+        setSelectedSources(srcList.filter((s: HarvestSourceInfo) => s.enabled).map((s: HarvestSourceInfo) => s.id))
+      }
       setTotalFound(statsRes.total_papers || 0)
       setTotalNew(statsRes.total_papers || 0)
       setHarvestRuns(runsRes.items || [])
@@ -213,9 +221,16 @@ export function HarvestPage(): JSX.Element {
       })
       setProgress(initialProgress)
 
+      const filters = protocol?.search_filters || {}
       await api.startHarvest(id, {
         sources: selectedSources,
         max_records_per_descriptor: maxRecords > 0 ? maxRecords : null,
+        year_start: filters.year_start,
+        year_end: filters.year_end,
+        languages: filters.languages,
+        document_types: filters.document_types,
+        institutions: filters.institutions,
+        open_access_only: filters.open_access_only,
       })
 
       // Polling de status da coleta
@@ -521,6 +536,13 @@ export function HarvestPage(): JSX.Element {
             <Card surface="primaria" className="harvest-config-card">
               <div className="card-mini-title">
                 <h4>3. Recorte Vigente & Limites</h4>
+                <button
+                  type="button"
+                  className="link-action"
+                  onClick={() => navigate(`/projects/${id}/protocol`)}
+                >
+                  Ajustar no Protocolo
+                </button>
               </div>
               <div className="config-fields-group">
                 <div className="config-info-row">
@@ -528,16 +550,42 @@ export function HarvestPage(): JSX.Element {
                   <strong>
                     {filters.year_start || filters.year_end
                       ? `${filters.year_start || 'Início'} a ${filters.year_end || 'Atual'}`
-                      : 'Todos os anos'}
+                      : 'Todos os anos (Sem restrição)'}
                   </strong>
                 </div>
                 <div className="config-info-row">
                   <span>Idiomas:</span>
                   <strong>
                     {filters.languages && filters.languages.length > 0
-                      ? filters.languages.join(', ')
-                      : 'Todos'}
+                      ? filters.languages.map((l: string) => l.toUpperCase()).join(', ')
+                      : 'Todos os idiomas'}
                   </strong>
+                </div>
+                <div className="config-info-row">
+                  <span>Tipos de Documento:</span>
+                  <strong>
+                    {filters.document_types && filters.document_types.length > 0
+                      ? filters.document_types.join(', ')
+                      : 'Todos os tipos'}
+                  </strong>
+                </div>
+                {filters.institutions && filters.institutions.length > 0 && (
+                  <div className="config-info-row">
+                    <span>Instituições:</span>
+                    <strong>{filters.institutions.join(', ')}</strong>
+                  </div>
+                )}
+                {filters.open_access_only && (
+                  <div className="config-info-row">
+                    <span>Acesso:</span>
+                    <strong className="text-success">Apenas Acesso Aberto (Open Access)</strong>
+                  </div>
+                )}
+                <div className="harvest-filters-transparency-note">
+                  <span className="transparency-title">💡 Transparência na Coleta:</span>
+                  <p>
+                    Filtros como <em>Idioma na BDTD</em> e <em>Ano na SciELO</em> são aplicados após o download (pós-filtro local) para contornar limitações de WAF dos servidores públicos. A coleta pode baixar temporariamente mais registros brutos antes de refinar.
+                  </p>
                 </div>
                 <div className="form-group-limit">
                   <label htmlFor="max-records-select">Limite de Registros por Consulta:</label>

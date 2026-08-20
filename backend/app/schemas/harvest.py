@@ -21,6 +21,8 @@ class HarvestStartRequest(BaseModel):
     year_end: Optional[int] = Field(default=None, ge=1800, le=2100)
     languages: Optional[List[str]] = Field(default_factory=list)
     document_types: Optional[List[str]] = Field(default_factory=list)
+    institutions: Optional[List[str]] = Field(default_factory=list)
+    open_access_only: Optional[bool] = False
     fetch_details: bool = Field(default=True, description="Raspar detalhes profundos como orientador e instituição de defesa")
 
 

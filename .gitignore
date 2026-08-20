@@ -97,6 +97,7 @@ electron.vite.config.*.mjs
 .env.production.local
 config_gemini.json
 secrets.json
+rsac-perfil-backup-*.json
 
 # ── IDEs & Operating Systems ────────────────────────────────────────
 .idea/
