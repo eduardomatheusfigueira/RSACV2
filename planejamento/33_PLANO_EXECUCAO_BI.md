@@ -109,7 +109,7 @@ para 1120 KB minificados (203 KB → 319 KB gzip). Aceitável para uma
 ferramenta de pesquisa desktop/self-hosted, mas é o preço real da decisão —
 não um efeito colateral a esconder.
 
-## Fase 2 — Filtros na interface e refinamento do funil de critérios
+## Fase 2 — Filtros na interface e refinamento do funil de critérios ✅ ENTREGUE
 
 **Objetivo**: os parâmetros de filtro do endpoint (doc 32 §3.2) ficam
 acessíveis na interface, não só na API; o funil de critérios recebe
@@ -129,7 +129,40 @@ tratamento visual que deixa claro qual critério reprovou mais artigos.
 verificação manual de que aplicar um filtro de base restringe os rankings
 sem alterar o funil PRISMA.
 
-## Fase 3 — Indicadores de processo e proveniência de IA
+**Retrospectiva**: entregue conforme especificado, com a ordenação por
+impacto implementada no backend (`_criteria_funnel`, não no frontend) — é o
+mesmo dado para qualquer cliente, e o backend já era o lugar que decidia a
+ordem de exibição dos outros rankings. A definição de "impacto" exigiu uma
+decisão que o doc 32 não detalhava: para um critério de EXCLUSÃO, atender é
+o que reprova (`met_count`); para um critério de INCLUSÃO, é o oposto — não
+atender é o que reprova (`not_met_count`). Invertida, a fórmula contaria o
+critério mais permissivo como o mais decisivo. Testada com um cenário de
+impacto bem distinto (não o `projeto_populado` de empate 1×1 da Fase 0, que
+não provava a ordenação) e verificada por regressão: removida a chamada de
+`sort`, o teste falhou como esperado, antes de a correção voltar.
+
+Os filtros (decisão/base/ano) ficaram acessíveis via `Select`/`Input` do
+kit de UI, com uma nota fixa na página explicando quais blocos o filtro
+afeta. Verificação manual (mesmo harness da Fase 1, doc 26) trocando o
+filtro de decisão de "Incluído" para "Excluído" ao vivo: os seis blocos de
+conteúdo mudaram (título, dado e estado vazio), os seis blocos de processo
+— funil PRISMA, funil de critérios, composição por decisão, volume por
+base, throughput e proveniência de IA — permaneceram pixel a pixel
+idênticos entre as duas capturas, confirmando doc 32 §3.2 na prática, não só
+no teste.
+
+Teste do lado do frontend: a montagem da query (`?decision=...&source=...`)
+foi extraída para `construirQueryDeInsights` em `insightsFormat.ts` —
+mesmo módulo sem import da Fase 1 — e testada isoladamente. `client.ts`
+passou a chamá-la em vez de montar a `URLSearchParams` inline. Não há teste
+automatizado do clique no `<select>` em si (mesma limitação de
+infraestrutura registrada na Fase 1); a garantia de "muda o parâmetro, muda
+o gráfico" vem da combinação do teste de `construirQueryDeInsights` (o
+parâmetro muda) com os testes de backend que já provam que cada valor de
+filtro produz um agregado diferente (o gráfico muda) e a verificação manual
+acima (as duas coisas juntas, ao vivo).
+
+## Fase 3 — Indicadores de processo e proveniência de IA ✅ ENTREGUE
 
 **Objetivo**: throughput de triagem por pessoa, proporção de decisões
 assistidas por IA e taxa de resposta fora do vocabulário esperado (doc 32
@@ -150,6 +183,46 @@ modelo de dados (Fase 5 do plano de segurança).
 passando; verificação manual de que o indicador de throughput reflete
 corretamente decisões tomadas por usuários diferentes em um projeto de
 teste com mais de uma conta.
+
+**Retrospectiva**: entregue conforme especificado, com uma correção sobre a
+premissa do próprio doc 32 §6.5. O texto original descrevia
+`source = "ia"` como o valor a contar; o código real
+(`app/services/screening_service.py`) grava `source=f"ai:{provedor}"` (ex.:
+`"ai:gemini"`), e a troca manual (`app/api/v1/papers.py`) grava
+`source="manual"`. A classificação em `_proveniencia_ia` usa
+`source.startswith("ai:")` contra o dado real, não contra a string do
+documento — encontrado ao ler o código de gravação antes de escrever a
+consulta, não depois de um teste falhar.
+
+Throughput e proporção manual/IA contam **eventos de auditoria**
+(`action IN ('ai_screening', 'decision_changed')`), não "papers" — um
+mesmo artigo pode ter mais de um evento (a IA sugere, uma pessoa corrige
+depois), e throughput mede trabalho de triagem feito, não o estado final
+da amostra. A taxa de resposta inválida só entra no denominador quem foi
+`ai_screening`; a decisão manual de correção não conta como "resposta de
+IA que precisou de correção" — ela É a correção.
+
+Testado com um projeto isolado (`projeto_com_auditoria`, não o
+`projeto_populado` das fases anteriores, para não herdar decisões sem
+auditoria e distorcer os totais): duas pessoas, três decisões assistidas
+(uma inválida), uma manual, confiança em três faixas distintas. Sete testes
+novos, incluindo o caso de projeto sem nenhuma decisão assistida (taxa e
+distribuição devolvem vazio/`None`, não erro) e a confirmação de que o
+agregado ignora o filtro de decisão, como os outros agregados de processo.
+
+Verificação manual (mesmo harness, doc 26): decisões de IA e manuais
+inseridas via ORM direto (reproduzindo os campos exatos que
+`screening_service.py`/`papers.py` gravariam — não um mock), `ai_confidence`
+setado em três artigos. Screenshot confirma throughput por pessoa, a
+proporção 3×1 IA/manual, "33%" de taxa de resposta inválida (1 de 3 eventos
+`ai_screening`) e a distribuição de confiança em três faixas — todos batendo
+exatamente com o que a consulta HTTP direta ao endpoint já mostrava.
+
+`README.md` e `planejamento/00_INDICE.md` não foram atualizados nesta
+rodada — ficam para o fechamento do plano (quando não houver mais fase
+aberta), no mesmo momento em que a Fase 5 de segurança atualizou os dois de
+uma vez, para não registrar "concluído" em documento de topo enquanto o
+plano de B.I. ainda está em andamento.
 
 ## Fora do plano
 

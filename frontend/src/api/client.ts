@@ -28,6 +28,7 @@ import type {
 
 import { useLogStore } from '@/stores/useLogStore'
 import { analisarUrlDeBackend } from '@/api/backendUrl'
+import { construirQueryDeInsights } from '@/pages/insightsFormat'
 
 // A forma da resposta de extração vive em `types/api.ts` (junto do estado do
 // PDF que ela carrega); aqui apenas reexportamos para quem importa do cliente.
@@ -754,13 +755,7 @@ class APIClient {
     projectId: string,
     filters?: import('@/types/api').InsightsFilters
   ): Promise<import('@/types/api').ProjectInsights> {
-    const searchParams = new URLSearchParams()
-    if (filters?.decision) searchParams.set('decision', filters.decision)
-    if (filters?.source) searchParams.set('source', filters.source)
-    if (filters?.year_from) searchParams.set('year_from', String(filters.year_from))
-    if (filters?.year_to) searchParams.set('year_to', String(filters.year_to))
-
-    const qs = searchParams.toString() ? `?${searchParams.toString()}` : ''
+    const qs = construirQueryDeInsights(filters)
     return this.request<import('@/types/api').ProjectInsights>(`/projects/${projectId}/insights${qs}`)
   }
 

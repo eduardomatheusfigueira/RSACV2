@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.enums import Decision
 from app.infrastructure.persistence.models import (
+    AuditLogModel,
     CriterionModel,
     ExtractionAnswerModel,
     ExtractionQuestionModel,
@@ -30,6 +31,11 @@ from app.infrastructure.persistence.models import (
     ProtocolModel,
 )
 from app.services.export_service import ExportService
+
+# Ações de `AuditLogModel` que representam uma decisão de triagem tomada —
+# manual (`app/api/v1/papers.py`) ou assistida (`app/services/screening_service.py`).
+# Outras ações (ex.: importação de perfil sem log completo) ficam de fora.
+_ACOES_DE_DECISAO = ("ai_screening", "decision_changed")
 
 _ESPACOS = re.compile(r"\s+")
 
@@ -104,12 +110,29 @@ def _base_query_conteudo(
     return query
 
 
+def _impacto(item: dict) -> int:
+    """
+    Quantos artigos este critério tirou do caminho — a leitura que
+    "atende"/"não atende" sozinho não dá (doc 33 Fase 2).
+
+    Para um critério de EXCLUSÃO, atender é o que exclui (`met_count`). Para
+    um critério de INCLUSÃO, é o contrário: não atender é o que barra
+    (`not_met_count`). Inverter os dois contaria o critério mais permissivo
+    como o mais decisivo.
+    """
+    return item["met_count"] if item["is_exclusion"] else item["not_met_count"]
+
+
 def _criteria_funnel(db: Session, project_id: str) -> list[dict]:
     """
     Para cada critério do protocolo, quantos artigos avaliados o atendem —
     o gráfico que explica por que a amostra final tem o tamanho que tem
     (doc 32 §6.1). Não é afetado pelos filtros: é sempre sobre a avaliação
     completa, não sobre um recorte da amostra final.
+
+    Ordenado por impacto (doc 33 Fase 2): o critério que mais tirou artigo do
+    caminho aparece primeiro — é a ordem que responde à pergunta do bloco,
+    não a ordem de cadastro no protocolo.
     """
     criterios = (
         db.query(CriterionModel)
@@ -149,6 +172,7 @@ def _criteria_funnel(db: Session, project_id: str) -> list[dict]:
             "met_count": atendem,
             "not_met_count": nao_atendem,
         })
+    funil.sort(key=_impacto, reverse=True)
     return funil
 
 
@@ -255,6 +279,76 @@ def _pdf_health(db: Session, project_id: str, papers_ids: list[str]) -> dict:
     }
 
 
+# Largura dos intervalos de confiança do gráfico de distribuição — décimos
+# fixos, não quantis: o eixo precisa significar a mesma coisa entre projetos.
+_LARGURA_FAIXA_CONFIANCA = 0.1
+
+
+def _faixa_de_confianca(valor: float) -> str:
+    valor = min(max(valor, 0.0), 1.0)
+    inicio = min(int(valor / _LARGURA_FAIXA_CONFIANCA), 9) * _LARGURA_FAIXA_CONFIANCA
+    fim = inicio + _LARGURA_FAIXA_CONFIANCA
+    return f"{inicio:.1f}–{fim:.1f}"
+
+
+def _proveniencia_ia(db: Session, project_id: str) -> dict:
+    """
+    Processo e proveniência de IA (doc 32 §6.5, doc 33 Fase 3): quem decidiu,
+    quanto veio de IA, e com que confiabilidade. Agregado de processo, como o
+    funil PRISMA — não é afetado pelos filtros de conteúdo, porque descreve o
+    trabalho de triagem em si, não a amostra final.
+    """
+    eventos = (
+        db.query(AuditLogModel.username, AuditLogModel.source, AuditLogModel.action)
+        .join(PaperModel, PaperModel.id == AuditLogModel.paper_id)
+        .filter(PaperModel.project_id == project_id, AuditLogModel.action.in_(_ACOES_DE_DECISAO))
+        .all()
+    )
+
+    throughput: Counter = Counter()
+    origem: Counter = Counter()
+    for username, source, _action in eventos:
+        throughput[username or "Desconhecido"] += 1
+        # Screening assistido grava `source="ai:<provedor>"` (doc 29 §29.9.3);
+        # a troca manual grava `source="manual"`.
+        origem["Assistida por IA" if source.startswith("ai:") else "Manual"] += 1
+
+    throughput_por_usuario = [
+        {"name": nome, "count": total}
+        for nome, total in sorted(throughput.items(), key=lambda kv: kv[1], reverse=True)
+    ]
+
+    eventos_ia = (
+        db.query(AuditLogModel.ai_response_valid)
+        .join(PaperModel, PaperModel.id == AuditLogModel.paper_id)
+        .filter(PaperModel.project_id == project_id, AuditLogModel.action == "ai_screening")
+        .all()
+    )
+    total_ia = len(eventos_ia)
+    invalidas = sum(1 for (valida,) in eventos_ia if not valida)
+    taxa_resposta_invalida = (invalidas / total_ia) if total_ia else None
+
+    confiancas = [
+        valor for (valor,) in db.query(PaperModel.ai_confidence).filter(
+            PaperModel.project_id == project_id,
+            PaperModel.ai_confidence.is_not(None),
+            or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)),  # noqa: E712
+        ).all()
+    ]
+    distribuicao_confianca: Counter = Counter(_faixa_de_confianca(c) for c in confiancas)
+    distribuicao_confianca_ia = [
+        {"name": faixa, "count": distribuicao_confianca[faixa]}
+        for faixa in sorted(distribuicao_confianca, key=lambda f: float(f.split("–")[0]))
+    ]
+
+    return {
+        "throughput_by_user": throughput_por_usuario,
+        "decisions_by_origin": dict(origem),
+        "ai_invalid_response_rate": taxa_resposta_invalida,
+        "ai_confidence_distribution": distribuicao_confianca_ia,
+    }
+
+
 def get_project_insights(
     db: Session,
     project_id: str,
@@ -288,6 +382,7 @@ def get_project_insights(
         "top_authors": _ranking([nome for p in conteudo for nome in _dividir_autores(p.authors)]),
         "top_institutions": _ranking([p.institution for p in conteudo]),
         "pdf_health": _pdf_health(db, project_id, [p.id for p in conteudo]),
+        "ai_provenance": _proveniencia_ia(db, project_id),
         "filters_applied": {
             "decision": decision,
             "source": source,

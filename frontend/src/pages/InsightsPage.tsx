@@ -7,9 +7,11 @@
  * aquisição de PDF. Não é bibliometria de citação (doc 31 §4): o dado para
  * isso não existe no RSAC hoje.
  *
- * Fase 0 do plano (doc 33): sem filtros na interface ainda — a página busca
- * os agregados padrão (decisão = Incluído) e os exibe. Filtros de
- * decisão/base/ano chegam na Fase 2.
+ * Fase 2 do plano (doc 33): filtros de decisão/base/ano na interface,
+ * afetando só os agregados de conteúdo — o funil PRISMA, o funil de
+ * critérios e a composição por base continuam sobre o projeto inteiro
+ * (doc 32 §3.2), porque o backend já os calcula assim independente do que a
+ * consulta pedir.
  */
 
 import { useEffect, useState } from 'react'
@@ -28,10 +30,19 @@ import {
 } from 'recharts'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
-import { Button, Card, EmptyState, LoadingState, PageHeader } from '@/components/ui'
-import type { NameCount, ProjectInsights } from '@/types/api'
+import { Button, Card, EmptyState, FormGroup, Input, LoadingState, PageHeader, Select } from '@/components/ui'
+import type { InsightsFilters, NameCount, ProjectInsights } from '@/types/api'
 import { formatarPercentual } from './insightsFormat'
 import './InsightsPage.css'
+
+const DECISOES: NonNullable<InsightsFilters['decision']>[] = ['Incluído', 'Excluído', 'Pendente']
+
+/** Rótulo plural para os títulos de bloco — "incluídos", não "Incluído-s". */
+const PLURAL_DECISAO: Record<string, string> = {
+  Incluído: 'incluídos',
+  Excluído: 'excluídos',
+  Pendente: 'pendentes',
+}
 
 const CORES = {
   serie1: 'var(--color-chart-series-1)',
@@ -150,29 +161,39 @@ export function InsightsPage(): JSX.Element {
 
   const [dados, setDados] = useState<ProjectInsights | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [atualizando, setAtualizando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [filtros, setFiltros] = useState<InsightsFilters>({ decision: 'Incluído' })
 
   useEffect(() => {
     if (!id) return
+    let cancelado = false
     ;(async () => {
       try {
-        setCarregando(true)
+        if (dados === null) setCarregando(true)
+        else setAtualizando(true)
         setErro(null)
         if (!activeProject || activeProject.id !== id) {
           const proj = await api.getProject(id)
-          setActiveProject(proj)
+          if (!cancelado) setActiveProject(proj)
         }
-        const resultado = await api.getInsights(id)
-        setDados(resultado)
+        const resultado = await api.getInsights(id, filtros)
+        if (!cancelado) setDados(resultado)
       } catch (e) {
         console.error('Erro ao carregar indicadores:', e)
-        setErro('Não foi possível carregar os indicadores deste projeto.')
+        if (!cancelado) setErro('Não foi possível carregar os indicadores deste projeto.')
       } finally {
-        setCarregando(false)
+        if (!cancelado) {
+          setCarregando(false)
+          setAtualizando(false)
+        }
       }
     })()
+    return () => {
+      cancelado = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  }, [id, filtros.decision, filtros.source, filtros.year_from, filtros.year_to])
 
   if (carregando) {
     return (
@@ -192,6 +213,12 @@ export function InsightsPage(): JSX.Element {
       </div>
     )
   }
+
+  const decisaoSelecionada = filtros.decision ?? 'Incluído'
+  const sufixoDecisao = `(${PLURAL_DECISAO[decisaoSelecionada]})`
+  // As bases vêm da composição por base, que é agregado de processo — inclui
+  // toda base já registrada no projeto, independente do filtro corrente.
+  const basesDisponiveis = dados.composition_by_source.map((s) => s.source_name)
 
   const funilPrisma: NameCount[] = [
     { name: 'Identificados', count: dados.prisma.identification.total_records_identified },
@@ -229,6 +256,76 @@ export function InsightsPage(): JSX.Element {
           </Button>
         }
       />
+
+      <Card surface="secundaria" relief="plano" className="insights-filtros">
+        <FormGroup label="Decisão" htmlFor="insights-filtro-decisao">
+          <Select
+            id="insights-filtro-decisao"
+            sizeVariant="sm"
+            value={decisaoSelecionada}
+            onChange={(e) =>
+              setFiltros((f) => ({ ...f, decision: e.target.value as InsightsFilters['decision'] }))
+            }
+          >
+            {DECISOES.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </Select>
+        </FormGroup>
+
+        <FormGroup label="Base" htmlFor="insights-filtro-base">
+          <Select
+            id="insights-filtro-base"
+            sizeVariant="sm"
+            value={filtros.source ?? ''}
+            onChange={(e) => setFiltros((f) => ({ ...f, source: e.target.value || undefined }))}
+          >
+            <option value="">Todas as bases</option>
+            {basesDisponiveis.map((base) => (
+              <option key={base} value={base}>
+                {base}
+              </option>
+            ))}
+          </Select>
+        </FormGroup>
+
+        <FormGroup label="Ano — de" htmlFor="insights-filtro-ano-de">
+          <Input
+            id="insights-filtro-ano-de"
+            sizeVariant="sm"
+            type="number"
+            inputMode="numeric"
+            placeholder="Ex.: 2015"
+            value={filtros.year_from ?? ''}
+            onChange={(e) =>
+              setFiltros((f) => ({ ...f, year_from: e.target.value ? Number(e.target.value) : undefined }))
+            }
+          />
+        </FormGroup>
+
+        <FormGroup label="Ano — até" htmlFor="insights-filtro-ano-ate">
+          <Input
+            id="insights-filtro-ano-ate"
+            sizeVariant="sm"
+            type="number"
+            inputMode="numeric"
+            placeholder="Ex.: 2024"
+            value={filtros.year_to ?? ''}
+            onChange={(e) =>
+              setFiltros((f) => ({ ...f, year_to: e.target.value ? Number(e.target.value) : undefined }))
+            }
+          />
+        </FormGroup>
+
+        {atualizando && <span className="insights-filtros__status">Atualizando…</span>}
+      </Card>
+
+      <p className="insights-filtros__nota">
+        O filtro restringe rankings, distribuição temporal, tipo de estudo e saúde de PDF. O funil PRISMA, o
+        funil de critérios e o volume por base continuam sobre o projeto inteiro.
+      </p>
 
       <div className="insights-grid">
         {/* ── Funil PRISMA ──────────────────────────────────────────── */}
@@ -393,7 +490,7 @@ export function InsightsPage(): JSX.Element {
         </Bloco>
 
         {/* ── Distribuição temporal ────────────────────────────────── */}
-        <Bloco titulo="Publicações incluídas por ano">
+        <Bloco titulo={`Publicações por ano ${sufixoDecisao}`}>
           <GraficoRanking
             itens={dados.composition_by_year.map((y) => ({ name: y.year, count: y.count }))}
             limite={dados.composition_by_year.length}
@@ -401,28 +498,28 @@ export function InsightsPage(): JSX.Element {
         </Bloco>
 
         {/* ── Tipo de estudo ───────────────────────────────────────── */}
-        <Bloco titulo="Tipo de estudo (incluídos)">
+        <Bloco titulo={`Tipo de estudo ${sufixoDecisao}`}>
           <GraficoRanking itens={dados.composition_by_research_type} />
         </Bloco>
 
         {/* ── Rankings ──────────────────────────────────────────────── */}
-        <Bloco titulo="Periódicos mais frequentes (incluídos)">
+        <Bloco titulo={`Periódicos mais frequentes ${sufixoDecisao}`}>
           <GraficoRanking itens={dados.top_journals} />
         </Bloco>
 
         <Bloco
-          titulo="Autores mais frequentes (incluídos)"
+          titulo={`Autores mais frequentes ${sufixoDecisao}`}
           descricao="Contagem aproximada: nomes não são desambiguados entre si."
         >
           <GraficoRanking itens={dados.top_authors} />
         </Bloco>
 
-        <Bloco titulo="Instituições mais frequentes (incluídos)">
+        <Bloco titulo={`Instituições mais frequentes ${sufixoDecisao}`}>
           <GraficoRanking itens={dados.top_institutions} />
         </Bloco>
 
         {/* ── Saúde de PDF e extração ───────────────────────────────── */}
-        <Bloco titulo="Saúde de aquisição de PDF (incluídos)">
+        <Bloco titulo={`Saúde de aquisição de PDF ${sufixoDecisao}`}>
           {Object.keys(dados.pdf_health.by_status).length === 0 ? (
             <EmptyState size="inline" title="Nenhum PDF processado ainda." />
           ) : (
@@ -444,6 +541,48 @@ export function InsightsPage(): JSX.Element {
                   <dd>{formatarPercentual(dados.pdf_health.extraction_completeness)}</dd>
                 </div>
               </dl>
+            </>
+          )}
+        </Bloco>
+
+        {/* ── Processo e proveniência de IA ─────────────────────────── */}
+        <Bloco
+          titulo="Throughput de triagem por pessoa"
+          descricao="Decisões manuais e assistidas registradas — sempre sobre o projeto inteiro."
+        >
+          <GraficoRanking itens={dados.ai_provenance.throughput_by_user} />
+        </Bloco>
+
+        <Bloco
+          titulo="Proveniência da decisão"
+          descricao="Quanto veio de IA, e com que confiabilidade — sempre sobre o projeto inteiro."
+        >
+          {Object.keys(dados.ai_provenance.decisions_by_origin).length === 0 ? (
+            <EmptyState size="inline" title="Nenhuma decisão auditada ainda." />
+          ) : (
+            <>
+              <GraficoRanking
+                itens={Object.entries(dados.ai_provenance.decisions_by_origin).map(([origem, total]) => ({
+                  name: origem,
+                  count: total,
+                }))}
+                limite={2}
+              />
+              <dl className="insights-metricas-secundarias">
+                <div>
+                  <dt>Resposta de IA fora do vocabulário</dt>
+                  <dd>{formatarPercentual(dados.ai_provenance.ai_invalid_response_rate)}</dd>
+                </div>
+              </dl>
+              {dados.ai_provenance.ai_confidence_distribution.length > 0 && (
+                <>
+                  <p className="insights-bloco__subtitulo">Distribuição de confiança das decisões assistidas</p>
+                  <GraficoRanking
+                    itens={dados.ai_provenance.ai_confidence_distribution}
+                    limite={10}
+                  />
+                </>
+              )}
             </>
           )}
         </Bloco>

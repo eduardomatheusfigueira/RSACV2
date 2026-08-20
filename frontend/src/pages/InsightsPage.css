@@ -24,6 +24,31 @@
   }
 }
 
+.insights-filtros {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.insights-filtros .rsac-form-group {
+  margin-bottom: 0;
+  min-width: 9rem;
+}
+
+.insights-filtros__status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  padding-bottom: var(--space-1);
+}
+
+.insights-filtros__nota {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
 .insights-bloco {
   padding: var(--space-4);
   display: flex;
@@ -42,6 +67,15 @@
   margin: 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-tertiary);
+}
+
+.insights-bloco__subtitulo {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .insights-metricas-secundarias {

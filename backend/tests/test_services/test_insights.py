@@ -12,6 +12,7 @@ import pytest
 
 from app.domain.enums import Decision
 from app.infrastructure.persistence.models import (
+    AuditLogModel,
     CriterionModel,
     ExtractionAnswerModel,
     ExtractionQuestionModel,
@@ -231,6 +232,52 @@ def test_funil_de_criterios_ignora_filtro_de_decisao(db_session, projeto_populad
     assert funil["Estudo brasileiro"]["evaluated_count"] == 3
 
 
+def test_funil_de_criterios_ordena_por_impacto(db_session):
+    """
+    Doc 33 Fase 2: o critério que mais tirou artigo do caminho vem primeiro —
+    não a ordem de cadastro no protocolo. Impacto de um critério de exclusão
+    é `met_count` (atender = ser excluído); de um critério de inclusão é
+    `not_met_count` (não atender = ser barrado). Cenário com valores bem
+    distintos para não depender de empate.
+    """
+    proj, proto = _novo_projeto(db_session, "Projeto de impacto")
+
+    pouco_impacto = CriterionModel(
+        protocol_id=proto.id, text="Critério de baixo impacto", is_exclusion=False, order=0
+    )
+    muito_impacto = CriterionModel(
+        protocol_id=proto.id, text="Critério de alto impacto", is_exclusion=True, order=1
+    )
+    db_session.add_all([pouco_impacto, muito_impacto])
+    db_session.flush()
+
+    papers = [
+        PaperModel(project_id=proj.id, title=f"Artigo {i}", decision=Decision.PENDING.value)
+        for i in range(4)
+    ]
+    db_session.add_all(papers)
+    db_session.flush()
+
+    # Baixo impacto: só 1 de 4 falha o critério de inclusão (not_met_count=1).
+    # Alto impacto: 3 de 4 atendem o critério de exclusão (met_count=3).
+    avaliacoes = [
+        PaperCriterionModel(paper_id=papers[0].id, criterion_id=pouco_impacto.id, value=True),
+        PaperCriterionModel(paper_id=papers[1].id, criterion_id=pouco_impacto.id, value=True),
+        PaperCriterionModel(paper_id=papers[2].id, criterion_id=pouco_impacto.id, value=True),
+        PaperCriterionModel(paper_id=papers[3].id, criterion_id=pouco_impacto.id, value=False),
+        PaperCriterionModel(paper_id=papers[0].id, criterion_id=muito_impacto.id, value=True),
+        PaperCriterionModel(paper_id=papers[1].id, criterion_id=muito_impacto.id, value=True),
+        PaperCriterionModel(paper_id=papers[2].id, criterion_id=muito_impacto.id, value=True),
+        PaperCriterionModel(paper_id=papers[3].id, criterion_id=muito_impacto.id, value=False),
+    ]
+    db_session.add_all(avaliacoes)
+    db_session.commit()
+
+    dados = get_project_insights(db_session, proj.id)
+    textos_em_ordem = [item["text"] for item in dados["criteria_funnel"]]
+    assert textos_em_ordem == ["Critério de alto impacto", "Critério de baixo impacto"]
+
+
 def test_rankings_respeitam_filtro_de_decisao_padrao_incluido(db_session, projeto_populado):
     proj, _, _ = projeto_populado
     dados = get_project_insights(db_session, proj.id)
@@ -311,6 +358,109 @@ def test_filters_applied_refletem_o_que_foi_usado(db_session, projeto_populado):
         "year_from": 2020,
         "year_to": None,
     }
+
+
+# ── Proveniência de IA (doc 32 §6.5, doc 33 Fase 3) ────────────────────
+
+@pytest.fixture
+def projeto_com_auditoria(db_session):
+    """Projeto isolado (não `projeto_populado`) para não herdar decisões sem
+    auditoria — os totais de proveniência de IA precisam ser exatos."""
+    proj, proto = _novo_projeto(db_session, "Projeto com auditoria de IA")
+
+    papers = [
+        PaperModel(
+            project_id=proj.id, title=f"Artigo {i}",
+            decision=Decision.INCLUDED.value, ai_confidence=conf,
+        )
+        for i, conf in enumerate([0.95, 0.92, 0.42, None])
+    ]
+    db_session.add_all(papers)
+    db_session.flush()
+    p_ia_1, p_ia_2, p_ia_3, p_manual = papers
+
+    db_session.add_all([
+        # Duas decisões assistidas pela pesquisadora Ana, uma delas inválida.
+        AuditLogModel(
+            paper_id=p_ia_1.id, action="ai_screening", new_value="Incluído",
+            source="ai:gemini", username="ana", ai_response_valid=True,
+        ),
+        AuditLogModel(
+            paper_id=p_ia_2.id, action="ai_screening", new_value="Incluído",
+            source="ai:gemini", username="ana", ai_response_valid=False,
+        ),
+        # Uma decisão assistida revisada por Bruno, válida.
+        AuditLogModel(
+            paper_id=p_ia_3.id, action="ai_screening", new_value="Pendente",
+            source="ai:qwen", username="bruno", ai_response_valid=True,
+        ),
+        # Uma decisão manual de Bruno.
+        AuditLogModel(
+            paper_id=p_manual.id, action="decision_changed", new_value="Incluído",
+            source="manual", username="bruno",
+        ),
+        # Ação que não é decisão de triagem — não deve contar em nada aqui.
+        AuditLogModel(
+            paper_id=p_manual.id, action="observations_changed", new_value="nota",
+            source="manual", username="bruno",
+        ),
+    ])
+    db_session.commit()
+    return proj, proto
+
+
+def test_throughput_por_usuario_conta_decisoes_por_pessoa(db_session, projeto_com_auditoria):
+    proj, _ = projeto_com_auditoria
+    dados = get_project_insights(db_session, proj.id)
+    throughput = {
+        item["name"]: item["count"] for item in dados["ai_provenance"]["throughput_by_user"]
+    }
+    assert throughput == {"ana": 2, "bruno": 2}
+
+
+def test_decisoes_por_origem_classifica_ia_e_manual(db_session, projeto_com_auditoria):
+    proj, _ = projeto_com_auditoria
+    dados = get_project_insights(db_session, proj.id)
+    assert dados["ai_provenance"]["decisions_by_origin"] == {"Assistida por IA": 3, "Manual": 1}
+
+
+def test_taxa_de_resposta_invalida_so_conta_eventos_de_ia_screening(
+    db_session, projeto_com_auditoria
+):
+    proj, _ = projeto_com_auditoria
+    dados = get_project_insights(db_session, proj.id)
+    # 1 de 3 eventos ai_screening foi inválida — a decisão manual não entra
+    # no denominador, só a assistida.
+    assert dados["ai_provenance"]["ai_invalid_response_rate"] == pytest.approx(1 / 3)
+
+
+def test_taxa_de_resposta_invalida_e_none_sem_triagem_assistida(db_session):
+    proj, _ = _novo_projeto(db_session, "Projeto sem IA")
+    db_session.commit()
+    dados = get_project_insights(db_session, proj.id)
+    assert dados["ai_provenance"]["ai_invalid_response_rate"] is None
+    assert dados["ai_provenance"]["throughput_by_user"] == []
+    assert dados["ai_provenance"]["decisions_by_origin"] == {}
+    assert dados["ai_provenance"]["ai_confidence_distribution"] == []
+
+
+def test_distribuicao_de_confianca_agrupa_em_faixas_de_decimo(db_session, projeto_com_auditoria):
+    proj, _ = projeto_com_auditoria
+    dados = get_project_insights(db_session, proj.id)
+    faixas = {
+        item["name"]: item["count"]
+        for item in dados["ai_provenance"]["ai_confidence_distribution"]
+    }
+    # 0.95 e 0.92 caem em 0.9–1.0; 0.42 cai em 0.4–0.5; o paper sem
+    # ai_confidence (None) não entra em faixa nenhuma.
+    assert faixas == {"0.9–1.0": 2, "0.4–0.5": 1}
+
+
+def test_proveniencia_de_ia_ignora_filtro_de_decisao(db_session, projeto_com_auditoria):
+    """Doc 32 §3.2: agregado de processo, sempre sobre o projeto inteiro."""
+    proj, _ = projeto_com_auditoria
+    dados = get_project_insights(db_session, proj.id, decision=Decision.EXCLUDED.value)
+    assert dados["ai_provenance"]["decisions_by_origin"] == {"Assistida por IA": 3, "Manual": 1}
 
 
 # ── Endpoint (autenticação e validação) ─────────────────────────────────

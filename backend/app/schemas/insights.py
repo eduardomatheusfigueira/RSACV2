@@ -45,6 +45,14 @@ class InsightsFiltersApplied(BaseModel):
     year_to: int | None = None
 
 
+class AiProvenance(BaseModel):
+    """Processo e proveniência de IA — doc 32 §6.5, doc 33 Fase 3."""
+    throughput_by_user: list[NameCount]
+    decisions_by_origin: dict[str, int]
+    ai_invalid_response_rate: float | None = None
+    ai_confidence_distribution: list[NameCount]
+
+
 class ProjectInsights(BaseModel):
     prisma: dict
     criteria_funnel: list[CriterionFunnelItem]
@@ -56,4 +64,5 @@ class ProjectInsights(BaseModel):
     top_authors: list[NameCount]
     top_institutions: list[NameCount]
     pdf_health: PdfHealth
+    ai_provenance: AiProvenance
     filters_applied: InsightsFiltersApplied

@@ -653,6 +653,14 @@ export interface InsightsFiltersApplied {
   year_to: number | null
 }
 
+/** Processo e proveniência de IA (doc 32 §6.5, doc 33 Fase 3). */
+export interface AiProvenance {
+  throughput_by_user: NameCount[]
+  decisions_by_origin: Record<string, number>
+  ai_invalid_response_rate: number | null
+  ai_confidence_distribution: NameCount[]
+}
+
 export interface ProjectInsights {
   prisma: PrismaFlowData
   criteria_funnel: CriterionFunnelItem[]
@@ -664,6 +672,7 @@ export interface ProjectInsights {
   top_authors: NameCount[]
   top_institutions: NameCount[]
   pdf_health: PdfHealth
+  ai_provenance: AiProvenance
   filters_applied: InsightsFiltersApplied
 }
 
