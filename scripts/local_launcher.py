@@ -146,6 +146,36 @@ def start_backend(port: int) -> bool:
     return False
 
 
+def read_local_token() -> str | None:
+    """
+    Lê o token local gravado pelo backend em `<user_data>/runtime_token`.
+
+    Desde a Fase 1 do plano de segurança a API exige sessão. No uso local a
+    prova de identidade é este arquivo — legível apenas pelo dono da máquina —,
+    o que mantém a interface local sem tela de login.
+    """
+    try:
+        import platformdirs
+
+        caminho = Path(platformdirs.user_data_dir("RSAC")) / "runtime_token"
+    except ImportError:
+        # Sem platformdirs (execução fora do venv do backend), tenta os
+        # caminhos convencionais de cada sistema.
+        if sys.platform == "win32":
+            base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+        elif sys.platform == "darwin":
+            base = Path.home() / "Library" / "Application Support"
+        else:
+            base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        caminho = base / "RSAC" / "runtime_token"
+
+    try:
+        conteudo = caminho.read_text(encoding="utf-8").strip()
+        return conteudo or None
+    except OSError:
+        return None
+
+
 def open_app_window(url: str):
     """Abre o aplicativo em janela dedicada (estilo Desktop) via Edge ou Chrome."""
     global _browser_proc
@@ -226,8 +256,17 @@ def main():
         input()
         sys.exit(1)
 
+    # A URL de abertura carrega o token local; a interface o troca por uma
+    # sessão e o remove da barra de endereço no primeiro carregamento.
+    token = read_local_token()
+    url_de_abertura = f"{local_url}/#/?local_token={token}" if token else local_url
+    if not token:
+        print(
+            "\033[93m[!] Token local não encontrado — a interface pedirá usuário e senha.\033[0m"
+        )
+
     print(f"\033[96m[*] Abrindo interface local em janela de aplicativo ({local_url})...\033[0m")
-    open_app_window(local_url)
+    open_app_window(url_de_abertura)
 
     os.system("cls" if sys.platform == "win32" else "clear")
     print("\033[92m" + "═" * 70)

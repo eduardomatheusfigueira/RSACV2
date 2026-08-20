@@ -27,6 +27,37 @@ class KeysBackupData(BaseModel):
     )
 
 
+class KeysExportRequest(BaseModel):
+    """
+    Pedido de exportação de chaves (doc 29 §29.4.3).
+
+    A senha protege o arquivo gerado. Não é a senha de nenhuma conta — é a
+    chave que o usuário vai precisar informar para restaurar o backup.
+    """
+
+    export_password: str = Field(..., min_length=8, description="Senha que protegerá o arquivo exportado")
+
+
+class KeysImportRequest(BaseModel):
+    """Restauração de um backup — cifrado (com senha) ou legado em claro."""
+
+    raw_content: Optional[str] = Field(default=None, description="Conteúdo bruto do arquivo (.json ou KEY=VALUE)")
+    payload: Optional[Dict[str, Any]] = Field(default=None, description="Conteúdo já desserializado")
+    export_password: Optional[str] = Field(default=None, description="Senha usada na exportação, se o arquivo for cifrado")
+
+
+class EncryptedEnvelope(BaseModel):
+    """Envelope cifrado devolvido pelas rotas de exportação de credenciais."""
+
+    schema_version: str
+    encrypted: bool = True
+    kdf: str
+    iterations: int
+    salt: str
+    ciphertext: str
+    exported_at: str
+
+
 class KeysImportResponse(BaseModel):
     status: str
     message: str
@@ -45,6 +76,12 @@ class ProfileSessionPreferences(BaseModel):
 
 class ProfileExportRequest(BaseModel):
     session_preferences: Optional[ProfileSessionPreferences] = None
+    # Por padrão o perfil completo sai **sem** credenciais: o backup de
+    # projetos, protocolos e extrações não precisa carregar chave de API junto
+    # (doc 29 §29.4.2). Quem quiser as chaves no mesmo arquivo pede
+    # explicitamente e fornece a senha que vai protegê-las.
+    include_secrets: bool = Field(default=False, description="Incluir credenciais, cifradas, no pacote")
+    export_password: Optional[str] = Field(default=None, description="Obrigatória quando include_secrets=True")
 
 
 class ProfileImportResponse(BaseModel):

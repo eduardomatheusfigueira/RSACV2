@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from typing import Dict, Optional
+
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
@@ -20,6 +21,7 @@ from app.infrastructure.persistence.models import (
     ProjectModel,
     ProtocolModel,
 )
+from app.security.middleware import erro_interno
 from app.services.extraction_service import ExtractionService
 from app.services.pdf_acquisition import (
     acquire_for_paper,
@@ -249,8 +251,11 @@ async def extract_answers_with_ai(
         )
         return {"status": "success", "answers": answers}
     except Exception as e:
-        logger.error(f"[ExtractionAPI] Erro ao extrair com assistência: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        mensagem, _ = erro_interno(
+            "Falha ao extrair as respostas com assistência.", e,
+            contexto="[ExtractionAPI] extração assistida",
+        )
+        raise HTTPException(status_code=500, detail=mensagem) from e
 
 
 @router.get("/pdf/status")
@@ -274,11 +279,16 @@ async def upload_paper_pdf(
     """Faz o upload manual do PDF do artigo."""
     paper = _get_paper(db, project_id, paper_id)
 
-    content = await file.read()
+    # Leitura em blocos com teto: o `await file.read()` anterior carregava o
+    # arquivo inteiro na RAM antes de qualquer validação (doc 28 V-10).
     try:
-        saved_path = pdf_service.save_uploaded_pdf(project_id, paper_id, content)
+        saved_path, tamanho, sha256 = await pdf_service.save_uploaded_stream(
+            project_id, paper_id, file
+        )
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        mensagem = str(exc)
+        codigo = 413 if "limite de" in mensagem or "Espaço em disco" in mensagem else 400
+        raise HTTPException(status_code=codigo, detail=mensagem) from exc
 
     document = pdf_service.read_document(saved_path)
 
@@ -286,8 +296,8 @@ async def upload_paper_pdf(
     paper.pdf_status = "manual"
     paper.pdf_strategy = "upload"
     paper.pdf_resolved_url = ""
-    paper.pdf_size_bytes = len(content)
-    paper.pdf_sha256 = pdf_service.sha256_of(content)
+    paper.pdf_size_bytes = tamanho
+    paper.pdf_sha256 = sha256
     paper.pdf_page_count = document.page_count
     paper.pdf_text_chars = document.char_count
     paper.pdf_is_scanned = document.is_scanned
@@ -413,7 +423,10 @@ def get_paper_pdf_extracted_text(
     try:
         document = pdf_service.read_document(paper.pdf_path, use_cache=not refresh)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        # A mensagem original carrega o caminho absoluto do arquivo no disco.
+        raise HTTPException(
+            status_code=404, detail="Arquivo PDF não encontrado localmente."
+        ) from exc
     except Exception as exc:  # noqa: BLE001 — motor externo de PDF
         logger.error(f"[PDFText] Erro ao extrair texto do PDF: {exc}")
         raise HTTPException(

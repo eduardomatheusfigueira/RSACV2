@@ -22,6 +22,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.security.encrypted_type import EncryptedText
+
 
 class Base(DeclarativeBase):
     """Base declarativa para todos os modelos ORM."""
@@ -292,9 +294,92 @@ class AuditLogModel(Base):
     old_value: Mapped[str | None] = mapped_column(Text, nullable=True)
     new_value: Mapped[str] = mapped_column(Text, nullable=False)
     source: Mapped[str] = mapped_column(String(20), default="manual")
+    # Quem fez a alteração. Sem isto, `source="manual"` não distingue o
+    # pesquisador do coautor nem de um terceiro — e uma revisão sistemática
+    # cujo produto é a reprodutibilidade precisa saber de quem foi a decisão.
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    username: Mapped[str] = mapped_column(String(64), default="")
+    # Proveniência da decisão assistida (doc 29 §29.9.3): provedor, modelo e o
+    # hash do contexto enviado. É o que permite refazer a conta depois —
+    # inclusive descobrir que uma decisão veio de conteúdo adulterado.
+    ai_provider: Mapped[str] = mapped_column(String(40), default="")
+    ai_model: Mapped[str] = mapped_column(String(80), default="")
+    ai_context_sha256: Mapped[str] = mapped_column(String(64), default="")
+    ai_response_valid: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="audit_logs")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Contas de Acesso e Sessões (doc 29 §29.3)
+# ─────────────────────────────────────────────────────────────────────
+
+class UserModel(Base):
+    """
+    Conta de acesso ao RSAC.
+
+    A senha nunca é guardada — só o hash Argon2id, que `app/security/passwords`
+    produz e verifica. `role` separa quem opera a revisão de quem administra as
+    credenciais (§29.3.4).
+    """
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(20), default="researcher", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    sessions: Mapped[list["SessionModel"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class SessionModel(Base):
+    """
+    Sessão ativa, com estado no servidor.
+
+    A alternativa — um JWT auto-contido — não permitiria revogar acesso antes
+    do vencimento; aqui `logout` apaga a linha e o token morre na hora
+    (§29.3.3). O que se guarda é o *hash* do token: um vazamento do banco não
+    entrega sessões utilizáveis.
+    """
+
+    __tablename__ = "sessions"
+    __table_args__ = (Index("ix_sessions_token_hash", "token_hash"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    user_agent: Mapped[str] = mapped_column(String(200), default="")
+
+    user: Mapped["UserModel"] = relationship(back_populates="sessions")
+
+
+class LoginAttemptModel(Base):
+    """
+    Tentativas de login, para o limite de força bruta (§29.7).
+
+    Guardar as tentativas no banco — e não em memória — é o que faz o limite
+    sobreviver ao reinício do processo, que de outro modo seria a forma trivial
+    de zerá-lo.
+    """
+
+    __tablename__ = "login_attempts"
+    __table_args__ = (Index("ix_login_attempts_username_time", "username", "attempted_at"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    username: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_host: Mapped[str] = mapped_column(String(64), default="")
+    successful: Mapped[bool] = mapped_column(Boolean, default=False)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -306,8 +391,8 @@ class SourceCredentialModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     source_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    api_key: Mapped[str] = mapped_column(Text, default="")
-    inst_token: Mapped[str] = mapped_column(Text, default="")
+    api_key: Mapped[str] = mapped_column(EncryptedText, default="")
+    inst_token: Mapped[str] = mapped_column(EncryptedText, default="")
     custom_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
@@ -323,10 +408,14 @@ class AISettingsModel(Base):
     ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     provider: Mapped[str] = mapped_column(String(50), nullable=False, default="gemini")
     model: Mapped[str] = mapped_column(String(100), nullable=False, default="gemini-3.6-flash")
-    api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
-    gemini_api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
-    qwen_api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
-    local_api_keys_encrypted: Mapped[str] = mapped_column(Text, default="[]")
+    # O sufixo `_encrypted` era falso até a Fase 2 do plano de segurança: o que
+    # se gravava era `json.dumps(lista)` puro. `EncryptedText` torna o nome
+    # verdadeiro — e o nome mentiroso era pior que a ausência da cifra, porque
+    # desarmava quem revisasse o código.
+    api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
+    gemini_api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
+    qwen_api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
+    local_api_keys_encrypted: Mapped[str] = mapped_column(EncryptedText, default="[]")
     endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     temperature: Mapped[float] = mapped_column(Float, default=0.2)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096)

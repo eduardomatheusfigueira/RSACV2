@@ -370,17 +370,67 @@ export interface DeduplicationReport {
   created_at: string
 }
 
+// ── Autenticação ──────────────────────────────────────────────────────
+
+export interface AuthUser {
+  id: string
+  username: string
+  role: 'owner' | 'researcher'
+  is_active: boolean
+  created_at: string
+  last_login_at?: string | null
+}
+
+export interface LoginResponse {
+  user: AuthUser
+  access_token: string
+  token_type: string
+  expires_in_hours: number
+}
+
+/** Única resposta que o backend dá antes do login. */
+export interface AuthStatus {
+  authentication_enabled: boolean
+  deployment_profile: 'desktop' | 'server' | 'ci'
+  has_accounts: boolean
+  /** O perfil desktop aceita o token local em vez de usuário e senha. */
+  local_token_accepted: boolean
+  authenticated: boolean
+  user?: AuthUser | null
+}
+
+export interface UserListResponse {
+  items: AuthUser[]
+  total: number
+}
+
+export interface UserCreatedResponse {
+  user: AuthUser
+  /** Devolvida apenas na criação, e nunca mais. */
+  generated_password?: string | null
+}
+
 // ── AI ────────────────────────────────────────────────────────────────
 
+/**
+ * Estado das configurações de IA vindo do backend.
+ *
+ * As chaves NÃO trafegam mais em texto claro: o que chega são máscaras
+ * (`••••••••abcd`) e contagens. Para trocar uma chave envia-se a nova por
+ * inteiro; para apagar, `deleteProviderKeys`.
+ */
 export interface AISettings {
   ai_enabled: boolean
   provider: 'gemini' | 'qwen' | 'local'
   model: string
   has_api_keys: boolean
-  api_keys?: string[]
-  gemini_api_keys?: string[]
-  qwen_api_keys?: string[]
-  local_api_keys?: string[]
+  key_previews: string[]
+  gemini_key_previews: string[]
+  qwen_key_previews: string[]
+  local_key_previews: string[]
+  gemini_keys_count: number
+  qwen_keys_count: number
+  local_keys_count: number
   endpoint: string | null
   temperature: number
   max_tokens: number
@@ -390,6 +440,8 @@ export interface AISettingsUpdate {
   ai_enabled: boolean
   provider: string
   model: string
+  // Omitir o campo mantém as chaves gravadas; enviar uma lista as substitui.
+  // Lista vazia é ignorada pelo backend — apagar exige deleteProviderKeys.
   api_keys?: string[]
   gemini_api_keys?: string[]
   qwen_api_keys?: string[]
@@ -407,6 +459,7 @@ export interface SourceCredentialBackupItem {
   custom_endpoint?: string | null
 }
 
+/** Backup legado, em claro — ainda aceito na importação. */
 export interface KeysBackupData {
   schema_version: string
   exported_at: string
@@ -414,6 +467,17 @@ export interface KeysBackupData {
   qwen_api_keys: string[]
   local_api_keys: string[]
   sources: Record<string, SourceCredentialBackupItem>
+}
+
+/** Envelope cifrado devolvido pela exportação de credenciais. */
+export interface EncryptedEnvelope {
+  schema_version: string
+  encrypted: boolean
+  kdf: string
+  iterations: number
+  salt: string
+  ciphertext: string
+  exported_at: string
 }
 
 export interface KeysImportResponse {
@@ -546,6 +610,77 @@ export interface PrismaFlowData {
   included: {
     studies_included_in_synthesis: number
   }
+}
+
+// ── Indicadores (B.I. e Bibliometria, doc 32) ──────────────────────────
+
+export interface CriterionFunnelItem {
+  criterion_id: string
+  text: string
+  is_exclusion: boolean
+  evaluated_count: number
+  met_count: number
+  not_met_count: number
+}
+
+export interface SourceComposition {
+  source_name: string
+  found_count: number
+  included_count: number
+}
+
+export interface YearCount {
+  year: string
+  count: number
+}
+
+/** Item de ranking (periódico, autor, instituição ou tipo de estudo). */
+export interface NameCount {
+  name: string
+  count: number
+}
+
+export interface PdfHealth {
+  by_status: Record<string, number>
+  scanned_ratio: number | null
+  extraction_completeness: number | null
+}
+
+export interface InsightsFiltersApplied {
+  decision: string
+  source: string | null
+  year_from: number | null
+  year_to: number | null
+}
+
+/** Processo e proveniência de IA (doc 32 §6.5, doc 33 Fase 3). */
+export interface AiProvenance {
+  throughput_by_user: NameCount[]
+  decisions_by_origin: Record<string, number>
+  ai_invalid_response_rate: number | null
+  ai_confidence_distribution: NameCount[]
+}
+
+export interface ProjectInsights {
+  prisma: PrismaFlowData
+  criteria_funnel: CriterionFunnelItem[]
+  composition_by_decision: Record<string, number>
+  composition_by_source: SourceComposition[]
+  composition_by_year: YearCount[]
+  composition_by_research_type: NameCount[]
+  top_journals: NameCount[]
+  top_authors: NameCount[]
+  top_institutions: NameCount[]
+  pdf_health: PdfHealth
+  ai_provenance: AiProvenance
+  filters_applied: InsightsFiltersApplied
+}
+
+export interface InsightsFilters {
+  decision?: 'Incluído' | 'Excluído' | 'Pendente'
+  source?: string
+  year_from?: number
+  year_to?: number
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────

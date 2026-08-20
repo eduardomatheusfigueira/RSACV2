@@ -69,6 +69,53 @@ duplicar.
 
 ---
 
+## 17.2.1 Acesso: como o app sabe quem é você
+
+A API exige identificação. Como isso aparece depende de onde o RSAC está
+rodando.
+
+**No aplicativo de mesa (Electron) e na interface local** não aparece nada: no
+primeiro start o backend sorteia um token e o grava em um arquivo legível
+apenas pelo seu usuário (`runtime_token`, na pasta de dados do app). O
+aplicativo lê esse arquivo e entra sozinho. Quem não tem acesso ao seu sistema
+de arquivos não consegue produzi-lo.
+
+**No modo servidor** (`Iniciar_Servidor.bat`) o acesso é por usuário e senha.
+Antes de abrir o túnel, o lançador verifica se existe conta; se não existir,
+pede o nome de usuário e cria a primeira. A senha é sorteada e mostrada **uma
+única vez** — anote-a.
+
+Para criar contas a qualquer momento, no computador que hospeda o servidor:
+
+```bash
+cd backend
+python -m app.cli create-user nome_do_usuario --role researcher
+python -m app.cli list-users
+python -m app.cli reset-password nome_do_usuario
+```
+
+### Os dois papéis
+
+| Papel | Pode |
+|---|---|
+| `owner` | Tudo: operar a revisão, gerir contas, ver e trocar as chaves de API |
+| `researcher` | Operar a revisão — coletar, triar, extrair, exportar. **Não** alcança as chaves de API, nem mascaradas |
+
+Convide colaboradores como `researcher`. É a diferença entre dar acesso ao
+trabalho e dar acesso às suas credenciais de API.
+
+### Por que isso importa para a revisão, não só para a segurança
+
+Cada decisão de triagem passa a registrar **quem** a tomou. Antes, o log de
+auditoria dizia apenas "manual" — o que, num servidor com duas pessoas, não
+distinguia o seu julgamento do julgamento do coautor. Numa revisão sistemática,
+cuja entrega é a reprodutibilidade do processo, isso é parte do produto.
+
+O nome da conta ativa fica visível na barra de status, ao lado do botão de
+sair.
+
+---
+
 ## 17.3 Etapa 1 — Projeto
 
 **Tela:** `ProjectsPage`

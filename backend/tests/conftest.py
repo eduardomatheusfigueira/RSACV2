@@ -3,15 +3,66 @@
 
 """RSAC V2 — Pytest Fixtures Globais."""
 
-import pytest
 import httpx
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_db
-from app.infrastructure.persistence.models import Base
+from app.infrastructure.persistence.models import Base, UserModel
 from app.main import create_app
+from app.security.passwords import hash_password
+
+# Credenciais das contas de teste. A senha respeita a política mínima (12
+# caracteres) porque `hash_password` a valida — o teste usa o caminho real.
+SENHA_TESTE = "senha-de-teste-12345"
+OWNER_USERNAME = "dono_teste"
+RESEARCHER_USERNAME = "pesquisador_teste"
+
+
+@pytest.fixture(autouse=True)
+def dns_de_teste(monkeypatch, request):
+    """
+    Resolve qualquer host de teste para um IP público fictício.
+
+    Os testes usam `httpx.MockTransport` com hosts que não existem
+    (`repositorio.br`, `revista.org`). Como o guarda de saída valida o **IP
+    resolvido**, e não o nome, sem isto todo teste de rede falharia por DNS —
+    e ficaria a impressão errada de que o guarda está barrando o que deveria
+    passar.
+
+    A suíte `test_security/test_egress_guard.py` marca-se com `dns_real` e
+    fica de fora, porque lá o objetivo é justamente exercitar a resolução de
+    verdade.
+    """
+    if request.node.get_closest_marker("dns_real"):
+        return
+
+    import socket
+
+    import app.security.egress as egress
+
+    def _fake_getaddrinfo(host, porta, *args, **kwargs):
+        # IP literal resolve para ele mesmo. Sem isto, `http://10.0.0.5` seria
+        # "resolvido" para um endereço público e o teste do guarda passaria
+        # sem exercitar nada — o fixture mascararia justamente o que verifica.
+        import ipaddress
+
+        try:
+            ip = ipaddress.ip_address(host)
+            familia = socket.AF_INET6 if ip.version == 6 else socket.AF_INET
+            return [(familia, socket.SOCK_STREAM, 6, "", (host, porta))]
+        except ValueError:
+            pass
+
+        if host == "localhost":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", porta))]
+
+        # Nome fictício de teste resolve para um endereço público.
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", porta))]
+
+    monkeypatch.setattr(egress, "_resolver_enderecos", _fake_getaddrinfo)
 
 
 @pytest.fixture
@@ -35,10 +86,79 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-async def async_client(db_session):
-    """Cliente assíncrono httpx para testes da FastAPI API."""
+def contas(db_session):
+    """Provisiona uma conta `owner` e uma `researcher` no banco de teste."""
+    dono = UserModel(
+        username=OWNER_USERNAME,
+        password_hash=hash_password(SENHA_TESTE),
+        role="owner",
+    )
+    pesquisador = UserModel(
+        username=RESEARCHER_USERNAME,
+        password_hash=hash_password(SENHA_TESTE),
+        role="researcher",
+    )
+    db_session.add_all([dono, pesquisador])
+    db_session.commit()
+    db_session.refresh(dono)
+    db_session.refresh(pesquisador)
+    return {"owner": dono, "researcher": pesquisador}
+
+
+def _montar_app(db_session):
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db_session
+    return app
+
+
+async def _autenticar(client: httpx.AsyncClient, username: str) -> None:
+    """Abre sessão pela rota real de login — o teste exercita o caminho real."""
+    res = await client.post(
+        "/api/v1/auth/login", json={"username": username, "password": SENHA_TESTE}
+    )
+    assert res.status_code == 200, f"login de teste falhou: {res.status_code} {res.text}"
+    # O cookie já fica no jar do cliente; o Bearer cobre, além disso, o caso do
+    # cliente hospedado em outra origem, que não recebe cookie SameSite=Strict.
+    client.headers["Authorization"] = f"Bearer {res.json()['access_token']}"
+
+
+@pytest.fixture(scope="function")
+async def async_client(db_session, contas):
+    """
+    Cliente autenticado como `owner` — o padrão dos testes funcionais.
+
+    Desde a Fase 1 do plano de segurança a API inteira exige sessão, então o
+    cliente padrão precisa ter uma. Para verificar a própria barreira, use
+    `anon_client`.
+    """
+    transport = httpx.ASGITransport(app=_montar_app(db_session))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        await _autenticar(client, OWNER_USERNAME)
+        yield client
+
+
+@pytest.fixture(scope="function")
+async def researcher_client(db_session, contas):
+    """Cliente autenticado como `researcher` — sem acesso às credenciais."""
+    transport = httpx.ASGITransport(app=_montar_app(db_session))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        await _autenticar(client, RESEARCHER_USERNAME)
+        yield client
+
+
+@pytest.fixture(scope="function")
+async def anon_client(db_session, contas):
+    """Cliente sem sessão. É com ele que se verifica o que a barreira barra."""
+    app = _montar_app(db_session)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+
+@pytest.fixture(scope="function")
+async def anon_client_sem_contas(db_session):
+    """Cliente sem sessão numa instalação sem nenhuma conta provisionada."""
+    app = _montar_app(db_session)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client

@@ -8,13 +8,22 @@ import pytest
 
 @pytest.mark.anyio
 async def test_api_keys_export_and_import(async_client):
-    # 1. Exportar inicialmente (vazio ou default)
-    res_export = await async_client.get("/api/v1/profile/keys/export")
-    assert res_export.status_code == 200
-    data = res_export.json()
-    assert data["schema_version"] == "rsac_api_keys_v1"
+    """
+    Ciclo de backup das chaves no contrato da Fase 0 de segurança:
+    exportação por POST, com senha, devolvendo envelope cifrado — e importação
+    que aceita tanto o envelope quanto um arquivo legado em claro.
+    """
+    # 1. Exportar exige POST com senha (o GET em claro foi removido; 404 ou
+    #    405 conforme a SPA esteja construída ou não)
+    assert (await async_client.get("/api/v1/profile/keys/export")).status_code in (404, 405)
 
-    # 2. Importar chaves via POST
+    res_export = await async_client.post(
+        "/api/v1/profile/keys/export", json={"export_password": "senha-de-backup-123"}
+    )
+    assert res_export.status_code == 200
+    assert res_export.json()["schema_version"] == "rsac_encrypted_envelope_v1"
+
+    # 2. Importar chaves (formato legado em claro continua aceito)
     payload = {
         "gemini_api_keys": ["AIzaSy_API_TEST_1", "AIzaSy_API_TEST_2"],
         "qwen_api_keys": ["sk-QWEN_API_TEST"],
@@ -25,19 +34,23 @@ async def test_api_keys_export_and_import(async_client):
         },
     }
 
-    res_import = await async_client.post("/api/v1/profile/keys/import", json=payload)
+    res_import = await async_client.post(
+        "/api/v1/profile/keys/import", json={"payload": payload}
+    )
     assert res_import.status_code == 200
     res_data = res_import.json()
     assert res_data["status"] == "ok"
     assert res_data["gemini_keys_count"] == 2
     assert res_data["qwen_keys_count"] == 1
 
-    # 3. Conferir via GET /api/v1/ai/settings
+    # 3. Conferir via GET /api/v1/ai/settings — máscaras, nunca as chaves
     res_ai_settings = await async_client.get("/api/v1/ai/settings")
     assert res_ai_settings.status_code == 200
     ai_data = res_ai_settings.json()
-    assert ai_data["gemini_api_keys"] == ["AIzaSy_API_TEST_1", "AIzaSy_API_TEST_2"]
-    assert ai_data["qwen_api_keys"] == ["sk-QWEN_API_TEST"]
+    assert ai_data["gemini_keys_count"] == 2
+    assert ai_data["qwen_keys_count"] == 1
+    assert ai_data["gemini_key_previews"] == ["••••••••ST_1", "••••••••ST_2"]
+    assert "AIzaSy_API_TEST_1" not in res_ai_settings.text
 
 
 @pytest.mark.anyio

@@ -6,6 +6,7 @@
 import json
 import os
 from typing import List, Optional
+
 from sqlalchemy.orm import Session
 
 from app.domain.enums import AIProvider

@@ -4,11 +4,13 @@
 """RSAC V2 — Router de Deduplicação e Relatório Consolidado."""
 
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.infrastructure.persistence.models import DeduplicationReportModel, ProjectModel
+from app.security.middleware import erro_interno
 from app.services.dedup_service import DeduplicationService
 
 logger = logging.getLogger(__name__)
@@ -38,7 +40,10 @@ def run_deduplication(
         }
     except Exception as e:
         logger.error(f"[Dedup] Erro ao executar deduplicação no projeto {project_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Falha ao executar deduplicação: {e}")
+        mensagem, _ = erro_interno(
+            "Falha ao executar a deduplicação.", e, contexto="[Dedup] execução"
+        )
+        raise HTTPException(status_code=500, detail=mensagem) from e
 
 
 @router.get("/report", summary="Obtém o último relatório de deduplicação gerado")

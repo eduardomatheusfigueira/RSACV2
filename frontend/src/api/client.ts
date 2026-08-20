@@ -27,6 +27,8 @@ import type {
 } from '@/types/api'
 
 import { useLogStore } from '@/stores/useLogStore'
+import { analisarUrlDeBackend } from '@/api/backendUrl'
+import { construirQueryDeInsights } from '@/pages/insightsFormat'
 
 // A forma da resposta de extração vive em `types/api.ts` (junto do estado do
 // PDF que ela carrega); aqui apenas reexportamos para quem importa do cliente.
@@ -48,48 +50,74 @@ export interface PrismaFlowData {
   }
 }
 
+/** Onde o token de sessão é guardado entre recarregamentos da aba. */
+const SESSION_STORAGE_KEY = 'rsac_session_token'
+
+/**
+ * Onde o endereço do backend é guardado.
+ *
+ * `sessionStorage`, não `localStorage`: era a persistência permanente que
+ * fazia o sequestro de `api_url` sobreviver ao fechamento da aba (doc 29
+ * §29.12).
+ */
+const BACKEND_URL_KEY = 'rsac_api_url'
+
+/** Chamado quando o backend responde 401 — a aplicação volta para o login. */
+type UnauthorizedHandler = () => void
+
 class APIClient {
   private port: number = 8000
+
+  /**
+   * Token de sessão.
+   *
+   * Fica em `sessionStorage`, não em `localStorage`: sobrevive ao recarregar a
+   * página, que é o que o uso normal exige, e morre ao fechar a aba — de modo
+   * que um computador compartilhado não deixa a sessão pendurada. Quando a SPA
+   * é servida pelo próprio backend, o cookie `HttpOnly` já resolve e este
+   * token é apenas redundância; ele existe para o cliente hospedado em outra
+   * origem (Netlify, Vite em desenvolvimento), que não recebe o cookie.
+   */
+  private sessionToken: string | null = (() => {
+    if (typeof window === 'undefined') return null
+    try {
+      return sessionStorage.getItem(SESSION_STORAGE_KEY)
+    } catch {
+      return null
+    }
+  })()
+
+  private onUnauthorized: UnauthorizedHandler | null = null
+  /**
+   * Endereço do backend.
+   *
+   * A resolução **não** consulta mais `?api_url=` aqui: aceitar o parâmetro no
+   * construtor era o que permitia sequestrar o cliente com um link (doc 28
+   * V-08). Quem trata o parâmetro é `AuthGate`, que pede confirmação humana
+   * nomeando o host antes de gravar qualquer coisa.
+   *
+   * A persistência é em `sessionStorage`, não em `localStorage`: um sequestro
+   * que passe pela confirmação morre ao fechar a aba, em vez de ficar
+   * pendurado para sempre.
+   */
   private baseUrl: string = (() => {
-    // 1. Verificar query param direto no carregamento inicial (?api_url= ou #/?api_url=)
     if (typeof window !== 'undefined') {
       try {
-        const searchParams = new URLSearchParams(window.location.search)
-        const urlFromSearch = searchParams.get('api_url')
-        if (urlFromSearch && urlFromSearch.trim()) {
-          const clean = urlFromSearch.trim().replace(/\/+$/, '')
-          const finalUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
-          localStorage.setItem('rsac_api_url', finalUrl)
-          return finalUrl
-        }
-        if (window.location.hash.includes('?')) {
-          const hashQuery = window.location.hash.split('?')[1]
-          const hashParams = new URLSearchParams(hashQuery)
-          const urlFromHash = hashParams.get('api_url')
-          if (urlFromHash && urlFromHash.trim()) {
-            const clean = urlFromHash.trim().replace(/\/+$/, '')
-            const finalUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
-            localStorage.setItem('rsac_api_url', finalUrl)
-            return finalUrl
-          }
-        }
-        // 2. Verificar URL previamente salva no localStorage
-        const saved = localStorage.getItem('rsac_api_url')
-        if (saved && saved.trim()) {
-          const clean = saved.trim().replace(/\/+$/, '')
-          return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
-        }
+        const salva = sessionStorage.getItem(BACKEND_URL_KEY)
+        if (salva && salva.trim()) return salva.trim()
       } catch {
-        // Ignora erros de acesso a window/localStorage
+        // Armazenamento bloqueado pelo navegador: cai na detecção automática.
       }
     }
-    // 3. Verificar variável de ambiente do Vite
+
     const envUrl = (import.meta as any).env?.VITE_API_URL
     if (envUrl && typeof envUrl === 'string' && envUrl.trim()) {
       const clean = envUrl.trim().replace(/\/+$/, '')
       return clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
     }
-    // 4. Detecção automática se estiver no navegador Web (servido pelo backend ou Cloudflare)
+
+    // Servida pelo próprio backend (o caso do túnel): a origem da página é o
+    // endereço da API, e não há o que confirmar — é o mesmo servidor.
     if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
       if (!window.location.host.includes(':5173')) {
         return `${window.location.origin}/api/v1`
@@ -101,15 +129,34 @@ class APIClient {
   /**
    * Configura a URL base do backend manualmente e persiste no navegador.
    */
+  /**
+   * Aponta o cliente para outro backend.
+   *
+   * Valida o endereço (protocolo e criptografia) antes de aceitar — a versão
+   * anterior gravava qualquer string. Quem chama é responsável por já ter
+   * obtido a confirmação humana; a validação aqui é a última barreira.
+   */
   setBaseUrl(url: string): void {
-    const clean = url.trim().replace(/\/+$/, '')
-    this.baseUrl = clean.endsWith('/api/v1') ? clean : `${clean}/api/v1`
+    const destino = analisarUrlDeBackend(url)
+    this.baseUrl = destino.url
+
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('rsac_api_url', this.baseUrl)
+        sessionStorage.setItem(BACKEND_URL_KEY, destino.url)
+        // Remove o resquício da versão que persistia para sempre.
+        localStorage.removeItem(BACKEND_URL_KEY)
       } catch {
-        // Ignora erros
+        // Armazenamento bloqueado: o endereço vale só para esta sessão.
       }
+    }
+  }
+
+  /** Host do backend em uso, para exibição permanente na interface. */
+  getBackendHost(): string {
+    try {
+      return new URL(this.baseUrl).host
+    } catch {
+      return this.baseUrl
     }
   }
 
@@ -119,8 +166,9 @@ class APIClient {
   setPort(port: number): void {
     this.port = port
     const envUrl = (import.meta as any).env?.VITE_API_URL
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('rsac_api_url') : null
-    if (!envUrl && !saved) {
+    const salva =
+      typeof window !== 'undefined' ? sessionStorage.getItem(BACKEND_URL_KEY) : null
+    if (!envUrl && !salva) {
       this.baseUrl = `http://127.0.0.1:${port}/api/v1`
     }
   }
@@ -134,28 +182,22 @@ class APIClient {
   }
 
   /**
-   * Detecta a porta ou URL do backend a partir da query string (suporta search e hash).
+   * Detecta a porta do backend passada pelo Electron.
+   *
+   * Deixou de aceitar `api_url`: o endereço do backend só muda por
+   * confirmação humana explícita, tratada no `AuthGate` (doc 29 §29.12).
    */
   detectPort(): void {
     if (typeof window === 'undefined') return
 
-    // 1. Procurar em window.location.search (?api_url=... ou ?port=...)
     const params = new URLSearchParams(window.location.search)
-    let apiUrl = params.get('api_url')
     let port = params.get('port')
 
-    // 2. Se não achou, procurar em window.location.hash (#/.../?api_url=...)
-    if (!apiUrl && !port && window.location.hash.includes('?')) {
-      const hashQuery = window.location.hash.split('?')[1]
-      const hashParams = new URLSearchParams(hashQuery)
-      apiUrl = hashParams.get('api_url')
+    if (!port && window.location.hash.includes('?')) {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1])
       port = hashParams.get('port')
     }
 
-    if (apiUrl) {
-      this.setBaseUrl(apiUrl)
-      return
-    }
     if (port) {
       this.setPort(parseInt(port, 10))
     }
@@ -168,12 +210,24 @@ class APIClient {
     return `${protocol}${hostAndPath}`
   }
 
+  /**
+   * O navegador não deixa mandar cabeçalho ao abrir um WebSocket, e o cookie
+   * não viaja entre origens diferentes — por isso o token vai na query. O
+   * endereço de um WebSocket não entra em histórico nem em `Referer`, então
+   * não é o mesmo risco de pôr credencial numa URL comum.
+   */
+  private withSessionToken(url: string): string {
+    if (!this.sessionToken) return url
+    const separador = url.includes('?') ? '&' : '?'
+    return `${url}${separador}token=${encodeURIComponent(this.sessionToken)}`
+  }
+
   getWebSocketUrl(projectId: string): string {
-    return `${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`
+    return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`)
   }
 
   getScreeningWebSocketUrl(projectId: string): string {
-    return `${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`
+    return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`)
   }
 
   getExcelExportUrl(projectId: string): string {
@@ -182,6 +236,27 @@ class APIClient {
 
   getBibtexExportUrl(projectId: string): string {
     return `${this.baseUrl}/projects/${projectId}/export/bibtex`
+  }
+
+  setSessionToken(token: string | null): void {
+    this.sessionToken = token
+    if (typeof window === 'undefined') return
+    try {
+      if (token) sessionStorage.setItem(SESSION_STORAGE_KEY, token)
+      else sessionStorage.removeItem(SESSION_STORAGE_KEY)
+    } catch {
+      // Navegador com armazenamento bloqueado: o cookie ainda cobre o caso
+      // de mesma origem, então não há por que interromper o fluxo.
+    }
+  }
+
+  getSessionToken(): string | null {
+    return this.sessionToken
+  }
+
+  /** Registra o que fazer quando o backend recusar a sessão. */
+  setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+    this.onUnauthorized = handler
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -204,8 +279,12 @@ class APIClient {
     try {
       const response = await fetch(url, {
         ...options,
+        // `include` faz o cookie de sessão viajar quando a SPA é servida pelo
+        // próprio backend; o Bearer cobre o caso de origem diferente.
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          ...(this.sessionToken ? { Authorization: `Bearer ${this.sessionToken}` } : {}),
           ...options.headers,
         },
       })
@@ -216,6 +295,13 @@ class APIClient {
         const error = await response.json().catch(() => ({ detail: response.statusText }))
         const errorMsg = error.detail || `HTTP ${response.status}`
         logStore.error(source, `${method} ${path} falhou (${response.status})`, `Erro: ${errorMsg}\nTempo: ${duration}ms`)
+
+        // Sessão expirada ou revogada: descarta o token e devolve o usuário ao
+        // login em vez de deixar a interface tentando de novo em silêncio.
+        if (response.status === 401 && !path.startsWith('/auth/')) {
+          this.setSessionToken(null)
+          this.onUnauthorized?.()
+        }
         throw new Error(errorMsg)
       }
 
@@ -404,6 +490,78 @@ class APIClient {
 
   // ── AI ────────────────────────────────────────────────────────────
 
+  // ── Autenticação ──────────────────────────────────────────────────
+
+  async getAuthStatus(): Promise<import('@/types/api').AuthStatus> {
+    return this.request<import('@/types/api').AuthStatus>('/auth/status')
+  }
+
+  async login(username: string, password: string): Promise<import('@/types/api').LoginResponse> {
+    const res = await this.request<import('@/types/api').LoginResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    })
+    this.setSessionToken(res.access_token)
+    return res
+  }
+
+  /**
+   * Troca o token local do app de mesa por uma sessão.
+   *
+   * É o que mantém o uso desktop sem tela de login: o Electron lê o arquivo
+   * `runtime_token` e passa o conteúdo adiante.
+   */
+  async loginWithLocalToken(token: string): Promise<import('@/types/api').LoginResponse> {
+    const res = await this.request<import('@/types/api').LoginResponse>('/auth/local', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    })
+    this.setSessionToken(res.access_token)
+    return res
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.request<{ status: string }>('/auth/logout', { method: 'POST' })
+    } finally {
+      // O token local morre mesmo se a chamada falhar: manter a sessão do lado
+      // do cliente depois de um pedido de saída seria o pior dos dois mundos.
+      this.setSessionToken(null)
+    }
+  }
+
+  async getCurrentUser(): Promise<import('@/types/api').AuthUser> {
+    return this.request<import('@/types/api').AuthUser>('/auth/me')
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>('/auth/password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    })
+  }
+
+  async listUsers(): Promise<import('@/types/api').UserListResponse> {
+    return this.request<import('@/types/api').UserListResponse>('/auth/users')
+  }
+
+  async createUser(
+    username: string,
+    role: 'owner' | 'researcher',
+    password?: string
+  ): Promise<import('@/types/api').UserCreatedResponse> {
+    return this.request<import('@/types/api').UserCreatedResponse>('/auth/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, role, password }),
+    })
+  }
+
+  async deactivateUser(userId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/auth/users/${userId}`, {
+      method: 'DELETE',
+    })
+  }
+
   async getAISettings(): Promise<AISettings> {
     return this.request<AISettings>('/ai/settings')
   }
@@ -412,6 +570,18 @@ class APIClient {
     return this.request<AISettings>('/ai/settings', {
       method: 'PUT',
       body: JSON.stringify(data),
+    })
+  }
+
+  /**
+   * Remove todas as chaves de um provedor.
+   *
+   * Contrapartida da gravação write-only: salvar o formulário com o campo
+   * vazio não apaga nada, então apagar precisa de um pedido explícito.
+   */
+  async deleteProviderKeys(provider: 'gemini' | 'qwen' | 'local'): Promise<AISettings> {
+    return this.request<AISettings>(`/ai/settings/keys/${provider}`, {
+      method: 'DELETE',
     })
   }
 
@@ -579,16 +749,44 @@ class APIClient {
     return this.request<PrismaFlowData>(`/projects/${projectId}/export/prisma`)
   }
 
-  // ── Profile & Keys Portability ────────────────────────────────────
+  // ── Indicadores (B.I. e Bibliometria) ──────────────────────────────
 
-  async exportKeys(): Promise<import('@/types/api').KeysBackupData> {
-    return this.request<import('@/types/api').KeysBackupData>('/profile/keys/export')
+  async getInsights(
+    projectId: string,
+    filters?: import('@/types/api').InsightsFilters
+  ): Promise<import('@/types/api').ProjectInsights> {
+    const qs = construirQueryDeInsights(filters)
+    return this.request<import('@/types/api').ProjectInsights>(`/projects/${projectId}/insights${qs}`)
   }
 
-  async importKeys(payload: { raw_content?: string } | Record<string, any>): Promise<import('@/types/api').KeysImportResponse> {
+  // ── Profile & Keys Portability ────────────────────────────────────
+
+  /**
+   * Exporta as credenciais em um arquivo cifrado com a senha informada.
+   *
+   * Era um GET que devolvia as chaves em texto claro — acionável por simples
+   * navegação. Virou POST com senha, e o que volta é um envelope inútil sem
+   * ela.
+   */
+  async exportKeys(exportPassword: string): Promise<import('@/types/api').EncryptedEnvelope> {
+    return this.request<import('@/types/api').EncryptedEnvelope>('/profile/keys/export', {
+      method: 'POST',
+      body: JSON.stringify({ export_password: exportPassword }),
+    })
+  }
+
+  /** Importa backup cifrado (com senha) ou arquivo legado em texto claro. */
+  async importKeys(
+    payload: Record<string, any> | null,
+    options?: { rawContent?: string; exportPassword?: string }
+  ): Promise<import('@/types/api').KeysImportResponse> {
     return this.request<import('@/types/api').KeysImportResponse>('/profile/keys/import', {
       method: 'POST',
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        payload,
+        raw_content: options?.rawContent,
+        export_password: options?.exportPassword,
+      }),
     })
   }
 

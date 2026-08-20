@@ -1,0 +1,124 @@
+/**
+ * RSAC V2 — Tela de Acesso
+ *
+ * A porta que o modo servidor não tinha. Aparece apenas quando o backend
+ * reporta que não há sessão válida — no app de mesa o token local resolve
+ * antes, e esta tela nunca chega a ser vista.
+ */
+
+import { useEffect, useRef, useState } from 'react'
+import { AlertCircle, KeyRound, LogIn, ShieldCheck, User } from 'lucide-react'
+import { Button, FormGroup, Input } from '@/components/ui'
+import { RsacLockup } from '@/components/brand/RsacLockup'
+import { useAuthStore } from '@/stores/useAuthStore'
+import './LoginPage.css'
+
+export function LoginPage(): JSX.Element {
+  const { login, error, submitting, status, setError } = useAuthStore()
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const usuarioRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    usuarioRef.current?.focus()
+  }, [])
+
+  const semContas = status?.has_accounts === false
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!username.trim() || !password) {
+      setError('Informe usuário e senha.')
+      return
+    }
+    await login(username.trim(), password)
+    setPassword('')
+  }
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-brand">
+          <RsacLockup size="lg" />
+        </div>
+
+        <h1 className="login-title">Acesso ao ambiente de revisão</h1>
+        <p className="login-subtitle">
+          Este servidor exige identificação. Suas credenciais protegem os projetos, os dados
+          coletados e as chaves de API configuradas.
+        </p>
+
+        {semContas ? (
+          /*
+           * Instalação sem conta nenhuma. Provisionar pela interface seria
+           * abrir um "criar o primeiro administrador" na internet — que é
+           * exatamente o buraco que esta fase fecha. O caminho é o terminal.
+           */
+          <div className="login-alert login-alert--info" role="status">
+            <ShieldCheck size={18} />
+            <div>
+              <strong>Nenhuma conta provisionada</strong>
+              <p>
+                Crie a primeira conta no computador que hospeda o servidor:
+                <code>python -m app.cli create-user seu_usuario --role owner</code>
+                A senha é exibida uma única vez no terminal.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <form className="login-form" onSubmit={handleSubmit}>
+            <FormGroup label="Usuário" htmlFor="login-usuario">
+              <Input
+                id="login-usuario"
+                ref={usuarioRef}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                placeholder="seu_usuario"
+                leftIcon={<User size={15} />}
+                disabled={submitting}
+              />
+            </FormGroup>
+
+            <FormGroup label="Senha" htmlFor="login-senha">
+              <Input
+                id="login-senha"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="••••••••••••"
+                leftIcon={<KeyRound size={15} />}
+                disabled={submitting}
+              />
+            </FormGroup>
+
+            {error && (
+              <div className="login-alert login-alert--error" role="alert">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              loading={submitting}
+              leftIcon={<LogIn size={16} />}
+              className="login-submit"
+            >
+              {submitting ? 'Entrando…' : 'Entrar'}
+            </Button>
+          </form>
+        )}
+
+        {status?.deployment_profile === 'server' && (
+          <p className="login-footnote">
+            Servidor publicado — não compartilhe o endereço nem suas credenciais.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}

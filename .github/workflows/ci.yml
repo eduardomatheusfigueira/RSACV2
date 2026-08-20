@@ -1,0 +1,119 @@
+# RSAC V2 — Integração Contínua
+#
+# O portão que torna durável o que as Fases 0–5 corrigiram: um PR que
+# reintroduza qualquer achado do doc 28 falha aqui, em vez de chegar ao
+# `main` e só ser notado na próxima auditoria.
+#
+# A suíte de segurança roda em passo próprio, e de propósito: quando ela
+# quebra, o log deve dizer "segurança" sem que ninguém precise ler a saída
+# inteira do pytest.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — testes e segurança
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -e ".[dev]"
+
+      - name: Suíte de segurança
+        # Primeiro e isolado: é o portão que impede a volta dos achados do
+        # doc 28. Falha aqui é falha de segurança, não de funcionalidade.
+        env:
+          RSAC_DEPLOYMENT_PROFILE: ci
+        run: pytest tests/test_security/ -v --tb=short
+
+      - name: Suíte completa
+        env:
+          RSAC_DEPLOYMENT_PROFILE: ci
+        run: pytest -q
+
+      - name: Lint (ruff)
+        # `continue-on-error` porque o repositório carrega dívida de estilo
+        # anterior a este plano (~900 avisos). O objetivo aqui é tornar a
+        # dívida visível sem travar PRs legítimos; quando ela for zerada,
+        # remova esta linha.
+        continue-on-error: true
+        run: ruff check app tests
+
+      - name: Vulnerabilidades conhecidas nas dependências
+        continue-on-error: true
+        run: pip-audit --desc
+
+      - name: Análise estática de segurança (bandit)
+        continue-on-error: true
+        run: bandit -r app -ll -x app/../tests
+
+  frontend:
+    name: Frontend — typecheck, testes e build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Testes
+        run: npx vitest run
+
+      - name: Lint de tokens do design system
+        continue-on-error: true
+        run: npm run lint:tokens
+
+      - name: Build web
+        run: npm run build:web
+
+      - name: Auditoria de dependências
+        continue-on-error: true
+        run: npm audit --omit=dev
+
+  segredos:
+    name: Varredura de segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

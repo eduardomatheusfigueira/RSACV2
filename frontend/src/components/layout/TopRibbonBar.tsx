@@ -84,7 +84,8 @@ const RIBBON_TABS: RibbonTab[] = [
   { id: 'harvest', label: 'Coleta', icon: <Download size={14} />, path: '/projects/:id/harvest', requiresProject: true, stepNumber: 2 },
   { id: 'screening', label: 'Triagem', icon: <CheckSquare size={14} />, path: '/projects/:id/screening', requiresProject: true, stepNumber: 3 },
   { id: 'extraction', label: 'Extração', icon: <FileText size={14} />, path: '/projects/:id/extraction', requiresProject: true, stepNumber: 4 },
-  { id: 'export', label: 'Síntese & Exportar', icon: <FileDown size={14} />, path: '/projects/:id/export', requiresProject: true, stepNumber: 5 },
+  { id: 'insights', label: 'Indicadores', icon: <BarChart3 size={14} />, path: '/projects/:id/insights', requiresProject: true, stepNumber: 5 },
+  { id: 'export', label: 'Síntese & Exportar', icon: <FileDown size={14} />, path: '/projects/:id/export', requiresProject: true, stepNumber: 6 },
   { id: 'settings', label: 'Ferramentas', icon: <Settings size={14} />, path: '/settings' },
 ]
 
@@ -798,6 +799,37 @@ export function TopRibbonBar(): JSX.Element {
                   <strong>Questionário:</strong>
                   <span>Responda as perguntas de mapeamento (Q-1 a Q-N) para cada estudo incluído</span>
                 </div>
+                <button type="button" className="tool-btn-next" onClick={() => navToProjectPage('insights')}>
+                  Próximo: Indicadores <ArrowRight size={12} />
+                </button>
+              </div>
+              </GrupoDoRibbon>
+            </Tabs.Content>
+
+            {/* ──────────────────────────────────────────────────────────
+                TAB: INDICADORES (B.I. e Bibliometria)
+                Purpose: descriptive/process statistics — funnel, criteria,
+                rankings, PDF health. Read-only: no export tools of its own.
+            ──────────────────────────────────────────────────────────── */}
+            <Tabs.Content value="insights" className="ribbon-tab-panel">
+              {/* Group: Visualizações */}
+              <GrupoDoRibbon titulo="Visualização">
+              <div className="ribbon-info-box">
+                <span className="info-label">Painel Ativo:</span>
+                <span className="info-value">Funil PRISMA, critérios, rankings e saúde de PDF</span>
+              </div>
+              </GrupoDoRibbon>
+
+              <div className="ribbon-divider" />
+
+              {/* Group: Próximo Passo */}
+              <GrupoDoRibbon titulo="Mapeamento & Fluxo" expansivel>
+              <div className="ribbon-next-step">
+                <ArrowRight size={14} className="icon-accent" />
+                <div className="next-step-text">
+                  <strong>Indicadores conferidos:</strong>
+                  <span>Os pacotes de exportação e o diagrama PRISMA completo estão na Síntese & Exportar</span>
+                </div>
                 <button type="button" className="tool-btn-next" onClick={() => navToProjectPage('export')}>
                   Próximo: Exportar <ArrowRight size={12} />
                 </button>
@@ -806,7 +838,7 @@ export function TopRibbonBar(): JSX.Element {
             </Tabs.Content>
 
             {/* ──────────────────────────────────────────────────────────
-                TAB: 5. EXPORTAR (Síntese & Relatórios)
+                TAB: 6. EXPORTAR (Síntese & Relatórios)
                 Purpose: Generate outputs — the deliverables of the review.
                 Primary: Download Excel, manuscript, diagrams.
             ──────────────────────────────────────────────────────────── */}

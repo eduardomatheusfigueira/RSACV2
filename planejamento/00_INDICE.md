@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–26` Vigente (Design System & Governança)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria)
 
 ---
 
@@ -15,14 +15,24 @@ de decisão, não como lista de pendências.
 O **doc 22** é a fronteira: consolida o que cada plano anterior previu, o que
 foi entregue, o que divergiu e o que segue aberto.
 
-Os documentos **23 a 26** são o **planejamento vigente**, dedicado a UX, UI e
+Os documentos **23 a 27** são o **planejamento vigente** de UX, UI e
 profissionalização da interface. Seguem a mesma gramática dos planos temáticos
 anteriores — diagnóstico → especificação → execução → validação.
+
+Os documentos **28 a 30** registram o **planejamento de segurança**, aberto
+quando o aplicativo passou a ter um servidor publicado na internet
+(`Iniciar_Servidor.bat`) e **concluído** — as seis fases estão entregues.
+
+Os documentos **31 a 33** registram o **planejamento de B.I. e
+bibliometria**, aberto para dar à revisão uma aba de indicadores após a
+Extração, e **concluído** — as quatro fases estão entregues.
 
 ```
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
-23–26   vigente            para onde vamos agora (UX/UI)
+23–27   vigente            design system e UX/UI
+28–30   concluído          segurança — as seis fases entregues ✅
+31–33   concluído          B.I. e bibliometria — as quatro fases entregues ✅
 ```
 
 ---
@@ -40,6 +50,39 @@ anteriores — diagnóstico → especificação → execução → validação.
 
 > A identidade visual da marca tem documento próprio, fora desta pasta:
 > [`brand/IDENTIDADE_VISUAL.md`](../brand/IDENTIDADE_VISUAL.md).
+
+---
+
+## ✅ Segurança do servidor — plano concluído
+
+> O plano de segurança foi **concluído**: os 18 achados do doc 28 estão
+> fechados, e a CI (`.github/workflows/ci.yml`) impede que voltem. O doc 28
+> registra o estado que motivou o trabalho; o doc 30 registra o que foi
+> entregue em cada fase, com as divergências justificadas.
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **28** | [Diagnóstico de Segurança](./28_DIAGNOSTICO_SEGURANCA.md) | Modelo de ameaça, superfície de ataque medida e 18 vulnerabilidades com evidência em `arquivo:linha` |
+| **29** | [Especificação de Segurança](./29_ESPECIFICACAO_SEGURANCA.md) | Documento normativo: perfis de implantação, autenticação, cifra de segredos, política de saída e cabeçalhos |
+| **30** | [Plano de Execução — Segurança](./30_PLANO_EXECUCAO_SEGURANCA.md) | Seis fases, critérios de aceite e a suíte de testes que impede a regressão |
+
+---
+
+## ✅ B.I. e Bibliometria — plano concluído
+
+> O plano de B.I. foi **concluído**: a aba de Indicadores está entregue com
+> funil PRISMA e de critérios, composição da amostra, rankings de
+> periódico/autor/instituição, saúde de PDF, filtros de decisão/base/ano e
+> proveniência de IA — coberta por 31 testes de backend e verificada ao
+> vivo contra um servidor real. O doc 31 registra o que motivou o trabalho;
+> o doc 33 registra o que foi entregue em cada fase, com as divergências
+> justificadas.
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **31** | [Diagnóstico de B.I.](./31_DIAGNOSTICO_BI.md) | Inventário do que o modelo de dados já sustenta, qualidade do dado e lacunas para bibliometria de citação |
+| **32** | [Especificação de B.I.](./32_ESPECIFICACAO_BI.md) | Documento normativo: contrato da API, normalização de texto livre, biblioteca de gráficos e métricas da v1 |
+| **33** | [Plano de Execução — B.I.](./33_PLANO_EXECUCAO_BI.md) | Quatro fases, do endpoint de agregação à aba navegável com filtros e proveniência de IA |
 
 ---
 

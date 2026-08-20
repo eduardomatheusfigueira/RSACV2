@@ -122,6 +122,71 @@ class PDFService:
         self._invalidate_text_cache(str(target_path))
         return str(target_path)
 
+    async def save_uploaded_stream(self, project_id: str, paper_id: str, upload) -> tuple[str, int, str]:
+        """
+        Grava um upload lendo em blocos, com teto de tamanho e de espaço livre.
+
+        `await file.read()` carregava o arquivo inteiro na RAM antes de olhar
+        para ele: um POST de alguns GB derrubava o processo (doc 28 V-10).
+        Aqui o corpo vai para o disco em pedaços de 1 MiB, e o teto é
+        verificado enquanto se lê — não depois.
+
+        Devolve `(caminho, tamanho, sha256)`.
+        """
+        import hashlib
+        import shutil
+        import tempfile
+
+        limite = settings.max_upload_mb * 1024 * 1024
+        bloco = 1024 * 1024
+
+        livre = shutil.disk_usage(self.storage_dir).free
+        if livre < 1024 * 1024 * 1024:
+            raise ValueError(
+                "Espaço em disco insuficiente para receber o arquivo "
+                f"({livre // (1024 * 1024)} MB livres)."
+            )
+
+        digest = hashlib.sha256()
+        tamanho = 0
+        primeiro_bloco = b""
+
+        with tempfile.NamedTemporaryFile(delete=False, dir=str(self.storage_dir)) as temporario:
+            caminho_temporario = temporario.name
+            try:
+                while True:
+                    pedaco = await upload.read(bloco)
+                    if not pedaco:
+                        break
+
+                    tamanho += len(pedaco)
+                    if tamanho > limite:
+                        raise ValueError(
+                            f"Arquivo maior que o limite de {settings.max_upload_mb} MB."
+                        )
+
+                    if not primeiro_bloco:
+                        primeiro_bloco = pedaco[:8]
+
+                    digest.update(pedaco)
+                    temporario.write(pedaco)
+            except Exception:
+                temporario.close()
+                Path(caminho_temporario).unlink(missing_ok=True)
+                raise
+
+        if not is_pdf_bytes(primeiro_bloco):
+            Path(caminho_temporario).unlink(missing_ok=True)
+            raise ValueError(
+                "O arquivo enviado não é um PDF válido (assinatura %PDF ausente)."
+            )
+
+        destino = self.get_pdf_path(project_id, paper_id)
+        Path(caminho_temporario).replace(destino)
+        self._invalidate_text_cache(str(destino))
+
+        return str(destino), tamanho, digest.hexdigest()
+
     def save_uploaded_pdf(self, project_id: str, paper_id: str, file_bytes: bytes) -> str:
         """Salva um PDF enviado manualmente pelo usuário (com validação)."""
         if not is_pdf_bytes(file_bytes):

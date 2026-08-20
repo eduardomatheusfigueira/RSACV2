@@ -1,0 +1,120 @@
+/* ═════════════════════════════════════════════════════════════════════
+   RSAC V2 — INSIGHTS PAGE STYLES (B.I. e Bibliometria, doc 32 §5)
+   ═════════════════════════════════════════════════════════════════════ */
+
+.insights-page {
+  max-width: 1560px;
+  margin: 0 auto;
+  min-height: calc(100vh - var(--header-height) - var(--statusbar-height) - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.insights-filtros {
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.insights-filtros .rsac-form-group {
+  margin-bottom: 0;
+  min-width: 9rem;
+}
+
+.insights-filtros__status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  padding-bottom: var(--space-1);
+}
+
+.insights-filtros__nota {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.insights-bloco {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.insights-bloco__cabecalho h3 {
+  margin: 0 0 var(--space-1) 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.insights-bloco__cabecalho p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.insights-bloco__subtitulo {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.insights-metricas-secundarias {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.insights-metricas-secundarias dt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.insights-metricas-secundarias dd {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-accent-on-surface);
+  margin: 0;
+}
+
+/*
+ * Tabela alternativa acessível (doc 32 §5.3): mesmo dado do gráfico, sempre
+ * presente no DOM para navegação por teclado/leitor de tela. Escondida
+ * visualmente pela técnica padrão de "clip" — width/height em px são a
+ * própria técnica de ocultação, não ritmo de espaçamento (R2d só cobre
+ * padding/margin/gap).
+ */
+.insights-tabela-acessivel,
+.rsac-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

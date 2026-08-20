@@ -68,14 +68,22 @@ A arquitetura é dividida em:
 - Visualizador integrado de documentos com suporte a PDF renderizado, extração textual com paginação preservada e remoção de artefatos de digitalização.
 - Matriz de extração estruturada baseada no formulário definido no protocolo, com ancoragem de trechos literais e indicação da página de referência.
 
-### 5. Síntese e Exportação de Resultados
+### 5. Indicadores (B.I. e Bibliometria)
+- Funil de identificação, triagem e critérios de inclusão/exclusão, ordenado por impacto na composição final da amostra.
+- Composição da amostra por decisão, base de coleta, ano de publicação e tipo de estudo.
+- Rankings de periódico, autor e instituição mais frequentes entre os artigos incluídos.
+- Saúde de aquisição de PDF e completude da matriz de extração.
+- Proveniência de IA: throughput de triagem por pessoa, proporção de decisões manuais vs. assistidas e taxa de resposta fora do vocabulário esperado.
+- Filtros por decisão, base e intervalo de ano, aplicados aos agregados de conteúdo.
+
+### 6. Síntese e Exportação de Resultados
 - Construção automatizada do Diagrama de Fluxo PRISMA com contabilidade de registros em cada etapa.
 - Exportação dos dados da revisão em formatos editáveis:
   - Documentos de texto (Markdown e DOCX)
   - Tabelas de extração e planilhas de triagem (CSV e XLSX)
   - Arquivos de bibliografia (BibTeX e RIS)
 
-### 6. Interface e Acessibilidade
+### 7. Interface e Acessibilidade
 - Design system com conformidade estrita de contraste (WCAG 2.1 AA) e tokens padronizados.
 - Tema padrão: **Platinum & Dusk Blue**, com suporte a seleção de paletas alternativas na página de configurações.
 - Monitoramento de tarefas em segundo plano e logs de execução via WebSocket.
@@ -152,6 +160,20 @@ cd ../frontend
 npm install
 ```
 
+#### (Opcional) E-mail de contato para busca de PDF
+As APIs de acesso aberto usadas na localização de PDFs (Unpaywall, OpenAlex, Crossref) dão prioridade — e no caso do Unpaywall, exigem — identificação por e-mail. Crie `backend/.env` com:
+```
+RSAC_CONTACT_EMAIL=seu-email@instituicao.br
+```
+
+#### Criar a Conta de Acesso
+A API exige autenticação. No app de mesa o token local resolve sozinho, mas o modo servidor precisa de uma conta:
+```bash
+cd backend
+python -m app.cli create-user seu_usuario --role owner
+```
+A senha aparece uma única vez — anote-a.
+
 #### Execução Unificada
 ```powershell
 # Windows PowerShell
@@ -198,6 +220,34 @@ RSACV2/
 ├── brand/                    # Definições da identidade visual e ativos gráficos
 └── planejamento/             # Documentação técnica de arquitetura e validações
 ```
+
+---
+
+## Segurança e Acesso
+
+A API exige autenticação. No **app de mesa** nada muda para o usuário: o backend grava um token local legível só pelo dono da máquina, e a interface abre direto. No **modo servidor** (`Iniciar_Servidor.bat`) o acesso é por usuário e senha, e o lançador se recusa a publicar o túnel enquanto não houver conta provisionada.
+
+Crie a primeira conta com:
+```bash
+cd backend
+python -m app.cli create-user seu_usuario --role owner
+```
+A senha é exibida **uma única vez** no terminal. Contas `owner` administram credenciais e usuários; contas `researcher` operam a revisão sem alcançar as chaves de API.
+
+As chaves de API ficam **cifradas em repouso** no banco. No modo servidor, exporte a chave-mestra antes de publicar:
+```bash
+python -m app.cli generate-secret-key   # gere e exporte como RSAC_SECRET_KEY
+```
+
+O plano de segurança ([`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)) foi **concluído**: os 18 achados do [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md) estão fechados, cobertos por testes de segurança dedicados e por uma CI que impede que voltem. Detalhes normativos em [`29_ESPECIFICACAO_SEGURANCA.md`](./planejamento/29_ESPECIFICACAO_SEGURANCA.md).
+
+---
+
+## Indicadores (B.I. e Bibliometria)
+
+A aba **Indicadores**, entre Extração e Exportação, mostra estatística descritiva e de processo da revisão: funil PRISMA e de critérios, composição da amostra, rankings de periódico/autor/instituição, saúde de aquisição de PDF e proveniência de IA. Não é bibliometria de citação — o RSAC não coleta contagem de citações nem palavras-chave por artigo hoje.
+
+O plano de B.I. ([`33_PLANO_EXECUCAO_BI.md`](./planejamento/33_PLANO_EXECUCAO_BI.md)) foi **concluído** em quatro fases, cobertas por 31 testes de backend e verificadas ao vivo contra um servidor real. Diagnóstico do que o modelo de dados sustenta em [`31_DIAGNOSTICO_BI.md`](./planejamento/31_DIAGNOSTICO_BI.md); contrato normativo em [`32_ESPECIFICACAO_BI.md`](./planejamento/32_ESPECIFICACAO_BI.md).
 
 ---
 

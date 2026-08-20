@@ -113,8 +113,10 @@ async def test_screen_single_paper_included(db_session):
     db_session.refresh(paper)
     assert paper.decision == "Incluído"
     assert paper.ai_confidence == 0.95
-    # A observação deve conter apenas o parecer do revisor, sem rótulo de IA/modelo
+    # O commit ebccbc5 removeu de propósito o prefixo "[IA - modelo]" das
+    # observações; a justificativa é gravada limpa.
     assert paper.observations == "Estudo atende aos critérios de inclusão."
+    assert "[IA -" not in paper.observations
     assert "IA" not in paper.observations
     assert "mock-model" not in paper.observations
 

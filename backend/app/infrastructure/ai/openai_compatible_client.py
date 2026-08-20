@@ -7,15 +7,20 @@ Integração resiliente com qualquer endpoint compatível com a API OpenAI Chat 
 com suporte a fallback de modelos, rotação de chaves e tratamento de formatos de resposta.
 """
 
-import asyncio
 import json
 import logging
 import re
 from typing import List, Optional
+
 import httpx
 
 from app.domain.entities import Paper, Protocol
-from app.infrastructure.ai.base import BaseAIClient, ProtocolSuggestions, ScreeningResult
+from app.infrastructure.ai.base import (
+    BaseAIClient,
+    ProtocolSuggestions,
+    ScreeningResult,
+    validar_resposta_de_triagem,
+)
 from app.infrastructure.ai.prompts import (
     build_field_assist_prompt,
     build_protocol_suggestion_prompt,
@@ -79,7 +84,7 @@ class OpenAICompatibleAIClient(BaseAIClient):
             match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
             if match:
                 return match.group(1).strip()
-        
+
         # Tentar extrair do primeiro '{' ao último '}'
         start_idx = text.find("{")
         end_idx = text.rfind("}")
@@ -159,9 +164,14 @@ class OpenAICompatibleAIClient(BaseAIClient):
         prompt = build_screening_prompt(paper, protocol)
         data = await self._call_chat_completion(prompt)
 
-        decisao = data.get("decisao", "Pendente")
-        if decisao not in ("Incluído", "Excluído", "Pendente"):
-            decisao = "Pendente"
+        # Validação contra o contrato, com o desvio registrado em vez de
+        # coagido em silêncio (doc 29 §29.9.2).
+        decisao, confianca, justificativa, valida, nota = validar_resposta_de_triagem(data)
+        if not valida:
+            logger.warning(
+                "[%s] Resposta de triagem fora do contrato (%s) — decisão rebaixada para Pendente.",
+                self.provider_name, nota,
+            )
 
         inc = data.get("criterios_inclusao_atendidos") or data.get("criterios_inclusao") or {}
         exc = data.get("criterios_exclusao_atendidos") or data.get("criterios_exclusao") or {}
@@ -174,10 +184,12 @@ class OpenAICompatibleAIClient(BaseAIClient):
             decision=decisao,
             inclusion_criteria=inc,
             exclusion_criteria=exc,
-            justification=data.get("justificativa", ""),
-            confidence=float(data.get("confianca", 0.9)),
+            justification=justificativa,
+            confidence=confianca,
             model_used=self.model_name,
             provider=self.provider_name,
+            response_valid=valida,
+            validation_note=nota,
         )
 
     async def generate_protocol_suggestions(

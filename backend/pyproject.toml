@@ -26,12 +26,20 @@ dependencies = [
     "google-genai>=1.0.0",
     "openai>=1.60.0",
     "beautifulsoup4>=4.12.0",
+    # Cifra dos backups de credenciais (app/security/secret_box.py)
+    "cryptography>=44.0.0",
+    # Hash de senhas das contas de acesso (app/security/passwords.py)
+    "argon2-cffi>=23.1.0",
+    # Análise de XML de terceiros resistente a expansão de entidades
+    "defusedxml>=0.7.1",
     "lxml>=5.3.0",
     "pandas>=2.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "pip-audit>=2.7.0",
+    "bandit>=1.8.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.25.0",
     "pytest-cov>=6.0.0",
@@ -60,3 +68,6 @@ warn_unused_configs = true
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+markers = [
+    "dns_real: exercita a resolução de nomes de verdade (guarda de saída)",
+]

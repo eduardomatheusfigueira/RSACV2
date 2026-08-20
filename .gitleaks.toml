@@ -1,0 +1,20 @@
+# RSAC V2 — Configuração do gitleaks (doc 28/29, Fase 5 do plano de segurança)
+#
+# Estende as regras padrão do gitleaks e permite apenas os literais de teste
+# abaixo — senhas e tokens sintéticos usados na suíte de autenticação
+# (`backend/tests/test_security/`), que nunca são segredos reais. Qualquer
+# outro achado continua bloqueando a CI.
+
+[extend]
+useDefault = true
+
+[allowlist]
+regexes = [
+  '''inventado-123''',
+  '''nova-senha-forte-9876''',
+  '''chute-errado-123''',
+]
+paths = [
+  '''backend/tests/test_security/test_websocket_auth\.py''',
+  '''backend/tests/test_security/test_authz_and_sessions\.py''',
+]

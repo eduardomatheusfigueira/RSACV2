@@ -6,10 +6,11 @@ RSAC V2 — Profile & API Keys Backup and Restore Service.
 Serviço para exportação e restauração padronizada de chaves de API e perfis completos de workspace.
 """
 
-from datetime import datetime, timezone
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.models import (
@@ -19,7 +20,6 @@ from app.infrastructure.persistence.models import (
     DeduplicationReportModel,
     ExtractionAnswerModel,
     ExtractionQuestionModel,
-    HarvestRunModel,
     PaperCriterionModel,
     PaperModel,
     PaperSourceModel,
@@ -92,6 +92,48 @@ class ProfileService:
             "local_api_keys": local_keys,
             "sources": sources_dict,
         }
+
+    def extract_secrets(self, profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Remove as credenciais do pacote de perfil **in place** e as devolve.
+
+        O perfil completo carregava as chaves de IA e as credenciais de bases
+        junto com projetos e extrações, em claro. Separar os dois é o que
+        permite o backup de pesquisa circular sem levar credencial junto: o que
+        volta daqui só reentra no pacote cifrado, e a pedido (doc 29 §29.4.2).
+        """
+        ai_settings = profile.get("ai_settings") or {}
+        secrets: Dict[str, Any] = {
+            "gemini_api_keys": ai_settings.pop("gemini_api_keys", []),
+            "qwen_api_keys": ai_settings.pop("qwen_api_keys", []),
+            "local_api_keys": ai_settings.pop("local_api_keys", []),
+            "source_credentials": profile.pop("source_credentials", []),
+        }
+
+        # O que fica no pacote em claro é só o retrato: quantas chaves existem.
+        ai_settings["gemini_keys_count"] = len(secrets["gemini_api_keys"])
+        ai_settings["qwen_keys_count"] = len(secrets["qwen_api_keys"])
+        ai_settings["local_keys_count"] = len(secrets["local_api_keys"])
+        profile["source_credentials_count"] = len(secrets["source_credentials"])
+
+        return secrets
+
+    def restore_secrets(self, profile: Dict[str, Any], secrets: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Inverso de `extract_secrets`: devolve as credenciais decifradas ao lugar
+        de onde saíram, para que `import_profile` as encontre onde já procura.
+        """
+        ai_settings = profile.setdefault("ai_settings", {})
+        for field in ("gemini_api_keys", "qwen_api_keys", "local_api_keys"):
+            values = secrets.get(field)
+            if values:
+                ai_settings[field] = values
+
+        if secrets.get("source_credentials"):
+            profile["source_credentials"] = secrets["source_credentials"]
+
+        profile.pop("secrets", None)
+        return profile
 
     def import_keys(self, db: Session, raw_input: Any) -> Dict[str, Any]:
         """
