@@ -748,6 +748,22 @@ class APIClient {
     return this.request<PrismaFlowData>(`/projects/${projectId}/export/prisma`)
   }
 
+  // ── Indicadores (B.I. e Bibliometria) ──────────────────────────────
+
+  async getInsights(
+    projectId: string,
+    filters?: import('@/types/api').InsightsFilters
+  ): Promise<import('@/types/api').ProjectInsights> {
+    const searchParams = new URLSearchParams()
+    if (filters?.decision) searchParams.set('decision', filters.decision)
+    if (filters?.source) searchParams.set('source', filters.source)
+    if (filters?.year_from) searchParams.set('year_from', String(filters.year_from))
+    if (filters?.year_to) searchParams.set('year_to', String(filters.year_to))
+
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : ''
+    return this.request<import('@/types/api').ProjectInsights>(`/projects/${projectId}/insights${qs}`)
+  }
+
   // ── Profile & Keys Portability ────────────────────────────────────
 
   /**

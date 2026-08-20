@@ -108,6 +108,21 @@
   --color-pending-on-surface: var(--color-warning-on-surface);
   --color-text-on-pending: #000000; /* 5.31:1 sobre #bc6c25 */
 
+  /* ── Séries de Gráfico (Indicadores/B.I.) ────────────────────────────
+     Par categórico de uso genérico para comparações de duas séries sem
+     leitura de "bom/ruim" (ex.: atende/não atende um critério, onde o
+     sentido inverte entre critério de inclusão e de exclusão — reaproveitar
+     --color-included/--color-excluded aqui seria enganoso). Validado com o
+     script de paleta da skill de dataviz: separação CVD (ΔE 24.7 protan),
+     contraste >= 3:1 sobre fundo claro e escuro. Só os temas `dark` e
+     `organic-dark` recebem passo próprio abaixo; os demais temas escuros
+     (lava-steel, stormy-tangerine, indigo-rose, amethyst-deep,
+     synthwave-neon) herdam o passo claro, que segue seguro sobre fundo
+     escuro (contraste só aumenta) ainda que não ajustado ao tom de cada um —
+     fronteira de escopo deliberada da Fase 1 (doc 33). */
+  --color-chart-series-1: #2a78d6;
+  --color-chart-series-2: #eb6834;
+
   /* ── Tipografia Contemporânea (Inter + JetBrains Mono) ──────────── */
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
@@ -335,6 +350,9 @@
   --color-pending-text: #e3b27c; /* 4.90:1 na tinta, composta sobre as superfícies */
   --color-pending-on-surface: var(--color-warning-on-surface);
   --color-text-on-pending: #000000; /* 9.33:1 sobre #dda15e */
+
+  --color-chart-series-1: #3987e5;
+  --color-chart-series-2: #d95926;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════

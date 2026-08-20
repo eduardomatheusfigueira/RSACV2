@@ -612,6 +612,68 @@ export interface PrismaFlowData {
   }
 }
 
+// ── Indicadores (B.I. e Bibliometria, doc 32) ──────────────────────────
+
+export interface CriterionFunnelItem {
+  criterion_id: string
+  text: string
+  is_exclusion: boolean
+  evaluated_count: number
+  met_count: number
+  not_met_count: number
+}
+
+export interface SourceComposition {
+  source_name: string
+  found_count: number
+  included_count: number
+}
+
+export interface YearCount {
+  year: string
+  count: number
+}
+
+/** Item de ranking (periódico, autor, instituição ou tipo de estudo). */
+export interface NameCount {
+  name: string
+  count: number
+}
+
+export interface PdfHealth {
+  by_status: Record<string, number>
+  scanned_ratio: number | null
+  extraction_completeness: number | null
+}
+
+export interface InsightsFiltersApplied {
+  decision: string
+  source: string | null
+  year_from: number | null
+  year_to: number | null
+}
+
+export interface ProjectInsights {
+  prisma: PrismaFlowData
+  criteria_funnel: CriterionFunnelItem[]
+  composition_by_decision: Record<string, number>
+  composition_by_source: SourceComposition[]
+  composition_by_year: YearCount[]
+  composition_by_research_type: NameCount[]
+  top_journals: NameCount[]
+  top_authors: NameCount[]
+  top_institutions: NameCount[]
+  pdf_health: PdfHealth
+  filters_applied: InsightsFiltersApplied
+}
+
+export interface InsightsFilters {
+  decision?: 'Incluído' | 'Excluído' | 'Pendente'
+  source?: string
+  year_from?: number
+  year_to?: number
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────
 
 export interface ProjectStats {

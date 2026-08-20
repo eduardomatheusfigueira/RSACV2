@@ -5,7 +5,7 @@ pensada para que o backend exista e esteja testado antes de o frontend
 consumi-lo, e para que a aba apareça navegável (ainda que incompleta) o
 quanto antes.
 
-## Fase 0 — Serviço de agregação e endpoint
+## Fase 0 — Serviço de agregação e endpoint ✅ ENTREGUE
 
 **Objetivo**: `GET /api/v1/projects/{id}/insights` devolvendo todos os
 agregados de §6.1–6.4 do doc 32 (funil PRISMA + critérios, composição da
@@ -32,7 +32,17 @@ suíte incluída; `curl` manual contra um projeto de teste confirma que os
 filtros de query alteram os agregados de conteúdo e preservam os de
 processo, como especificado em doc 32 §3.2.
 
-## Fase 1 — Aba navegável com os agregados da Fase 0
+**Retrospectiva**: entregue conforme especificado — 24 testes novos, 397 no
+total no backend, verificação manual contra servidor real (perfil desktop)
+confirmando filtro, validação (422) e autenticação (401). Um defeito real
+apareceu durante a implementação: o próprio doc 32 previa um *fallback* de
+divisão de autores por vírgula quando o campo não tem `"; "` — mas
+"Sobrenome, Inicial" já usa vírgula dentro de um único nome, e esse
+fallback fragmentaria "Silva, J." em dois autores fantasmas. Corrigido no
+código e no doc 32 §4 antes de entregar: sem `"; "`, o campo inteiro é um
+autor só, sem fallback por vírgula.
+
+## Fase 1 — Aba navegável com os agregados da Fase 0 ✅ ENTREGUE
 
 **Objetivo**: a aba existe, aparece na navegação, mostra os gráficos cujo
 dado já está pronto (Fase 0) com estado vazio correto onde não há dado.
@@ -56,6 +66,48 @@ dado já está pronto (Fase 0) com estado vazio correto onde não há dado.
 (desktop, `npm run dev`) confirma que os seis blocos renderizam com dado
 verdadeiro e que os filtros de decisão/base/ano (se já plugados na UI nesta
 fase) refletem no gráfico. `npm run verify` e `npx vitest run` limpos.
+
+**Retrospectiva**: entregue com nove blocos (não seis — o número final do
+doc 32 §6.1–6.4, contando funil PRISMA, funil de critérios, composição por
+decisão, composição por base, distribuição temporal, tipo de estudo e os
+três rankings). Duas divergências do texto acima, ambas registradas aqui
+porque mudam o que "testado" significa nesta fase:
+
+1. **`InsightsPage.test.tsx` não existe** — existe
+   `insightsFormat.ts`/`.test.ts`. O projeto não tem infraestrutura de teste
+   de renderização de componente: nenhuma das 8 páginas existentes antes
+   desta tem um teste próprio, só `api/backendUrl.test.ts`, e esse único
+   precedente é sobre um módulo **sem import nenhum** — deliberadamente
+   isolado para não precisar resolver o alias `@/` nem montar DOM. Importar
+   `InsightsPage.tsx` (que puxa `recharts`, Radix e o cliente HTTP) na
+   suíte confirmou o gap: `vitest run` não resolve `@/`, e mesmo resolvendo,
+   nenhuma configuração de ambiente DOM existe para montar o componente.
+   Introduzir `@testing-library/react` unilateralmente para esta única
+   página teria sido uma mudança de infraestrutura de teste do projeto
+   inteiro, não uma decisão de escopo desta fase. A escolha foi replicar o
+   padrão existente: extrair a única lógica pura da página
+   (`formatarPercentual`) para um módulo sem import, testável do mesmo jeito
+   que `backendUrl.ts` — e verificar a renderização de verdade manualmente.
+2. **A verificação manual não foi `npm run dev`** — esse comando sobe o
+   shell do Electron, que falha em contêiner (`Running as root without
+   --no-sandbox is not supported`). O projeto já tem a ferramenta certa para
+   isso, usada pela suíte de validação visual/A11y (doc 26):
+   `vite.config.testserver.mts` + `scripts/shared/rsac-fixture.mjs`, que
+   sobe só o renderer numa porta fixa e abre com o mesmo binário Chromium
+   do resto da suíte. Usada aqui com um projeto de dado real (decisões,
+   critérios, três bases, quatro instituições/autores) — screenshot
+   confirma os nove blocos renderizados, a cor por decisão batendo com os
+   tokens `--color-included/-excluded/-pending`, o estado vazio funcionando
+   de verdade (nenhum artigo tinha `journal` preenchido — "Periódicos"
+   mostrou o estado vazio, não um gráfico quebrado), e nenhum erro de
+   console além de uma falha de rede pré-existente e alheia ao trabalho
+   desta fase (Google Fonts, sem acesso à internet no sandbox — reproduz
+   idêntica na `ExportPage` já existente).
+
+Custo registrado: adotar Recharts (doc 32 §5.1) pesou o bundle web de 725 KB
+para 1120 KB minificados (203 KB → 319 KB gzip). Aceitável para uma
+ferramenta de pesquisa desktop/self-hosted, mas é o preço real da decisão —
+não um efeito colateral a esconder.
 
 ## Fase 2 — Filtros na interface e refinamento do funil de critérios
 

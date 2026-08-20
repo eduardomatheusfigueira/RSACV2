@@ -13,6 +13,7 @@ import { ProtocolPage } from '@/pages/ProtocolPage'
 import { ScreeningPage } from '@/pages/ScreeningPage'
 import { HarvestPage } from '@/pages/HarvestPage'
 import { ExtractionPage } from '@/pages/ExtractionPage'
+import { InsightsPage } from '@/pages/InsightsPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -177,6 +178,7 @@ function AppContent(): JSX.Element {
           <Route path="/projects/:id/harvest" element={<HarvestPage />} />
           <Route path="/projects/:id/screening" element={<ScreeningPage />} />
           <Route path="/projects/:id/extraction" element={<ExtractionPage />} />
+          <Route path="/projects/:id/insights" element={<InsightsPage />} />
           <Route path="/projects/:id/export" element={<ExportPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
