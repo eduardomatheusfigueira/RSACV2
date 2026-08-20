@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Vigente (B.I. e Bibliometria)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria)
 
 ---
 
@@ -23,17 +23,16 @@ Os documentos **28 a 30** registram o **planejamento de segurança**, aberto
 quando o aplicativo passou a ter um servidor publicado na internet
 (`Iniciar_Servidor.bat`) e **concluído** — as seis fases estão entregues.
 
-Os documentos **31 a 33** são o **planejamento vigente de B.I. e
-bibliometria**: uma aba de indicadores após a Extração, fundamentada no que o
-modelo de dados atual já sustenta. Mesma gramática — diagnóstico →
-especificação → execução.
+Os documentos **31 a 33** registram o **planejamento de B.I. e
+bibliometria**, aberto para dar à revisão uma aba de indicadores após a
+Extração, e **concluído** — as quatro fases estão entregues.
 
 ```
 01–21   histórico          o que nos trouxe até aqui
   22    log de entregas    o que ficou pronto, o que divergiu, o que sobrou
 23–27   vigente            design system e UX/UI
 28–30   concluído          segurança — as seis fases entregues ✅
-31–33   vigente            B.I. e bibliometria
+31–33   concluído          B.I. e bibliometria — as quatro fases entregues ✅
 ```
 
 ---
@@ -69,7 +68,15 @@ especificação → execução.
 
 ---
 
-## 📊 Planejamento vigente — B.I. e Bibliometria
+## ✅ B.I. e Bibliometria — plano concluído
+
+> O plano de B.I. foi **concluído**: a aba de Indicadores está entregue com
+> funil PRISMA e de critérios, composição da amostra, rankings de
+> periódico/autor/instituição, saúde de PDF, filtros de decisão/base/ano e
+> proveniência de IA — coberta por 31 testes de backend e verificada ao
+> vivo contra um servidor real. O doc 31 registra o que motivou o trabalho;
+> o doc 33 registra o que foi entregue em cada fase, com as divergências
+> justificadas.
 
 | # | Documento | Descrição |
 |---|-----------|-----------|
