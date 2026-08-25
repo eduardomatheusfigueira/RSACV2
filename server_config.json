@@ -1,8 +1,5 @@
 {
   "port": 8000,
   "auto_open_browser": false,
-  "netlify_url": "https://rsacv2.netlify.app",
-  "cloudflared_path": "",
-  "cors_origins": ["https://rsacv2.netlify.app"],
-  "cloudflared_sha256": ""
+  "cors_origins": []
 }
