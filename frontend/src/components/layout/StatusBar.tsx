@@ -6,7 +6,7 @@
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { Sparkles, Edit3, Terminal, AlertCircle, LogOut, UserRound } from 'lucide-react'
+import { Sparkles, Edit3, Terminal, AlertCircle, UserRound } from 'lucide-react'
 import { RsacMark } from '@/components/brand/RsacMark'
 import { BetaBadge } from '@/components/brand/BetaBadge'
 import { api } from '@/api/client'
@@ -16,7 +16,7 @@ import './StatusBar.css'
 export function StatusBar(): JSX.Element {
   const { backendStatus, backendVersion, aiEnabled } = useSettingsStore()
   const { entries, panelOpen, togglePanel } = useLogStore()
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
 
   const errorCount = entries.filter((e) => e.level === 'error').length
 
@@ -27,31 +27,19 @@ export function StatusBar(): JSX.Element {
   const handleConfigureBackend = () => {
     const current = api.getBaseUrl().replace(/\/api\/v1\/?$/, '')
     const input = window.prompt(
-      'Configurar URL do Backend (ex: https://seu-tunnel.trycloudflare.com ou http://127.0.0.1:8000):',
+      'Configurar URL do Backend (ex: http://127.0.0.1:8000):',
       current
     )
     if (!input || !input.trim()) return
 
-    // Mesma validação e mesma confirmação do link com `api_url`: trocar o
-    // servidor pela barra de status é a mesma decisão, e mudar de destino sem
-    // ver o host é o que a Fase 4 fecha (doc 29 §29.12).
-    let destino
     try {
-      destino = analisarUrlDeBackend(input)
+      const destino = analisarUrlDeBackend(input)
+      if (!window.confirm(mensagemDeConfirmacao(destino))) return
+      api.setBaseUrl(destino.url)
+      window.location.reload()
     } catch (err: any) {
       window.alert(err?.message ?? 'Endereço de servidor inválido.')
-      return
     }
-
-    if (!window.confirm(mensagemDeConfirmacao(destino))) return
-
-    api.setBaseUrl(destino.url)
-    window.location.reload()
-  }
-
-  const handleLogout = async () => {
-    if (!window.confirm('Encerrar a sessão? Você precisará entrar novamente.')) return
-    await logout()
   }
 
   return (
@@ -91,23 +79,10 @@ export function StatusBar(): JSX.Element {
       <div className="status-bar-right">
         {user && (
           <>
-            {/* Quem está operando fica visível o tempo todo: num servidor
-                compartilhado, a autoria das decisões de triagem depende de a
-                pessoa saber com qual conta está trabalhando. */}
-            <span className="status-user" title={`Sessão de ${user.username} (${user.role})`}>
+            <span className="status-user" title={`Perfil Local: ${user.username}`}>
               <UserRound size={12} />
               <span className="status-user-name">{user.username}</span>
-              {user.role === 'owner' && <span className="status-user-role">owner</span>}
             </span>
-            <button
-              type="button"
-              className="status-logout-btn"
-              onClick={handleLogout}
-              title="Encerrar sessão"
-            >
-              <LogOut size={12} />
-              <span>Sair</span>
-            </button>
             <span className="status-divider">|</span>
           </>
         )}

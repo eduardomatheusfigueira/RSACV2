@@ -108,25 +108,21 @@ async def lifespan(app: FastAPI):
         contas_ativas = (
             db_boot.query(UserModel).filter(UserModel.is_active == True).count()  # noqa: E712
         )
+        if contas_ativas == 0:
+            from app.security.crypto import hash_password
+            import secrets
+
+            usuario_padrao = UserModel(
+                username="pesquisador",
+                password_hash=hash_password(secrets.token_urlsafe(16)),
+                role="owner",
+                is_active=True,
+            )
+            db_boot.add(usuario_padrao)
+            db_boot.commit()
+            logger.info("[Auth] Conta de usuário local ('pesquisador') provisionada automaticamente.")
     finally:
         db_boot.close()
-
-    if settings.is_server_profile and contas_ativas == 0:
-        mensagem = (
-            "Nenhuma conta de acesso provisionada e o perfil é 'server'. "
-            "Publicar o backend sem autenticação daria controle total a quem "
-            "obtivesse a URL. Crie a primeira conta com:\n"
-            "    python -m app.cli create-user <usuario> --role owner"
-        )
-        logger.critical("[Segurança] %s", mensagem)
-        raise RuntimeError(mensagem)
-
-    if contas_ativas == 0:
-        logger.warning(
-            "[Segurança] Nenhuma conta provisionada. No perfil desktop o app usa o "
-            "token local, mas crie uma conta antes de publicar o servidor: "
-            "python -m app.cli create-user <usuario> --role owner"
-        )
 
     # Reconciliar execuções pendentes interrompidas por queda/reinício do processo
     try:

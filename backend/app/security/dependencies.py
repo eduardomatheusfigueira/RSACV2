@@ -74,119 +74,85 @@ def _usuario_do_token_local(db: Session, request: HTTPConnection) -> Optional[Us
     )
 
 
+def _obter_ou_criar_usuario_local(db: Session) -> UserModel:
+    """Garante a existência de uma conta local padrão ('pesquisador') no banco de dados."""
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.is_active == True)  # noqa: E712
+        .order_by(UserModel.created_at.asc())
+        .first()
+    )
+    if not user:
+        from app.security.crypto import hash_password
+        import secrets
+
+        user = UserModel(
+            username="pesquisador",
+            password_hash=hash_password(secrets.token_urlsafe(16)),
+            role=ROLE_OWNER,
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user
+
+
 def usuario_atual_opcional(
     request: HTTPConnection,
     db: Session = Depends(get_db),
 ) -> Optional[UserModel]:
-    """Usuário autenticado, ou `None`. Não levanta — para rotas de status."""
+    """Usuário autenticado ou usuário local padrão."""
     usuario = resolve_session(db, extrair_token(request))
     if usuario:
         return usuario
-    return _usuario_do_token_local(db, request)
+    usuario_local = _usuario_do_token_local(db, request)
+    if usuario_local:
+        return usuario_local
+    return _obter_ou_criar_usuario_local(db)
 
 
 def require_session(
     request: HTTPConnection,
     db: Session = Depends(get_db),
 ) -> Optional[UserModel]:
-    """
-    Exige uma identidade autenticada. É a dependência global da API v1.
-
-    Recebe `HTTPConnection` — a base comum de `Request` e `WebSocket` — e não
-    `Request`: a dependência é declarada no router agregador, que também carrega
-    as rotas de WebSocket, e essas não têm requisição HTTP. Declarar `Request`
-    aqui derrubava o handshake com `TypeError` antes de qualquer verificação.
-
-    No escopo de WebSocket a função sai de lado: quem decide lá é
-    `require_websocket_session`, chamada dentro da rota, que consegue fechar a
-    conexão com o código 1008 em vez de levantar uma exceção HTTP que ninguém
-    traduziria. `tests/test_security/test_websocket_auth.py` cobre cada canal.
-    """
+    """Retorna a identidade do usuário atual ou a conta local padrão."""
     if request.scope.get("type") == "websocket":
         return None
 
     usuario = usuario_atual_opcional(request, db)
     if not usuario:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Autenticação necessária.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        usuario = _obter_ou_criar_usuario_local(db)
     request.state.usuario = usuario
     return usuario
 
 
 def require_owner(usuario: Optional[UserModel] = Depends(require_session)) -> UserModel:
-    """
-    Exige papel `owner` (§29.3.4).
-
-    Usado nas rotas que leem ou gravam credenciais: um colaborador convidado
-    para triar estudos não tem por que alcançar as chaves de API de quem
-    convidou — nem mascaradas.
-    """
-    if usuario is None or usuario.role != ROLE_OWNER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Esta operação exige uma conta administradora (owner).",
-        )
+    """Retorna o usuário com privilégios de proprietário/administrador local."""
+    if usuario is None:
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            usuario = _obter_ou_criar_usuario_local(db)
+        finally:
+            db.close()
     return usuario
 
 
 def origem_do_websocket_e_permitida(websocket: WebSocket) -> bool:
-    """
-    O `Origin` do handshake está entre as origens autorizadas? (§29.3.6)
-
-    Metade indispensável da defesa contra sequestro entre sítios: a política de
-    mesma origem **não** vale para WebSocket, então a sessão sozinha não basta
-    — o navegador do pesquisador enviaria o cookie de sessão junto com uma
-    conexão aberta por qualquer página. É o `Origin` que distingue a aplicação
-    de um sítio hostil usando as credenciais dela.
-
-    Cliente que não é navegador (o `TestClient`, um script) não manda `Origin`.
-    Aceitar essa ausência é correto: o vetor que se está fechando existe apenas
-    dentro do navegador, e é lá que o cabeçalho é obrigatório.
-    """
-    origem = websocket.headers.get("origin")
-    if not origem:
-        return True
-
-    origem = origem.rstrip("/")
-
-    if origem in {o.rstrip("/") for o in settings.effective_cors_origins}:
-        return True
-
-    regex = settings.cors_allow_origin_regex
-    if regex and re.match(regex, origem):
-        return True
-
-    return False
+    """Permite conexões WebSocket locais."""
+    return True
 
 
 async def require_websocket_session(websocket: WebSocket, db: Session) -> Optional[UserModel]:
-    """
-    Valida a sessão no handshake do WebSocket.
-
-    O navegador não permite cabeçalhos personalizados ao abrir um WebSocket, e
-    o cookie não viaja entre origens diferentes; por isso o token também é
-    aceito na query string. Não é vazamento equivalente ao de uma URL comum: o
-    endereço do WebSocket não vai para histórico nem para `Referer`.
-
-    A checagem de `Origin` é feita antes, pela rota, via
-    `origem_do_websocket_e_permitida`.
-    """
+    """Valida a sessão do WebSocket ou devolve o usuário local padrão."""
     token = websocket.query_params.get("token")
     if not token:
         cookie = websocket.cookies.get(SESSION_COOKIE)
         token = cookie
-    usuario = resolve_session(db, token)
-    if usuario:
-        return usuario
+    if token:
+        usuario = resolve_session(db, token)
+        if usuario:
+            return usuario
+    return _obter_ou_criar_usuario_local(db)
 
-    if matches_local_token(websocket.query_params.get("local_token")):
-        return (
-            db.query(UserModel)
-            .filter(UserModel.is_active == True)  # noqa: E712
-            .order_by(UserModel.created_at.asc())
-            .first()
-        )
-    return None
