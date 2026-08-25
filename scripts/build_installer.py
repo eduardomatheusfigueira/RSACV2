@@ -3,8 +3,8 @@
 
 """
 RSAC V2 — Build do Instalador Oficial Windows (.exe)
-Compila o backend Python em binário autônomo e gera o instalador NSIS completo:
-- RSAC V2-Setup-2.0.0.exe (ou RSAC-Setup.exe)
+Compila o backend Python em binário autônomo e gera o instalador Inno Setup (.exe):
+- dist_bin/RSAC-Setup.exe
 """
 
 import os
@@ -17,7 +17,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 BACKEND_DIR = ROOT_DIR / "backend"
 DIST_DIR = ROOT_DIR / "dist_bin"
-RELEASE_DIR = FRONTEND_DIR / "release"
+SCRIPTS_DIR = ROOT_DIR / "scripts"
 
 
 def run_cmd(cmd, cwd=ROOT_DIR, desc=""):
@@ -26,6 +26,20 @@ def run_cmd(cmd, cwd=ROOT_DIR, desc=""):
     if proc.returncode != 0:
         print(f"[X] Falha na etapa: {desc}")
         sys.exit(1)
+
+
+def find_iscc() -> str:
+    """Localiza o compilador Inno Setup no sistema."""
+    candidates = [
+        shutil.which("iscc"),
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"),
+        r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        r"C:\Program Files\Inno Setup 6\ISCC.exe",
+    ]
+    for c in candidates:
+        if c and os.path.isfile(c):
+            return c
+    return "iscc"
 
 
 def main():
@@ -58,22 +72,20 @@ def main():
     npm_bin = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
     run_cmd(f'"{npm_bin}" run build', cwd=FRONTEND_DIR, desc="Compilando interface e processos Electron")
 
-    # 3. Pacote do Instalador NSIS
+    # 3. Gerar arquivos desembalados do Electron
     npx_bin = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
-    run_cmd(f'"{npx_bin}" electron-builder --win', cwd=FRONTEND_DIR, desc="Gerando instalador executável (NSIS)")
+    run_cmd(f'"{npx_bin}" electron-builder --dir', cwd=FRONTEND_DIR, desc="Preparando pacote da aplicação")
 
-    # 4. Copiar instalador para dist_bin
+    # 4. Compilar instalador oficial com Inno Setup
+    iscc_path = find_iscc()
     DIST_DIR.mkdir(parents=True, exist_ok=True)
-    setup_file = RELEASE_DIR / "RSAC V2-Setup-2.0.0.exe"
-    if setup_file.exists():
-        dst = DIST_DIR / "RSAC-Setup.exe"
-        shutil.copy2(setup_file, dst)
-        print(f"\n[✓] Instalador copiado para: {dst}")
+    iss_file = SCRIPTS_DIR / "installer.iss"
+    run_cmd(f'"{iscc_path}" /Qp "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
 
+    setup_file = DIST_DIR / "RSAC-Setup.exe"
     print("\n" + "═" * 65)
     print("🎉 SUCESSO! O instalador autônomo está pronto para distribuição:")
     print(f"  📦 {setup_file}")
-    print(f"  📦 {DIST_DIR / 'RSAC-Setup.exe'}")
     print("═" * 65 + "\n")
 
 

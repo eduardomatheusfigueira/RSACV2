@@ -3,7 +3,7 @@
  * Handlers para mensagens IPC entre Main e Renderer.
  */
 
-import { ipcMain, dialog, app, nativeTheme, Notification } from 'electron'
+import { ipcMain, dialog, app, nativeTheme, Notification, BrowserWindow } from 'electron'
 
 export function registerIpcHandlers(): void {
   // ── Informações do Sistema ──────────────────────────────────────────
@@ -52,12 +52,10 @@ export function registerIpcHandlers(): void {
 
   // Notificar renderer quando tema do sistema mudar
   nativeTheme.on('updated', () => {
-    const { BrowserWindow } = require('electron')
     const windows = BrowserWindow.getAllWindows()
     const theme = nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
-    windows.forEach((win: any) => {
+    windows.forEach((win) => {
       win.webContents.send('theme:changed', theme)
     })
-
   })
 }

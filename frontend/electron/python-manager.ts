@@ -79,9 +79,14 @@ export class PythonManager {
       ]
     }
 
-    console.log(`[PythonManager] Spawning: ${exePath} ${exeArgs.join(' ')}`)
+    const backendCwd = app.isPackaged
+      ? (existsSync(standaloneDirExe) ? join(process.resourcesPath, 'backend', 'rsac-backend') : join(process.resourcesPath, 'backend'))
+      : join(__dirname, '..', '..', '..', 'backend')
+
+    console.log(`[PythonManager] Spawning: ${exePath} ${exeArgs.join(' ')} (cwd: ${backendCwd})`)
 
     this.process = spawn(exePath, exeArgs, {
+      cwd: backendCwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env }
     })

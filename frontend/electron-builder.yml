@@ -18,8 +18,6 @@ extraResources:
     to: backend
 
 win:
-  # build/icon.ico — 16/24/32/48/64/128/256 px, com ajuste óptico por tamanho:
-  # abaixo de 64 px o selo BETA é suprimido para o monograma respirar.
   icon: build/icon.ico
   target:
     - target: nsis
@@ -28,19 +26,14 @@ win:
   artifactName: ${productName}-Setup-${version}.${ext}
 
 nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+  oneClick: true
+  perMachine: false
+  allowElevation: false
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: RSAC V2
-  # Identidade visual do instalador e do desinstalador
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
-  installerHeaderIcon: build/installerHeaderIcon.ico
-  installerHeader: build/installerHeader.bmp
-  installerSidebar: build/installerSidebar.bmp
-  # O painel de desinstalação usa a mesma arte de marca do de instalação.
-  uninstallerSidebar: build/installerSidebar.bmp
   uninstallDisplayName: ${productName} ${version}
 
 mac:
