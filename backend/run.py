@@ -26,13 +26,23 @@ def main():
         import os
         os.environ["RSAC_DEBUG"] = "true"
 
-    uvicorn.run(
-        "app.main:app",
-        host=args.host,
-        port=args.port,
-        reload=args.reload,
-        log_level="debug" if args.debug else "info",
-    )
+    if args.reload:
+        uvicorn.run(
+            "app.main:app",
+            host=args.host,
+            port=args.port,
+            reload=True,
+            log_level="debug" if args.debug else "info",
+        )
+    else:
+        from app.main import app
+        uvicorn.run(
+            app,
+            host=args.host,
+            port=args.port,
+            reload=False,
+            log_level="debug" if args.debug else "info",
+        )
 
 
 if __name__ == "__main__":
