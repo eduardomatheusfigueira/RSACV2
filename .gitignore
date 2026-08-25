@@ -80,6 +80,10 @@ electron.vite.config.*.mjs
 *.rpm
 *.zip
 *.tar.gz
+*.spec
+build_temp/
+dist_bin/
+frontend/resources/backend/
 
 # ── Identidade Visual (exceções) ────────────────────────────────────
 # `build/` acima é regra de artefatos Python. Os buildResources do

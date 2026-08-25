@@ -5,6 +5,7 @@
 
 import { spawn, ChildProcess } from 'child_process'
 import { app } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import net from 'net'
 
@@ -48,22 +49,39 @@ export class PythonManager {
 
     this.port = await this.findFreePort()
 
-    // Em produção, Python está embarcado; em dev, usa o do sistema
-    const pythonPath = app.isPackaged
-      ? join(process.resourcesPath, 'backend', 'python.exe')
-      : 'python'
+    let exePath: string
+    let exeArgs: string[]
 
-    const scriptPath = app.isPackaged
-      ? join(process.resourcesPath, 'backend', 'run.py')
-      : join(__dirname, '..', '..', '..', 'backend', 'run.py')
+    const standaloneDirExe = join(process.resourcesPath, 'backend', 'rsac-backend', 'rsac-backend.exe')
+    const standaloneSingleExe = join(process.resourcesPath, 'backend', 'rsac-backend.exe')
 
-    console.log(`[PythonManager] Spawning: ${pythonPath} ${scriptPath} --port ${this.port}`)
+    if (app.isPackaged) {
+      if (existsSync(standaloneDirExe)) {
+        exePath = standaloneDirExe
+        exeArgs = ['--port', String(this.port), '--host', '127.0.0.1']
+      } else if (existsSync(standaloneSingleExe)) {
+        exePath = standaloneSingleExe
+        exeArgs = ['--port', String(this.port), '--host', '127.0.0.1']
+      } else {
+        exePath = join(process.resourcesPath, 'backend', 'python.exe')
+        exeArgs = [
+          join(process.resourcesPath, 'backend', 'run.py'),
+          '--port', String(this.port),
+          '--host', '127.0.0.1'
+        ]
+      }
+    } else {
+      exePath = 'python'
+      exeArgs = [
+        join(__dirname, '..', '..', '..', 'backend', 'run.py'),
+        '--port', String(this.port),
+        '--host', '127.0.0.1'
+      ]
+    }
 
-    this.process = spawn(pythonPath, [
-      scriptPath,
-      '--port', String(this.port),
-      '--host', '127.0.0.1'
-    ], {
+    console.log(`[PythonManager] Spawning: ${exePath} ${exeArgs.join(' ')}`)
+
+    this.process = spawn(exePath, exeArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env }
     })
