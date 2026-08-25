@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Build Executables
-Compila os 2 executáveis do projeto com PyInstaller:
-1. RSAC_Server.exe  (Servidor Backend + Cloudflare Tunnel + Web Remoto)
-2. RSAC_Local.exe   (Interface Local Desktop)
+RSAC V2 — Build Executável Desktop
+Compila o executável unificado do aplicativo com PyInstaller:
+- RSAC.exe (Aplicativo Desktop com Backend Integrado)
 """
 
 import os
@@ -46,34 +45,23 @@ def ensure_icon_ico():
     return ICON_ICO if ICON_ICO.exists() else None
 
 
-def create_batch_launchers():
-    """Cria arquivos .bat rápidos na raiz para conveniência adicional."""
-    server_bat = ROOT_DIR / "Iniciar_Servidor.bat"
-    local_bat = ROOT_DIR / "Iniciar_Interface_Local.bat"
-
-    with open(server_bat, "w", encoding="utf-8") as f:
+def create_batch_launcher():
+    """Cria o arquivo Iniciar_RSAC.bat na raiz para conveniência."""
+    launcher_bat = ROOT_DIR / "Iniciar_RSAC.bat"
+    with open(launcher_bat, "w", encoding="utf-8") as f:
         f.write("@echo off\n")
-        f.write("title RSAC V2 - Servidor Remoto & Cloudflare\n")
-        f.write("if exist \"RSAC_Server.exe\" (\n")
-        f.write("    start \"\" \"RSAC_Server.exe\"\n")
+        f.write("title RSAC V2 — Aplicativo Desktop\n")
+        f.write("if exist \"RSAC.exe\" (\n")
+        f.write("    start \"\" \"RSAC.exe\"\n")
         f.write(") else (\n")
-        f.write("    python scripts\\server_launcher.py\n")
+        f.write("    python scripts\\launcher.py\n")
         f.write(")\n")
 
-    with open(local_bat, "w", encoding="utf-8") as f:
-        f.write("@echo off\n")
-        f.write("title RSAC V2 - Interface Local\n")
-        f.write("if exist \"RSAC_Local.exe\" (\n")
-        f.write("    start \"\" \"RSAC_Local.exe\"\n")
-        f.write(") else (\n")
-        f.write("    python scripts\\local_launcher.py\n")
-        f.write(")\n")
-
-    print("[✓] Arquivos Iniciar_Servidor.bat e Iniciar_Interface_Local.bat criados na raiz.")
+    print("[✓] Arquivo Iniciar_RSAC.bat atualizado na raiz.")
 
 
 def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
-    """Executa o PyInstaller para compilar um script Python em executável .exe."""
+    """Executa o PyInstaller para compilar o executável."""
     print(f"\n{'='*60}")
     print(f"[*] Compilando {output_name}.exe a partir de {script_path.name}...")
     print(f"{'='*60}")
@@ -91,9 +79,6 @@ def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
         str(DIST_DIR),
         "--workpath",
         str(BUILD_DIR),
-        "--hidden-import=qrcode",
-        "--hidden-import=qrcode.constants",
-        "--hidden-import=qrcode.image.base",
         "--hidden-import=colorama",
     ]
 
@@ -107,7 +92,6 @@ def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
         print(f"[X] Erro ao compilar {output_name}.exe")
         return False
 
-    # Copiar o executável gerado para a raiz do projeto para fácil acesso
     src_exe = DIST_DIR / f"{output_name}.exe"
     dst_exe = ROOT_DIR / f"{output_name}.exe"
     if src_exe.exists():
@@ -125,22 +109,17 @@ def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
 def main():
     icon_path = ensure_icon_ico()
 
-    # 1. Compilar RSAC_Server.exe
-    server_ok = build_exe(SCRIPTS_DIR / "server_launcher.py", "RSAC_Server", icon_path)
+    # Compilar RSAC.exe único
+    ok = build_exe(SCRIPTS_DIR / "launcher.py", "RSAC", icon_path)
 
-    # 2. Compilar RSAC_Local.exe
-    local_ok = build_exe(SCRIPTS_DIR / "local_launcher.py", "RSAC_Local", icon_path)
+    create_batch_launcher()
 
-    # 3. Criar arquivos .bat auxiliares
-    create_batch_launchers()
-
-    # 4. Limpeza de diretórios temporários de build
+    # Limpeza de temporários
     if BUILD_DIR.exists():
         shutil.rmtree(BUILD_DIR, ignore_errors=True)
     if DIST_DIR.exists():
         shutil.rmtree(DIST_DIR, ignore_errors=True)
 
-    # Remover arquivos .spec gerados
     for spec in ROOT_DIR.glob("*.spec"):
         try:
             spec.unlink()
@@ -148,10 +127,10 @@ def main():
             pass
 
     print("\n" + "═" * 60)
-    if server_ok and local_ok:
-        print("🎉 SUCESSO! Ambos os executáveis foram gerados na raiz:")
-        print(f"  1. 🚀 {ROOT_DIR / 'RSAC_Server.exe'}")
-        print(f"  2. 💻 {ROOT_DIR / 'RSAC_Local.exe'}")
+    if ok:
+        print("🎉 SUCESSO! Executável oficial gerado na raiz:")
+        print(f"  👉 {ROOT_DIR / 'RSAC.exe'}")
+        print(f"  👉 {ROOT_DIR / 'Iniciar_RSAC.bat'}")
     else:
         print("⚠️ Houve falhas durante a compilação. Verifique os logs acima.")
     print("═" * 60 + "\n")
@@ -159,3 +138,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

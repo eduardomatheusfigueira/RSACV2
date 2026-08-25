@@ -108,28 +108,22 @@ A arquitetura é dividida em:
 
 ---
 
-## Modos de Execução
+## Como Executar
 
-O RSAC V2 pode ser executado em três modalidades distintas, dependendo do ambiente de uso:
+O RSAC V2 é um aplicativo desktop local e direto:
 
-### 1. Interface Local Desktop
-Inicia o backend em segundo plano e abre a interface diretamente em janela dedicada de aplicativo (Chrome/Edge App Mode):
+### 1. Executável / Lançador Rápido
+Basta executar o aplicativo nativo na raiz do projeto:
 ```bat
-Iniciar_Interface_Local.bat
+RSAC.exe
 ```
-Ou via linha de comando:
-```bash
-python scripts/local_launcher.py
-```
-
-### 2. Servidor com Acesso Remoto (Nuvem / Dispositivos Móveis)
-Inicia o backend e estabelece um túnel seguro (HTTPS) via Cloudflare Tunnel, exibindo no terminal o endereço público e o código QR para acesso em smartphones ou tablets:
+Ou pelo inicializador em lote:
 ```bat
-Iniciar_Servidor.bat
+Iniciar_RSAC.bat
 ```
-Ou via linha de comando:
+Ou via terminal Python:
 ```bash
-python scripts/server_launcher.py
+python scripts/launcher.py
 ```
 
 ### 3. Ambiente de Desenvolvimento (Desktop Electron)

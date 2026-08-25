@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Local App Launcher
-Inicia o backend Python (FastAPI) e abre a interface local diretamente
-em janela dedicada de aplicativo Desktop (Chrome/Edge App Mode ou Navegador Padrão).
+RSAC V2 — Launcher Principal
+Inicia o backend FastAPI localmente e abre a interface em janela dedicada
+de aplicativo Desktop (Chrome/Edge App Mode ou Navegador Padrão).
 """
 
 import atexit
-import json
 import os
 import shutil
 import signal
@@ -57,7 +56,7 @@ def ensure_frontend_build() -> bool:
     if dist_index.exists():
         return True
 
-    print("\033[93m[*] Interface estática não encontrada. Compilando frontend Web SPA...\033[0m")
+    print("\033[93m[*] Interface compilada não encontrada. Gerando build...\033[0m")
     try:
         npm_bin = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
         proc = subprocess.run(
@@ -68,7 +67,7 @@ def ensure_frontend_build() -> bool:
             text=True,
         )
         if dist_index.exists():
-            print("\033[92m[✓] Build do frontend concluído com sucesso!\033[0m\n")
+            print("\033[92m[✓] Build concluído com sucesso!\033[0m\n")
             return True
         else:
             print(f"\033[91m[X] Falha no build do frontend:\n{proc.stderr or proc.stdout}\033[0m\n")
@@ -82,7 +81,7 @@ def is_port_in_use(port: int) -> bool:
     """Verifica se o backend já está respondendo na porta."""
     try:
         url = f"http://127.0.0.1:{port}/api/v1/health"
-        req = urllib.request.Request(url, headers={"User-Agent": "RSAC-Local-Launcher"})
+        req = urllib.request.Request(url, headers={"User-Agent": "RSAC-Launcher"})
         with urllib.request.urlopen(req, timeout=1.5) as res:
             if res.status == 200:
                 return True
@@ -146,42 +145,12 @@ def start_backend(port: int) -> bool:
     return False
 
 
-def read_local_token() -> str | None:
-    """
-    Lê o token local gravado pelo backend em `<user_data>/runtime_token`.
-
-    Desde a Fase 1 do plano de segurança a API exige sessão. No uso local a
-    prova de identidade é este arquivo — legível apenas pelo dono da máquina —,
-    o que mantém a interface local sem tela de login.
-    """
-    try:
-        import platformdirs
-
-        caminho = Path(platformdirs.user_data_dir("RSAC")) / "runtime_token"
-    except ImportError:
-        # Sem platformdirs (execução fora do venv do backend), tenta os
-        # caminhos convencionais de cada sistema.
-        if sys.platform == "win32":
-            base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-        elif sys.platform == "darwin":
-            base = Path.home() / "Library" / "Application Support"
-        else:
-            base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-        caminho = base / "RSAC" / "runtime_token"
-
-    try:
-        conteudo = caminho.read_text(encoding="utf-8").strip()
-        return conteudo or None
-    except OSError:
-        return None
-
-
 def open_app_window(url: str):
     """Abre o aplicativo em janela dedicada (estilo Desktop) via Edge ou Chrome."""
     global _browser_proc
 
     browsers = [
-        # Microsoft Edge (nativo em todo Windows 10/11)
+        # Microsoft Edge (nativo no Windows)
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
         # Google Chrome
@@ -194,7 +163,6 @@ def open_app_window(url: str):
     for browser in browsers:
         if os.path.isfile(browser):
             try:
-                # Inicia em modo App (janela dedicada sem barra de URL)
                 _browser_proc = subprocess.Popen(
                     [browser, f"--app={url}", "--window-size=1400,900"],
                     creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
@@ -246,7 +214,7 @@ def main():
     os.system("cls" if sys.platform == "win32" else "clear")
 
     print("\033[92m" + "═" * 70)
-    print("        💻 RSAC V2 — INTERFACE LOCAL DESKTOP")
+    print("        🚀 RSAC V2 — APLICATIVO DESKTOP")
     print("═" * 70 + "\033[0m\n")
 
     ensure_frontend_build()
@@ -256,25 +224,17 @@ def main():
         input()
         sys.exit(1)
 
-    # A URL de abertura carrega o token local; a interface o troca por uma
-    # sessão e o remove da barra de endereço no primeiro carregamento.
-    token = read_local_token()
-    url_de_abertura = f"{local_url}/#/?local_token={token}" if token else local_url
-    if not token:
-        print(
-            "\033[93m[!] Token local não encontrado — a interface pedirá usuário e senha.\033[0m"
-        )
-
-    print(f"\033[96m[*] Abrindo interface local em janela de aplicativo ({local_url})...\033[0m")
-    open_app_window(url_de_abertura)
+    print(f"\033[96m[*] Abrindo interface em janela de aplicativo ({local_url})...\033[0m")
+    open_app_window(local_url)
 
     os.system("cls" if sys.platform == "win32" else "clear")
     print("\033[92m" + "═" * 70)
-    print("        💻 RSAC V2 — APLICATIVO EM EXECUÇÃO")
+    print("        🚀 RSAC V2 — APLICATIVO EM EXECUÇÃO")
     print("═" * 70 + "\033[0m\n")
 
-    print(f"  \033[92m[✓]\033[0m Backend: \033[96m{local_url}\033[0m (\033[92mOnline\033[0m)")
-    print("  \033[92m[✓]\033[0m Interface Local: \033[92mAtiva em Janela Desktop\033[0m\n")
+    print(f"  \033[92m[✓]\033[0m Backend Local:    \033[96m{local_url}\033[0m (\033[92mOnline\033[0m)")
+    print("  \033[92m[✓]\033[0m Interface Desktop: \033[92mAtiva em Janela Nativa\033[0m")
+    print("  \033[92m[✓]\033[0m Banco de Dados:    \033[92mSQLite Conectado\033[0m\n")
 
     print("\033[92m" + "─" * 70 + "\033[0m")
     print("  \033[97m[O]\033[0m Abrir Novamente no Navegador    \033[97m[Q]\033[0m Encerrar Aplicativo")

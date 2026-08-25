@@ -1,9 +1,7 @@
 @echo off
-title RSAC V2 — Aplicativo Local
+title RSAC V2 — Aplicativo Desktop
 if exist "RSAC.exe" (
     start "" "RSAC.exe"
-) else if exist "RSAC_Local.exe" (
-    start "" "RSAC_Local.exe"
 ) else (
-    python scripts\local_launcher.py
+    python scripts\launcher.py
 )
