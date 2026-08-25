@@ -90,7 +90,10 @@ def test_resolve_within_recusa_symlink_para_fora(tmp_path):
     root.mkdir(parents=True)
     fora = tmp_path / "fora.txt"
     fora.write_text("segredo", encoding="utf-8")
-    (root / "atalho.txt").symlink_to(fora)
+    try:
+        (root / "atalho.txt").symlink_to(fora)
+    except OSError:
+        pytest.skip("Criação de links simbólicos não suportada ou sem permissão de administrador neste ambiente.")
 
     assert _resolve_within(root, "atalho.txt") is None
 

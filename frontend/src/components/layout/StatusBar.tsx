@@ -6,7 +6,7 @@
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-import { Sparkles, Edit3, Terminal, AlertCircle, UserRound } from 'lucide-react'
+import { Sparkles, Edit3, Terminal, AlertCircle, LogOut, UserRound } from 'lucide-react'
 import { RsacMark } from '@/components/brand/RsacMark'
 import { BetaBadge } from '@/components/brand/BetaBadge'
 import { api } from '@/api/client'
@@ -16,7 +16,7 @@ import './StatusBar.css'
 export function StatusBar(): JSX.Element {
   const { backendStatus, backendVersion, aiEnabled } = useSettingsStore()
   const { entries, panelOpen, togglePanel } = useLogStore()
-  const { user } = useAuthStore()
+  const { user, logout } = useAuthStore()
 
   const errorCount = entries.filter((e) => e.level === 'error').length
 
@@ -40,6 +40,11 @@ export function StatusBar(): JSX.Element {
     } catch (err: any) {
       window.alert(err?.message ?? 'Endereço de servidor inválido.')
     }
+  }
+
+  const handleLogout = async () => {
+    if (!window.confirm('Encerrar a sessão? Você precisará entrar novamente.')) return
+    await logout()
   }
 
   return (
@@ -79,10 +84,20 @@ export function StatusBar(): JSX.Element {
       <div className="status-bar-right">
         {user && (
           <>
-            <span className="status-user" title={`Perfil Local: ${user.username}`}>
+            <span className="status-user" title={`Sessão de ${user.username} (${user.role})`}>
               <UserRound size={12} />
               <span className="status-user-name">{user.username}</span>
+              {user.role === 'owner' && <span className="status-user-role">owner</span>}
             </span>
+            <button
+              type="button"
+              className="status-logout-btn"
+              onClick={handleLogout}
+              title="Encerrar sessão"
+            >
+              <LogOut size={12} />
+              <span>Sair</span>
+            </button>
             <span className="status-divider">|</span>
           </>
         )}

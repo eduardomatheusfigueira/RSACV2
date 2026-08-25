@@ -197,10 +197,16 @@ def login_com_token_local(
         .first()
     )
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Nenhuma conta provisionada nesta instalação.",
+        user = UserModel(
+            username="pesquisador",
+            password_hash=hash_password(generate_password(20)),
+            role=ROLE_OWNER,
+            is_active=True,
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info("[Auth] Conta inicial ('pesquisador') provisionada automaticamente via token local.")
 
     return _emitir_sessao(db, user, request, response)
 

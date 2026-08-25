@@ -304,6 +304,7 @@ def test_perfil_server_aceita_chave_do_ambiente(monkeypatch):
 def test_perfil_desktop_gera_arquivo_com_permissao_restrita(monkeypatch, tmp_path):
     import os
     import stat
+    import sys
 
     import app.security.crypto as crypto_module
     from app.config import DeploymentProfile, Settings
@@ -316,8 +317,9 @@ def test_perfil_desktop_gera_arquivo_com_permissao_restrita(monkeypatch, tmp_pat
     assert material
 
     caminho = tmp_path / "master.key"
-    modo = stat.S_IMODE(os.stat(caminho).st_mode)
-    assert modo == 0o600, f"permissão {oct(modo)} — a chave-mestra ficaria legível a terceiros"
+    if sys.platform != "win32":
+        modo = stat.S_IMODE(os.stat(caminho).st_mode)
+        assert modo == 0o600, f"permissão {oct(modo)} — a chave-mestra ficaria legível a terceiros"
 
     # Chamar de novo reaproveita a mesma chave; do contrário, tudo o que já
     # foi cifrado deixaria de abrir a cada reinício.

@@ -3,7 +3,7 @@
  * Configura roteamento, TanStack Query e inicializa conexão com backend.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
@@ -16,9 +16,16 @@ import { ExtractionPage } from '@/pages/ExtractionPage'
 import { InsightsPage } from '@/pages/InsightsPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
+import {
+  analisarUrlDeBackend,
+  extrairApiUrlDaLocalizacao,
+  mensagemDeConfirmacao,
+} from '@/api/backendUrl'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 // TanStack Query client
 const queryClient = new QueryClient({
@@ -38,16 +45,6 @@ function ProjectRedirect(): JSX.Element {
 
 /**
  * Trata `?api_url=` com confirmação humana explícita (doc 29 §29.12).
- *
- * Antes, o parâmetro era aceito em silêncio e gravado para sempre: um link
- * como `https://rsac.netlify.app/#/?api_url=https://backend.attacker` carregava
- * a interface real, com o certificado real, e mandava toda requisição seguinte
- * — inclusive as chaves digitadas — para o servidor do atacante.
- *
- * O que fecha isso não é validar o endereço, e sim **nomear o host** para uma
- * pessoa antes que qualquer requisição saia: é a única informação capaz de
- * distinguir o link legítimo do hostil, e o usuário foi treinado pelo próprio
- * lançador a clicar em links do RSAC com `api_url` embutido.
  */
 function aplicarApiUrlDaLocalizacao(): void {
   const bruto = extrairApiUrlDaLocalizacao()
@@ -63,8 +60,6 @@ function aplicarApiUrlDaLocalizacao(): void {
     return
   }
 
-  // Mesma origem da página: é o próprio backend que serviu a interface, não há
-  // terceiro para confirmar.
   if (typeof window !== 'undefined' && destino.origem === window.location.origin) {
     api.setBaseUrl(destino.url)
     return
@@ -79,9 +74,6 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
   const [customUrl, setCustomUrl] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Reconexão automática: o servidor pode simplesmente ainda não ter subido, e
-  // sem isto quem deixasse a aba aberta esperando continuaria nesta tela mesmo
-  // depois de ele voltar.
   useEffect(() => {
     const id = window.setInterval(onRetry, 5000)
     return () => window.clearInterval(id)
@@ -96,11 +88,6 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
     }
     try {
       const destino = analisarUrlDeBackend(trimmed)
-      // Confirmação nomeando o host antes de apontar o app para outro
-      // servidor (doc 29 §29.12). Validar o formato não basta: o endereço
-      // pode ser válido e hostil, e é para ele que a senha digitada em
-      // seguida vai. `StatusBar` e o caminho do `?api_url=` já confirmam;
-      // aqui a etapa faltava.
       if (!window.confirm(mensagemDeConfirmacao(destino))) return
       api.setBaseUrl(destino.url)
       onRetry()
@@ -230,13 +217,33 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
 
 /**
  * Portão de autenticação.
- *
- * Fica entre o health check e as rotas: enquanto a fase é `checking` não se
- * mostra nem login nem conteúdo, porque qualquer um dos dois piscaria para
- * metade dos usuários. `unavailable` é distinto de `anonymous` de propósito —
- * pedir a senha contra um backend fora do ar faria o usuário concluir que a
- * senha está errada.
  */
+function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
+  const { phase, bootstrap, markAnonymous } = useAuthStore()
+
+  useEffect(() => {
+    api.detectPort()
+    aplicarApiUrlDaLocalizacao()
+    api.setUnauthorizedHandler(markAnonymous)
+    void bootstrap()
+    return () => api.setUnauthorizedHandler(null)
+  }, [])
+
+  if (phase === 'checking') {
+    return <></>
+  }
+
+  if (phase === 'unavailable') {
+    return <BackendUnavailableView onRetry={() => void bootstrap()} />
+  }
+
+  if (phase === 'anonymous') {
+    return <LoginPage />
+  }
+
+  return <>{children}</>
+}
+
 function AppContent(): JSX.Element {
   const { setBackendStatus, setBackendVersion, theme, setTheme } = useSettingsStore()
 
@@ -286,21 +293,23 @@ function AppContent(): JSX.Element {
   }, [])
 
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:id" element={<ProjectRedirect />} />
-        <Route path="/projects/:id/protocol" element={<ProtocolPage />} />
-        <Route path="/projects/:id/harvest" element={<HarvestPage />} />
-        <Route path="/projects/:id/screening" element={<ScreeningPage />} />
-        <Route path="/projects/:id/extraction" element={<ExtractionPage />} />
-        <Route path="/projects/:id/insights" element={<InsightsPage />} />
-        <Route path="/projects/:id/export" element={<ExportPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <AuthGate>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:id" element={<ProjectRedirect />} />
+          <Route path="/projects/:id/protocol" element={<ProtocolPage />} />
+          <Route path="/projects/:id/harvest" element={<HarvestPage />} />
+          <Route path="/projects/:id/screening" element={<ScreeningPage />} />
+          <Route path="/projects/:id/extraction" element={<ExtractionPage />} />
+          <Route path="/projects/:id/insights" element={<InsightsPage />} />
+          <Route path="/projects/:id/export" element={<ExportPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </AuthGate>
   )
 }
 

@@ -89,6 +89,7 @@ def test_token_local_e_gravado_com_permissao_restrita(monkeypatch, tmp_path):
     """O arquivo é a credencial do app de mesa — só o dono pode lê-lo."""
     import os
     import stat
+    import sys
 
     settings_obj = Settings(deployment_profile=DeploymentProfile.DESKTOP)
     monkeypatch.setattr(local_token_module, "settings", settings_obj)
@@ -98,8 +99,9 @@ def test_token_local_e_gravado_com_permissao_restrita(monkeypatch, tmp_path):
     assert token and len(token) >= 32
 
     caminho = tmp_path / "runtime_token"
-    modo = stat.S_IMODE(os.stat(caminho).st_mode)
-    assert modo == 0o600, f"permissão {oct(modo)} — o token não pode ser legível por terceiros"
+    if sys.platform != "win32":
+        modo = stat.S_IMODE(os.stat(caminho).st_mode)
+        assert modo == 0o600, f"permissão {oct(modo)} — o token não pode ser legível por terceiros"
 
     # Chamar de novo devolve o mesmo token, não gera outro.
     assert local_token_module.ensure_local_token() == token

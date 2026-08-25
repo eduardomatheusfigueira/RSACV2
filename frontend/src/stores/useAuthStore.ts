@@ -65,29 +65,90 @@ function consumeLocalTokenFromUrl(): string | null {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  phase: 'authenticated',
-  user: {
-    id: 'local',
-    username: 'pesquisador',
-    role: 'owner',
-    is_active: true,
-  },
+  phase: 'checking',
+  user: null,
   status: null,
   error: null,
   submitting: false,
 
+  /**
+   * Decide, na partida, entre entrar direto e pedir credenciais.
+   *
+   * Ordem: sessão já válida → token local do app de mesa → tela de login.
+   */
   bootstrap: async () => {
     try {
-      const status = await api.getAuthStatus()
-      set({ status, user: status.user || get().user, phase: 'authenticated' })
+      let status: import('@/types/api').AuthStatus
+      try {
+        status = await api.getAuthStatus()
+      } catch (err) {
+        // Recuar para o backend local: útil quando o túnel salvo expirou e o
+        // servidor está na própria máquina.
+        const eraRemoto =
+          !api.getBaseUrl().includes('127.0.0.1') && !api.getBaseUrl().includes('localhost')
+        if (eraRemoto && api.podeAlcancarLoopback()) {
+          console.warn('[Auth] Falha ao conectar na URL remota configurada, tentando localhost:8000...')
+          api.setBaseUrl('http://127.0.0.1:8000/api/v1')
+          status = await api.getAuthStatus()
+        } else {
+          throw err
+        }
+      }
+      set({ status })
+
+      if (status.authenticated && status.user) {
+        set({ phase: 'authenticated', user: status.user, error: null })
+        return
+      }
+
+      const tokenDaUrl = consumeLocalTokenFromUrl()
+      if (tokenDaUrl) {
+        const entrou = await get().loginWithLocalToken(tokenDaUrl)
+        if (entrou) return
+      }
+
+      set({ phase: 'anonymous', user: null })
     } catch {
-      // Continua autenticado localmente
+      // Backend fora do ar é diferente de sessão ausente: mostrar a tela de
+      // login aqui faria o usuário digitar a senha contra um servidor que não
+      // responde, e concluir que a senha está errada.
+      set({ phase: 'unavailable', user: null })
     }
   },
 
-  login: async () => true,
-  loginWithLocalToken: async () => true,
-  logout: async () => {},
+  login: async (username, password) => {
+    set({ submitting: true, error: null })
+    try {
+      const res = await api.login(username, password)
+      set({ phase: 'authenticated', user: res.user, error: null, submitting: false })
+      return true
+    } catch (err: any) {
+      set({ error: err?.message || 'Não foi possível entrar.', submitting: false })
+      return false
+    }
+  },
+
+  loginWithLocalToken: async (token) => {
+    try {
+      const res = await api.loginWithLocalToken(token)
+      set({ phase: 'authenticated', user: res.user, error: null })
+      return true
+    } catch {
+      // Silencioso de propósito: no perfil servidor o token local não é aceito,
+      // e a falha aqui apenas leva à tela de login normal.
+      return false
+    }
+  },
+
+  logout: async () => {
+    try {
+      await api.logout()
+    } finally {
+      set({ phase: 'anonymous', user: null, error: null })
+    }
+  },
+
   setError: (message) => set({ error: message }),
-  markAnonymous: () => {},
+
+  markAnonymous: () => set({ phase: 'anonymous', user: null }),
 }))

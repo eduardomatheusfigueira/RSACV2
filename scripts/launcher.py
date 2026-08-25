@@ -207,6 +207,30 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
+def get_local_token() -> str | None:
+    """Lê o token local gerado pelo backend."""
+    data_dir = os.getenv("RSAC_DATA_DIR")
+    paths = []
+    if data_dir:
+        paths.append(Path(data_dir) / "runtime_token")
+    if sys.platform == "win32":
+        local_app_data = os.getenv("LOCALAPPDATA")
+        if local_app_data:
+            paths.append(Path(local_app_data) / "RSAC" / "runtime_token")
+    paths.append(Path.home() / ".rsac" / "runtime_token")
+    paths.append(BACKEND_DIR / "data" / "runtime_token")
+
+    for p in paths:
+        if p.exists():
+            try:
+                token = p.read_text(encoding="utf-8").strip()
+                if token:
+                    return token
+            except Exception:
+                pass
+    return None
+
+
 def main():
     port = 8000
     local_url = f"http://127.0.0.1:{port}"
@@ -224,8 +248,11 @@ def main():
         input()
         sys.exit(1)
 
+    local_token = get_local_token()
+    app_url = f"{local_url}?local_token={local_token}" if local_token else local_url
+
     print(f"\033[96m[*] Abrindo interface em janela de aplicativo ({local_url})...\033[0m")
-    open_app_window(local_url)
+    open_app_window(app_url)
 
     os.system("cls" if sys.platform == "win32" else "clear")
     print("\033[92m" + "═" * 70)
