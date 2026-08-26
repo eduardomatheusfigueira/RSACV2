@@ -57,7 +57,13 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist_bin
 OutputBaseFilename=RSAC-Setup
-SetupIconFile=..\brand\icon.ico
+; Mesmo ícone do executável do aplicativo (`electron-builder.yml`), gerado por
+; `brand/generate_brand_assets.py` a partir da geometria da marca. Havia um
+; segundo `.ico` em `brand/`, produzido pelo antigo `build_executables.py` a
+; partir de um único PNG reescalado: com aquele script fora, ele ficou sem
+; gerador — e o instalador exibia um ícone diferente do que o usuário veria
+; depois no atalho.
+SetupIconFile=..\frontend\build\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/fast
 SolidCompression=no

@@ -118,8 +118,8 @@ def _limpar_prefixos_de_ia_legados(db: Session) -> None:
 
 # ── Descoberta da instalação por quem lança o processo ────────────────
 
-# Prefixo da linha que o Electron e o `scripts/launcher.py` procuram na saída
-# padrão do backend.
+# Prefixo da linha que o processo principal do Electron procura na saída padrão
+# do backend.
 LINHA_DE_HANDSHAKE = "RSAC_RUNTIME"
 
 
@@ -127,12 +127,12 @@ def _anunciar_pasta_de_dados() -> None:
     """
     Diz na saída padrão onde ficam a pasta de dados e o arquivo de token.
 
-    Quem lança o backend precisa do `runtime_token` para entrar sem tela de
-    login — e até aqui adivinhava o caminho, cada um do seu jeito: o launcher
-    procurava em `%LOCALAPPDATA%\\RSAC`, o backend gravava no caminho do
-    `platformdirs` (`%LOCALAPPDATA%\\RSAC\\RSAC`), e o app empacotado nem
-    procurava. Adivinhar é o problema; o processo que grava o arquivo é quem
-    sabe onde ele está, então é ele que informa.
+    O Electron precisa do `runtime_token` para abrir a interface sem tela de
+    login. Até aqui o caminho era adivinhado — e adivinhado errado: o backend
+    grava onde o `platformdirs` manda (`%LOCALAPPDATA%\\RSAC\\RSAC` no
+    Windows), e o app empacotado nem chegava a procurar. Adivinhar é o
+    problema; o processo que grava o arquivo é quem sabe onde ele está, então
+    é ele que informa.
 
     O que sai daqui é o **caminho**, nunca o token: a saída padrão do backend
     vai para o log do processo pai, e credencial não tem por que passar por lá.

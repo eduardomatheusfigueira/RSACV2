@@ -28,6 +28,9 @@ interface AuthState {
   /**
    * Token local desta instalação, entregue pelo processo principal do Electron.
    *
+   * É a única via: o backend grava o `runtime_token` numa pasta que só o dono
+   * da máquina lê, o Electron o entrega por IPC, e ele nunca passa pela URL.
+   *
    * Fica no estado, e não numa variável de módulo, porque `bootstrap` é
    * rechamado pela tela de indisponibilidade a cada nova tentativa: guardado
    * fora, o token valeria só para a primeira, e uma reconexão bem-sucedida
@@ -42,36 +45,6 @@ interface AuthState {
   logout: () => Promise<void>
   setError: (message: string | null) => void
   markAnonymous: () => void
-}
-
-/**
- * Token local passado pelo Electron ou pelo lançador local via query string.
- * É lido uma vez e removido da URL logo em seguida, para não ficar no
- * histórico do navegador nem em algum print de tela.
- */
-function consumeLocalTokenFromUrl(): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const busca = new URLSearchParams(window.location.search)
-    let token = busca.get('local_token')
-
-    if (!token && window.location.hash.includes('?')) {
-      const hashParams = new URLSearchParams(window.location.hash.split('?')[1])
-      token = hashParams.get('local_token')
-    }
-    if (!token) return null
-
-    const limpa = new URL(window.location.href)
-    limpa.searchParams.delete('local_token')
-    if (limpa.hash.includes('local_token')) {
-      limpa.hash = limpa.hash.replace(/([?&])local_token=[^&]*/, '$1').replace(/[?&]$/, '')
-    }
-    window.history.replaceState({}, document.title, limpa.toString())
-
-    return token
-  } catch {
-    return null
-  }
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -114,10 +87,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return
       }
 
-      // Duas origens para o mesmo token: a URL (lançador do navegador, que o
-      // passa em `?local_token=`) e a ponte IPC do app de mesa. A da URL vem
-      // primeiro por ser consumida — é lida e apagada do endereço.
-      const tokenLocal = consumeLocalTokenFromUrl() ?? get().tokenLocal
+      // O token local chega por um caminho só: a ponte IPC do processo
+      // principal do Electron. Havia um segundo, `?local_token=` na URL, que
+      // existia para o lançador de navegador; com ele removido, o que sobrava
+      // era uma credencial aceita pela barra de endereços sem ninguém para
+      // produzi-la.
+      const tokenLocal = get().tokenLocal
       if (tokenLocal) {
         const entrou = await get().loginWithLocalToken(tokenLocal)
         if (entrou) return

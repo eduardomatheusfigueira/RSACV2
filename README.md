@@ -23,7 +23,7 @@ O RSAC V2 é uma ferramenta desenvolvida para apoiar a condução de revisões s
 
 A arquitetura é dividida em:
 - **Backend**: API construída em Python (FastAPI, SQLAlchemy 2.0 e SQLite), responsável pela persistência, rotinas de coleta assíncrona, desduplicação e processamento de arquivos.
-- **Frontend**: Interface construída em React 19, TypeScript e Vite, disponibilizada como aplicativo desktop via Electron ou como Single Page Application (SPA) acessível via navegador web e dispositivos móveis.
+- **Frontend**: Interface construída em React 19, TypeScript e Vite, distribuída como aplicativo de mesa via Electron — o produto instalado. A mesma interface pode ser compilada como Single Page Application (`npm run build:web`) e servida pelo próprio backend no perfil `server`, para quem precise publicar a revisão por túnel; não é o modo de uso normal.
 
 ---
 
@@ -110,23 +110,32 @@ A arquitetura é dividida em:
 
 ## Como Executar
 
-O RSAC V2 é um aplicativo desktop local e direto:
+O RSAC V2 é um aplicativo de mesa instalado. Não há versão para abrir no
+navegador: a interface e o backend Python viajam juntos no instalador, e o
+servidor sobe e desce com a janela.
 
-### 1. Executável / Lançador Rápido
-Basta executar o aplicativo nativo na raiz do projeto:
-```bat
-RSAC.exe
+### 1. Uso normal — instalar e abrir
+
+Execute o instalador e abra o RSAC V2 pelo atalho da área de trabalho ou do
+menu Iniciar:
+
 ```
-Ou pelo inicializador em lote:
-```bat
-Iniciar_RSAC.bat
+dist_bin/RSAC-Setup.exe
 ```
-Ou via terminal Python:
+
+Não é preciso instalar Python nem Node: o backend vai congelado dentro do
+pacote. Na primeira execução o backend cria a pasta de dados do usuário
+(banco, PDFs, logs e chaves) e a interface entra direto, sem tela de login —
+o acesso é provado por um arquivo que só o dono da máquina consegue ler.
+
+Para gerar o instalador a partir do código (requer Windows, Python, Node e o
+[Inno Setup 6](https://jrsoftware.org/isdl.php)):
+
 ```bash
-python scripts/launcher.py
+python scripts/build_installer.py
 ```
 
-### 3. Ambiente de Desenvolvimento (Desktop Electron)
+### 2. Ambiente de Desenvolvimento (Desktop Electron)
 Para desenvolvimento ativo com recarregamento em tempo real (*hot reload*):
 
 #### Pré-requisitos
@@ -210,7 +219,7 @@ RSACV2/
 │   │   ├── stores/          # Estados globais (Zustand)
 │   │   └── styles/          # Tokens e folhas de estilo globais
 │   └── vite.config.web.ts   # Configuração de build para distribuição Web SPA
-├── scripts/                  # Scripts de automação, launchers e geração de executáveis
+├── scripts/                  # Build do instalador (PyInstaller + electron-builder + Inno Setup)
 ├── brand/                    # Definições da identidade visual e ativos gráficos
 └── planejamento/             # Documentação técnica de arquitetura e validações
 ```
@@ -219,7 +228,7 @@ RSACV2/
 
 ## Segurança e Acesso
 
-A API exige autenticação. No **app de mesa** nada muda para o usuário: o backend grava um token local legível só pelo dono da máquina, e a interface abre direto. No **modo servidor** (`Iniciar_Servidor.bat`) o acesso é por usuário e senha, e o lançador se recusa a publicar o túnel enquanto não houver conta provisionada.
+A API exige autenticação. No **app de mesa** — o modo normal — nada muda para o usuário: o backend grava um token local legível só pelo dono da máquina, o Electron o entrega à interface por canal interno, e a janela abre direto. O **perfil `server`** (`RSAC_DEPLOYMENT_PROFILE=server`), usado para publicar o backend por túnel, exige usuário e senha, recusa-se a subir sem conta provisionada e não aceita o token local.
 
 Crie a primeira conta com:
 ```bash

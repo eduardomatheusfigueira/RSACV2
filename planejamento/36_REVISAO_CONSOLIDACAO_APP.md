@@ -179,7 +179,9 @@ backend a implementava por inteiro (`POST /api/v1/auth/local`). Faltava a ponta:
 - **No `launcher.py`** — `get_local_token()` procurava em
   `%LOCALAPPDATA%\RSAC`, em `~/.rsac` e em `backend/data`. O backend grava na
   pasta do `platformdirs`, que no Windows é `%LOCALAPPDATA%\RSAC\RSAC`. Nenhum
-  dos três caminhos existia.
+  dos três caminhos existia. (Esse lançador foi corrigido e, em seguida,
+  removido — § 36.6.2. Fica registrado porque é a segunda ocorrência do mesmo
+  erro, e é a repetição que nomeia a causa.)
 
 Adivinhar caminho era o erro comum aos dois. Quem sabe onde o arquivo está é o
 processo que o escreveu, então é ele que informa: o backend passou a anunciar,
@@ -197,7 +199,7 @@ log do processo pai, e credencial não tem por que passar por lá. O
 interface pelo canal IPC — não pela URL, onde ficaria no histórico e em
 qualquer captura de tela.
 
-Como recuo, quando o handshake não chega, ambos os lados agora procuram nos
+Como recuo, quando o handshake não chega, o `PythonManager` procura nos
 caminhos que o `platformdirs` realmente produz em cada sistema.
 
 Verificado no Electron real, sob display virtual:
@@ -215,15 +217,16 @@ prometeu.
 
 ### 36.4.1 `RSAC_DATA_DIR` passou a existir de verdade
 
-O `launcher.py` já consultava `RSAC_DATA_DIR` para achar o token, mas
+`RSAC_DATA_DIR` era consultada pelo lançador para achar o token, mas
 `Settings.data_dir` era uma propriedade fixa no `platformdirs`: o backend nunca
 leu a variável. Quem a definisse mudava metade do sistema. Agora ela é um campo
 (`data_dir_override`, alias `RSAC_DATA_DIR`) com precedência sobre o padrão do
-sistema, e vale para os dois lados.
+sistema.
 
 O **padrão não mudou**, de propósito: fixar a pasta no Electron moveria o banco
-de quem já usa o `launcher.py`, e a revisão passaria a existir em duas
-instalações sem o usuário perceber.
+de quem já tem uma revisão em andamento, que passaria a existir em duas
+instalações sem o usuário perceber. O override fica como a única forma de pôr
+os dados noutro disco, para quem quiser.
 
 ---
 
@@ -282,9 +285,10 @@ que o nome diz: vigilância sobre um backend que caiu em uso.
 |:-:|------|-----------|
 | C-01 | `openai`, `google-genai` e `alembic` fora do `pyproject.toml` | Declaradas e **nunca importadas**: os dois provedores de IA falam REST por `httpx`; a migração de esquema é a caseira de `app/database.py` |
 | C-02 | `RSAC_DATA_DIR` respeitada pelo backend | § 36.4.1 |
-| C-03 | `server_config.json` reduzido ao que é lido | O arquivo prometia `port`, `auto_open_browser` e `cors_origins`; o `launcher.py` calculava o caminho e **não abria o arquivo**, com a porta fixa em 8000 no código. Agora a porta é lida; as outras duas chaves saíram, porque CORS e perfil vêm de variável de ambiente |
+| C-03 | `server_config.json` removido | O arquivo prometia `port`, `auto_open_browser` e `cors_origins`; o `launcher.py` calculava o caminho e **não abria o arquivo**, com a porta fixa em 8000 no código. Foi corrigido para ser lido de verdade e, com a remoção do lançador (§ 36.6.2), saiu junto — era a configuração de um programa que não existe mais |
 | C-04 | `--hidden-import=pandas` no build do backend | Com o import agora dentro da função, declarar a dependência a torna imune a uma reorganização futura do módulo |
 | C-05 | Uma só definição de instalador (§ 36.6.1) | Havia duas — o alvo `nsis` do `electron-builder.yml`, que nenhum script invocava, e o `installer.iss` que o build realmente usa |
+| C-07 | Um só lançador (§ 36.6.2) | O lançador de navegador (`launcher.py`, `RSAC.exe`, `Iniciar_RSAC.bat`) foi removido: o produto é o app instalado |
 
 ### 36.6.1 A escolha do empacotamento (C-05)
 
@@ -344,11 +348,45 @@ a configuração nova produz `release/win-unpacked/RSAC V2.exe` e os
 `installer.iss` procura continua sendo o nome que o empacotador gera, agora
 com uma origem única em vez de duas cópias que coincidiam por sorte.
 
-**O que fica fora desta decisão.** Os dois *lançadores* — `launcher.py` (janela
-do Edge/Chrome, SPA servida pelo FastAPI) e o Electron — continuam existindo,
-e isso é deliberado: o primeiro é o caminho de desenvolvimento e de acesso pelo
-navegador, o segundo é o produto instalado. O que se consolidou aqui é o
-**empacotamento**, não o número de formas de abrir o RSAC.
+### 36.6.2 O lançador de navegador foi removido (C-07)
+
+A consolidação do empacotamento deixava de pé a pergunta seguinte: *dois
+lançadores para um produto*. Ela foi respondida — **o produto é o app instalado,
+e só ele**.
+
+Saíram do repositório:
+
+| Arquivo | O que era |
+|---|---|
+| `scripts/launcher.py` | Subia o backend e abria a SPA numa janela do Edge/Chrome em modo `--app` |
+| `scripts/build_executables.py` | Compilava aquele lançador em `RSAC.exe` (PyInstaller `--onefile`) |
+| `Iniciar_RSAC.bat` | Chamava `RSAC.exe`, ou o `launcher.py` como recuo |
+| `server_config.json` | Configuração lida apenas pelo `launcher.py` |
+| `brand/icon.ico` | Ícone gerado pelo `build_executables.py` a partir de um único PNG reescalado |
+
+E, por consequência, duas coisas no código:
+
+- **`consumeLocalTokenFromUrl` saiu do `useAuthStore`.** O token local tinha
+  duas vias de entrada: `?local_token=` na URL, que era como o lançador o
+  passava para o navegador, e a ponte IPC do Electron. Sem o lançador, a
+  primeira ficou sendo uma credencial aceita pela barra de endereços sem
+  ninguém para produzi-la. Fica a via IPC, que nunca põe o token na URL.
+- **O ícone do instalador passou a ser `frontend/build/icon.ico`** — o mesmo do
+  executável do aplicativo, gerado por `brand/generate_brand_assets.py` a
+  partir da geometria da marca, com ajuste óptico por resolução. O `.ico` de
+  `brand/` era feito de um PNG único reescalado e, com o `build_executables.py`
+  fora, teria ficado sem gerador: um binário versionado que ninguém sabe
+  reproduzir. O efeito colateral é que o ícone do instalador e o do atalho
+  deixam de ser dois desenhos diferentes.
+
+**O que não saiu, e por quê.** O perfil `server` continua inteiro — o backend
+ainda serve a SPA de `frontend/dist` quando ela existe, `npm run build:web`
+continua no CI, e as rotas de conta e sessão seguem cobertas pelos testes de
+segurança dos docs 28–30. Ele não é "o navegador" que este ciclo removeu: é a
+publicação por túnel, com usuário e senha, para quem precise abrir a revisão a
+mais de uma pessoa. Removê-lo é uma decisão de produto de outra ordem — mexe em
+autenticação, contas, CORS e cerca de trinta testes de segurança — e não foi
+tomada aqui.
 
 ---
 

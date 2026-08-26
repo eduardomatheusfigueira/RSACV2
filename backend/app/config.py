@@ -21,14 +21,14 @@ class DeploymentProfile(str, Enum):
     Perfil de exposição em que o backend está rodando (doc 29 §29.2).
 
     O RSAC nasceu assumindo que o único cliente era o Electron na mesma
-    máquina. Quando o `server_launcher.py` passou a publicar o backend na
-    internet, essa premissa deixou de valer sem que nada no código soubesse.
-    O perfil torna o perímetro explícito: todo controle de segurança deriva
+    máquina. Quando um lançador passou a publicar o backend na internet por
+    túnel, essa premissa deixou de valer sem que nada no código soubesse. O
+    perfil torna o perímetro explícito: todo controle de segurança deriva
     dele, em vez de suposição implícita.
     """
 
-    DESKTOP = "desktop"   # Electron ou navegador local falando com loopback
-    SERVER = "server"     # publicado (túnel, rede local, Netlify)
+    DESKTOP = "desktop"   # Electron falando com o backend em loopback
+    SERVER = "server"     # publicado (túnel, rede local)
     CI = "ci"             # testes automatizados
 
 
@@ -78,10 +78,10 @@ class Settings(BaseSettings):
     # significa "a pasta padrão do sistema operacional" (via platformdirs),
     # que é o caminho normal do app de mesa.
     #
-    # O override existe porque `scripts/launcher.py` já procurava o token em
-    # `RSAC_DATA_DIR` — só que o backend nunca leu essa variável, e o caminho
-    # ficava sendo adivinhado dos dois lados. Agora quem lança o backend pode
-    # fixar a pasta e saber exatamente onde procurar.
+    # O override é a única forma de tirar a revisão da pasta padrão do sistema
+    # — para pô-la noutro disco, ou numa pasta sincronizada. Quem define a
+    # variável manda; o backend não escolhe outro lugar por conta própria,
+    # porque isso partiria a revisão em duas instalações sem ninguém notar.
     data_dir_override: Optional[Path] = Field(default=None, validation_alias="RSAC_DATA_DIR")
 
     # ── Banco de Dados ────────────────────────────────────────────────
