@@ -98,8 +98,11 @@ jobs:
         continue-on-error: true
         run: npm run lint:tokens
 
-      - name: Build web
-        run: npm run build:web
+      - name: Build do aplicativo (main, preload e interface)
+        # `npm run build` e não `build:web`: o alvo web deixou de existir junto
+        # com o acesso pelo navegador, e o que precisa compilar é exatamente o
+        # que o instalador empacota.
+        run: npm run build
 
       - name: Auditoria de dependências
         continue-on-error: true

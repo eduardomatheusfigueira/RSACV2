@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Cabeçalhos, limites de recurso e sanitização de erro
@@ -15,7 +14,6 @@ from starlette.websockets import WebSocketDisconnect
 from app.api.deps import get_db
 from app.config import Settings
 from app.main import create_app
-from tests.conftest import OWNER_USERNAME, SENHA_TESTE
 
 # ── Cabeçalhos de segurança (§29.6) ───────────────────────────────────
 
@@ -238,60 +236,49 @@ CANAIS = [
 
 
 @pytest.fixture
-def ws_client(db_session, contas):
+def ws_client(db_session, token_local):
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db_session
     with TestClient(app) as c:
         yield c
 
 
-def _token(client) -> str:
-    res = client.post(
-        "/api/v1/auth/login", json={"username": OWNER_USERNAME, "password": SENHA_TESTE}
-    )
-    return res.json()["access_token"]
-
-
 @pytest.mark.parametrize("canal", CANAIS)
-def test_websocket_de_origem_hostil_e_recusado(ws_client, canal):
+def test_websocket_de_origem_hostil_e_recusado(ws_client, canal, token_local):
     """
-    O caso que a sessão sozinha não resolve: a política de mesma origem não
-    vale para WebSocket, então o cookie do pesquisador abriria o canal para
-    qualquer página aberta no navegador dele.
+    O caso que a credencial sozinha não resolve: a política de mesma origem não
+    vale para WebSocket, então bastaria a página hostil descobrir o endereço
+    para tentar abrir o canal.
     """
-    token = _token(ws_client)
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with ws_client.websocket_connect(
-            f"{canal}?token={token}", headers={"Origin": "https://evil.example"}
-        ) as ws:
-            ws.receive_text()
+    with pytest.raises(WebSocketDisconnect) as exc, ws_client.websocket_connect(
+        f"{canal}?local_token={token_local}", headers={"Origin": "https://evil.example"}
+    ) as ws:
+        ws.receive_text()
     assert exc.value.code == 1008
 
 
-def test_websocket_de_origem_local_e_aceito(ws_client):
-    token = _token(ws_client)
+def test_websocket_de_origem_local_e_aceito(ws_client, token_local):
     with ws_client.websocket_connect(
-        f"{CANAIS[0]}?token={token}", headers={"Origin": "http://localhost:5173"}
+        f"{CANAIS[0]}?local_token={token_local}", headers={"Origin": "http://localhost:5173"}
     ) as ws:
         ws.send_text("ping")
         assert ws.receive_text() == "pong"
 
 
-def test_websocket_sem_origem_e_aceito(ws_client):
+def test_websocket_sem_origem_e_aceito(ws_client, token_local):
     """Cliente que não é navegador não manda `Origin` — e o vetor é do navegador."""
-    token = _token(ws_client)
-    with ws_client.websocket_connect(f"{CANAIS[0]}?token={token}") as ws:
+    with ws_client.websocket_connect(f"{CANAIS[0]}?local_token={token_local}") as ws:
         ws.send_text("ping")
         assert ws.receive_text() == "pong"
 
 
-def test_origem_hostil_e_recusada_antes_da_sessao(ws_client):
+def test_origem_hostil_e_recusada_antes_da_credencial(ws_client):
     """A ordem importa: `Origin` primeiro, para não vazar validade de token."""
-    with pytest.raises(WebSocketDisconnect) as exc:
-        with ws_client.websocket_connect(
-            f"{CANAIS[0]}?token=token-invalido", headers={"Origin": "https://evil.example"}
-        ) as ws:
-            ws.receive_text()
+    with pytest.raises(WebSocketDisconnect) as exc, ws_client.websocket_connect(
+        f"{CANAIS[0]}?local_token=token-invalido",
+        headers={"Origin": "https://evil.example"},
+    ) as ws:
+        ws.receive_text()
     assert exc.value.code == 1008
 
 

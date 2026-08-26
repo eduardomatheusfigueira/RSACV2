@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Modelos ORM (SQLAlchemy 2.x).
@@ -7,11 +6,10 @@ Mapeamento objeto-relacional para todas as tabelas do banco de dados SQLite.
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     Boolean,
-    Column,
     DateTime,
     Float,
     ForeignKey,
@@ -37,7 +35,7 @@ def generate_uuid() -> str:
 
 def utcnow() -> datetime:
     """Retorna datetime UTC atual."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -312,74 +310,24 @@ class AuditLogModel(Base):
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Contas de Acesso e Sessões (doc 29 §29.3)
+# Contas de Acesso e Sessões — removidas
 # ─────────────────────────────────────────────────────────────────────
-
-class UserModel(Base):
-    """
-    Conta de acesso ao RSAC.
-
-    A senha nunca é guardada — só o hash Argon2id, que `app/security/passwords`
-    produz e verifica. `role` separa quem opera a revisão de quem administra as
-    credenciais (§29.3.4).
-    """
-
-    __tablename__ = "users"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    role: Mapped[str] = mapped_column(String(20), default="researcher", nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
-    sessions: Mapped[list["SessionModel"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
-    )
-
-
-class SessionModel(Base):
-    """
-    Sessão ativa, com estado no servidor.
-
-    A alternativa — um JWT auto-contido — não permitiria revogar acesso antes
-    do vencimento; aqui `logout` apaga a linha e o token morre na hora
-    (§29.3.3). O que se guarda é o *hash* do token: um vazamento do banco não
-    entrega sessões utilizáveis.
-    """
-
-    __tablename__ = "sessions"
-    __table_args__ = (Index("ix_sessions_token_hash", "token_hash"),)
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    user_agent: Mapped[str] = mapped_column(String(200), default="")
-
-    user: Mapped["UserModel"] = relationship(back_populates="sessions")
-
-
-class LoginAttemptModel(Base):
-    """
-    Tentativas de login, para o limite de força bruta (§29.7).
-
-    Guardar as tentativas no banco — e não em memória — é o que faz o limite
-    sobreviver ao reinício do processo, que de outro modo seria a forma trivial
-    de zerá-lo.
-    """
-
-    __tablename__ = "login_attempts"
-    __table_args__ = (Index("ix_login_attempts_username_time", "username", "attempted_at"),)
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    username: Mapped[str] = mapped_column(String(64), nullable=False)
-    client_host: Mapped[str] = mapped_column(String(64), default="")
-    successful: Mapped[bool] = mapped_column(Boolean, default=False)
-    attempted_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+#
+# Havia aqui `UserModel`, `SessionModel` e `LoginAttemptModel`. Saíram junto
+# com o login: a credencial do RSAC passou a ser o arquivo `runtime_token`, e
+# quem consegue lê-lo já tem a conta do sistema operacional em que o banco
+# vive (ver `app/security/dependencies.py`).
+#
+# Nenhum modelo do domínio apontava para `users` — só `SessionModel` — então a
+# remoção não deixa chave estrangeira órfã. Bancos criados antes disto mantêm
+# as três tabelas no arquivo: a migração automática de `app/database.py` só
+# acrescenta coluna, nunca apaga tabela, e apagá-las seria destruir dados de um
+# banco que o usuário talvez queira abrir numa versão anterior. Elas
+# simplesmente deixam de ser lidas e escritas.
+#
+# `AuditLogModel.username` continua existindo e continua sendo preenchido —
+# agora com o usuário do sistema operacional. É o que mantém a trilha de
+# autoria da revisão, que é produto, não detalhe operacional.
 
 
 # ─────────────────────────────────────────────────────────────────────

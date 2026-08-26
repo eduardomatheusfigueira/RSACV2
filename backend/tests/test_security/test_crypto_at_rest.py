@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Cifra dos segredos em repouso (doc 28 V-07, doc 29 §29.4.1).
@@ -16,7 +15,7 @@ import re
 import pytest
 from sqlalchemy import create_engine, text
 
-from app.security.crypto import CIPHER_PREFIX, MasterKeyError, SecretCipher, is_encrypted
+from app.security.crypto import CIPHER_PREFIX, SecretCipher, is_encrypted
 from app.security.log_filter import mascarar
 from app.security.migration import cifrar_segredos_legados
 
@@ -42,9 +41,10 @@ async def test_arquivo_do_banco_nao_contem_chave_em_claro(async_client, tmp_path
     from sqlalchemy.orm import sessionmaker
 
     from app.api.deps import get_db
-    from app.infrastructure.persistence.models import Base, UserModel
+    from app.infrastructure.persistence.models import Base
     from app.main import create_app
-    from app.security.passwords import hash_password
+    from app.security.dependencies import LOCAL_TOKEN_HEADER
+    from app.security.local_token import ensure_local_token
 
     caminho = tmp_path / "rsac_teste.db"
     engine = create_engine(f"sqlite:///{caminho}")
@@ -52,23 +52,15 @@ async def test_arquivo_do_banco_nao_contem_chave_em_claro(async_client, tmp_path
     Session = sessionmaker(bind=engine)
     sessao = Session()
 
-    sessao.add(
-        UserModel(
-            username="dono", password_hash=hash_password("senha-de-teste-12345"), role="owner"
-        )
-    )
-    sessao.commit()
-
     app = create_app()
     app.dependency_overrides[get_db] = lambda: sessao
     transport = httpx.ASGITransport(app=app)
 
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        login = await client.post(
-            "/api/v1/auth/login", json={"username": "dono", "password": "senha-de-teste-12345"}
-        )
-        client.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
-
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+        headers={LOCAL_TOKEN_HEADER: ensure_local_token()},
+    ) as client:
         assert (
             await client.put(
                 "/api/v1/ai/settings",
@@ -272,45 +264,36 @@ def test_cada_cifra_produz_token_diferente():
     assert cofre.encrypt(CHAVE_GEMINI) != cofre.encrypt(CHAVE_GEMINI)
 
 
-# ── Chave-mestra e perfil ─────────────────────────────────────────────
+# ── Chave-mestra ──────────────────────────────────────────────────────
 
-def test_perfil_server_exige_chave_do_ambiente(monkeypatch, tmp_path):
+def test_chave_do_ambiente_tem_precedencia(monkeypatch):
     """
-    Um arquivo de chave ao lado do banco seria lido pela mesma falha que leria
-    o banco. No servidor, a chave vem do ambiente ou não vem (§29.4.1).
+    `RSAC_SECRET_KEY` continua sendo respeitada, para quem prefira guardar a
+    chave-mestra fora do disco da máquina.
+
+    O que saiu daqui foi a **obrigatoriedade** dela no perfil `server`: lá um
+    arquivo ao lado do banco seria lido pela mesma falha que leria o banco. Sem
+    publicação, o arquivo `0600` na pasta do usuário é a proteção adequada, e
+    exigir configuração manual só faria a primeira execução falhar.
     """
     import app.security.crypto as crypto_module
-    from app.config import DeploymentProfile, Settings
+    from app.config import Settings
 
-    settings_obj = Settings(deployment_profile=DeploymentProfile.SERVER, secret_key=None)
-    monkeypatch.setattr(crypto_module, "settings", settings_obj)
-
-    with pytest.raises(MasterKeyError, match="RSAC_SECRET_KEY"):
-        crypto_module.obter_chave_mestra()
-
-
-def test_perfil_server_aceita_chave_do_ambiente(monkeypatch):
-    import app.security.crypto as crypto_module
-    from app.config import DeploymentProfile, Settings
-
-    settings_obj = Settings(
-        deployment_profile=DeploymentProfile.SERVER, secret_key="chave-vinda-do-ambiente"
+    monkeypatch.setattr(
+        crypto_module, "settings", Settings(secret_key="chave-vinda-do-ambiente")
     )
-    monkeypatch.setattr(crypto_module, "settings", settings_obj)
-
     assert crypto_module.obter_chave_mestra() == b"chave-vinda-do-ambiente"
 
 
-def test_perfil_desktop_gera_arquivo_com_permissao_restrita(monkeypatch, tmp_path):
+def test_sem_chave_do_ambiente_gera_arquivo_com_permissao_restrita(monkeypatch, tmp_path):
     import os
     import stat
     import sys
 
     import app.security.crypto as crypto_module
-    from app.config import DeploymentProfile, Settings
+    from app.config import Settings
 
-    settings_obj = Settings(deployment_profile=DeploymentProfile.DESKTOP, secret_key=None)
-    monkeypatch.setattr(crypto_module, "settings", settings_obj)
+    monkeypatch.setattr(crypto_module, "settings", Settings(secret_key=None))
     monkeypatch.setattr(crypto_module, "master_key_path", lambda: tmp_path / "master.key")
 
     material = crypto_module.obter_chave_mestra()

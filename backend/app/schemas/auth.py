@@ -1,87 +1,25 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Autenticação e Contas (doc 29 §29.3)."""
+"""RSAC V2 — Schema do estado da autenticação local."""
 
-from datetime import datetime
-from typing import List, Optional
-
-from pydantic import BaseModel, Field
-
-
-class LoginRequest(BaseModel):
-    username: str = Field(..., min_length=1, max_length=64)
-    password: str = Field(..., min_length=1)
-
-
-class LocalTokenRequest(BaseModel):
-    """Troca do token local do perfil desktop por uma sessão."""
-
-    token: str = Field(..., min_length=8, description="Conteúdo de <data_dir>/runtime_token")
-
-
-class UserResponse(BaseModel):
-    id: str
-    username: str
-    role: str
-    is_active: bool
-    created_at: datetime
-    last_login_at: Optional[datetime] = None
-
-
-class LoginResponse(BaseModel):
-    """
-    Resultado do login.
-
-    O `access_token` acompanha o cookie porque o cliente hospedado em outra
-    origem (Netlify, Vite em desenvolvimento) não recebe cookie `SameSite=Strict`.
-    Quem é servido pelo próprio backend pode ignorá-lo e deixar o cookie
-    trabalhar.
-    """
-
-    user: UserResponse
-    access_token: str
-    token_type: str = "bearer"
-    expires_in_hours: int
+from pydantic import BaseModel
 
 
 class AuthStatusResponse(BaseModel):
     """
-    Estado da autenticação — a única rota que responde antes do login.
+    Estado da autenticação — a única rota que responde sem credencial.
 
-    Serve ao cliente (mostrar tela de login ou entrar direto) e ao lançador de
-    servidor, que se recusa a abrir o túnel se `authentication_enabled` for
-    falso (§29.11.6).
+    Existia aqui um módulo com nove schemas: login, troca de senha, criação e
+    listagem de contas. Foram embora com as contas. O que a interface precisa
+    saber na partida cabe em três campos, e nenhum deles ajuda quem não tiver
+    o token: a versão (para a barra de estado), se esta instalação chegou a
+    gerar um `runtime_token`, e se **esta** requisição o apresentou.
+
+    A distinção entre os dois últimos é o que separa "o backend acabou de
+    subir e ainda não gerou o token" de "o token existe e o que você mandou
+    não é ele" — dois problemas com soluções diferentes.
     """
 
-    authentication_enabled: bool
-    deployment_profile: str
-    has_accounts: bool
-    local_token_accepted: bool
-    authenticated: bool = False
-    user: Optional[UserResponse] = None
-
-
-class UserCreateRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=64, pattern=r"^[A-Za-z0-9._-]+$")
-    password: Optional[str] = Field(
-        default=None, description="Se omitida, o servidor sorteia uma e a devolve uma única vez"
-    )
-    role: str = Field(default="researcher", pattern=r"^(owner|researcher)$")
-
-
-class UserCreatedResponse(BaseModel):
-    user: UserResponse
-    generated_password: Optional[str] = Field(
-        default=None, description="Devolvida apenas na criação, e nunca mais"
-    )
-
-
-class PasswordChangeRequest(BaseModel):
-    current_password: str
-    new_password: str = Field(..., min_length=12)
-
-
-class UserListResponse(BaseModel):
-    items: List[UserResponse]
-    total: int
+    app_version: str
+    local_token_disponivel: bool
+    authenticated: bool

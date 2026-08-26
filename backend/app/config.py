@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Configuração da Aplicação.
@@ -7,67 +6,45 @@ Utiliza Pydantic BaseSettings para gerenciamento centralizado de configurações
 com suporte a variáveis de ambiente e valores padrão.
 """
 
-from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import platformdirs
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
-class DeploymentProfile(str, Enum):
-    """
-    Perfil de exposição em que o backend está rodando (doc 29 §29.2).
-
-    O RSAC nasceu assumindo que o único cliente era o Electron na mesma
-    máquina. Quando um lançador passou a publicar o backend na internet por
-    túnel, essa premissa deixou de valer sem que nada no código soubesse. O
-    perfil torna o perímetro explícito: todo controle de segurança deriva
-    dele, em vez de suposição implícita.
-    """
-
-    DESKTOP = "desktop"   # Electron falando com o backend em loopback
-    SERVER = "server"     # publicado (túnel, rede local)
-    CI = "ci"             # testes automatizados
-
-
 class Settings(BaseSettings):
-    """Configurações globais da aplicação RSAC V2."""
+    """
+    Configurações globais da aplicação RSAC V2.
+
+    O perímetro é fixo: **o backend só atende em loopback, na máquina de quem
+    o instalou**. Havia aqui um `DeploymentProfile` com três valores — desktop,
+    server e ci — que existia porque o backend também podia ser publicado por
+    túnel, e todo controle de segurança derivava dele. Com a publicação
+    removida, o enum passaria a ter um valor real só; o que era um perímetro
+    variável virou uma premissa, e uma premissa não precisa de configuração
+    para ser declarada.
+    """
 
     # ── Identificação ─────────────────────────────────────────────────
     app_name: str = "RSAC"
     app_version: str = "2.0.0"
     debug: bool = False
 
-    # ── Perímetro de confiança ────────────────────────────────────────
-    deployment_profile: DeploymentProfile = DeploymentProfile.DESKTOP
-
     # ── Rede de saída (doc 29 §29.5.3) ────────────────────────────────
     # Libera destinos em loopback para o caso legítimo do LLM local
-    # (Ollama, LM Studio). Ignorado no perfil `server`, onde loopback é a rede
-    # interna de quem hospeda, não a máquina do usuário.
+    # (Ollama, LM Studio).
     allow_private_egress: bool = True
 
     # Limites de recurso (doc 29 §29.7)
     max_upload_mb: int = 100
     rate_limit_enabled: bool = True
 
-    # Hosts aceitos no cabeçalho `Host` (perfil `server`). Vazio = sem
-    # restrição, porque o nome do túnel Cloudflare muda a cada execução e
-    # exigir configuração aqui inviabilizaria o uso normal.
-    trusted_hosts: list[str] = []
-
     # ── Chave-mestra da cifra de segredos (doc 29 §29.4.1) ────────────
     # Obrigatória no perfil `server`: lá um arquivo de chave ao lado do banco
     # seria lido pela mesma falha que leria o banco. Fora do `server`, a
     # ausência faz o backend gerar `<data_dir>/master.key` com permissão 0600.
-    secret_key: Optional[str] = None
-
-    # ── Sessões (doc 29 §29.3.3) ──────────────────────────────────────
-    # Validade da sessão, renovada por atividade: quem está triando não é
-    # deslogado no meio do trabalho, mas uma aba esquecida aberta expira.
-    session_ttl_hours: int = 12
+    secret_key: str | None = None
 
     # ── Servidor ──────────────────────────────────────────────────────
     host: str = "127.0.0.1"
@@ -82,16 +59,10 @@ class Settings(BaseSettings):
     # — para pô-la noutro disco, ou numa pasta sincronizada. Quem define a
     # variável manda; o backend não escolhe outro lugar por conta própria,
     # porque isso partiria a revisão em duas instalações sem ninguém notar.
-    data_dir_override: Optional[Path] = Field(default=None, validation_alias="RSAC_DATA_DIR")
+    data_dir_override: Path | None = Field(default=None, validation_alias="RSAC_DATA_DIR")
 
     # ── Banco de Dados ────────────────────────────────────────────────
-    database_url: Optional[str] = None
-
-    # ── CORS ──────────────────────────────────────────────────────────
-    # Origens extras autorizadas no perfil `server`. Aceita lista JSON ou
-    # valores separados por vírgula em RSAC_CORS_ORIGINS. No perfil `desktop`
-    # o loopback já é liberado por `cors_allow_origin_regex`.
-    cors_origins: list[str] = []
+    database_url: str | None = None
 
     # ── Aquisição de PDFs ─────────────────────────────────────────────
     # E-mail de contato usado nas APIs acadêmicas de acesso aberto.
@@ -110,52 +81,32 @@ class Settings(BaseSettings):
     # ~28k caracteres ≈ 7–9k tokens, folgado para janelas de 32k em diante.
     ai_context_budget_chars: int = 28000
 
-    # ── Perímetro derivado do perfil ──────────────────────────────────
+    # ── Origens autorizadas ───────────────────────────────────────────
 
     @property
-    def is_server_profile(self) -> bool:
-        """Verdadeiro quando o backend está publicado fora do loopback."""
-        return self.deployment_profile is DeploymentProfile.SERVER
-
-    @property
-    def cors_allow_origin_regex(self) -> Optional[str]:
+    def cors_allow_origin_regex(self) -> str:
         """
-        Regex de origem permitida — apenas loopback, e apenas fora do perfil
-        `server`. A porta é variável (Vite escolhe a que estiver livre), por
-        isso o regex; o que ele não faz é aceitar host arbitrário.
+        Regex das origens que podem falar com a API.
 
-        `null` é a origem opaca que o Chromium envia quando a página vem de
-        `file://` — que é exatamente o caso do app empacotado, onde o Electron
-        carrega o `index.html` do disco. A entrada `file://` que existia aqui
-        nunca chegou a casar com nada: o navegador não manda o esquema, manda
-        a palavra `null`, e por isso **toda** chamada da API era barrada no app
-        instalado. As duas ficam: `file://` para clientes que a enviem, `null`
-        para o Chromium.
+        Só loopback e a origem opaca do app empacotado. A porta é variável (o
+        Electron sorteia uma a cada execução, e o Vite escolhe a que estiver
+        livre), por isso o regex; o que ele não faz é aceitar host arbitrário.
 
-        O que impede que isso vire porta de entrada para um sítio hostil (que
-        também consegue produzir origem `null`, via iframe em sandbox) é o
-        regime de credencial, não a origem: o cookie de sessão é
-        `SameSite=Strict` e não acompanha requisição de outro sítio, e o token
-        local viaja em cabeçalho próprio, inalcançável de fora da página. O que
-        sobra para quem chegar por essa via é 401 em tudo, menos as três rotas
-        públicas — que não expõem dado de revisão. No perfil `server` nada
-        disto vale: lá o retorno continua sendo `None`.
+        `null` é o que o Chromium envia quando a página vem de `file://` — o
+        caso do app instalado, onde o Electron carrega o `index.html` do disco.
+        A entrada `file://` que existia aqui nunca chegou a casar com nada: o
+        navegador não manda o esquema, manda a palavra `null`, e por isso
+        **toda** chamada da API era barrada no app instalado. As duas ficam:
+        `file://` para clientes que a enviem, `null` para o Chromium.
+
+        Um sítio hostil também consegue produzir origem `null`, via iframe em
+        sandbox — e o que o detém não é a origem, é a credencial: a API só
+        responde a quem apresentar o token do arquivo `runtime_token`, que só o
+        dono da máquina consegue ler. Sem ele, o que se alcança por essa via é
+        401 em tudo, menos `/health` e `/auth/status`, que não expõem dado de
+        revisão.
         """
-        if self.is_server_profile:
-            return None
         return r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|file://|null)$"
-
-    @property
-    def effective_cors_origins(self) -> list[str]:
-        """Lista finita de origens autorizadas, derivada do perfil."""
-        if self.deployment_profile is DeploymentProfile.CI:
-            return ["http://testserver"]
-        return [o.strip().rstrip("/") for o in self.cors_origins if o and o.strip()]
-
-    @property
-    def expose_api_docs(self) -> bool:
-        """A documentação OpenAPI mapeia a API inteira — fechada quando exposta."""
-        return not self.is_server_profile
 
     @property
     def data_dir(self) -> Path:

@@ -1,145 +1,60 @@
 /**
- * RSAC V2 — Auth Store (Zustand, sem persistência)
+ * RSAC V2 — Estado do acesso local (Zustand, sem persistência)
  *
- * Guarda a identidade da sessão corrente. Não usa o middleware `persist` de
- * propósito: quem persiste a sessão é o backend (cookie `HttpOnly`) e, no caso
- * de origem diferente, o `sessionStorage` gerido pelo cliente HTTP. Duplicar
- * isso aqui criaria uma segunda fonte da verdade que poderia dizer
- * "autenticado" depois de o servidor já ter revogado a sessão.
+ * Guarda se esta janela consegue falar com o backend desta instalação. Era um
+ * store de sessão — com login, logout, usuário corrente e papéis — e encolheu
+ * junto com as contas: sem publicação por túnel, a credencial é o arquivo
+ * `runtime_token`, que o processo principal do Electron lê e entrega por IPC.
+ *
+ * Sem persistência, de propósito: quem sabe o token é o Electron, e ele o
+ * entrega de novo a cada partida. Guardar uma cópia aqui criaria uma segunda
+ * fonte da verdade capaz de discordar do arquivo em disco.
  */
 
 import { create } from 'zustand'
 import { api } from '@/api/client'
-import type { AuthStatus, AuthUser } from '@/types/api'
+import type { AuthStatus } from '@/types/api'
 
 /**
- * `checking` é um estado real, não um detalhe: antes de saber se há sessão a
- * aplicação não pode nem mostrar a tela de login (piscaria para quem já está
- * autenticado) nem o conteúdo (piscaria dado para quem não está).
+ * `checking` é um estado real, não um detalhe: antes de saber se o backend
+ * responde, a aplicação não pode mostrar nem o conteúdo (piscaria dado que
+ * talvez não carregue) nem o diagnóstico de conexão (acusaria uma falha que
+ * talvez não exista).
  */
-type AuthPhase = 'checking' | 'authenticated' | 'anonymous' | 'unavailable'
+type AuthPhase = 'checking' | 'ready' | 'unavailable'
 
 interface AuthState {
   phase: AuthPhase
-  user: AuthUser | null
   status: AuthStatus | null
-  error: string | null
-  submitting: boolean
-  /**
-   * Token local desta instalação, entregue pelo processo principal do Electron.
-   *
-   * É a única via: o backend grava o `runtime_token` numa pasta que só o dono
-   * da máquina lê, o Electron o entrega por IPC, e ele nunca passa pela URL.
-   *
-   * Fica no estado, e não numa variável de módulo, porque `bootstrap` é
-   * rechamado pela tela de indisponibilidade a cada nova tentativa: guardado
-   * fora, o token valeria só para a primeira, e uma reconexão bem-sucedida
-   * cairia na tela de login.
-   */
-  tokenLocal: string | null
 
   definirTokenLocal: (token: string | null) => void
   bootstrap: () => Promise<void>
-  login: (username: string, password: string) => Promise<boolean>
-  loginWithLocalToken: (token: string) => Promise<boolean>
-  logout: () => Promise<void>
-  setError: (message: string | null) => void
-  markAnonymous: () => void
+  marcarIndisponivel: () => void
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   phase: 'checking',
-  user: null,
   status: null,
-  error: null,
-  submitting: false,
-  tokenLocal: null,
 
-  definirTokenLocal: (token) => set({ tokenLocal: token }),
+  /** Recebe o token local do processo principal e o entrega ao cliente HTTP. */
+  definirTokenLocal: (token) => api.setLocalToken(token),
 
   /**
-   * Decide, na partida, entre entrar direto e pedir credenciais.
+   * Confere, na partida, se o backend responde e aceita a credencial.
    *
-   * Ordem: sessão já válida → token local do app de mesa → tela de login.
+   * Um token recusado e um backend fora do ar levam à mesma tela — e é o
+   * certo: nos dois casos o que o usuário pode fazer é reiniciar o aplicativo
+   * ou apontar para outro endereço. A distinção que importa está no texto, e
+   * vem de `local_token_disponivel` no corpo da resposta.
    */
   bootstrap: async () => {
     try {
-      let status: import('@/types/api').AuthStatus
-      try {
-        status = await api.getAuthStatus()
-      } catch (err) {
-        // Recuar para o backend local: útil quando o túnel salvo expirou e o
-        // servidor está na própria máquina.
-        const eraRemoto =
-          !api.getBaseUrl().includes('127.0.0.1') && !api.getBaseUrl().includes('localhost')
-        if (eraRemoto && api.podeAlcancarLoopback()) {
-          console.warn('[Auth] Falha ao conectar na URL remota configurada, tentando localhost:8000...')
-          api.setBaseUrl('http://127.0.0.1:8000/api/v1')
-          status = await api.getAuthStatus()
-        } else {
-          throw err
-        }
-      }
-      set({ status })
-
-      if (status.authenticated && status.user) {
-        set({ phase: 'authenticated', user: status.user, error: null })
-        return
-      }
-
-      // O token local chega por um caminho só: a ponte IPC do processo
-      // principal do Electron. Havia um segundo, `?local_token=` na URL, que
-      // existia para o lançador de navegador; com ele removido, o que sobrava
-      // era uma credencial aceita pela barra de endereços sem ninguém para
-      // produzi-la.
-      const tokenLocal = get().tokenLocal
-      if (tokenLocal) {
-        const entrou = await get().loginWithLocalToken(tokenLocal)
-        if (entrou) return
-      }
-
-      set({ phase: 'anonymous', user: null })
+      const status = await api.getAuthStatus()
+      set({ status, phase: status.authenticated ? 'ready' : 'unavailable' })
     } catch {
-      // Backend fora do ar é diferente de sessão ausente: mostrar a tela de
-      // login aqui faria o usuário digitar a senha contra um servidor que não
-      // responde, e concluir que a senha está errada.
-      set({ phase: 'unavailable', user: null })
+      set({ status: null, phase: 'unavailable' })
     }
   },
 
-  login: async (username, password) => {
-    set({ submitting: true, error: null })
-    try {
-      const res = await api.login(username, password)
-      set({ phase: 'authenticated', user: res.user, error: null, submitting: false })
-      return true
-    } catch (err: any) {
-      set({ error: err?.message || 'Não foi possível entrar.', submitting: false })
-      return false
-    }
-  },
-
-  loginWithLocalToken: async (token) => {
-    try {
-      const res = await api.loginWithLocalToken(token)
-      set({ phase: 'authenticated', user: res.user, error: null })
-      return true
-    } catch {
-      // Silencioso de propósito: no perfil servidor o token local não é aceito,
-      // e a falha aqui apenas leva à tela de login normal.
-      return false
-    }
-  },
-
-  logout: async () => {
-    try {
-      await api.logout()
-    } finally {
-      set({ phase: 'anonymous', user: null, error: null })
-    }
-  },
-
-  setError: (message) => set({ error: message }),
-
-  markAnonymous: () => set({ phase: 'anonymous', user: null }),
+  marcarIndisponivel: () => set({ phase: 'unavailable' }),
 }))

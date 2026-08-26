@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Token local do perfil desktop (doc 29 §29.3.2).
@@ -19,13 +18,13 @@ criado nem aceito: lá a prova de identidade é a senha da conta.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import secrets
 import stat
 import sys
 from pathlib import Path
-from typing import Optional
 
 from app.config import settings
 
@@ -54,17 +53,12 @@ def _restringir_permissoes(caminho: Path) -> None:
         logger.warning("[Auth] Não foi possível restringir permissões de %s: %s", caminho, exc)
 
 
-def ensure_local_token() -> Optional[str]:
+def ensure_local_token() -> str | None:
     """
     Garante um token local para esta instalação e devolve-o.
 
-    No perfil `server` devolve `None` sem criar nada: um arquivo de acesso ao
-    lado do banco seria uma credencial a mais para a travessia de caminho
-    procurar.
+    O arquivo é criado na primeira partida e reaproveitado depois.
     """
-    if settings.is_server_profile:
-        return None
-
     caminho = token_path()
     if caminho.exists():
         try:
@@ -80,10 +74,11 @@ def ensure_local_token() -> Optional[str]:
         caminho.parent.mkdir(parents=True, exist_ok=True)
         caminho.write_text(token, encoding="utf-8")
         _restringir_permissoes(caminho)
-        try:
+        # A pasta de dados restrita ao dono é reforço, não requisito: em
+        # sistema de arquivos que não representa modo POSIX a chamada falha, e
+        # o token continua protegido pelas próprias permissões.
+        with contextlib.suppress(OSError):  # pragma: no cover
             os.chmod(caminho.parent, stat.S_IRWXU)
-        except OSError:  # pragma: no cover
-            pass
     except OSError as exc:
         logger.error("[Auth] Falha ao gravar o token local em %s: %s", caminho, exc)
         return None
@@ -92,10 +87,8 @@ def ensure_local_token() -> Optional[str]:
     return token
 
 
-def read_local_token() -> Optional[str]:
+def read_local_token() -> str | None:
     """Lê o token local já existente, sem criar um novo."""
-    if settings.is_server_profile:
-        return None
     caminho = token_path()
     if not caminho.exists():
         return None
@@ -106,7 +99,7 @@ def read_local_token() -> Optional[str]:
         return None
 
 
-def matches_local_token(candidate: Optional[str]) -> bool:
+def matches_local_token(candidate: str | None) -> bool:
     """
     O token apresentado é o desta instalação?
 
@@ -125,7 +118,5 @@ def matches_local_token(candidate: Optional[str]) -> bool:
 def descrever_para_log() -> str:
     """Linha amigável para o log de inicialização, sem revelar o token."""
     caminho = token_path()
-    if settings.is_server_profile:
-        return "perfil server — autenticação por conta e senha"
     plataforma = "Windows" if sys.platform == "win32" else "POSIX"
-    return f"perfil desktop — token local em {caminho} ({plataforma})"
+    return f"token local em {caminho} ({plataforma})"

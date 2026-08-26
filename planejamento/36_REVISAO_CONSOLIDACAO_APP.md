@@ -11,6 +11,13 @@
 > que não pôde ser medido nesta máquina — o binário congelado do PyInstaller no
 > Windows, com antivírus — está marcado **[A MEDIR NO WINDOWS]**.
 >
+> **Nota de leitura (posterior).** As seções 36.3 e 36.4 descrevem correções
+> feitas sobre a autenticação por sessão e por conta. Essa camada foi removida
+> no ciclo seguinte — ver [doc 37](./37_SIMPLIFICACAO_DO_PERIMETRO.md), que é a
+> referência vigente. O diagnóstico aqui continua valendo: é a história de por
+> que o app instalado não abria, e as duas correções sobreviveram à mudança
+> (`null` no CORS e o token entregue pelo Electron).
+>
 > Este documento **não repete** os docs 28–30. A segurança que aquele ciclo
 > instalou está de pé; o que se descobriu aqui é que dois dos seus controles
 > foram calibrados para uma origem que o navegador nunca envia, e por isso
@@ -379,14 +386,15 @@ E, por consequência, duas coisas no código:
   reproduzir. O efeito colateral é que o ícone do instalador e o do atalho
   deixam de ser dois desenhos diferentes.
 
-**O que não saiu, e por quê.** O perfil `server` continua inteiro — o backend
-ainda serve a SPA de `frontend/dist` quando ela existe, `npm run build:web`
-continua no CI, e as rotas de conta e sessão seguem cobertas pelos testes de
-segurança dos docs 28–30. Ele não é "o navegador" que este ciclo removeu: é a
-publicação por túnel, com usuário e senha, para quem precise abrir a revisão a
-mais de uma pessoa. Removê-lo é uma decisão de produto de outra ordem — mexe em
-autenticação, contas, CORS e cerca de trinta testes de segurança — e não foi
-tomada aqui.
+**O que não saiu neste ciclo.** O perfil `server` — a publicação por túnel,
+com usuário e senha — ficou de pé aqui, por ser decisão de produto de outra
+ordem: mexia em autenticação, contas, CORS e cerca de trinta testes de
+segurança.
+
+Ela foi tomada logo depois, e está no doc 37: o perfil publicável, as contas e
+as sessões saíram, e o RSAC passou a ser um app instalado com uma credencial
+só. Com isso o `npm run build:web` e o catch-all que servia a SPA também
+saíram — não havia mais navegador para atender.
 
 ---
 
@@ -395,14 +403,19 @@ tomada aqui.
 **C-06 — A SPA servida pelo backend eliminaria a classe do B-02.**
 Se o backend empacotado carregasse a SPA (`--add-data` no PyInstaller) e o
 Electron apontasse para `http://127.0.0.1:<porta>/` em vez de `loadFile`, a
-origem da página passaria a ser a origem da API: **sem CORS, sem exceção de
-origem opaca, cookie de sessão no regime normal, `Origin` do WebSocket casando
-com o regex de loopback e uma só cópia da interface**. É a consolidação que
-torna B-02 e B-03 impossíveis em vez de tratados.
+origem da página passaria a ser a origem da API: **sem CORS e sem exceção de
+origem opaca**.
 
-Não foi feito aqui porque muda o pipeline de empacotamento do Windows, que não
-pode ser exercitado nesta máquina — e uma mudança de build não verificada é
+Não foi feito porque muda o pipeline de empacotamento do Windows, que não pode
+ser exercitado nesta máquina — e uma mudança de build não verificada é
 exatamente o tipo de coisa que produz o próximo "o app não abre".
+
+O ciclo seguinte (doc 37) atacou o mesmo problema pelo outro lado: em vez de
+fazer as origens coincidirem, reduziu o que a exceção de origem concede. Com a
+credencial passando a ser um arquivo que só o dono da máquina lê, uma página
+hostil de origem `null` alcança 401 em tudo — e o catch-all que servia a SPA,
+com a travessia de caminho que ele precisava confinar, foi removido por não ter
+mais cliente.
 
 ### Dívida registrada, não tocada
 
@@ -426,7 +439,7 @@ cd backend && RSAC_DEPLOYMENT_PROFILE=ci pytest -q
 python -X importtime -c "import app.main" 2>&1 | tail -1
 
 # Frontend — tipos, testes e tamanho do pacote inicial
-cd frontend && npx tsc --noEmit && npx vitest run && npm run build:web
+cd frontend && npx tsc --noEmit && npx vitest run && npm run build
 ```
 
 Para reproduzir o bloqueante B-02 antes da correção: reverta o `null` do regex

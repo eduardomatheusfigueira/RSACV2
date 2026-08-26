@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Serviço de Triagem com Inteligência Artificial (Screening Service).
@@ -12,8 +11,7 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -39,13 +37,17 @@ class AuditActor:
     """
     Quem acionou uma operação assistida por IA.
 
-    Existe como valor imutável, e não como o objeto ORM do usuário, porque a
-    triagem em lote roda em segundo plano com outra sessão de banco — carregar
-    o modelo para lá o deixaria destacado (`DetachedInstanceError`) na primeira
+    Existe como valor imutável, e não como um objeto do ORM, porque a triagem
+    em lote roda em segundo plano com outra sessão de banco — carregar um
+    modelo para lá o deixaria destacado (`DetachedInstanceError`) na primeira
     leitura de atributo.
+
+    Guardava também um `user_id` da conta que acionou a triagem. Com as contas
+    removidas, o nome do operador do sistema é toda a identidade que existe, e
+    um identificador que não aponta para lugar nenhum só faria a trilha de
+    auditoria parecer mais precisa do que é.
     """
 
-    user_id: str
     username: str
 
 
@@ -81,13 +83,13 @@ def _normalize_key(value: str) -> str:
     return re.sub(r"[\s_\-\.\:]+", "", str(value or "")).upper()
 
 
-def _build_criterion_map(criteria_list: List[CriterionModel], prefixes: List[str]) -> Dict[str, str]:
+def _build_criterion_map(criteria_list: list[CriterionModel], prefixes: list[str]) -> dict[str, str]:
     """Monta um mapa tolerante de chaves possíveis do modelo -> id do critério.
 
     Cobre as variações usuais devolvidas pelos provedores: "INC1", "INC_1",
     "Critério 1", "C1", o índice puro ("1") e o próprio texto do critério.
     """
-    mapping: Dict[str, str] = {}
+    mapping: dict[str, str] = {}
     for idx, crit in enumerate(criteria_list, 1):
         for prefix in prefixes:
             mapping[_normalize_key(f"{prefix}{idx}")] = crit.id
@@ -97,7 +99,7 @@ def _build_criterion_map(criteria_list: List[CriterionModel], prefixes: List[str
     return mapping
 
 
-def _iter_criteria_flags(raw) -> List[tuple]:
+def _iter_criteria_flags(raw) -> list[tuple]:
     """Converte a resposta de critérios em pares (chave, booleano).
 
     Aceita tanto o dicionário previsto no prompt ({"INC1": true}) quanto listas
@@ -164,7 +166,7 @@ def _to_protocol_entity(model: ProtocolModel) -> Protocol:
 class ScreeningService:
     """Serviço de Triagem com IA."""
 
-    def __init__(self, ai_client: Optional[BaseAIClient] = None):
+    def __init__(self, ai_client: BaseAIClient | None = None):
         self.ai_client = ai_client
 
     def _get_client(self, db: Session) -> BaseAIClient:
@@ -233,7 +235,6 @@ class ScreeningService:
             old_value=old_decision,
             new_value=result.decision,
             source=f"ai:{result.provider}",
-            user_id=actor.user_id if actor else None,
             username=actor.username if actor else "",
             ai_provider=result.provider or "",
             ai_model=result.model_used or "",

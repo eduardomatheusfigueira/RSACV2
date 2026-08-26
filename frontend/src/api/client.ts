@@ -50,8 +50,17 @@ export interface PrismaFlowData {
   }
 }
 
-/** Onde o token de sessão é guardado entre recarregamentos da aba. */
-const SESSION_STORAGE_KEY = 'rsac_session_token'
+/**
+  * Onde o token local é guardado entre recarregamentos da janela.
+  *
+  * `sessionStorage`, não `localStorage`: o token vem do processo principal do
+  * Electron a cada partida, e guardá-lo para sempre só criaria uma cópia velha
+  * de uma credencial que o backend pode ter regerado.
+  */
+const LOCAL_TOKEN_STORAGE_KEY = 'rsac_local_token'
+
+/** Cabeçalho pelo qual a credencial viaja. Espelha `LOCAL_TOKEN_HEADER`. */
+const LOCAL_TOKEN_HEADER = 'X-RSAC-Local-Token'
 
 /**
  * Onde o endereço do backend é guardado.
@@ -62,7 +71,7 @@ const SESSION_STORAGE_KEY = 'rsac_session_token'
  */
 const BACKEND_URL_KEY = 'rsac_api_url'
 
-/** Chamado quando o backend responde 401 — a aplicação volta para o login. */
+/** Chamado quando o backend responde 401 — a aplicação mostra o diagnóstico. */
 type UnauthorizedHandler = () => void
 
 class APIClient {
@@ -78,10 +87,10 @@ class APIClient {
    * token é apenas redundância; ele existe para o cliente hospedado em outra
    * origem (Netlify, Vite em desenvolvimento), que não recebe o cookie.
    */
-  private sessionToken: string | null = (() => {
+  private localToken: string | null = (() => {
     if (typeof window === 'undefined') return null
     try {
-      return sessionStorage.getItem(SESSION_STORAGE_KEY)
+      return sessionStorage.getItem(LOCAL_TOKEN_STORAGE_KEY)
     } catch {
       return null
     }
@@ -238,18 +247,18 @@ class APIClient {
    * endereço de um WebSocket não entra em histórico nem em `Referer`, então
    * não é o mesmo risco de pôr credencial numa URL comum.
    */
-  private withSessionToken(url: string): string {
-    if (!this.sessionToken) return url
+  private withLocalToken(url: string): string {
+    if (!this.localToken) return url
     const separador = url.includes('?') ? '&' : '?'
-    return `${url}${separador}token=${encodeURIComponent(this.sessionToken)}`
+    return `${url}${separador}local_token=${encodeURIComponent(this.localToken)}`
   }
 
   getWebSocketUrl(projectId: string): string {
-    return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`)
+    return this.withLocalToken(`${this.getWsBaseUrl()}/projects/${projectId}/harvest/ws`)
   }
 
   getScreeningWebSocketUrl(projectId: string): string {
-    return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`)
+    return this.withLocalToken(`${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`)
   }
 
   getExcelExportUrl(projectId: string): string {
@@ -260,23 +269,24 @@ class APIClient {
     return `${this.baseUrl}/projects/${projectId}/export/bibtex`
   }
 
-  setSessionToken(token: string | null): void {
-    this.sessionToken = token
+  /** Guarda o token local desta instalação, entregue pelo Electron. */
+  setLocalToken(token: string | null): void {
+    this.localToken = token
     if (typeof window === 'undefined') return
     try {
-      if (token) sessionStorage.setItem(SESSION_STORAGE_KEY, token)
-      else sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      if (token) sessionStorage.setItem(LOCAL_TOKEN_STORAGE_KEY, token)
+      else sessionStorage.removeItem(LOCAL_TOKEN_STORAGE_KEY)
     } catch {
-      // Navegador com armazenamento bloqueado: o cookie ainda cobre o caso
-      // de mesma origem, então não há por que interromper o fluxo.
+      // Armazenamento bloqueado: o token vale só para esta execução, e o
+      // Electron o entrega de novo na próxima.
     }
   }
 
-  getSessionToken(): string | null {
-    return this.sessionToken
+  getLocalToken(): string | null {
+    return this.localToken
   }
 
-  /** Registra o que fazer quando o backend recusar a sessão. */
+  /** Registra o que fazer quando o backend recusar a credencial. */
   setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
     this.onUnauthorized = handler
   }
@@ -301,12 +311,9 @@ class APIClient {
     try {
       const response = await fetch(url, {
         ...options,
-        // `include` faz o cookie de sessão viajar quando a SPA é servida pelo
-        // próprio backend; o Bearer cobre o caso de origem diferente.
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...(this.sessionToken ? { Authorization: `Bearer ${this.sessionToken}` } : {}),
+          ...(this.localToken ? { [LOCAL_TOKEN_HEADER]: this.localToken } : {}),
           ...options.headers,
         },
       })
@@ -318,10 +325,11 @@ class APIClient {
         const errorMsg = error.detail || `HTTP ${response.status}`
         logStore.error(source, `${method} ${path} falhou (${response.status})`, `Erro: ${errorMsg}\nTempo: ${duration}ms`)
 
-        // Sessão expirada ou revogada: descarta o token e devolve o usuário ao
-        // login em vez de deixar a interface tentando de novo em silêncio.
+        // Token recusado: avisa a aplicação em vez de deixar a interface
+        // tentando de novo em silêncio. Não descartamos o token — ele é o
+        // único que existe, e o problema costuma ser o backend ter regerado o
+        // arquivo, o que a próxima partida do Electron resolve.
         if (response.status === 401 && !path.startsWith('/auth/')) {
-          this.setSessionToken(null)
           this.onUnauthorized?.()
         }
         throw new Error(errorMsg)
@@ -520,75 +528,14 @@ class APIClient {
   // ── AI ────────────────────────────────────────────────────────────
 
   // ── Autenticação ──────────────────────────────────────────────────
+  //
+  // Uma chamada só. Eram nove: login, logout, `me`, troca de senha e a gestão
+  // de contas. Foram embora com as contas — a credencial do RSAC é o arquivo
+  // `runtime_token`, apresentado no cabeçalho a cada requisição, e não há
+  // sessão para abrir nem para fechar.
 
   async getAuthStatus(): Promise<import('@/types/api').AuthStatus> {
     return this.request<import('@/types/api').AuthStatus>('/auth/status')
-  }
-
-  async login(username: string, password: string): Promise<import('@/types/api').LoginResponse> {
-    const res = await this.request<import('@/types/api').LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    })
-    this.setSessionToken(res.access_token)
-    return res
-  }
-
-  /**
-   * Troca o token local do app de mesa por uma sessão.
-   *
-   * É o que mantém o uso desktop sem tela de login: o Electron lê o arquivo
-   * `runtime_token` e passa o conteúdo adiante.
-   */
-  async loginWithLocalToken(token: string): Promise<import('@/types/api').LoginResponse> {
-    const res = await this.request<import('@/types/api').LoginResponse>('/auth/local', {
-      method: 'POST',
-      body: JSON.stringify({ token }),
-    })
-    this.setSessionToken(res.access_token)
-    return res
-  }
-
-  async logout(): Promise<void> {
-    try {
-      await this.request<{ status: string }>('/auth/logout', { method: 'POST' })
-    } finally {
-      // O token local morre mesmo se a chamada falhar: manter a sessão do lado
-      // do cliente depois de um pedido de saída seria o pior dos dois mundos.
-      this.setSessionToken(null)
-    }
-  }
-
-  async getCurrentUser(): Promise<import('@/types/api').AuthUser> {
-    return this.request<import('@/types/api').AuthUser>('/auth/me')
-  }
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>('/auth/password', {
-      method: 'POST',
-      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-    })
-  }
-
-  async listUsers(): Promise<import('@/types/api').UserListResponse> {
-    return this.request<import('@/types/api').UserListResponse>('/auth/users')
-  }
-
-  async createUser(
-    username: string,
-    role: 'owner' | 'researcher',
-    password?: string
-  ): Promise<import('@/types/api').UserCreatedResponse> {
-    return this.request<import('@/types/api').UserCreatedResponse>('/auth/users', {
-      method: 'POST',
-      body: JSON.stringify({ username, role, password }),
-    })
-  }
-
-  async deactivateUser(userId: string): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>(`/auth/users/${userId}`, {
-      method: 'DELETE',
-    })
   }
 
   async getAISettings(): Promise<AISettings> {

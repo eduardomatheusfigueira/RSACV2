@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Guarda de requisições de saída (doc 28 V-05, doc 29 §29.5.3).
@@ -28,7 +27,6 @@ import ipaddress
 import logging
 import socket
 from dataclasses import dataclass
-from typing import Optional
 from urllib.parse import urlparse
 
 from app.config import settings
@@ -112,16 +110,13 @@ def _e_loopback(endereco: str) -> bool:
 
 def _loopback_liberado() -> bool:
     """
-    Loopback é destino legítimo em um caso só: LLM local (Ollama, LM Studio)
-    no perfil desktop. No perfil `server` isso não vale — lá o loopback é a
-    rede interna de quem hospeda, não a máquina do usuário.
+    Loopback é destino legítimo em um caso só: um LLM local (Ollama, LM Studio)
+    na mesma máquina.
     """
-    if settings.is_server_profile:
-        return False
     return settings.allow_private_egress
 
 
-def validar_url(url: str, *, permitir_loopback: Optional[bool] = None) -> DestinoValidado:
+def validar_url(url: str, *, permitir_loopback: bool | None = None) -> DestinoValidado:
     """
     Valida uma URL de saída e devolve o destino com o IP já resolvido.
 
@@ -180,7 +175,7 @@ def resolver_e_validar(
     if not infos:
         raise EgressBlocked(url, "host sem endereço")
 
-    primeiro_ip: Optional[str] = None
+    primeiro_ip: str | None = None
     for info in infos:
         endereco = info[4][0]
         try:
@@ -203,7 +198,7 @@ def resolver_e_validar(
     return DestinoValidado(url=url, host=host, ip=primeiro_ip, porta=porta)
 
 
-def url_e_permitida(url: str, *, permitir_loopback: Optional[bool] = None) -> bool:
+def url_e_permitida(url: str, *, permitir_loopback: bool | None = None) -> bool:
     """Versão booleana, para filtrar listas de candidatos sem tratar exceção."""
     try:
         validar_url(url, permitir_loopback=permitir_loopback)
@@ -249,14 +244,11 @@ def host_e_academico_conhecido(url: str) -> bool:
 
 def detalhe_publico(url: str, detalhe: str) -> str:
     """
-    Reduz o detalhe de uma tentativa ao que pode sair para o cliente.
+    Detalhe de uma tentativa de saída que pode ser mostrado ao usuário.
 
-    No perfil `server`, host desconhecido só recebe a categoria: sem isso, a
-    correção do SSRF ainda deixaria o atacante aprender pela mensagem de erro
-    o que não conseguiu alcançar.
+    Havia aqui um recorte para o perfil `server`, onde a mensagem de erro
+    viraria um oráculo de varredura para quem alcançasse a URL publicada. Sem
+    publicação, quem lê a mensagem é o dono da máquina — e para ele o detalhe
+    é o que permite entender por que a busca de um PDF não foi adiante.
     """
-    if not settings.is_server_profile:
-        return detalhe
-    if host_e_academico_conhecido(url):
-        return detalhe
-    return "Destino não elegível ou indisponível."
+    return detalhe

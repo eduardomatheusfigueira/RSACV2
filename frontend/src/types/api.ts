@@ -376,42 +376,19 @@ export interface DeduplicationReport {
 
 // ── Autenticação ──────────────────────────────────────────────────────
 
-export interface AuthUser {
-  id: string
-  username: string
-  role: 'owner' | 'researcher'
-  is_active: boolean
-  created_at: string
-  last_login_at?: string | null
-}
-
-export interface LoginResponse {
-  user: AuthUser
-  access_token: string
-  token_type: string
-  expires_in_hours: number
-}
-
-/** Única resposta que o backend dá antes do login. */
+/**
+ * Única resposta que o backend dá sem credencial.
+ *
+ * Havia aqui `AuthUser`, `LoginResponse`, `UserListResponse` e
+ * `UserCreatedResponse`. Saíram com as contas: a credencial do RSAC é o
+ * arquivo `runtime_token` desta instalação, e não há usuário a descrever.
+ */
 export interface AuthStatus {
-  authentication_enabled: boolean
-  deployment_profile: 'desktop' | 'server' | 'ci'
-  has_accounts: boolean
-  /** O perfil desktop aceita o token local em vez de usuário e senha. */
-  local_token_accepted: boolean
+  app_version: string
+  /** O backend já gerou o `runtime_token` desta instalação? */
+  local_token_disponivel: boolean
+  /** Esta requisição apresentou um token que confere? */
   authenticated: boolean
-  user?: AuthUser | null
-}
-
-export interface UserListResponse {
-  items: AuthUser[]
-  total: number
-}
-
-export interface UserCreatedResponse {
-  user: AuthUser
-  /** Devolvida apenas na criação, e nunca mais. */
-  generated_password?: string | null
 }
 
 // ── AI ────────────────────────────────────────────────────────────────

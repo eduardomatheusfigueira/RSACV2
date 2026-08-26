@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–35` Vigente (Coleta) · `36` Concluído (Consolidação do App)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Histórico (Segurança — perímetro superado pelo 37) · `31–33` Concluído (B.I. e Bibliometria) · `34–35` Vigente (Coleta) · `36–37` Vigente (App instalado)
 
 ---
 
@@ -38,7 +38,8 @@ velocidade que dele decorre. Mesma gramática — diagnóstico → execução.
 28–30   concluído          segurança — as seis fases entregues ✅
 31–33   concluído          B.I. e bibliometria — as quatro fases entregues ✅
 34–35   vigente            confiabilidade e velocidade da coleta
-  36    concluído          consolidação do app instalado — arranque e bloqueantes ✅
+  36    vigente            consolidação do app instalado — arranque e bloqueantes ✅
+  37    vigente            perímetro, credencial e autenticação do app instalado ✅
 ```
 
 ---
@@ -111,9 +112,17 @@ velocidade que dele decorre. Mesma gramática — diagnóstico → execução.
 |---|-----------|-----------|
 | **36** | [Revisão de Consolidação do Aplicativo](./36_REVISAO_CONSOLIDACAO_APP.md) | Por que o app instalado demorava a abrir: cinco bloqueantes (origem `null` no CORS, token local não entregue, janela criada depois do backend) e quatro correções de arranque, todas medidas |
 
+| **37** | [Simplificação do Perímetro](./37_SIMPLIFICACAO_DO_PERIMETRO.md) | A remoção do perfil publicável, das contas e das sessões — e por que a credencial passou a ser um arquivo `0600` em vez de uma senha |
+
 > O doc 36 nasceu de um relato de campo — "depois de instalado, o app fica
 > muito lento para abrir" — e concluiu que a lentidão era sintoma, não causa:
-> o aplicativo empacotado não chegava a alcançar o próprio backend.
+> o aplicativo empacotado não chegava a alcançar o próprio backend. O doc 37
+> é a consequência: se o produto é um app instalado, o perímetro é a máquina,
+> e metade dos controles existia para um cenário que deixou de existir.
+>
+> **Os docs 28–30 passam a ser história.** Os 18 achados do doc 28 continuam
+> fechados e a maioria das correções continua de pé; o que mudou é o perímetro
+> que eles normatizavam. A referência vigente de segurança é o doc 37.
 
 ---
 

@@ -1,18 +1,16 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Router de Configurações de IA e Sugestão de Protocolos."""
 
 import json
 import logging
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.infrastructure.ai.factory import AIFactory
-from app.infrastructure.persistence.models import AISettingsModel, UserModel
+from app.infrastructure.persistence.models import AISettingsModel
 from app.schemas.ai import (
     AISettingsResponse,
     AISettingsUpdate,
@@ -21,7 +19,6 @@ from app.schemas.ai import (
     ProtocolSuggestRequest,
 )
 from app.security import mask_secret_list
-from app.security.dependencies import require_owner
 from app.security.egress import EgressBlocked, validar_url
 from app.security.middleware import erro_interno
 
@@ -30,7 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
-def _parse_keys_json(raw_text: Optional[str]) -> List[str]:
+def _parse_keys_json(raw_text: str | None) -> list[str]:
     """Deserializa JSON array de chaves com fallback resiliente."""
     if not raw_text:
         return []
@@ -45,7 +42,7 @@ def _parse_keys_json(raw_text: Optional[str]) -> List[str]:
         return [raw_text.strip()] if raw_text.strip() else []
 
 
-def _keys_by_provider(settings: AISettingsModel) -> dict[str, List[str]]:
+def _keys_by_provider(settings: AISettingsModel) -> dict[str, list[str]]:
     """Chaves em claro de cada provedor, com o fallback do campo legado."""
     gemini = _parse_keys_json(settings.gemini_api_keys_encrypted)
     qwen = _parse_keys_json(settings.qwen_api_keys_encrypted)
@@ -95,7 +92,6 @@ def _build_settings_response(settings: AISettingsModel) -> AISettingsResponse:
 @router.get("/settings", response_model=AISettingsResponse)
 def get_ai_settings(
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """Configurações de IA ativas e a máscara das chaves de cada provedor."""
     settings = db.query(AISettingsModel).first()
@@ -116,7 +112,6 @@ def get_ai_settings(
 def update_ai_settings(
     data: AISettingsUpdate,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """Atualiza as configurações e chaves dos provedores de IA mantendo isolamento total."""
     settings = db.query(AISettingsModel).first()
@@ -155,7 +150,7 @@ def update_ai_settings(
     # máscaras, e um formulário salvo sem tocar no campo de chaves chegava aqui
     # como lista vazia. Sob a regra antiga isso apagaria a credencial em
     # silêncio. Apagar passou a exigir DELETE explícito.
-    def _assign_keys(column: str, values: Optional[List[str]]) -> None:
+    def _assign_keys(column: str, values: list[str] | None) -> None:
         if values is None:
             return
         clean = [k.strip() for k in values if k and k.strip()]
@@ -182,7 +177,6 @@ def update_ai_settings(
 def delete_provider_keys(
     provider: str,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """
     Remove todas as chaves de um provedor.

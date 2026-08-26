@@ -1,19 +1,16 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Router para Configurações de Fontes e Credenciais de Coleta."""
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.harvesters.factory import HarvesterFactory
-from app.infrastructure.persistence.models import SourceCredentialModel, UserModel
+from app.infrastructure.persistence.models import SourceCredentialModel
 from app.schemas.settings import SourceCredentialResponse, SourceCredentialUpdate
-from app.security.dependencies import require_owner
 
 logger = logging.getLogger(__name__)
 
@@ -30,10 +27,9 @@ def _mask_key(key: str | None) -> str:
     return "••••••••" + clean[-4:]
 
 
-@router.get("", response_model=List[SourceCredentialResponse])
+@router.get("", response_model=list[SourceCredentialResponse])
 def list_source_credentials(
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """Lista todas as fontes com seus respectivos status de credenciais configuradas."""
     available_sources = HarvesterFactory.get_all_available()
@@ -67,7 +63,6 @@ def update_source_credential(
     source_name: str,
     data: SourceCredentialUpdate,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """Salva ou atualiza a chave de API/token institucional de uma base científica."""
     s_upper = source_name.upper()
@@ -110,7 +105,6 @@ def update_source_credential(
 def delete_source_credential(
     source_name: str,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """Remove as credenciais salvas de uma base científica."""
     s_upper = source_name.upper()

@@ -1690,8 +1690,10 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </div>
             </div>
 
+            {/* A diretriz vem do projeto: quem escolheu JBI ou Cochrane no
+                protocolo não deve ler "conforme PRISMA-ScR" na tela. */}
             <p className="section-help">
-              Conforme PRISMA-ScR (Item 7 e 8) e PRISMA 2020: Estabeleça explicitamente todos os limites de busca (período temporal, restrições linguísticas, tipos de publicação aceitos e bases de dados alvo) antes de iniciar a coleta.
+              Conforme {currentProtocolDef.name}: estabeleça explicitamente todos os limites de busca (período temporal, restrições linguísticas, tipos de publicação aceitos e bases de dados alvo) antes de iniciar a coleta.
             </p>
 
             {helpOpen.searchFilters && (

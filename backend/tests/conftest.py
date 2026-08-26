@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Pytest Fixtures Globais."""
 
@@ -10,15 +9,25 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_db
-from app.infrastructure.persistence.models import Base, UserModel
+from app.config import settings
+from app.infrastructure.persistence.models import Base
 from app.main import create_app
-from app.security.passwords import hash_password
+from app.security.dependencies import LOCAL_TOKEN_HEADER
+from app.security.local_token import ensure_local_token
 
-# Credenciais das contas de teste. A senha respeita a política mínima (12
-# caracteres) porque `hash_password` a valida — o teste usa o caminho real.
-SENHA_TESTE = "senha-de-teste-12345"
-OWNER_USERNAME = "dono_teste"
-RESEARCHER_USERNAME = "pesquisador_teste"
+
+@pytest.fixture(autouse=True)
+def pasta_de_dados_isolada(tmp_path, monkeypatch):
+    """
+    Aponta a pasta de dados para um diretório temporário.
+
+    Vale para toda a suíte, e não só para os testes de segurança: é o que
+    impede um teste de criar `runtime_token` ou `master.key` na instalação real
+    de quem está rodando `pytest` — e, pior, de passar por acidente porque
+    encontrou o token de verdade da máquina.
+    """
+    monkeypatch.setattr(settings, "data_dir_override", tmp_path / "dados")
+    yield
 
 
 @pytest.fixture(autouse=True)
@@ -86,23 +95,17 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-def contas(db_session):
-    """Provisiona uma conta `owner` e uma `researcher` no banco de teste."""
-    dono = UserModel(
-        username=OWNER_USERNAME,
-        password_hash=hash_password(SENHA_TESTE),
-        role="owner",
-    )
-    pesquisador = UserModel(
-        username=RESEARCHER_USERNAME,
-        password_hash=hash_password(SENHA_TESTE),
-        role="researcher",
-    )
-    db_session.add_all([dono, pesquisador])
-    db_session.commit()
-    db_session.refresh(dono)
-    db_session.refresh(pesquisador)
-    return {"owner": dono, "researcher": pesquisador}
+def token_local() -> str:
+    """
+    Token desta instalação de teste, criado na pasta temporária.
+
+    Devolve o conteúdo real do arquivo, gerado pela mesma função que o backend
+    usa na partida — o teste exercita o caminho de verdade, e não uma string
+    combinada entre o teste e o código.
+    """
+    token = ensure_local_token()
+    assert token, "o token local deveria ter sido criado na pasta de teste"
+    return token
 
 
 def _montar_app(db_session):
@@ -111,54 +114,36 @@ def _montar_app(db_session):
     return app
 
 
-async def _autenticar(client: httpx.AsyncClient, username: str) -> None:
-    """Abre sessão pela rota real de login — o teste exercita o caminho real."""
-    res = await client.post(
-        "/api/v1/auth/login", json={"username": username, "password": SENHA_TESTE}
-    )
-    assert res.status_code == 200, f"login de teste falhou: {res.status_code} {res.text}"
-    # O cookie já fica no jar do cliente; o Bearer cobre, além disso, o caso do
-    # cliente hospedado em outra origem, que não recebe cookie SameSite=Strict.
-    client.headers["Authorization"] = f"Bearer {res.json()['access_token']}"
-
-
 @pytest.fixture(scope="function")
-async def async_client(db_session, contas):
+async def async_client(db_session, token_local):
     """
-    Cliente autenticado como `owner` — o padrão dos testes funcionais.
+    Cliente autenticado — o padrão dos testes funcionais.
 
-    Desde a Fase 1 do plano de segurança a API inteira exige sessão, então o
-    cliente padrão precisa ter uma. Para verificar a própria barreira, use
-    `anon_client`.
+    A API inteira exige o token local, então o cliente padrão precisa
+    apresentá-lo. Para verificar a própria barreira, use `anon_client`.
+
+    Era um cliente com sessão aberta por login; virou um cabeçalho, porque foi
+    isso que a autenticação virou.
     """
     transport = httpx.ASGITransport(app=_montar_app(db_session))
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        await _autenticar(client, OWNER_USERNAME)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+        headers={LOCAL_TOKEN_HEADER: token_local},
+    ) as client:
         yield client
 
 
 @pytest.fixture(scope="function")
-async def researcher_client(db_session, contas):
-    """Cliente autenticado como `researcher` — sem acesso às credenciais."""
+async def anon_client(db_session, token_local):
+    """
+    Cliente sem credencial. É com ele que se verifica o que a barreira barra.
+
+    Depende de `token_local` de propósito: a instalação **tem** um token
+    válido, e este cliente simplesmente não o apresenta. Sem essa dependência,
+    o teste passaria mesmo que a barreira estivesse aberta, porque não haveria
+    token nenhum contra o qual comparar.
+    """
     transport = httpx.ASGITransport(app=_montar_app(db_session))
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        await _autenticar(client, RESEARCHER_USERNAME)
-        yield client
-
-
-@pytest.fixture(scope="function")
-async def anon_client(db_session, contas):
-    """Cliente sem sessão. É com ele que se verifica o que a barreira barra."""
-    app = _montar_app(db_session)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
-
-
-@pytest.fixture(scope="function")
-async def anon_client_sem_contas(db_session):
-    """Cliente sem sessão numa instalação sem nenhuma conta provisionada."""
-    app = _montar_app(db_session)
-    transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client

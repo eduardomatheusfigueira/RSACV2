@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Cifra de segredos em repouso (doc 29 §29.4.1).
@@ -31,7 +30,6 @@ import logging
 import os
 import stat
 from pathlib import Path
-from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
@@ -102,21 +100,13 @@ def obter_chave_mestra() -> bytes:
     """
     Devolve o material da chave-mestra segundo o perfil de implantação.
 
-    No perfil `server` a chave **precisa** vir do ambiente: gerar um arquivo
-    ali daria a sensação de proteção sem a proteção.
+    `RSAC_SECRET_KEY` tem precedência para quem queira guardar a chave fora do
+    disco da máquina; sem ela, o arquivo `master.key` é gerado na primeira
+    execução com permissão `0600`.
     """
     do_ambiente = (settings.secret_key or "").strip()
     if do_ambiente:
         return do_ambiente.encode("utf-8")
-
-    if settings.is_server_profile:
-        raise MasterKeyError(
-            "RSAC_SECRET_KEY não está definida e o perfil é 'server'. "
-            "No modo servidor a chave-mestra precisa vir do ambiente — um "
-            "arquivo ao lado do banco seria lido pela mesma falha que leria o "
-            "banco. Gere uma chave e exporte-a antes de publicar:\n"
-            "    python -m app.cli generate-secret-key"
-        )
 
     return _ler_ou_criar_arquivo_de_chave()
 
@@ -131,9 +121,9 @@ class SecretCipher:
     configurações diferentes.
     """
 
-    def __init__(self, key_material: Optional[bytes] = None):
+    def __init__(self, key_material: bytes | None = None):
         self._material = key_material
-        self._fernet: Optional[Fernet] = None
+        self._fernet: Fernet | None = None
 
     @property
     def fernet(self) -> Fernet:
@@ -142,7 +132,7 @@ class SecretCipher:
             self._fernet = Fernet(_derivar_chave(material))
         return self._fernet
 
-    def encrypt(self, plaintext: Optional[str]) -> Optional[str]:
+    def encrypt(self, plaintext: str | None) -> str | None:
         """Cifra um valor. `None` e string vazia passam intactos."""
         if plaintext is None:
             return None
@@ -153,7 +143,7 @@ class SecretCipher:
         token = self.fernet.encrypt(plaintext.encode("utf-8")).decode("ascii")
         return f"{CIPHER_PREFIX}{token}"
 
-    def decrypt(self, stored: Optional[str]) -> Optional[str]:
+    def decrypt(self, stored: str | None) -> str | None:
         """
         Decifra um valor gravado.
 
@@ -180,7 +170,7 @@ class SecretCipher:
             return None
 
 
-def is_encrypted(value: Optional[str]) -> bool:
+def is_encrypted(value: str | None) -> bool:
     """O valor já está no formato cifrado desta implementação?"""
     return bool(value) and isinstance(value, str) and value.startswith(CIPHER_PREFIX)
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Router de Coleta, Controle de Jobs e WebSockets de Progresso."""
 
@@ -23,7 +22,7 @@ from app.schemas.harvest import (
 )
 from app.security.dependencies import (
     origem_do_websocket_e_permitida,
-    require_websocket_session,
+    require_websocket_local_token,
 )
 from app.services.harvest_job_manager import harvest_job_manager
 from app.services.harvesting_service import HarvestingService, ws_manager
@@ -246,14 +245,14 @@ async def harvest_websocket(
     não vale para WebSocket, então aceitar primeiro e checar depois já teria
     entregado o canal a quem abriu a conexão de outro sítio.
     """
-    # `Origin` antes da sessão: sem essa checagem, o cookie do pesquisador
-    # abriria o canal para qualquer página aberta no navegador dele (§29.3.6).
+    # `Origin` antes da credencial: a política de mesma origem não vale para
+    # WebSocket, então sem essa checagem qualquer página aberta no navegador do
+    # pesquisador poderia tentar abrir o canal (§29.3.6).
     if not origem_do_websocket_e_permitida(websocket):
         await websocket.close(code=1008, reason="Origem não autorizada.")
         return
 
-    usuario = await require_websocket_session(websocket, db)
-    if not usuario:
+    if not await require_websocket_local_token(websocket):
         await websocket.close(code=1008, reason="Autenticação necessária.")
         return
 

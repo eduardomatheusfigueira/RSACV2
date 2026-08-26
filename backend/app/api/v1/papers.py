@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Router de Artigos (Papers)."""
 
 import logging
 import math
-from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import or_, func
 
 from app.api.deps import get_db
 from app.infrastructure.persistence.models import (
@@ -16,16 +15,14 @@ from app.infrastructure.persistence.models import (
     PaperCriterionModel,
     PaperModel,
     PaperSourceModel,
-    ProjectModel,
-    UserModel,
 )
-from app.security.dependencies import require_session
 from app.schemas.paper import (
     PaperCreate,
     PaperListResponse,
     PaperResponse,
     PaperUpdate,
 )
+from app.security.dependencies import operador_local
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +74,9 @@ def list_papers(
     project_id: str,
     page: int = Query(1, ge=1, description="Número da página"),
     page_size: int = Query(25, ge=1, le=200, description="Itens por página"),
-    decision: Optional[str] = Query(None, description="Filtrar por decisão: Pendente, Incluído, Excluído"),
-    search: Optional[str] = Query(None, description="Busca textual em título, autores ou abstract"),
-    source: Optional[str] = Query(None, description="Filtrar por base fonte"),
+    decision: str | None = Query(None, description="Filtrar por decisão: Pendente, Incluído, Excluído"),
+    search: str | None = Query(None, description="Busca textual em título, autores ou abstract"),
+    source: str | None = Query(None, description="Filtrar por base fonte"),
     include_duplicates: bool = Query(False, description="Se deve incluir registros marcados como duplicatas"),
     db: Session = Depends(get_db),
 ):
@@ -94,7 +91,12 @@ def list_papers(
     )
 
     if not include_duplicates:
-        query = query.filter(or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)))
+        # `is_(False)` e não `== False`: em SQLAlchemy o operador de igualdade
+        # é sobrecarregado para gerar SQL, então o `E712` do ruff era ruído —
+        # mas `is_` diz a mesma coisa sem o aviso e sem ambiguidade.
+        query = query.filter(
+            or_(PaperModel.is_duplicate.is_(False), PaperModel.is_duplicate.is_(None))
+        )
 
     if decision:
         query = query.filter(func.lower(PaperModel.decision) == decision.lower())
@@ -205,7 +207,6 @@ def update_paper(
     paper_id: str,
     data: PaperUpdate,
     db: Session = Depends(get_db),
-    usuario: UserModel = Depends(require_session),
 ):
     """Atualiza decisão, observações e critérios de triagem do artigo."""
     paper = (
@@ -224,17 +225,17 @@ def update_paper(
         dec_val = data.decision.value if hasattr(data.decision, "value") else data.decision
         if dec_val != paper.decision:
             # Registrar no log de auditoria, com autoria (doc 29 §29.3.5).
-            # `source="manual"` sozinho não distinguia o pesquisador do coautor
-            # — e numa revisão sistemática saber de quem foi a decisão é parte
-            # do produto, não um detalhe operacional.
+            # `source="manual"` sozinho não diz de quem foi a decisão — e numa
+            # revisão sistemática isso é parte do produto, não um detalhe
+            # operacional. Com as contas removidas, quem assina é o usuário do
+            # sistema operacional que está operando o app.
             audit = AuditLogModel(
                 paper_id=paper.id,
                 action="decision_changed",
                 old_value=paper.decision,
                 new_value=dec_val,
                 source="manual",
-                user_id=usuario.id,
-                username=usuario.username,
+                username=operador_local(),
             )
             db.add(audit)
             paper.decision = dec_val

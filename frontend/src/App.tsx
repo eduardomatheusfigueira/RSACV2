@@ -7,7 +7,6 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
-import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
 import {
@@ -29,8 +28,9 @@ import { useAuthStore } from '@/stores/useAuthStore'
  * Agora cada aba chega quando é aberta, e a primeira pintura carrega o que
  * cabe nela.
  *
- * `LoginPage` fica estática de propósito: é uma das duas primeiras telas
- * possíveis, e adiar seu código só acrescentaria um piscar à entrada.
+ * Todas entram por importação dinâmica: com a tela de login removida, a
+ * primeira coisa que a aplicação mostra é o Painel, e é só o pedaço dele que
+ * precisa estar pronto no primeiro quadro.
  */
 const DashboardPage = lazy(() =>
   import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
@@ -276,13 +276,18 @@ async function resolverBackendLocal(): Promise<void> {
 }
 
 /**
- * Portão de autenticação.
+ * Portão de acesso ao ambiente de revisão.
+ *
+ * Duas saídas, não três: a interface, ou o diagnóstico de conexão. A terceira
+ * era a tela de login, e ela saiu com as contas — no app instalado a
+ * credencial é um arquivo que o Electron lê e entrega, e não há nada que o
+ * usuário pudesse digitar aqui que ajudasse.
  */
 function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
-  const { phase, bootstrap, markAnonymous } = useAuthStore()
+  const { phase, bootstrap, marcarIndisponivel } = useAuthStore()
 
   useEffect(() => {
-    api.setUnauthorizedHandler(markAnonymous)
+    api.setUnauthorizedHandler(marcarIndisponivel)
     void (async () => {
       await resolverBackendLocal()
       aplicarApiUrlDaLocalizacao()
@@ -303,10 +308,6 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
 
   if (phase === 'unavailable') {
     return <BackendUnavailableView onRetry={() => void bootstrap()} />
-  }
-
-  if (phase === 'anonymous') {
-    return <LoginPage />
   }
 
   return <>{children}</>

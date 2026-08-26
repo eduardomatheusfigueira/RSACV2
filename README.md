@@ -23,7 +23,7 @@ O RSAC V2 é uma ferramenta desenvolvida para apoiar a condução de revisões s
 
 A arquitetura é dividida em:
 - **Backend**: API construída em Python (FastAPI, SQLAlchemy 2.0 e SQLite), responsável pela persistência, rotinas de coleta assíncrona, desduplicação e processamento de arquivos.
-- **Frontend**: Interface construída em React 19, TypeScript e Vite, distribuída como aplicativo de mesa via Electron — o produto instalado. A mesma interface pode ser compilada como Single Page Application (`npm run build:web`) e servida pelo próprio backend no perfil `server`, para quem precise publicar a revisão por túnel; não é o modo de uso normal.
+- **Frontend**: Interface construída em React 19, TypeScript e Vite, distribuída como aplicativo de mesa via Electron. Backend e interface viajam juntos no instalador e sobem e descem com a janela; não há versão publicada nem acesso pelo navegador.
 
 ---
 
@@ -169,14 +169,6 @@ As APIs de acesso aberto usadas na localização de PDFs (Unpaywall, OpenAlex, C
 RSAC_CONTACT_EMAIL=seu-email@instituicao.br
 ```
 
-#### Criar a Conta de Acesso
-A API exige autenticação. No app de mesa o token local resolve sozinho, mas o modo servidor precisa de uma conta:
-```bash
-cd backend
-python -m app.cli create-user seu_usuario --role owner
-```
-A senha aparece uma única vez — anote-a.
-
 #### Execução Unificada
 ```powershell
 # Windows PowerShell
@@ -218,7 +210,7 @@ RSACV2/
 │   │   ├── pages/           # Telas do fluxo da revisão
 │   │   ├── stores/          # Estados globais (Zustand)
 │   │   └── styles/          # Tokens e folhas de estilo globais
-│   └── vite.config.web.ts   # Configuração de build para distribuição Web SPA
+│   └── electron/            # Processo principal, preload e ponte IPC
 ├── scripts/                  # Build do instalador (PyInstaller + electron-builder + Inno Setup)
 ├── brand/                    # Definições da identidade visual e ativos gráficos
 └── planejamento/             # Documentação técnica de arquitetura e validações
@@ -228,21 +220,43 @@ RSACV2/
 
 ## Segurança e Acesso
 
-A API exige autenticação. No **app de mesa** — o modo normal — nada muda para o usuário: o backend grava um token local legível só pelo dono da máquina, o Electron o entrega à interface por canal interno, e a janela abre direto. O **perfil `server`** (`RSAC_DEPLOYMENT_PROFILE=server`), usado para publicar o backend por túnel, exige usuário e senha, recusa-se a subir sem conta provisionada e não aceita o token local.
+O RSAC V2 é um aplicativo de mesa, e o perímetro é o da máquina em que ele
+está instalado: **o backend só atende em `127.0.0.1`, e não há como publicá-lo**.
 
-Crie a primeira conta com:
-```bash
-cd backend
-python -m app.cli create-user seu_usuario --role owner
-```
-A senha é exibida **uma única vez** no terminal. Contas `owner` administram credenciais e usuários; contas `researcher` operam a revisão sem alcançar as chaves de API.
+A credencial é um arquivo. Na primeira execução o backend sorteia um token de
+256 bits e o grava em `runtime_token`, na pasta de dados do usuário, legível só
+pelo dono; o Electron lê esse arquivo e o apresenta em todas as chamadas da
+API, num cabeçalho próprio. Para o usuário, isso significa abrir o aplicativo e
+usá-lo — não há tela de login, conta a criar nem senha a lembrar.
 
-As chaves de API ficam **cifradas em repouso** no banco. No modo servidor, exporte a chave-mestra antes de publicar:
-```bash
-python -m app.cli generate-secret-key   # gere e exporte como RSAC_SECRET_KEY
-```
+O raciocínio é o do Jupyter e o do Docker Desktop: quem consegue ler um arquivo
+`0600` na pasta do usuário já tem a conta do sistema operacional em que o banco,
+os PDFs e as chaves de API vivem. Uma senha por cima disso não acrescentaria
+barreira — acrescentaria uma tela que o app de mesa passaria a vida tentando
+contornar.
 
-O plano de segurança ([`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md)) foi **concluído**: os 18 achados do [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md) estão fechados, cobertos por testes de segurança dedicados e por uma CI que impede que voltem. Detalhes normativos em [`29_ESPECIFICACAO_SEGURANCA.md`](./planejamento/29_ESPECIFICACAO_SEGURANCA.md).
+Se o token precisar ser trocado, apague o arquivo e reabra o aplicativo:
+
+| Sistema | Caminho |
+|---|---|
+| Windows | `%LOCALAPPDATA%\RSAC\RSAC\runtime_token` |
+| macOS | `~/Library/Application Support/RSAC/runtime_token` |
+| Linux | `~/.local/share/RSAC/runtime_token` |
+
+`RSAC_DATA_DIR` muda a pasta inteira, para quem queira a revisão noutro disco.
+
+As chaves de API das fontes e dos provedores de IA ficam **cifradas em
+repouso** no banco, com uma chave-mestra gerada em `master.key` (também `0600`)
+na primeira execução. `RSAC_SECRET_KEY` tem precedência, para quem prefira
+guardá-la fora do disco da máquina.
+
+O plano de segurança ([`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLANO_EXECUCAO_SEGURANCA.md))
+foi **concluído**: os 18 achados do [`28_DIAGNOSTICO_SEGURANCA.md`](./planejamento/28_DIAGNOSTICO_SEGURANCA.md)
+estão fechados, cobertos por testes dedicados e por uma CI que impede que
+voltem. O que mudou depois deles — a remoção do perfil publicável, das contas e
+das sessões — está registrado em
+[`37_SIMPLIFICACAO_DO_PERIMETRO.md`](./planejamento/37_SIMPLIFICACAO_DO_PERIMETRO.md),
+que é o documento vigente sobre o assunto.
 
 ---
 

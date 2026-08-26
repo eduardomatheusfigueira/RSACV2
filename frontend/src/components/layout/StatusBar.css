@@ -217,54 +217,6 @@
   }
 }
 
-/* ── Identidade da sessão ──────────────────────────────────────────────
-   Num servidor compartilhado, saber com qual conta se está operando não é
-   enfeite: a trilha de auditoria grava essa identidade em cada decisão. */
-
-.status-user {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-text-secondary);
-  font-size: var(--text-2xs);
-}
-
-.status-user-name {
-  font-weight: var(--weight-bold);
-  color: var(--color-text-primary);
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.status-user-role {
-  padding: 0 var(--space-1);
-  border: 1px solid var(--color-accent-on-surface);
-  border-radius: var(--radius-sm);
-  color: var(--color-accent-on-surface);
-  font-size: var(--text-3xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.status-logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-2);
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  font-size: var(--text-2xs);
-  cursor: pointer;
-}
-
-.status-logout-btn:hover {
-  color: var(--color-text-primary);
-  text-decoration: underline;
-}
-
 /* Host do backend em uso.
    Visível o tempo todo de propósito: é o que permite ao pesquisador perceber
    que a interface passou a falar com outro servidor. */

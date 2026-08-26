@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 Guarda de requisições de saída — SSRF (doc 28 V-05, doc 29 §29.5.3).
@@ -16,7 +15,6 @@ fecha o *DNS rebinding*, e testá-la com um resolvedor falso não provaria nada.
 import httpx
 import pytest
 
-from app.config import DeploymentProfile, Settings
 from app.security.egress import (
     EgressBlocked,
     detalhe_publico,
@@ -116,23 +114,34 @@ def test_host_com_um_ip_publico_e_outro_interno_e_recusado(monkeypatch):
         validar_url("https://host-misto.example/x", permitir_loopback=False)
 
 
-# ── Loopback: legítimo apenas para o LLM local, e só no desktop ───────
+# ── Loopback: legítimo apenas para o LLM local ────────────────────────
 
-def test_llm_local_e_permitido_no_desktop():
+def test_llm_local_e_permitido():
     """Ollama e LM Studio escutam em loopback, em porta arbitrária."""
     assert url_e_permitida("http://localhost:11434/v1", permitir_loopback=True)
     assert url_e_permitida("http://127.0.0.1:1234/v1", permitir_loopback=True)
 
 
-def test_loopback_nao_e_permitido_no_perfil_server(monkeypatch):
-    """No servidor, loopback é a rede interna de quem hospeda."""
-    import app.security.egress as egress
+def test_loopback_pode_ser_fechado_por_configuracao(monkeypatch):
+    """
+    `RSAC_ALLOW_PRIVATE_EGRESS=false` fecha a própria máquina como destino.
 
-    monkeypatch.setattr(
-        egress, "settings", Settings(deployment_profile=DeploymentProfile.SERVER)
-    )
+    Havia aqui um teste do perfil `server`, onde loopback era sempre a rede
+    interna de quem hospeda e a recusa era automática. Sem publicação, quem
+    decide é a configuração — e o que precisa continuar valendo é que a chave
+    realmente fecha a porta, para quem não usa LLM local e prefere assim.
+    """
+    import app.security.egress as egress
+    from app.config import Settings
+
+    monkeypatch.setattr(egress, "settings", Settings(allow_private_egress=False))
     assert not url_e_permitida("http://localhost:11434/v1")
     assert not url_e_permitida("http://127.0.0.1:6379")
+
+
+def test_loopback_e_liberado_por_padrao_para_o_llm_local():
+    """O padrão serve ao caso real: Ollama e LM Studio na mesma máquina."""
+    assert url_e_permitida("http://localhost:11434/v1")
 
 
 def test_loopback_liberado_nao_abre_a_rede_privada():
@@ -218,42 +227,23 @@ async def test_cadeia_longa_demais_e_interrompida():
     assert contador["n"] <= 7, "seguiu saltos demais antes de desistir"
 
 
-# ── A trilha deixa de ser oráculo (§29.5.4) ───────────────────────────
+# ── A trilha de tentativas (§29.5.4) ──────────────────────────────────
 
-def test_trilha_detalhada_para_host_academico(monkeypatch):
-    import app.security.egress as egress
+def test_trilha_e_completa_para_quem_opera_a_maquina():
+    """
+    O detalhe da tentativa chega inteiro ao usuário.
 
-    monkeypatch.setattr(
-        egress, "settings", Settings(deployment_profile=DeploymentProfile.SERVER)
-    )
-    detalhe = "HTTP 403 (conteúdo restrito por assinatura)"
-    assert detalhe_publico("https://arxiv.org/pdf/1", detalhe) == detalhe
-
-
-def test_trilha_reduzida_para_host_desconhecido_no_server(monkeypatch):
-    """Sem isso, a mensagem de erro ainda entregaria o mapa da rede interna."""
-    import app.security.egress as egress
-
-    monkeypatch.setattr(
-        egress, "settings", Settings(deployment_profile=DeploymentProfile.SERVER)
-    )
-    detalhe = "HTTP 401 — servidor interno de RH respondeu"
-    publico = detalhe_publico("https://intranet.empresa.local/x", detalhe)
-
-    assert publico != detalhe
-    assert "RH" not in publico
-    assert "401" not in publico
-
-
-def test_trilha_completa_no_desktop(monkeypatch):
-    """No app de mesa não há terceiro para enganar — o detalhe ajuda o usuário."""
-    import app.security.egress as egress
-
-    monkeypatch.setattr(
-        egress, "settings", Settings(deployment_profile=DeploymentProfile.DESKTOP)
-    )
-    detalhe = "HTTP 404 no repositório institucional"
-    assert detalhe_publico("https://qualquer.host/x", detalhe) == detalhe
+    Havia aqui um recorte para o perfil `server`: publicado, a mensagem de erro
+    viraria um oráculo de varredura da rede interna de quem hospeda, e host
+    desconhecido só recebia a categoria. Sem publicação, quem lê a mensagem é o
+    dono da máquina — e para ele o detalhe é o que explica por que a busca de
+    um PDF não foi adiante.
+    """
+    for url, detalhe in (
+        ("https://arxiv.org/pdf/1", "HTTP 403 (conteúdo restrito por assinatura)"),
+        ("https://qualquer.host/x", "HTTP 404 no repositório institucional"),
+    ):
+        assert detalhe_publico(url, detalhe) == detalhe
 
 
 def test_reconhecimento_de_host_academico():

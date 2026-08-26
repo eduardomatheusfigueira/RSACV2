@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Middlewares de segurança (doc 29 §29.6, §29.7, §29.8).
@@ -14,7 +13,7 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict, deque
-from typing import Callable, Deque, Optional
+from collections.abc import Callable
 from uuid import uuid4
 
 from fastapi import Request, status
@@ -23,7 +22,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.config import settings
-from app.security.sessions import SESSION_COOKIE
+from app.security.dependencies import LOCAL_TOKEN_HEADER
 
 logger = logging.getLogger(__name__)
 
@@ -59,12 +58,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             )
             response.headers.setdefault("Cache-Control", "no-store")
 
-        # HSTS só faz sentido sobre HTTPS — e enviá-lo em `http://localhost`
-        # travaria o desenvolvimento no navegador do desenvolvedor.
-        if settings.is_server_profile and request.url.scheme == "https":
-            response.headers.setdefault(
-                "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
-            )
+        # O HSTS que havia aqui só era emitido sobre HTTPS no perfil `server`.
+        # Sem publicação não há HTTPS: o backend atende `http://127.0.0.1`, e
+        # mandar um cabeçalho que exige TLS para o loopback só travaria o
+        # navegador de quem desenvolve.
 
         return response
 
@@ -108,18 +105,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp):
         super().__init__(app)
-        self._historico: dict[tuple[str, str], Deque[float]] = defaultdict(deque)
+        self._historico: dict[tuple[str, str], deque[float]] = defaultdict(deque)
 
     def _chave(self, request: Request) -> str:
-        token = request.cookies.get(SESSION_COOKIE)
-        if not token:
-            cabecalho = request.headers.get("Authorization", "")
-            if cabecalho.lower().startswith("bearer "):
-                token = cabecalho[7:].strip()
+        token = request.headers.get(LOCAL_TOKEN_HEADER)
         if token:
-            # Prefixo do token basta para distinguir sessões sem guardar a
-            # credencial inteira em memória.
-            return f"s:{token[:16]}"
+            # Prefixo do token basta para separar quem está autenticado de quem
+            # não está, sem guardar a credencial inteira em memória.
+            return f"t:{token[:16]}"
         return f"ip:{request.client.host if request.client else 'desconhecido'}"
 
     async def dispatch(self, request: Request, call_next: Callable):
@@ -191,7 +184,7 @@ def instalar_tratamento_de_erro(app) -> None:
         )
 
 
-def erro_interno(mensagem: str, exc: Optional[BaseException] = None, *, contexto: str = "") -> tuple[str, str]:
+def erro_interno(mensagem: str, exc: BaseException | None = None, *, contexto: str = "") -> tuple[str, str]:
     """
     Prepara um par `(mensagem_publica, referencia)` para erros tratados na rota.
 

@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """RSAC V2 — Router para Backup e Restauração de Chaves e Perfil de Workspace."""
 
 import json
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -19,8 +18,6 @@ from app.schemas.profile import (
     ProfileExportRequest,
     ProfileImportResponse,
 )
-from app.infrastructure.persistence.models import UserModel
-from app.security.dependencies import require_owner
 from app.security.secret_box import (
     SecretBoxError,
     decrypt_envelope,
@@ -39,7 +36,6 @@ profile_service = ProfileService()
 def export_keys(
     request: KeysExportRequest = Body(...),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """
     Exporta as credenciais cadastradas em um arquivo **cifrado com senha**.
@@ -56,14 +52,13 @@ def export_keys(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
         logger.error(f"[Profile] Erro ao exportar chaves: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Falha ao exportar as chaves de API.")
+        raise HTTPException(status_code=500, detail="Falha ao exportar as chaves de API.") from e
 
 
 @router.post("/keys/import", response_model=KeysImportResponse)
 def import_keys(
     request: KeysImportRequest = Body(...),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """
     Importa um arquivo de chaves — envelope cifrado ou backup legado em claro.
@@ -93,14 +88,13 @@ def import_keys(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
         logger.error(f"[Profile] Erro ao importar chaves: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Falha ao importar as chaves de API. Confira o arquivo e a senha.")
+        raise HTTPException(status_code=400, detail="Falha ao importar as chaves de API. Confira o arquivo e a senha.") from e
 
 
 @router.post("/export")
 def export_full_profile(
     request: ProfileExportRequest = Body(default_factory=ProfileExportRequest),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """
     Exporta o perfil completo de sessão, preferências, configurações de IA,
@@ -120,14 +114,13 @@ def export_full_profile(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
         logger.error(f"[Profile] Erro ao exportar perfil completo: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Falha ao exportar o perfil completo.")
+        raise HTTPException(status_code=500, detail="Falha ao exportar o perfil completo.") from e
 
 
 @router.post("/import", response_model=ProfileImportResponse)
 def import_full_profile(
-    profile_data: Dict[str, Any] = Body(...),
+    profile_data: dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
 ):
     """
     Restaura um perfil completo de sessão e workspace.
@@ -152,4 +145,4 @@ def import_full_profile(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
         logger.error(f"[Profile] Erro ao restaurar perfil completo: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail="Falha ao restaurar o perfil. Confira o arquivo e a senha.")
+        raise HTTPException(status_code=400, detail="Falha ao restaurar o perfil. Confira o arquivo e a senha.") from e

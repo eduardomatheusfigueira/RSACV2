@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 """
 RSAC V2 — Serviço de Deduplicação de Artigos Otimizado.
@@ -12,13 +11,12 @@ Estratégia de 3 passes escalável com chaves de bloqueio (blocking keys):
 
 import re
 import unicodedata
-from typing import List, Optional, Tuple
 
 from rapidfuzz import fuzz
 from sqlalchemy.orm import Session
 
 from app.harvesters.base import RawPaperRecord
-from app.infrastructure.persistence.models import PaperModel, PaperSourceModel
+from app.infrastructure.persistence.models import PaperModel, PaperSourceModel, utcnow
 
 
 class DeduplicationService:
@@ -43,7 +41,7 @@ class DeduplicationService:
         return " ".join(words[:4]) if words else title_normalized[:20]
 
     @staticmethod
-    def normalize_doi(doi: Optional[str]) -> Optional[str]:
+    def normalize_doi(doi: str | None) -> str | None:
         """Normaliza strings de DOI."""
         if not doi:
             return None
@@ -57,7 +55,7 @@ class DeduplicationService:
         project_id: str,
         record: RawPaperRecord,
         fuzzy_threshold: float = 92.0,
-    ) -> Optional[PaperModel]:
+    ) -> PaperModel | None:
         """
         Verifica se um registro é duplicata através de 3 passes otimizados por índice.
         """
@@ -128,7 +126,7 @@ class DeduplicationService:
         project_id: str,
         record: RawPaperRecord,
         fuzzy_threshold: float = 92.0,
-    ) -> Tuple[PaperModel, bool]:
+    ) -> tuple[PaperModel, bool]:
         """
         Processa e anexa o registro à sessão SQLAlchemy SEM commit (flush apenas).
         Retorna (paper, is_new).
@@ -207,7 +205,7 @@ class DeduplicationService:
         project_id: str,
         record: RawPaperRecord,
         fuzzy_threshold: float = 92.0,
-    ) -> Tuple[PaperModel, bool]:
+    ) -> tuple[PaperModel, bool]:
         """Processa um registro individual com commit imediato (para retrocompatibilidade)."""
         paper, is_new = self.process_record_in_session(db, project_id, record, fuzzy_threshold)
         db.commit()
@@ -218,9 +216,9 @@ class DeduplicationService:
         self,
         db: Session,
         project_id: str,
-        records: List[RawPaperRecord],
+        records: list[RawPaperRecord],
         fuzzy_threshold: float = 92.0,
-    ) -> Tuple[int, int, List[Tuple[str, str, bool]]]:
+    ) -> tuple[int, int, list[tuple[str, str, bool]]]:
         """
         Processa um lote de registros em uma única transação atômica.
         Retorna (total_novos, total_duplicados, [(paper_id, title, is_new), ...]).
@@ -338,7 +336,7 @@ class DeduplicationService:
         blocking_lookup: dict[str, list[PaperModel]] = {}
 
         for paper in all_papers:
-            matched_primary: Optional[PaperModel] = None
+            matched_primary: PaperModel | None = None
 
             # Passo 1: DOI Match
             if paper.doi and paper.doi in doi_lookup:
@@ -458,7 +456,11 @@ class DeduplicationService:
             sources_breakdown=json.dumps(source_counts, ensure_ascii=False),
             duplicates_list=json.dumps(duplicatas_encontradas, ensure_ascii=False),
             report_text=report_text,
-            created_at=datetime.utcnow(),
+            # `datetime.utcnow()` está depreciado e devolve um objeto ingênuo —
+            # sem fuso —, que comparado a um consciente levanta TypeError. A
+            # coluna já usa `utcnow()` de `models.py`; usar a mesma função aqui
+            # mantém uma origem só para o instante de criação.
+            created_at=utcnow(),
         )
         db.add(report_model)
         db.commit()
