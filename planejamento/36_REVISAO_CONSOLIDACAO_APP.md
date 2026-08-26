@@ -284,28 +284,75 @@ que o nome diz: vigilância sobre um backend que caiu em uso.
 | C-02 | `RSAC_DATA_DIR` respeitada pelo backend | § 36.4.1 |
 | C-03 | `server_config.json` reduzido ao que é lido | O arquivo prometia `port`, `auto_open_browser` e `cors_origins`; o `launcher.py` calculava o caminho e **não abria o arquivo**, com a porta fixa em 8000 no código. Agora a porta é lida; as outras duas chaves saíram, porque CORS e perfil vêm de variável de ambiente |
 | C-04 | `--hidden-import=pandas` no build do backend | Com o import agora dentro da função, declarar a dependência a torna imune a uma reorganização futura do módulo |
+| C-05 | Uma só definição de instalador (§ 36.6.1) | Havia duas — o alvo `nsis` do `electron-builder.yml`, que nenhum script invocava, e o `installer.iss` que o build realmente usa |
+
+### 36.6.1 A escolha do empacotamento (C-05)
+
+Havia **duas** definições de instalador do Windows para um instalador só:
+
+- `electron-builder.yml` declarava um alvo `nsis` completo — ícones, atalhos,
+  `oneClick`, nome de artefato — que **nenhum script invocava**;
+- `scripts/installer.iss` (Inno Setup) é o que o `build_installer.py`
+  realmente usa, depois de pedir ao electron-builder só o diretório (`--dir`).
+
+A definição morta era justamente a que alguém leria primeiro ao procurar como
+o RSAC é distribuído.
+
+**A opção "apagar o `electron-builder.yml`" não existe.** O arquivo não é a
+configuração do NSIS: é a configuração do **empacotador**, e o passo
+`npx electron-builder --dir` depende dele para saber o `appId`, a pasta de
+saída (`release/`) e, sobretudo, para copiar o backend congelado do
+PyInstaller como `extraResources`. Sem ele o pacote sai sem o Python dentro —
+e aí o instalador instala um aplicativo que não tem servidor para iniciar.
+
+**Escolha: o Inno Setup continua sendo o instalador.** Duas razões, nesta
+ordem:
+
+1. É o caminho que funciona hoje e que foi adotado deliberadamente
+   (`1ec5868`). Migrar para o NSIS trocaria um instalador em uso por um não
+   verificado — e esta revisão existe porque uma mudança de empacotamento não
+   verificada quebrou o produto.
+2. O NSIS não pôde ser exercitado aqui: gerá-lo fora do Windows exige
+   `wine`/`makensis`, ausentes nesta máquina. Entregar uma migração de build
+   sem uma única execução seria repetir o erro.
+
+O que mudou, então:
+
+| Antes | Depois |
+|---|---|
+| Bloco `nsis:` completo, morto, no `electron-builder.yml` | Removido; `win.target` passa a ser `dir`, com comentário dizendo que trocá-lo por `nsis` **é** a decisão de abandonar o `installer.iss` |
+| `productName` no `electron-builder.yml`, nome do executável repetido no `installer.iss`, versão repetida em ambos | `productName` e `version` só no `package.json`; o `build_installer.py` os lê de lá e os injeta no Inno Setup |
+| `installer.iss` com nome, versão e caminho fixos no arquivo | `#ifndef` com padrões + inclusão de `installer_defs.generated.iss`, escrito pelo build |
+| `electron-builder --dir` (alvo conforme a plataforma do build) | `electron-builder --win --dir`, explícito |
+| Nada verificava se o `.exe` gerado é o que o instalador procura | O build falha, com a lista dos `.exe` encontrados, antes de chamar o Inno Setup |
+
+A divisão de responsabilidades passou a estar escrita nos dois arquivos:
+o `electron-builder.yml` monta o diretório do aplicativo; o `installer.iss`
+transforma esse diretório em instalador. Não se sobrepõem, e cada fato —
+nome, versão, pasta de saída, executável — tem uma origem só.
+
+**Por arquivo gerado, não por `/D`.** O nome do produto tem espaço no meio
+("RSAC V2"). Passá-lo por `/DMyAppName=...` obrigaria shell, citação do
+Windows e pré-processador do Inno a concordarem sobre aspas — três camadas
+para produzir uma string que o Python escreve pronta, entre aspas, num arquivo
+que o `.iss` inclui. O arquivo é gerado a cada build e não é versionado; se
+faltar, os `#ifndef` assumem e compilar o `.iss` à mão continua funcionando.
+
+**Verificado:** `npx electron-builder --win --dir` executado nesta máquina com
+a configuração nova produz `release/win-unpacked/RSAC V2.exe` e os
+`extraResources` (`backend/`, `icon.png`) no lugar — ou seja, o nome que o
+`installer.iss` procura continua sendo o nome que o empacotador gera, agora
+com uma origem única em vez de duas cópias que coincidiam por sorte.
+
+**O que fica fora desta decisão.** Os dois *lançadores* — `launcher.py` (janela
+do Edge/Chrome, SPA servida pelo FastAPI) e o Electron — continuam existindo,
+e isso é deliberado: o primeiro é o caminho de desenvolvimento e de acesso pelo
+navegador, o segundo é o produto instalado. O que se consolidou aqui é o
+**empacotamento**, não o número de formas de abrir o RSAC.
+
+---
 
 ### Em aberto — decisão do mantenedor
-
-**C-05 — Dois lançadores e dois instaladores.**
-O repositório mantém dois produtos de partida que divergiram:
-
-| | `scripts/launcher.py` → `RSAC.exe` | Electron → `RSAC-Setup.exe` |
-|---|---|---|
-| Interface | Edge/Chrome em modo `--app` | Janela Electron |
-| SPA | `frontend/dist`, servida pelo FastAPI | `out/renderer`, de `file://` |
-| Origem no CORS | loopback (casa com o regex) | `null` (a correção deste ciclo) |
-| Token local | por `?local_token=` na URL | por canal IPC |
-| Empacotamento | PyInstaller `--onefile` | PyInstaller `--onedir` + electron-builder `--dir` + Inno Setup |
-
-E `electron-builder.yml` ainda declara um alvo `nsis` completo que nenhum
-script invoca — o `build_installer.py` usa `--dir` e entrega ao Inno Setup.
-São **três** caminhos de empacotamento para dois produtos.
-
-Recomendação: eleger o Electron como o produto instalado e rebaixar o
-`launcher.py` a ferramenta de desenvolvimento e de acesso pelo navegador,
-declarando isso no README. O alvo `nsis` ou passa a ser o usado, ou sai do
-`electron-builder.yml`.
 
 **C-06 — A SPA servida pelo backend eliminaria a classe do B-02.**
 Se o backend empacotado carregasse a SPA (`--add-data` no PyInstaller) e o

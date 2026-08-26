@@ -1,5 +1,23 @@
+# ── Empacotador da aplicação, não instalador ─────────────────────────
+#
+# Este arquivo descreve **como o diretório do aplicativo é montado**: o que
+# entra no `app.asar`, quais recursos ficam soltos ao lado dele e com que
+# ícone o executável nasce. Ele para aí, de propósito.
+#
+# Quem transforma esse diretório em instalador do Windows é
+# `scripts/installer.iss` (Inno Setup), invocado por
+# `scripts/build_installer.py`. Havia aqui, até esta revisão, um alvo `nsis`
+# completo — com ícones, atalhos e nome de artefato — que nenhum script
+# chamava: eram duas definições de instalador para um instalador só, e a que
+# não era usada é justamente a que alguém leria primeiro ao procurar como o
+# RSAC é distribuído.
+#
+# `productName` e `version` **não** estão aqui: vêm do `package.json`, que é a
+# origem única dos dois. O `build_installer.py` lê o mesmo arquivo para passar
+# esses valores ao Inno Setup, de modo que o nome do executável que o
+# electron-builder gera e o que o instalador procura não podem divergir.
+
 appId: br.ufsc.rsac
-productName: RSAC V2
 copyright: Copyright © 2026 Eduardo Matheus Figueira
 directories:
   output: release
@@ -11,6 +29,10 @@ files:
   - package.json
 # Ícone da janela para plataformas que não o extraem do executável (Linux e
 # desenvolvimento). No Windows empacotado o ícone vem embutido no .exe.
+#
+# `backend` é o binário `--onedir` do PyInstaller, produzido pelo passo 1 do
+# `build_installer.py`. É o que o `PythonManager` procura em
+# `process.resourcesPath/backend/rsac-backend/rsac-backend.exe`.
 extraResources:
   - from: resources/icon.png
     to: icon.png
@@ -19,22 +41,13 @@ extraResources:
 
 win:
   icon: build/icon.ico
+  # `dir` e não `nsis`: o empacotamento termina no diretório desembalado, e o
+  # instalador é gerado a partir dele pelo Inno Setup. Trocar isto por `nsis`
+  # é a decisão de abandonar o `installer.iss` — não um detalhe de build.
   target:
-    - target: nsis
+    - target: dir
       arch:
         - x64
-  artifactName: ${productName}-Setup-${version}.${ext}
-
-nsis:
-  oneClick: true
-  perMachine: false
-  allowElevation: false
-  createDesktopShortcut: always
-  createStartMenuShortcut: true
-  shortcutName: RSAC V2
-  installerIcon: build/icon.ico
-  uninstallerIcon: build/icon.ico
-  uninstallDisplayName: ${productName} ${version}
 
 mac:
   icon: build/icon.icns

@@ -3,10 +3,25 @@
 
 """
 RSAC V2 — Build do Instalador Oficial Windows (.exe)
-Compila o backend Python em binário autônomo e gera o instalador Inno Setup (.exe):
-- dist_bin/RSAC-Setup.exe
+
+Único caminho de empacotamento do produto. Três passos, cada um com uma
+responsabilidade que não se repete em lugar nenhum:
+
+  1. PyInstaller congela o backend Python em `frontend/resources/backend/`.
+  2. electron-vite compila a interface e os processos do Electron; o
+     electron-builder monta o diretório do aplicativo a partir de
+     `frontend/electron-builder.yml` (alvo `dir` — ele **não** gera
+     instalador).
+  3. o Inno Setup transforma esse diretório em `dist_bin/RSAC-Setup.exe`, a
+     partir de `scripts/installer.iss`.
+
+Nome e versão do produto saem daqui para o Inno Setup, lidos de
+`frontend/package.json`. É essa passagem que impede o executável gerado no
+passo 2 e o procurado no passo 3 de divergirem — divergência que, quando
+acontece, produz um instalador que instala e um atalho que não abre nada.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -18,14 +33,59 @@ FRONTEND_DIR = ROOT_DIR / "frontend"
 BACKEND_DIR = ROOT_DIR / "backend"
 DIST_DIR = ROOT_DIR / "dist_bin"
 SCRIPTS_DIR = ROOT_DIR / "scripts"
+PACKAGE_JSON = FRONTEND_DIR / "package.json"
+DEFS_FILENAME = "installer_defs.generated.iss"
 
 
 def run_cmd(cmd, cwd=ROOT_DIR, desc=""):
+    """Executa um passo do build, abortando tudo se ele falhar."""
     print(f"\n[*] {desc}...")
     proc = subprocess.run(cmd, cwd=str(cwd), shell=True)
     if proc.returncode != 0:
         print(f"[X] Falha na etapa: {desc}")
         sys.exit(1)
+
+
+def ler_identidade_do_produto() -> tuple[str, str]:
+    """
+    Nome e versão do produto, do `package.json`.
+
+    É de lá que o electron-builder os tira para nomear o executável, então é
+    de lá que o instalador precisa tirá-los também. Qualquer outra cópia seria
+    uma segunda verdade esperando para discordar.
+    """
+    dados = json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))
+    nome = dados.get("productName") or dados["name"]
+    return nome, dados["version"]
+
+
+def escrever_definicoes_do_inno(
+    nome: str, versao: str, app_exe: Path, unpacked_dir: Path
+) -> Path:
+    """
+    Escreve o arquivo que o `installer.iss` inclui com nome, versão e caminhos.
+
+    Escrever em vez de passar por `/D` na linha de comando não é preciosismo:
+    "RSAC V2" tem um espaço, e um valor com espaço em `/D` atravessa o shell, a
+    citação do Windows e o pré-processador do Inno antes de virar uma string —
+    três camadas para combinar. Aqui a string já sai entre aspas, escrita por
+    quem conhece o valor.
+    """
+    destino = SCRIPTS_DIR / DEFS_FILENAME
+    # Caminho relativo ao próprio `.iss`, e não absoluto: é a forma que o Inno
+    # já usava, mantém o arquivo gerado igual em qualquer máquina e evita
+    # discutir com o pré-processador sobre barras invertidas.
+    origem_relativa = os.path.relpath(unpacked_dir, SCRIPTS_DIR)
+    conteudo = f'''; Gerado por scripts/build_installer.py — não edite, não versione.
+; Os valores vêm de frontend/package.json e do que o electron-builder produziu.
+#define MyAppName "{nome}"
+#define MyAppVersion "{versao}"
+#define MyAppExeName "{app_exe.name}"
+#define UnpackedDir "{origem_relativa}"
+'''
+    destino.write_text(conteudo, encoding="utf-8")
+    print(f"[✓] Definições do instalador escritas em {destino.name}")
+    return destino
 
 
 def find_iscc() -> str:
@@ -43,9 +103,13 @@ def find_iscc() -> str:
 
 
 def main():
+    nome_do_produto, versao_do_produto = ler_identidade_do_produto()
+
     print("═" * 65)
     print("       🚀 GERANDO INSTALADOR OFICIAL DO RSAC V2 (.EXE)")
     print("═" * 65)
+    print(f"  Produto: {nome_do_produto} — versão {versao_do_produto}")
+    print(f"  Origem:  {PACKAGE_JSON.relative_to(ROOT_DIR)}")
 
     # 1. Compilar o backend em pacote autônomo
     backend_cmd = (
@@ -77,15 +141,37 @@ def main():
     npm_bin = shutil.which("npm.cmd") or shutil.which("npm") or "npm"
     run_cmd(f'"{npm_bin}" run build', cwd=FRONTEND_DIR, desc="Compilando interface e processos Electron")
 
-    # 3. Gerar arquivos desembalados do Electron
+    # 3. Gerar arquivos desembalados do Electron (alvo `dir`, sem instalador)
     npx_bin = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
-    run_cmd(f'"{npx_bin}" electron-builder --dir', cwd=FRONTEND_DIR, desc="Preparando pacote da aplicação")
+    run_cmd(
+        f'"{npx_bin}" electron-builder --win --dir',
+        cwd=FRONTEND_DIR,
+        desc="Preparando pacote da aplicação",
+    )
 
     # 4. Compilar instalador oficial com Inno Setup
+    unpacked_dir = FRONTEND_DIR / "release" / "win-unpacked"
+    app_exe = unpacked_dir / f"{nome_do_produto}.exe"
+    if not app_exe.is_file():
+        # O Inno Setup empacotaria a pasta sem reclamar e o atalho instalado
+        # apontaria para um executável inexistente — falha que só apareceria na
+        # máquina de quem instalou. Melhor parar aqui.
+        print(f"[X] Executável esperado não foi encontrado: {app_exe}")
+        print("    O nome vem de 'productName' em frontend/package.json e precisa")
+        print("    coincidir com o que o electron-builder gerou. Conteúdo da pasta:")
+        for item in sorted(unpacked_dir.glob("*.exe")) if unpacked_dir.is_dir() else []:
+            print(f"      • {item.name}")
+        sys.exit(1)
+
+    escrever_definicoes_do_inno(nome_do_produto, versao_do_produto, app_exe, unpacked_dir)
+
     iscc_path = find_iscc()
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     iss_file = SCRIPTS_DIR / "installer.iss"
-    run_cmd(f'"{iscc_path}" /Qp "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
+    run_cmd(
+        f'"{iscc_path}" /Qp "{iss_file}"',
+        desc="Compilando instalador executável (Inno Setup)",
+    )
 
     setup_file = DIST_DIR / "RSAC-Setup.exe"
     print("\n" + "═" * 65)

@@ -83,6 +83,10 @@ electron.vite.config.*.mjs
 *.spec
 build_temp/
 dist_bin/
+# Nome/versão do produto que scripts/build_installer.py injeta no installer.iss.
+# Gerado a cada build a partir de frontend/package.json — versioná-lo criaria a
+# segunda fonte de verdade que ele existe para eliminar.
+scripts/installer_defs.generated.iss
 frontend/resources/backend/
 
 # ── Identidade Visual (exceções) ────────────────────────────────────
