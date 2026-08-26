@@ -11,7 +11,6 @@ import io
 import re
 from typing import Dict
 
-import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.infrastructure.persistence.models import (
@@ -88,6 +87,15 @@ class ExportService:
           3. Artigos Excluídos
           4. Métricas PRISMA
         """
+        # O pandas é importado aqui, e não no topo do módulo, de propósito.
+        # Este arquivo é alcançado pelo router na importação da aplicação, e o
+        # pandas (com o numpy atrás) custava ~0,35 s do arranque do backend em
+        # troca de nada: ele só é usado para montar estas quatro abas, numa
+        # ação que o usuário dispara manualmente. Num binário congelado do
+        # PyInstaller — o caso do app instalado — esse custo é bem maior, e
+        # ficava inteiro no caminho entre o duplo-clique e a janela.
+        import pandas as pd
+
         project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
         protocol = db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).first()
 

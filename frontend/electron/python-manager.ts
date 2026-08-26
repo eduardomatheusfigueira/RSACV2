@@ -5,13 +5,24 @@
 
 import { spawn, ChildProcess } from 'child_process'
 import { app } from 'electron'
-import { existsSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
+import { homedir } from 'os'
 import { join } from 'path'
 import net from 'net'
+
+/**
+ * Prefixo da linha que o backend imprime na saída padrão para dizer onde
+ * gravou a pasta de dados e o arquivo de token (ver `_anunciar_pasta_de_dados`
+ * em `backend/app/main.py`). É o que substitui a adivinhação de caminho que
+ * cada lançador fazia do seu jeito.
+ */
+const PREFIXO_DE_HANDSHAKE = 'RSAC_RUNTIME'
 
 export class PythonManager {
   private process: ChildProcess | null = null
   private port: number = 0
+  /** Caminho do `runtime_token`, informado pelo próprio backend. */
+  private tokenFile: string | null = null
 
   /**
    * Encontra uma porta TCP disponível no sistema.
@@ -26,6 +37,18 @@ export class PythonManager {
       })
       server.on('error', reject)
     })
+  }
+
+  /**
+   * Lê a linha de handshake da saída do backend, se for uma.
+   */
+  private absorverHandshake(linha: string): void {
+    const casamento = new RegExp(`^${PREFIXO_DE_HANDSHAKE}\\s+(\\w+)=(.+)$`).exec(linha)
+    if (!casamento) return
+    const [, chave, valor] = casamento
+    if (chave === 'token_file') {
+      this.tokenFile = valor.trim()
+    }
   }
 
   /**
@@ -93,7 +116,13 @@ export class PythonManager {
 
     // Log stdout/stderr do Python
     this.process.stdout?.on('data', (data) => {
-      console.log(`[Python] ${data.toString().trim()}`)
+      const texto = data.toString()
+      texto.split(/\r?\n/).forEach((linha: string) => {
+        const limpa = linha.trim()
+        if (!limpa) return
+        this.absorverHandshake(limpa)
+        console.log(`[Python] ${limpa}`)
+      })
     })
 
     this.process.stderr?.on('data', (data) => {
@@ -111,6 +140,57 @@ export class PythonManager {
   }
 
   /**
+   * Caminhos onde o `runtime_token` pode estar quando o handshake não chegou.
+   *
+   * Espelham o que o `platformdirs.user_data_dir("RSAC")` produz em cada
+   * sistema. É recuo, não caminho principal: quem sabe onde o arquivo está é
+   * o processo que o escreveu.
+   */
+  private caminhosProvaveisDoToken(): string[] {
+    const doAmbiente = process.env.RSAC_DATA_DIR
+    const caminhos: string[] = []
+    if (doAmbiente) caminhos.push(join(doAmbiente, 'runtime_token'))
+
+    if (process.platform === 'win32') {
+      const localAppData = process.env.LOCALAPPDATA
+      if (localAppData) {
+        caminhos.push(join(localAppData, 'RSAC', 'RSAC', 'runtime_token'))
+        caminhos.push(join(localAppData, 'RSAC', 'runtime_token'))
+      }
+    } else if (process.platform === 'darwin') {
+      caminhos.push(join(homedir(), 'Library', 'Application Support', 'RSAC', 'runtime_token'))
+    } else {
+      const xdg = process.env.XDG_DATA_HOME || join(homedir(), '.local', 'share')
+      caminhos.push(join(xdg, 'RSAC', 'runtime_token'))
+    }
+    return caminhos
+  }
+
+  /**
+   * Lê o token local que autentica o app de mesa sem tela de login.
+   *
+   * Sem isto o app instalado chegava ao backend e caía na tela de acesso, que
+   * no perfil desktop manda criar conta pelo terminal — um beco sem saída para
+   * quem só instalou o programa.
+   */
+  lerTokenLocal(): string | null {
+    const candidatos = [
+      ...(this.tokenFile ? [this.tokenFile] : []),
+      ...this.caminhosProvaveisDoToken()
+    ]
+    for (const caminho of candidatos) {
+      try {
+        if (!existsSync(caminho)) continue
+        const conteudo = readFileSync(caminho, 'utf-8').trim()
+        if (conteudo) return conteudo
+      } catch {
+        // Arquivo ilegível: tenta o próximo candidato.
+      }
+    }
+    return null
+  }
+
+  /**
    * Aguarda o backend responder ao health check.
    */
   private async waitForReady(timeoutMs = 30000): Promise<void> {
@@ -125,7 +205,7 @@ export class PythonManager {
       } catch {
         // Backend ainda não está pronto, retry
       }
-      await new Promise((r) => setTimeout(r, 500))
+      await new Promise((r) => setTimeout(r, 250))
     }
     throw new Error(`Backend Python não respondeu em ${timeoutMs}ms`)
   }

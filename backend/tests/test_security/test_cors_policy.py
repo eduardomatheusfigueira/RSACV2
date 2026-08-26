@@ -74,6 +74,42 @@ async def test_loopback_continua_liberado_no_desktop(db_session, monkeypatch, or
     assert res.headers.get(ALLOW_ORIGIN) == origem
 
 
+@pytest.mark.anyio
+async def test_origem_opaca_do_app_de_mesa_e_liberada_no_desktop(db_session, monkeypatch):
+    """
+    O app empacotado carrega a interface de `file://`, e o Chromium apresenta
+    isso como a origem opaca `null` — nunca como `file://`.
+
+    Enquanto o regex só previa `file://`, o cabeçalho de liberação não saía e o
+    navegador embutido barrava **toda** chamada da API: o app instalado abria e
+    ficava em laço de reconexão, sem nunca alcançar o próprio backend. Este
+    teste fixa a origem que o navegador realmente envia.
+    """
+    settings_obj = Settings(deployment_profile=DeploymentProfile.DESKTOP)
+    async with await _client_for(settings_obj, db_session, monkeypatch) as client:
+        res = await client.get("/api/v1/health", headers={"Origin": "null"})
+
+    assert res.headers.get(ALLOW_ORIGIN) == "null"
+
+
+@pytest.mark.anyio
+async def test_origem_opaca_nao_e_liberada_no_perfil_server(db_session, monkeypatch):
+    """
+    A concessão acima vale só para o app de mesa.
+
+    Publicado, `null` é a origem de um iframe em sandbox de qualquer sítio — e
+    lá não há app local nenhum a atender.
+    """
+    settings_obj = Settings(
+        deployment_profile=DeploymentProfile.SERVER,
+        cors_origins=["https://minha-revisao.exemplo"],
+    )
+    async with await _client_for(settings_obj, db_session, monkeypatch) as client:
+        res = await client.get("/api/v1/health", headers={"Origin": "null"})
+
+    assert ALLOW_ORIGIN not in {k.lower() for k in res.headers}
+
+
 # ── Perfil server: apenas a lista declarada ───────────────────────────
 
 @pytest.mark.anyio

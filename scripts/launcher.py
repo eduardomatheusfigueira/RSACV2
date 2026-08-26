@@ -8,6 +8,7 @@ de aplicativo Desktop (Chrome/Edge App Mode ou Navegador Padrão).
 """
 
 import atexit
+import json
 import os
 import shutil
 import signal
@@ -44,6 +45,25 @@ BASE_DIR = get_base_dir()
 BACKEND_DIR = BASE_DIR / "backend"
 FRONTEND_DIR = BASE_DIR / "frontend"
 CONFIG_FILE = BASE_DIR / "server_config.json"
+
+PORTA_PADRAO = 8000
+
+
+def ler_configuracao() -> dict:
+    """
+    Lê `server_config.json`, se existir.
+
+    O arquivo está versionado na raiz desde o início, mas ninguém o abria: o
+    caminho era calculado e a porta ficava fixa em 8000 no `main()`. Quem
+    editasse o arquivo para trocar a porta não via efeito nenhum — e sem
+    mensagem de erro, que é a pior forma de uma configuração falhar.
+    """
+    try:
+        if CONFIG_FILE.exists():
+            return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"\033[93m[!] {CONFIG_FILE.name} ilegível ({exc}); usando os padrões.\033[0m")
+    return {}
 
 _backend_proc: subprocess.Popen | None = None
 _browser_proc: subprocess.Popen | None = None
@@ -207,32 +227,62 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def get_local_token() -> str | None:
-    """Lê o token local gerado pelo backend."""
+def caminhos_do_token() -> list[Path]:
+    """
+    Onde o `runtime_token` pode estar, em ordem de precedência.
+
+    A lista anterior errava o alvo em todas as entradas: procurava em
+    `%LOCALAPPDATA%\\RSAC`, em `~/.rsac` e em `backend/data`, e o backend nunca
+    gravou em nenhum dos três — ele usa a pasta do `platformdirs`, que no
+    Windows é `%LOCALAPPDATA%\\RSAC\\RSAC`. O resultado é que o token nunca era
+    encontrado, a interface abria sem ele e caía na tela de acesso, que no
+    perfil desktop manda criar conta pelo terminal.
+
+    `RSAC_DATA_DIR` continua em primeiro lugar — e agora o backend também a
+    respeita (`Settings.data_dir`), de modo que fixar a variável passou a
+    valer para os dois lados em vez de só para este.
+    """
+    caminhos: list[Path] = []
+
     data_dir = os.getenv("RSAC_DATA_DIR")
-    paths = []
     if data_dir:
-        paths.append(Path(data_dir) / "runtime_token")
+        caminhos.append(Path(data_dir) / "runtime_token")
+
     if sys.platform == "win32":
         local_app_data = os.getenv("LOCALAPPDATA")
         if local_app_data:
-            paths.append(Path(local_app_data) / "RSAC" / "runtime_token")
-    paths.append(Path.home() / ".rsac" / "runtime_token")
-    paths.append(BACKEND_DIR / "data" / "runtime_token")
+            caminhos.append(Path(local_app_data) / "RSAC" / "RSAC" / "runtime_token")
+    elif sys.platform == "darwin":
+        caminhos.append(
+            Path.home() / "Library" / "Application Support" / "RSAC" / "runtime_token"
+        )
+    else:
+        xdg = os.getenv("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+        caminhos.append(Path(xdg) / "RSAC" / "runtime_token")
 
-    for p in paths:
-        if p.exists():
-            try:
-                token = p.read_text(encoding="utf-8").strip()
-                if token:
-                    return token
-            except Exception:
-                pass
+    return caminhos
+
+
+def get_local_token() -> str | None:
+    """Lê o token local gerado pelo backend."""
+    for caminho in caminhos_do_token():
+        try:
+            if not caminho.exists():
+                continue
+            token = caminho.read_text(encoding="utf-8").strip()
+            if token:
+                return token
+        except OSError:
+            continue
     return None
 
 
 def main():
-    port = 8000
+    config = ler_configuracao()
+    try:
+        port = int(config.get("port") or PORTA_PADRAO)
+    except (TypeError, ValueError):
+        port = PORTA_PADRAO
     local_url = f"http://127.0.0.1:{port}"
 
     os.system("cls" if sys.platform == "win32" else "clear")

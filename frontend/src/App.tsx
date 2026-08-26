@@ -3,19 +3,10 @@
  * Configura roteamento, TanStack Query e inicializa conexão com backend.
  */
 
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from '@/components/layout/AppShell'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { ProjectsPage } from '@/pages/ProjectsPage'
-import { ProtocolPage } from '@/pages/ProtocolPage'
-import { ScreeningPage } from '@/pages/ScreeningPage'
-import { HarvestPage } from '@/pages/HarvestPage'
-import { ExtractionPage } from '@/pages/ExtractionPage'
-import { InsightsPage } from '@/pages/InsightsPage'
-import { ExportPage } from '@/pages/ExportPage'
-import { SettingsPage } from '@/pages/SettingsPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
@@ -24,8 +15,50 @@ import {
   extrairApiUrlDaLocalizacao,
   mensagemDeConfirmacao,
 } from '@/api/backendUrl'
+import { atualizarStatusDoSplash, dispensarBootSplash } from '@/bootSplash'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useAuthStore } from '@/stores/useAuthStore'
+
+/*
+ * As telas de trabalho entram por importação dinâmica.
+ *
+ * Estáticas, as nove somavam um pacote único de ~1,1 MB que o navegador
+ * precisava baixar, analisar e executar inteiro antes de desenhar a primeira
+ * tela — incluindo a biblioteca de gráficos, que só a aba de Indicadores usa,
+ * e as três páginas maiores do produto, que quem abre o app no Painel não vê.
+ * Agora cada aba chega quando é aberta, e a primeira pintura carrega o que
+ * cabe nela.
+ *
+ * `LoginPage` fica estática de propósito: é uma das duas primeiras telas
+ * possíveis, e adiar seu código só acrescentaria um piscar à entrada.
+ */
+const DashboardPage = lazy(() =>
+  import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
+)
+const ProjectsPage = lazy(() =>
+  import('@/pages/ProjectsPage').then((m) => ({ default: m.ProjectsPage }))
+)
+const ProtocolPage = lazy(() =>
+  import('@/pages/ProtocolPage').then((m) => ({ default: m.ProtocolPage }))
+)
+const ScreeningPage = lazy(() =>
+  import('@/pages/ScreeningPage').then((m) => ({ default: m.ScreeningPage }))
+)
+const HarvestPage = lazy(() =>
+  import('@/pages/HarvestPage').then((m) => ({ default: m.HarvestPage }))
+)
+const ExtractionPage = lazy(() =>
+  import('@/pages/ExtractionPage').then((m) => ({ default: m.ExtractionPage }))
+)
+const InsightsPage = lazy(() =>
+  import('@/pages/InsightsPage').then((m) => ({ default: m.InsightsPage }))
+)
+const ExportPage = lazy(() =>
+  import('@/pages/ExportPage').then((m) => ({ default: m.ExportPage }))
+)
+const SettingsPage = lazy(() =>
+  import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+)
 
 // TanStack Query client
 const queryClient = new QueryClient({
@@ -216,18 +249,53 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
 }
 
 /**
+ * Descobre onde está o backend antes da primeira chamada da API.
+ *
+ * No app de mesa quem sabe a porta é o processo principal — ela é sorteada a
+ * cada execução —, e ele só responde quando o Python passa no health check.
+ * Aguardar essa resposta é o que substitui a antiga tentativa às cegas na
+ * porta 8000, que só se corrigia depois de falhar e entrar em repetição.
+ *
+ * Na web e em desenvolvimento a ponte não existe, e vale o que sempre valeu:
+ * a porta vem da query string, ou a origem da própria página é o backend.
+ */
+async function resolverBackendLocal(): Promise<void> {
+  api.detectPort()
+
+  const ponte = window.rsacAPI?.getBackendInfo
+  if (typeof ponte !== 'function') return
+
+  atualizarStatusDoSplash('Iniciando o servidor local')
+  try {
+    const info = await window.rsacAPI.getBackendInfo()
+    if (info?.porta) api.setPort(info.porta)
+    if (info?.tokenLocal) useAuthStore.getState().definirTokenLocal(info.tokenLocal)
+  } catch (err) {
+    console.warn('[App] Não foi possível obter a porta do backend local:', err)
+  }
+}
+
+/**
  * Portão de autenticação.
  */
 function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   const { phase, bootstrap, markAnonymous } = useAuthStore()
 
   useEffect(() => {
-    api.detectPort()
-    aplicarApiUrlDaLocalizacao()
     api.setUnauthorizedHandler(markAnonymous)
-    void bootstrap()
+    void (async () => {
+      await resolverBackendLocal()
+      aplicarApiUrlDaLocalizacao()
+      atualizarStatusDoSplash('Preparando o ambiente de revisão')
+      await bootstrap()
+    })()
     return () => api.setUnauthorizedHandler(null)
   }, [])
+
+  // A splash de marca cobre a espera; sai quando há tela de verdade a mostrar.
+  useEffect(() => {
+    if (phase !== 'checking') dispensarBootSplash()
+  }, [phase])
 
   if (phase === 'checking') {
     return <></>
@@ -248,41 +316,35 @@ function AppContent(): JSX.Element {
   const { setBackendStatus, setBackendVersion, theme, setTheme } = useSettingsStore()
 
   useEffect(() => {
-    // Detectar porta do backend passada via query string pelo Electron
-    api.detectPort()
-
     // Aplicar o tema persistido (do localStorage) ao DOM sem forçar override
     document.documentElement.setAttribute('data-theme', theme)
 
-    // Health check — verificar conexão com backend
-    const checkHealth = async () => {
+    let cancelado = false
+    let proximaTentativa: number | undefined
+
+    /*
+     * Health check para o indicador da barra de estado.
+     *
+     * A porta já foi resolvida pelo `AuthGate` (ver `resolverBackendLocal`),
+     * então a repetição aqui é só para a queda do backend em uso — não é mais
+     * o mecanismo que descobre onde ele está. O recuo cego para a 8000 saiu
+     * junto: com a porta sorteada a cada execução, ele acertava por acaso e,
+     * quando errava, apontava o diagnóstico para o endereço errado.
+     */
+    const verificarSaude = async () => {
+      if (cancelado) return
       try {
         const health = await api.health()
         setBackendStatus('online')
         setBackendVersion(health.version)
         console.log(`[App] Backend conectado: ${api.getBaseUrl()} — v${health.version}`)
-      } catch (error) {
-        const envUrl = (import.meta as any).env?.VITE_API_URL
-        if (!envUrl && api.getPort() !== 8000) {
-          console.warn(`[App] Backend não respondeu na porta ${api.getPort()}, tentando porta padrão 8000...`)
-          api.setPort(8000)
-          try {
-            const health = await api.health()
-            setBackendStatus('online')
-            setBackendVersion(health.version)
-            console.log(`[App] Backend conectado na porta 8000 — v${health.version}`)
-            return
-          } catch {
-            // Continua
-          }
-        }
+      } catch {
         setBackendStatus('connecting')
-        // Retry após 2 segundos
-        setTimeout(checkHealth, 2000)
+        proximaTentativa = window.setTimeout(verificarSaude, 2000)
       }
     }
 
-    checkHealth()
+    void verificarSaude()
 
     // Detectar mudanças de tema do sistema (via Electron IPC)
     if (window.rsacAPI?.onThemeChanged) {
@@ -290,10 +352,22 @@ function AppContent(): JSX.Element {
         setTheme(theme)
       })
     }
+
+    return () => {
+      cancelado = true
+      if (proximaTentativa) window.clearTimeout(proximaTentativa)
+    }
   }, [])
 
   return (
     <AuthGate>
+      {/*
+        O `fallback` é vazio de propósito: o AppShell (faixa superior, painel de
+        log, barra de estado) permanece montado enquanto o pedaço da aba chega,
+        e uma tela de carregamento sobre ele piscaria a cada troca de aba num
+        carregamento que, vindo do disco, dura poucos quadros.
+      */}
+      <Suspense fallback={<></>}>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
@@ -309,6 +383,7 @@ function AppContent(): JSX.Element {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </Suspense>
     </AuthGate>
   )
 }

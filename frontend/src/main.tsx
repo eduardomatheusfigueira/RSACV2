@@ -5,6 +5,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import { dispensarBootSplash } from './bootSplash'
 import './styles/globals.css'
 
 const rootElement = document.getElementById('root')!
@@ -16,19 +17,9 @@ createRoot(rootElement).render(
 )
 
 /**
- * Remove a splash de inicialização declarada no index.html.
- *
- * A Content-Security-Policy do app proíbe script inline, então a camada não
- * consegue se remover sozinha — quem a dispensa é este ponto de entrada, no
- * primeiro frame após a montagem, com uma esmaecida curta para não haver
- * corte seco entre a marca e a interface.
+ * A splash é dispensada pela própria aplicação, quando há tela para mostrar
+ * (ver `bootSplash.ts` e o `AuthGate` em `App.tsx`). O que fica aqui é apenas
+ * a rede de segurança: se nada tiver decidido em 60 s, a marca sai de cena
+ * para não esconder um erro de renderização atrás de uma animação bonita.
  */
-const splash = document.getElementById('boot-splash')
-if (splash) {
-  requestAnimationFrame(() => {
-    splash.classList.add('is-leaving')
-    splash.addEventListener('transitionend', () => splash.remove(), { once: true })
-    // Rede de segurança caso a transição não dispare (ex.: prefers-reduced-motion).
-    window.setTimeout(() => splash.remove(), 600)
-  })
-}
+window.setTimeout(dispensarBootSplash, 60_000)

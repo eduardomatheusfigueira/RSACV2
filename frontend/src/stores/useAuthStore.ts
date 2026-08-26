@@ -25,7 +25,17 @@ interface AuthState {
   status: AuthStatus | null
   error: string | null
   submitting: boolean
+  /**
+   * Token local desta instalação, entregue pelo processo principal do Electron.
+   *
+   * Fica no estado, e não numa variável de módulo, porque `bootstrap` é
+   * rechamado pela tela de indisponibilidade a cada nova tentativa: guardado
+   * fora, o token valeria só para a primeira, e uma reconexão bem-sucedida
+   * cairia na tela de login.
+   */
+  tokenLocal: string | null
 
+  definirTokenLocal: (token: string | null) => void
   bootstrap: () => Promise<void>
   login: (username: string, password: string) => Promise<boolean>
   loginWithLocalToken: (token: string) => Promise<boolean>
@@ -70,6 +80,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   status: null,
   error: null,
   submitting: false,
+  tokenLocal: null,
+
+  definirTokenLocal: (token) => set({ tokenLocal: token }),
 
   /**
    * Decide, na partida, entre entrar direto e pedir credenciais.
@@ -101,9 +114,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return
       }
 
-      const tokenDaUrl = consumeLocalTokenFromUrl()
-      if (tokenDaUrl) {
-        const entrou = await get().loginWithLocalToken(tokenDaUrl)
+      // Duas origens para o mesmo token: a URL (lançador do navegador, que o
+      // passa em `?local_token=`) e a ponte IPC do app de mesa. A da URL vem
+      // primeiro por ser consumida — é lida e apagada do endereço.
+      const tokenLocal = consumeLocalTokenFromUrl() ?? get().tokenLocal
+      if (tokenLocal) {
+        const entrou = await get().loginWithLocalToken(tokenLocal)
         if (entrou) return
       }
 

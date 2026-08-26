@@ -87,3 +87,32 @@ def test_websocket_recusa_sessao_encerrada(client):
         with client.websocket_connect(f"{CANAIS[0]}?token={token}") as ws:
             ws.receive_text()
     assert exc.value.code == 1008
+
+
+# ── Origem do handshake (§29.3.6) ─────────────────────────────────────
+
+def test_origem_opaca_do_app_de_mesa_e_aceita_no_handshake(monkeypatch):
+    """
+    O painel de log e o acompanhamento de coleta dependem do WebSocket, e o
+    handshake vindo do app empacotado chega com `Origin: null` — a origem
+    opaca do `file://`. Sem esta aceitação o canal fecha com 1008 e a coleta
+    parece travada, mesmo com o backend íntegro.
+    """
+    import app.security.dependencies as deps_module
+    from app.config import DeploymentProfile, Settings
+    from app.security.dependencies import origem_do_websocket_e_permitida
+
+    # O módulo importa `settings` para o próprio espaço de nomes, então é ele
+    # que precisa ser trocado — trocar `app.config.settings` não teria efeito
+    # nenhum aqui, e o teste passaria por acaso.
+    monkeypatch.setattr(
+        deps_module, "settings", Settings(deployment_profile=DeploymentProfile.DESKTOP)
+    )
+
+    class _FakeWS:
+        def __init__(self, origem):
+            self.headers = {"origin": origem} if origem else {}
+
+    assert origem_do_websocket_e_permitida(_FakeWS("null"))
+    assert origem_do_websocket_e_permitida(_FakeWS("http://localhost:5173"))
+    assert not origem_do_websocket_e_permitida(_FakeWS("https://evil.example"))

@@ -5,6 +5,34 @@
 
 import { ipcMain, dialog, app, nativeTheme, Notification, BrowserWindow } from 'electron'
 
+/**
+ * O que a interface precisa saber sobre o backend para falar com ele.
+ *
+ * `porta` nula significa que o backend não subiu — e a interface trata isso
+ * como diagnóstico de conexão, não como espera indefinida.
+ */
+export interface InfoDoBackend {
+  porta: number | null
+  tokenLocal: string | null
+  erro?: string
+}
+
+/**
+ * Abre o canal pelo qual a interface pergunta onde está o backend.
+ *
+ * É `handle`, e não `send`, de propósito: o backend pode ficar pronto antes de
+ * o renderer existir, e um evento disparado nesse intervalo se perderia. Aqui
+ * a interface pergunta quando quiser e a resposta espera pela promessa —
+ * quem chega tarde recebe o valor já resolvido, quem chega cedo aguarda.
+ *
+ * O token local sai por este canal, e só por ele: passá-lo na URL, como faz o
+ * lançador do navegador, o deixaria no histórico e em qualquer captura de tela
+ * da janela.
+ */
+export function registrarPonteDoBackend(obterInfo: () => Promise<InfoDoBackend>): void {
+  ipcMain.handle('backend:info', () => obterInfo())
+}
+
 export function registerIpcHandlers(): void {
   // ── Informações do Sistema ──────────────────────────────────────────
 

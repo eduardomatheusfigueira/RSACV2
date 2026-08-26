@@ -8,6 +8,18 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // API customizada exposta ao renderer
 const rsacAPI = {
+  // ── Backend local ───────────────────────────────────────────────────
+  /**
+   * Porta e token do backend desta instalação.
+   *
+   * A promessa só resolve quando o processo Python responde ao health check
+   * (ou desiste), então é ela que a interface aguarda enquanto a splash está
+   * na tela — em vez de tentar a porta 8000 no escuro e entrar em laço de
+   * repetição quando o backend está noutra porta.
+   */
+  getBackendInfo: (): Promise<{ porta: number | null; tokenLocal: string | null; erro?: string }> =>
+    ipcRenderer.invoke('backend:info'),
+
   // ── Informações do Sistema ──────────────────────────────────────────
   getAppVersion: (): Promise<string> =>
     ipcRenderer.invoke('app:version'),

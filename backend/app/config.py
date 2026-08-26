@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 import platformdirs
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -72,6 +73,17 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
 
+    # ── Pasta de dados ────────────────────────────────────────────────
+    # Onde ficam banco, PDFs, logs, `master.key` e `runtime_token`. Vazio
+    # significa "a pasta padrão do sistema operacional" (via platformdirs),
+    # que é o caminho normal do app de mesa.
+    #
+    # O override existe porque `scripts/launcher.py` já procurava o token em
+    # `RSAC_DATA_DIR` — só que o backend nunca leu essa variável, e o caminho
+    # ficava sendo adivinhado dos dois lados. Agora quem lança o backend pode
+    # fixar a pasta e saber exatamente onde procurar.
+    data_dir_override: Optional[Path] = Field(default=None, validation_alias="RSAC_DATA_DIR")
+
     # ── Banco de Dados ────────────────────────────────────────────────
     database_url: Optional[str] = None
 
@@ -111,10 +123,27 @@ class Settings(BaseSettings):
         Regex de origem permitida — apenas loopback, e apenas fora do perfil
         `server`. A porta é variável (Vite escolhe a que estiver livre), por
         isso o regex; o que ele não faz é aceitar host arbitrário.
+
+        `null` é a origem opaca que o Chromium envia quando a página vem de
+        `file://` — que é exatamente o caso do app empacotado, onde o Electron
+        carrega o `index.html` do disco. A entrada `file://` que existia aqui
+        nunca chegou a casar com nada: o navegador não manda o esquema, manda
+        a palavra `null`, e por isso **toda** chamada da API era barrada no app
+        instalado. As duas ficam: `file://` para clientes que a enviem, `null`
+        para o Chromium.
+
+        O que impede que isso vire porta de entrada para um sítio hostil (que
+        também consegue produzir origem `null`, via iframe em sandbox) é o
+        regime de credencial, não a origem: o cookie de sessão é
+        `SameSite=Strict` e não acompanha requisição de outro sítio, e o token
+        local viaja em cabeçalho próprio, inalcançável de fora da página. O que
+        sobra para quem chegar por essa via é 401 em tudo, menos as três rotas
+        públicas — que não expõem dado de revisão. No perfil `server` nada
+        disto vale: lá o retorno continua sendo `None`.
         """
         if self.is_server_profile:
             return None
-        return r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|file://)$"
+        return r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|file://|null)$"
 
     @property
     def effective_cors_origins(self) -> list[str]:
@@ -130,8 +159,16 @@ class Settings(BaseSettings):
 
     @property
     def data_dir(self) -> Path:
-        """Diretório de dados da aplicação (cross-platform)."""
-        path = Path(platformdirs.user_data_dir(self.app_name))
+        """
+        Diretório de dados da aplicação.
+
+        `RSAC_DATA_DIR` tem precedência; sem ela, a pasta padrão do sistema.
+        A ordem importa: quem fixa a variável está dizendo onde os dados devem
+        estar, e mudar isso por conta própria separaria a revisão em duas
+        instalações sem que o usuário percebesse.
+        """
+        path = self.data_dir_override or Path(platformdirs.user_data_dir(self.app_name))
+        path = Path(path).expanduser()
         path.mkdir(parents=True, exist_ok=True)
         return path
 

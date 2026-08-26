@@ -9,13 +9,26 @@ authors = [
     { name = "Eduardo Matheus Figueira" },
 ]
 
+# Três dependências saíram desta lista por não terem uma única importação no
+# código: `alembic` (a migração de esquema é a de `app/database.py`),
+# `google-genai` e `openai` (os dois provedores de IA falam REST por `httpx`,
+# em `app/infrastructure/ai/`). Elas custavam tempo de instalação, superfície
+# de auditoria e peso de empacotamento em troca de nada. Se algum dia um SDK
+# for adotado de verdade, ele volta junto com o código que o usa.
+#
+# `uv.lock` e `requirements.lock` ainda listam as três: regenerá-los aqui
+# arrastaria junto uma migração de formato do lockfile (revisão 1 → 3) e a
+# resolução inteira das dependências de desenvolvimento, o que misturaria uma
+# atualização de dependências com uma correção de arranque. Regenere-os num
+# passo próprio, com a mesma ferramenta que os gerou:
+#     uv lock
+#     pip-compile --generate-hashes --output-file=requirements.lock pyproject.toml
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.7.0",
     "sqlalchemy>=2.0.36",
-    "alembic>=1.14.0",
     "httpx>=0.28.0",
     "pymupdf>=1.25.0",
     "openpyxl>=3.1.5",
@@ -23,8 +36,6 @@ dependencies = [
     "python-multipart>=0.0.18",
     "websockets>=14.0",
     "rapidfuzz>=3.10.0",
-    "google-genai>=1.0.0",
-    "openai>=1.60.0",
     "beautifulsoup4>=4.12.0",
     # Cifra dos backups de credenciais (app/security/secret_box.py)
     "cryptography>=44.0.0",

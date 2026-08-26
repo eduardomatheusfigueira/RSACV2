@@ -708,7 +708,15 @@ export interface HealthResponse {
 
 // ── Electron API ──────────────────────────────────────────────────────
 
+/** Porta e token do backend local, entregues pelo processo principal. */
+export interface InfoDoBackendLocal {
+  porta: number | null
+  tokenLocal: string | null
+  erro?: string
+}
+
 export interface RsacAPI {
+  getBackendInfo: () => Promise<InfoDoBackendLocal>
   getAppVersion: () => Promise<string>
   getPlatform: () => Promise<string>
   showOpenDialog: (options: unknown) => Promise<unknown>

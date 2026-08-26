@@ -64,6 +64,11 @@ def main():
         f'--hidden-import=uvicorn.lifespans '
         f'--hidden-import=uvicorn.lifespans.on '
         f'--hidden-import=sqlalchemy.dialects.sqlite '
+        # O pandas passou a ser importado dentro de `ExportService.generate_excel`
+        # para sair do caminho de arranque. O PyInstaller enxerga importação em
+        # corpo de função, mas declarar aqui torna a dependência explícita e
+        # imune a uma reorganização futura do módulo.
+        f'--hidden-import=pandas '
         f'"{BACKEND_DIR / "run.py"}"'
     )
     run_cmd(backend_cmd, desc="Compilando backend Python em binário autônomo")

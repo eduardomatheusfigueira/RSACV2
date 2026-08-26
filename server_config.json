@@ -1,5 +1,4 @@
 {
-  "port": 8000,
-  "auto_open_browser": false,
-  "cors_origins": []
+  "_leia_me": "Configuração do lançador local (scripts/launcher.py). Apenas 'port' é lida. CORS e perfil de implantação do backend vêm de variáveis de ambiente (RSAC_CORS_ORIGINS, RSAC_DEPLOYMENT_PROFILE), não daqui.",
+  "port": 8000
 }

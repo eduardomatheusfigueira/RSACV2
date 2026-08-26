@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–35` Vigente (Coleta)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–35` Vigente (Coleta) · `36` Concluído (Consolidação do App)
 
 ---
 
@@ -38,6 +38,7 @@ velocidade que dele decorre. Mesma gramática — diagnóstico → execução.
 28–30   concluído          segurança — as seis fases entregues ✅
 31–33   concluído          B.I. e bibliometria — as quatro fases entregues ✅
 34–35   vigente            confiabilidade e velocidade da coleta
+  36    concluído          consolidação do app instalado — arranque e bloqueantes ✅
 ```
 
 ---
@@ -101,6 +102,18 @@ velocidade que dele decorre. Mesma gramática — diagnóstico → execução.
 > A linha de base numérica dos docs 34 e 35 é reproduzível por
 > [`backend/scripts/bench_coleta.py`](../backend/scripts/bench_coleta.py),
 > que roda sem rede e serve de portão de regressão de desempenho.
+
+---
+
+## 📌 Concluído — consolidação do aplicativo instalado
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **36** | [Revisão de Consolidação do Aplicativo](./36_REVISAO_CONSOLIDACAO_APP.md) | Por que o app instalado demorava a abrir: cinco bloqueantes (origem `null` no CORS, token local não entregue, janela criada depois do backend) e quatro correções de arranque, todas medidas |
+
+> O doc 36 nasceu de um relato de campo — "depois de instalado, o app fica
+> muito lento para abrir" — e concluiu que a lentidão era sintoma, não causa:
+> o aplicativo empacotado não chegava a alcançar o próprio backend.
 
 ---
 

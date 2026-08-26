@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.v1.router import api_router, public_router
@@ -27,7 +28,7 @@ from app.infrastructure.persistence.models import (
     UserModel,
 )
 from app.security.crypto import MasterKeyError, obter_chave_mestra
-from app.security.local_token import descrever_para_log, ensure_local_token
+from app.security.local_token import descrever_para_log, ensure_local_token, token_path
 from app.security.log_filter import instalar_filtro_de_segredos
 from app.security.middleware import (
     RateLimitMiddleware,
@@ -58,6 +59,93 @@ instalar_filtro_de_segredos()
 logger = logging.getLogger("rsac")
 
 
+# ── Tarefas de partida no banco ───────────────────────────────────────
+
+def _reconciliar_coletas_interrompidas(db: Session) -> None:
+    """
+    Marca como falha a coleta que ficou `running` quando o processo caiu.
+
+    Sem isto, uma coleta interrompida por reinício fica para sempre "em
+    andamento" na interface, e o usuário espera por um trabalho que já não tem
+    processo nenhum atrás.
+    """
+    try:
+        interrompidas = (
+            db.query(HarvestRunModel).filter(HarvestRunModel.status == "running").all()
+        )
+        if not interrompidas:
+            return
+        logger.warning(
+            f"[Lifespan] Reconciliando {len(interrompidas)} coleta(s) que ficaram com status 'running'."
+        )
+        for run in interrompidas:
+            run.status = "failed"
+            run.error_message = "Interrompida por reinício do servidor."
+            run.completed_at = datetime.now(timezone.utc)
+        db.commit()
+    except Exception as exc:  # noqa: BLE001 — não pode impedir o app de subir
+        db.rollback()
+        logger.error(f"[Lifespan] Erro ao reconciliar execuções de coleta: {exc}")
+
+
+def _limpar_prefixos_de_ia_legados(db: Session) -> None:
+    """
+    Remove o rótulo `[IA] …` que versões antigas gravavam nas observações.
+
+    O filtro `ilike("[%")` faz com que, depois da primeira limpeza, a consulta
+    não devolva linha nenhuma — é o que mantém isto barato a cada partida em
+    vez de percorrer a triagem inteira.
+    """
+    try:
+        from app.services.screening_service import _strip_ai_prefix
+
+        legados = db.query(PaperModel).filter(PaperModel.observations.ilike("[%")).all()
+        limpos = 0
+        for paper in legados:
+            limpo = _strip_ai_prefix(paper.observations)
+            if limpo != (paper.observations or "").strip():
+                paper.observations = limpo
+                limpos += 1
+        if limpos:
+            db.commit()
+            logger.info(
+                f"[Lifespan] Removido prefixo de IA de {limpos} observação(ões) antigas."
+            )
+    except Exception as exc:  # noqa: BLE001 — não pode impedir o app de subir
+        db.rollback()
+        logger.error(f"[Lifespan] Erro ao limpar prefixos de IA das observações: {exc}")
+
+
+# ── Descoberta da instalação por quem lança o processo ────────────────
+
+# Prefixo da linha que o Electron e o `scripts/launcher.py` procuram na saída
+# padrão do backend.
+LINHA_DE_HANDSHAKE = "RSAC_RUNTIME"
+
+
+def _anunciar_pasta_de_dados() -> None:
+    """
+    Diz na saída padrão onde ficam a pasta de dados e o arquivo de token.
+
+    Quem lança o backend precisa do `runtime_token` para entrar sem tela de
+    login — e até aqui adivinhava o caminho, cada um do seu jeito: o launcher
+    procurava em `%LOCALAPPDATA%\\RSAC`, o backend gravava no caminho do
+    `platformdirs` (`%LOCALAPPDATA%\\RSAC\\RSAC`), e o app empacotado nem
+    procurava. Adivinhar é o problema; o processo que grava o arquivo é quem
+    sabe onde ele está, então é ele que informa.
+
+    O que sai daqui é o **caminho**, nunca o token: a saída padrão do backend
+    vai para o log do processo pai, e credencial não tem por que passar por lá.
+    """
+    if settings.is_server_profile:
+        return
+    try:
+        print(f"{LINHA_DE_HANDSHAKE} data_dir={settings.data_dir}", flush=True)
+        print(f"{LINHA_DE_HANDSHAKE} token_file={token_path()}", flush=True)
+    except Exception:  # pragma: no cover — saída padrão fechada/redirecionada
+        pass
+
+
 # ── Lifespan ──────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -83,6 +171,7 @@ async def lifespan(app: FastAPI):
     # processo recusa-se a subir — em vez de subir aberto, como acontecia.
     ensure_local_token()
     logger.info(f"Autenticação: {descrever_para_log()}")
+    _anunciar_pasta_de_dados()
 
     # ── Chave-mestra da cifra (doc 29 §29.4.1) ────────────────────────
     #
@@ -103,11 +192,20 @@ async def lifespan(app: FastAPI):
 
     cifrar_segredos_legados(engine)
 
+    # ── Trabalho de partida no banco, numa sessão só ──────────────────
+    #
+    # Eram três sessões abertas e fechadas em sequência — contagem de contas,
+    # reconciliação de coletas e limpeza de observações antigas —, cada uma
+    # pagando conexão e PRAGMAs do SQLite antes de a primeira requisição poder
+    # ser atendida. O trabalho é o mesmo; o que muda é que agora ele acontece
+    # numa conexão única, e o backend responde ao health check mais cedo.
     db_boot = SessionLocal()
     try:
         contas_ativas = (
             db_boot.query(UserModel).filter(UserModel.is_active == True).count()  # noqa: E712
         )
+        _reconciliar_coletas_interrompidas(db_boot)
+        _limpar_prefixos_de_ia_legados(db_boot)
     finally:
         db_boot.close()
 
@@ -127,50 +225,6 @@ async def lifespan(app: FastAPI):
             "token local, mas crie uma conta antes de publicar o servidor: "
             "python -m app.cli create-user <usuario> --role owner"
         )
-
-    # Reconciliar execuções pendentes interrompidas por queda/reinício do processo
-    try:
-        db = SessionLocal()
-        interrupted_runs = (
-            db.query(HarvestRunModel)
-            .filter(HarvestRunModel.status == "running")
-            .all()
-        )
-        if interrupted_runs:
-            logger.warning(
-                f"[Lifespan] Reconciliando {len(interrupted_runs)} coleta(s) que ficaram com status 'running'."
-            )
-            for run in interrupted_runs:
-                run.status = "failed"
-                run.error_message = "Interrompida por reinício do servidor."
-                run.completed_at = datetime.now(timezone.utc)
-            db.commit()
-        db.close()
-    except Exception as e:
-        logger.error(f"[Lifespan] Erro ao reconciliar execuções de coleta: {e}")
-
-    # Limpar rótulos de origem automática herdados de versões anteriores nas observações
-    try:
-        from app.services.screening_service import _strip_ai_prefix
-
-        db = SessionLocal()
-        legacy_papers = (
-            db.query(PaperModel)
-            .filter(PaperModel.observations.ilike("[%"))
-            .all()
-        )
-        cleaned_count = 0
-        for paper in legacy_papers:
-            cleaned = _strip_ai_prefix(paper.observations)
-            if cleaned != (paper.observations or "").strip():
-                paper.observations = cleaned
-                cleaned_count += 1
-        if cleaned_count:
-            db.commit()
-            logger.info(f"[Lifespan] Removido prefixo de IA de {cleaned_count} observação(ões) antigas.")
-        db.close()
-    except Exception as e:
-        logger.error(f"[Lifespan] Erro ao limpar prefixos de IA das observações: {e}")
 
     logger.info("Backend pronto para receber requisições.")
     yield

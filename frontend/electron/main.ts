@@ -8,7 +8,7 @@ import { existsSync, appendFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { PythonManager } from './python-manager'
-import { registerIpcHandlers } from './ipc-handlers'
+import { registerIpcHandlers, registrarPonteDoBackend, type InfoDoBackend } from './ipc-handlers'
 
 function logToFile(msg: string) {
   try {
@@ -38,8 +38,8 @@ function resolveAppIcon(): string | undefined {
   return candidates.find(existsSync)
 }
 
-function createWindow(backendPort: number): void {
-  logToFile(`Creating main window with backend port: ${backendPort}`)
+function createWindow(): void {
+  logToFile('Creating main window')
   const icon = resolveAppIcon()
 
   mainWindow = new BrowserWindow({
@@ -68,15 +68,32 @@ function createWindow(backendPort: number): void {
 
   // Em dev, carrega do dev server; em prod, do arquivo HTML
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}?port=${backendPort}`)
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'), {
-      query: { port: String(backendPort) }
-    })
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
-app.whenReady().then(async () => {
+/**
+ * Sobe o backend e resolve o que a interface precisa saber sobre ele.
+ *
+ * Devolve sempre — inclusive quando falha. A janela já está aberta quando isto
+ * roda, e uma promessa rejeitada aqui viraria uma tela parada sem explicação;
+ * o `erro` preenchido é o que permite à interface mostrar o diagnóstico de
+ * conexão em vez de girar para sempre.
+ */
+async function iniciarBackend(): Promise<InfoDoBackend> {
+  try {
+    const porta = await pythonManager.start()
+    logToFile(`Python backend started on port ${porta}`)
+    return { porta, tokenLocal: pythonManager.lerTokenLocal() }
+  } catch (error) {
+    logToFile(`Python backend start failed: ${error}`)
+    return { porta: null, tokenLocal: null, erro: String(error) }
+  }
+}
+
+app.whenReady().then(() => {
   logToFile('App whenReady triggered')
   electronApp.setAppUserModelId(APP_ID)
 
@@ -86,19 +103,24 @@ app.whenReady().then(async () => {
 
   registerIpcHandlers()
 
-  let backendPort = 8000
-  try {
-    backendPort = await pythonManager.start()
-    logToFile(`Python backend started on port ${backendPort}`)
-  } catch (error) {
-    logToFile(`Python backend start failed: ${error}. Falling back to default port.`)
-  }
+  // A partida do backend corre **em paralelo** com a janela, não antes dela.
+  //
+  // Antes, `whenReady` esperava o health check do Python para só então chamar
+  // `createWindow`: até 30 s entre o duplo-clique e qualquer pixel na tela, com
+  // a splash de marca do `index.html` — feita justamente para cobrir essa
+  // espera — só aparecendo depois que a espera havia terminado. Quem instalava
+  // o app via o ícone saltar na barra de tarefas e nada acontecer.
+  //
+  // Agora a janela aparece no primeiro instante, mostra a splash, e pergunta
+  // pela porta quando precisa dela (`backend:info`).
+  const backendPronto = iniciarBackend()
+  registrarPonteDoBackend(() => backendPronto)
 
-  createWindow(backendPort)
+  createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(backendPort)
+      createWindow()
     }
   })
 })
