@@ -15,7 +15,6 @@ import re
 import unicodedata
 from collections.abc import AsyncGenerator
 from typing import Any, Dict, List, Optional, Set, Tuple
-from bs4 import BeautifulSoup
 import httpx
 
 from app.domain.enums import to_canonical_doc_type
@@ -24,9 +23,11 @@ from app.harvesters.base import (
     HarvesterCapabilities,
     HarvestProgress,
     HarvestQuery,
+    HarvestSourceError,
     ProgressCallback,
     RawPaperRecord,
 )
+from app.harvesters.html_parser import make_soup
 from app.harvesters.factory import register_harvester
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,31 @@ RE_DOI: re.Pattern = re.compile(r"(10\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECAS
 
 # Limite máximo de filtros no WAF da BDTD antes de retornar 429
 BDTD_MAX_API_FILTERS: int = 2
+
+# Normalização de idiomas: a BDTD devolve ora o código MARC ("por"), ora o rótulo
+# de exibição ("Português" / "Portuguese"), conforme o repositório de origem.
+# Comparar o valor cru com o código pedido pelo protocolo descartava **todos** os
+# registros e a coleta terminava zerada sem erro.
+LANG_ALIASES: Dict[str, str] = {
+    "por": "por", "pt": "por", "ptbr": "por", "pt-br": "por", "pt_br": "por",
+    "portugues": "por", "portuguese": "por", "brazilian portuguese": "por",
+    "eng": "eng", "en": "eng", "en-us": "eng", "en_us": "eng",
+    "ingles": "eng", "english": "eng",
+    "spa": "spa", "es": "spa", "esp": "spa", "espanhol": "spa", "espanol": "spa",
+    "spanish": "spa", "castellano": "spa",
+    "fra": "fra", "fre": "fra", "fr": "fra", "frances": "fra", "french": "fra",
+    "deu": "deu", "ger": "deu", "de": "deu", "alemao": "deu", "german": "deu",
+    "ita": "ita", "it": "ita", "italiano": "ita", "italian": "ita",
+}
+
+
+def normalize_language(value: Any) -> str:
+    """Converte código ou rótulo de idioma para um código canônico ISO 639-2/B."""
+    if not value:
+        return ""
+    texto = unicodedata.normalize("NFKD", str(value)).encode("ASCII", "ignore").decode("utf-8")
+    texto = texto.strip().lower().replace("_", "-")
+    return LANG_ALIASES.get(texto, LANG_ALIASES.get(texto.replace("-", ""), texto))
 
 
 def sanitize_bdtd_keyword(keyword: str) -> str:
@@ -68,20 +94,10 @@ def sanitize_bdtd_filters(raw_filters: Optional[List[str]]) -> Tuple[List[str], 
 
         stripped = f_str.lstrip("~")
         if stripped.startswith("language:") or stripped.startswith("idioma:"):
-            lang_code = stripped.split(":", 1)[1].strip().strip('"\'').lower()
-            if lang_code:
-                # Mapeamento para ISO 639-1 / VuFind
-                if lang_code in ("por", "pt", "portugues", "português"):
-                    allowed_languages.add("por")
-                    allowed_languages.add("pt")
-                elif lang_code in ("eng", "en", "ingles", "inglês"):
-                    allowed_languages.add("eng")
-                    allowed_languages.add("en")
-                elif lang_code in ("spa", "es", "espanhol"):
-                    allowed_languages.add("spa")
-                    allowed_languages.add("es")
-                else:
-                    allowed_languages.add(lang_code)
+            lang_code = stripped.split(":", 1)[1].strip().strip('"\'')
+            canonico = normalize_language(lang_code)
+            if canonico:
+                allowed_languages.add(canonico)
         elif ":" in f_str:
             field_name, val = f_str.split(":", 1)
             if field_name.strip() and val.strip():
@@ -245,10 +261,15 @@ class BDTDHarvester(BaseHarvester):
         default_delay=0.5,
     )
 
-    BASE_URLS = [
-        "https://bdtd.ibict.br/vufind/api/v1/search",
-        "https://oasisbr.ibict.br/vufind/api/v1/search",
+    # BDTD e OasisBR **não** são espelhos: o OasisBR é um agregador mais amplo.
+    # Cada host guarda o próprio prefixo de registro, usado para montar a URL de
+    # detalhe do mesmo host que respondeu (antes a raspagem apontava sempre para
+    # bdtd.ibict.br e um id do OasisBR resultava em 404 silencioso).
+    BASE_HOSTS = [
+        "https://bdtd.ibict.br",
+        "https://oasisbr.ibict.br",
     ]
+    BASE_URLS = [f"{host}/vufind/api/v1/search" for host in BASE_HOSTS]
 
     REQUEST_FIELDS = [
         "id",
@@ -277,15 +298,21 @@ class BDTDHarvester(BaseHarvester):
         }
         self._scrape_semaphore = asyncio.Semaphore(4)
 
-    async def _scrape_record_details(self, client: httpx.AsyncClient, record_id: str) -> Dict[str, str]:
+    async def _scrape_record_details(
+        self,
+        client: httpx.AsyncClient,
+        record_id: str,
+        base_host: Optional[str] = None,
+    ) -> Dict[str, str]:
         """Raspagem assíncrona da página pública do VuFind para obter orientador e metadados Dublin Core."""
-        url = f"https://bdtd.ibict.br/vufind/Record/{record_id}"
+        host = base_host or self.BASE_HOSTS[0]
+        url = f"{host}/vufind/Record/{record_id}"
         details: Dict[str, str] = {}
         try:
             async with self._scrape_semaphore:
                 res = await client.get(url, headers=self.headers, timeout=20.0)
                 if res.status_code == 200:
-                    soup = BeautifulSoup(res.text, "lxml")
+                    soup = make_soup(res.text)
                     for meta in soup.find_all("meta"):
                         name = meta.attrs.get("name")
                         content = meta.attrs.get("content")
@@ -330,13 +357,21 @@ class BDTDHarvester(BaseHarvester):
 
         seen_record_ids: Set[str] = set()
         total_overall = 0
+        # Contabilidade de confiabilidade: distingue "a base não tem nada" de
+        # "não conseguimos falar com a base" — sem isso, bloqueio vira zero mudo.
+        descritores_consultados = 0
+        consulta_bem_sucedida = False
+        falhas: List[str] = []
+        descartados_por_idioma = 0
 
         # Montar filtros nativos Solr e pós-filtros locais
         raw_filter_list = []
         if year_start or year_end:
             y_start = year_start or 1900
             y_end = year_end or 2099
-            raw_filter_list.append(f'publishDate:"[{y_start} TO {y_end}]"')
+            # Faixa Solr **sem aspas**: com aspas o VuFind interpreta "[1970 TO 2023]"
+            # como frase literal e a busca não devolve nada.
+            raw_filter_list.append(f"publishDate:[{y_start} TO {y_end}]")
         for lang in languages:
             raw_filter_list.append(f"language:{lang}")
 
@@ -347,6 +382,8 @@ class BDTDHarvester(BaseHarvester):
                 desc_query = sanitize_bdtd_keyword(desc)
                 if not desc_query:
                     continue
+
+                descritores_consultados += 1
 
                 page = 1
                 total_for_desc = 0
@@ -376,23 +413,41 @@ class BDTDHarvester(BaseHarvester):
 
                     success = False
                     data: Dict[str, Any] = {}
+                    base_host_usado = self.BASE_HOSTS[0]
+                    ultimo_erro = ""
 
                     # Retries com espelhos e backoff
                     for attempt in range(1, 4):
-                        for base_url in self.BASE_URLS:
+                        for idx, base_url in enumerate(self.BASE_URLS):
                             try:
                                 res = await client.get(base_url, params=params)
                                 if res.status_code == 200:
-                                    data = res.json()
+                                    try:
+                                        data = res.json()
+                                    except Exception as e:
+                                        ultimo_erro = f"resposta não-JSON de {base_url} ({e})"
+                                        logger.warning(f"[BDTD] {ultimo_erro}")
+                                        continue
                                     if "records" in data or data.get("status") == "OK":
                                         success = True
+                                        base_host_usado = self.BASE_HOSTS[idx]
                                         break
+                                    ultimo_erro = f"payload inesperado de {base_url}"
                                 elif res.status_code == 429:
+                                    ultimo_erro = f"HTTP 429 em {base_url}"
                                     logger.warning(f"[BDTD] Rate limit (429) em {base_url}. Aguardando 15s...")
                                     await asyncio.sleep(15.0)
+                                elif res.status_code in (401, 403):
+                                    # Bloqueio de robô: o cookie de verificação do WAF
+                                    # pode ter expirado. Registrar explicitamente.
+                                    ultimo_erro = f"HTTP {res.status_code} em {base_url} (bloqueio do WAF)"
+                                    logger.warning(f"[BDTD] {ultimo_erro} (tentativa {attempt})")
+                                    await asyncio.sleep(3.0 * attempt)
                                 else:
-                                    logger.warning(f"[BDTD] HTTP {res.status_code} em {base_url} (tentativa {attempt})")
+                                    ultimo_erro = f"HTTP {res.status_code} em {base_url}"
+                                    logger.warning(f"[BDTD] {ultimo_erro} (tentativa {attempt})")
                             except Exception as e:
+                                ultimo_erro = f"{type(e).__name__}: {e} ({base_url})"
                                 logger.warning(f"[BDTD] Tentativa {attempt} ({base_url}) falhou: {e}")
 
                         if success:
@@ -400,9 +455,14 @@ class BDTDHarvester(BaseHarvester):
                         await asyncio.sleep(2.0 * attempt)
 
                     if not success:
-                        logger.error(f"[BDTD] Falha ao consultar '{desc_query}' (pág {page}) após retries.")
+                        motivo = ultimo_erro or "causa não identificada"
+                        logger.error(
+                            f"[BDTD] Falha ao consultar '{desc_query}' (pág {page}) após retries: {motivo}"
+                        )
+                        falhas.append(f"'{desc_query}' pág {page}: {motivo}")
                         break
 
+                    consulta_bem_sucedida = True
                     records = data.get("records", [])
                     if not records:
                         logger.info(f"[BDTD] Fim dos registros para '{desc_query}' na pág {page}")
@@ -415,10 +475,13 @@ class BDTDHarvester(BaseHarvester):
                         if record_id:
                             seen_record_ids.add(record_id)
 
-                        # Pós-filtro local de idiomas
+                        # Pós-filtro local de idiomas (comparação por código canônico:
+                        # a base mistura "por" e "Português" entre repositórios)
                         rec_langs = rec.get("languages", [])
                         if allowed_langs and rec_langs:
-                            if not any(str(l).strip().lower() in allowed_langs for l in rec_langs):
+                            rec_langs_norm = {normalize_language(l) for l in rec_langs if str(l).strip()}
+                            if rec_langs_norm and rec_langs_norm.isdisjoint(allowed_langs):
+                                descartados_por_idioma += 1
                                 continue
 
                         # Resumo: tratar listas VuFind com join seguro (P0-5)
@@ -451,7 +514,7 @@ class BDTDHarvester(BaseHarvester):
                         raw_format = formats[0] if formats else "Tese/Dissertação"
                         canonical_type = to_canonical_doc_type(self.source_name, raw_format)
 
-                        detail_url = f"https://bdtd.ibict.br/vufind/Record/{record_id}" if record_id else ""
+                        detail_url = f"{base_host_usado}/vufind/Record/{record_id}" if record_id else ""
                         urls = rec.get("urls", [])
                         dl_url = urls[0].get("url", "") if urls and isinstance(urls[0], dict) else detail_url
 
@@ -468,7 +531,9 @@ class BDTDHarvester(BaseHarvester):
 
                         # Enriquecimento opcional via raspagem de detalhes (Fase 5 / P1-1)
                         if fetch_details and record_id:
-                            details = await self._scrape_record_details(client, record_id)
+                            details = await self._scrape_record_details(
+                                client, record_id, base_host=base_host_usado
+                            )
                             if details:
                                 advisor_candidate = (
                                     details.get("dc.contributor.advisor")
@@ -497,6 +562,9 @@ class BDTDHarvester(BaseHarvester):
                             research_type=canonical_type,
                             institution=inst_str or "BDTD/IBICT",
                             matched_descriptor=desc.strip(),
+                            # Reprodutibilidade: BDTD e OasisBR são acervos distintos
+                            # e o registro precisa dizer de qual deles veio.
+                            extra_metadata={"acervo": base_host_usado, "record_url": detail_url},
                         )
 
                         if paper.title:
@@ -513,6 +581,34 @@ class BDTDHarvester(BaseHarvester):
                     page += 1
                     await asyncio.sleep(self.capabilities.default_delay)
 
+            # Falha total: nenhuma consulta foi respondida. Marcar como concluída
+            # com zero registros publicaria um número falso no fluxograma PRISMA.
+            if descritores_consultados and not consulta_bem_sucedida:
+                raise HarvestSourceError(
+                    self.source_name,
+                    "nenhuma consulta à API foi respondida",
+                    "; ".join(falhas[:5]) or "causa não identificada",
+                )
+
+            avisos: List[str] = []
+            if falhas:
+                avisos.append(
+                    f"{len(falhas)} consulta(s) falharam e os descritores ficaram "
+                    f"incompletos: {'; '.join(falhas[:3])}"
+                )
+            if descartados_por_idioma and total_overall == 0:
+                avisos.append(
+                    f"{descartados_por_idioma} registros foram descartados pelo filtro de "
+                    f"idioma ({', '.join(sorted(allowed_langs))}) — revise o recorte do protocolo"
+                )
+            elif descartados_por_idioma:
+                logger.info(
+                    f"[BDTD] {descartados_por_idioma} registros descartados pelo filtro local de idioma."
+                )
+            aviso = " | ".join(avisos) if avisos else None
+            if aviso:
+                logger.warning(f"[BDTD] {aviso}")
+
             if on_progress:
                 await on_progress(
                     HarvestProgress(
@@ -522,5 +618,6 @@ class BDTDHarvester(BaseHarvester):
                         total_found_so_far=total_overall,
                         phase="completed",
                         is_complete=True,
+                        error=aviso,
                     )
                 )

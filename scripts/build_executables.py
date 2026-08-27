@@ -80,6 +80,12 @@ def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
         "--workpath",
         str(BUILD_DIR),
         "--hidden-import=colorama",
+        # Parser de HTML dos coletores SciELO/BDTD: referenciado por string,
+        # invisível à análise estática do PyInstaller (ver app/harvesters/html_parser.py).
+        "--hidden-import=lxml",
+        "--hidden-import=lxml.etree",
+        "--hidden-import=lxml._elementpath",
+        "--hidden-import=bs4",
     ]
 
     if icon_path and icon_path.exists():

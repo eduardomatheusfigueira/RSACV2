@@ -97,6 +97,7 @@ velocidade que dele decorre. Mesma gramática — diagnóstico → execução.
 |---|-----------|-----------|
 | **34** | [Diagnóstico da Coleta — SciELO e BDTD](./34_DIAGNOSTICO_COLETA_SCIELO_BDTD.md) | Estado real dos dois coletores nacionais, com linha de base medida sem rede |
 | **35** | [Plano de Robustez e Velocidade](./35_PLANO_ROBUSTEZ_VELOCIDADE_COLETA.md) | Sete fases: verdade → correção → ritmo → paralelismo → retomada → interface → testes |
+| **36** | [Correção: SciELO e BDTD voltando zeradas](./36_CORRECAO_COLETA_ZERADA.md) | Diagnóstico e correção do zero silencioso das duas fontes nacionais |
 
 > A linha de base numérica dos docs 34 e 35 é reproduzível por
 > [`backend/scripts/bench_coleta.py`](../backend/scripts/bench_coleta.py),

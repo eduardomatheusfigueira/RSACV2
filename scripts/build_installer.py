@@ -64,6 +64,13 @@ def main():
         f'--hidden-import=uvicorn.lifespans '
         f'--hidden-import=uvicorn.lifespans.on '
         f'--hidden-import=sqlalchemy.dialects.sqlite '
+        # O parser de HTML dos coletores SciELO/BDTD é escolhido por string
+        # ("lxml"), então a análise estática do PyInstaller não o enxerga.
+        # Sem estas linhas o executável sobe sem lxml e a raspagem zera.
+        f'--hidden-import=lxml '
+        f'--hidden-import=lxml.etree '
+        f'--hidden-import=lxml._elementpath '
+        f'--hidden-import=bs4 '
         f'"{BACKEND_DIR / "run.py"}"'
     )
     run_cmd(backend_cmd, desc="Compilando backend Python em binário autônomo")

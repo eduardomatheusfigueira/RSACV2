@@ -13,7 +13,7 @@ import logging
 import re
 from collections.abc import AsyncGenerator
 from typing import Any, Dict, List, Optional
-from bs4 import BeautifulSoup, Tag
+from bs4 import Tag
 import httpx
 
 from app.domain.enums import to_canonical_doc_type
@@ -22,9 +22,11 @@ from app.harvesters.base import (
     HarvesterCapabilities,
     HarvestProgress,
     HarvestQuery,
+    HarvestSourceError,
     ProgressCallback,
     RawPaperRecord,
 )
+from app.harvesters.html_parser import make_soup
 from app.harvesters.factory import register_harvester
 
 logger = logging.getLogger(__name__)
@@ -34,6 +36,14 @@ RE_YEAR_ID: re.Pattern = re.compile(r"S\d{4}-\d{3,4}(\d{4})")
 RE_YEAR_TEXT: re.Pattern = re.compile(r"((?:19|20)\d{2})")
 RE_TOTAL_HITS: re.Pattern = re.compile(r"de\s+(\d[\d.]*)\s")
 RE_DOI: re.Pattern = re.compile(r"(10\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
+# Página legítima de "nenhum resultado" — distingue busca vazia de bloqueio/layout quebrado
+RE_SEM_RESULTADOS: re.Pattern = re.compile(
+    r"nenhum\s+(?:resultado|artigo|registro)|"
+    r"n[ãa]o\s+(?:foram\s+encontrados|encontrou|h[áa]\s+resultados)|"
+    r"no\s+results?\s+(?:found|were\s+found)|"
+    r"sin\s+resultados",
+    re.IGNORECASE,
+)
 
 
 def parse_scielo_item(item_tag: Tag, descriptor: str = "") -> RawPaperRecord:
@@ -134,7 +144,11 @@ class SciELOHarvester(BaseHarvester):
     )
 
     SEARCH_URL = "https://search.scielo.org/"
-    RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
+    # 403 entra na lista: o portal responde 403 quando o WAF classifica a
+    # requisição como automatizada, e o bloqueio costuma ceder ao reaquecer a
+    # sessão. Sem isso, um 403 encerrava o descritor na primeira tentativa.
+    RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
+    MAX_TENTATIVAS = 5
 
     def __init__(self, timeout: float = 35.0):
         super().__init__(source_name="SciELO", timeout=timeout)
@@ -148,6 +162,14 @@ class SciELOHarvester(BaseHarvester):
             "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
             "Referer": "https://search.scielo.org/",
         }
+
+    async def _aquecer_sessao(self, client: httpx.AsyncClient) -> None:
+        """GET na raiz para adquirir cookies de sessão antes de buscar."""
+        try:
+            await client.get(self.SEARCH_URL)
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.warning(f"[SciELO] Aviso ao aquecer sessão: {e}")
 
     async def harvest(
         self,
@@ -170,20 +192,23 @@ class SciELOHarvester(BaseHarvester):
             year_end = None
 
         total_overall = 0
+        # Contabilidade de confiabilidade: sem ela, uma falha de rede ou uma
+        # mudança de layout terminam como "coleta concluída com zero registros".
+        descritores_consultados = 0
+        descritores_com_falha: List[str] = []
+        falhas: List[str] = []
+        pagina_lida_com_sucesso = False
 
         async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True, headers=self.headers) as client:
             # 1. Warm-up da sessão HTTP para adquirir cookies de sessão
-            try:
-                await client.get(self.SEARCH_URL)
-                await asyncio.sleep(0.5)
-            except Exception as e:
-                logger.warning(f"[SciELO] Aviso ao aquecer sessão: {e}")
+            await self._aquecer_sessao(client)
 
             for desc in descriptors:
                 desc_clean = desc.strip()
                 if not desc_clean:
                     continue
 
+                descritores_consultados += 1
                 page = 1
                 total_for_desc = 0
 
@@ -210,39 +235,50 @@ class SciELOHarvester(BaseHarvester):
 
                     # Estratégia de retry exponencial para resiliência a oscilações do SciELO
                     res = None
-                    for attempt in range(1, 6):
+                    ultimo_erro = ""
+                    for attempt in range(1, self.MAX_TENTATIVAS + 1):
                         try:
                             res = await client.get(self.SEARCH_URL, params=params)
                             if res.status_code == 200:
                                 break
                             elif res.status_code in self.RETRY_STATUS_CODES:
+                                ultimo_erro = f"HTTP {res.status_code}"
                                 backoff = 1.5 ** attempt
                                 logger.warning(
-                                    f"[SciELO] HTTP {res.status_code} na pág {page} (tentativa {attempt}/5). "
+                                    f"[SciELO] HTTP {res.status_code} na pág {page} (tentativa {attempt}/{self.MAX_TENTATIVAS}). "
                                     f"Aguardando {backoff:.1f}s..."
                                 )
                                 await asyncio.sleep(backoff)
+                                # 403 indica bloqueio de robô: refazer o aquecimento
+                                # para renovar os cookies antes da próxima tentativa.
+                                if res.status_code == 403:
+                                    await self._aquecer_sessao(client)
                             else:
+                                ultimo_erro = f"HTTP {res.status_code}"
                                 logger.warning(f"[SciELO] HTTP {res.status_code} para '{desc_clean}' na pág {page}")
                                 break
                         except Exception as e:
+                            ultimo_erro = f"{type(e).__name__}: {e}"
                             backoff = 1.5 ** attempt
-                            logger.warning(f"[SciELO] Erro de rede na pág {page} (tentativa {attempt}/5): {e}")
+                            logger.warning(
+                                f"[SciELO] Erro de rede na pág {page} (tentativa {attempt}/{self.MAX_TENTATIVAS}): {e}"
+                            )
                             await asyncio.sleep(backoff)
 
                     if not res or res.status_code != 200:
-                        logger.error(f"[SciELO] Falha definitiva para '{desc_clean}' na pág {page}")
+                        motivo = ultimo_erro or "resposta inválida"
+                        logger.error(f"[SciELO] Falha definitiva para '{desc_clean}' na pág {page}: {motivo}")
+                        descritores_com_falha.append(desc_clean)
+                        falhas.append(f"'{desc_clean}' pág {page}: {motivo}")
                         break
 
-                    soup = BeautifulSoup(res.text, "lxml")
+                    soup = make_soup(res.text)
                     items = soup.find_all(class_="item")
-                    if not items:
-                        logger.info(f"[SciELO] Fim dos registros para '{desc_clean}' na pág {page}")
-                        break
+                    texto_pagina = soup.get_text(" ", strip=True)
 
                     # Extrair total de resultados na pág 1 (com fallback para regex)
+                    num_found = 0
                     if page == 1:
-                        num_found = 0
                         total_hits_elem = soup.find(id="TotalHits")
                         if total_hits_elem:
                             try:
@@ -250,7 +286,7 @@ class SciELOHarvester(BaseHarvester):
                             except Exception:
                                 pass
                         if not num_found:
-                            m = RE_TOTAL_HITS.search(soup.get_text())
+                            m = RE_TOTAL_HITS.search(texto_pagina)
                             if m:
                                 try:
                                     num_found = int(m.group(1).replace(".", ""))
@@ -258,6 +294,37 @@ class SciELOHarvester(BaseHarvester):
                                     pass
                         if num_found:
                             logger.info(f"[SciELO] Total encontrado para '{desc_clean}': {num_found}")
+
+                    if not items:
+                        if page == 1:
+                            # Zero itens na primeira página tem três causas muito
+                            # diferentes, e tratá-las como "fim dos registros"
+                            # é o que transforma bloqueio em coleta vazia.
+                            if num_found > 0:
+                                motivo = (
+                                    f"a página anuncia {num_found} resultados mas nenhum item foi "
+                                    f"reconhecido — layout do portal provavelmente mudou"
+                                )
+                                logger.error(f"[SciELO] '{desc_clean}': {motivo}")
+                                descritores_com_falha.append(desc_clean)
+                                falhas.append(f"'{desc_clean}': {motivo}")
+                            elif RE_SEM_RESULTADOS.search(texto_pagina):
+                                pagina_lida_com_sucesso = True
+                                logger.info(f"[SciELO] Busca sem resultados para '{desc_clean}'")
+                            else:
+                                motivo = (
+                                    "resposta sem itens e sem contador de resultados — possível "
+                                    "bloqueio do portal ou mudança de layout"
+                                )
+                                logger.error(f"[SciELO] '{desc_clean}': {motivo}")
+                                descritores_com_falha.append(desc_clean)
+                                falhas.append(f"'{desc_clean}': {motivo}")
+                        else:
+                            pagina_lida_com_sucesso = True
+                            logger.info(f"[SciELO] Fim dos registros para '{desc_clean}' na pág {page}")
+                        break
+
+                    pagina_lida_com_sucesso = True
 
                     for item in items:
                         paper = parse_scielo_item(item, descriptor=desc_clean)
@@ -286,6 +353,23 @@ class SciELOHarvester(BaseHarvester):
                     page += 1
                     await asyncio.sleep(self.capabilities.default_delay)
 
+            # Falha total: nenhuma página foi lida com sucesso em nenhum descritor.
+            # Terminar como "concluída com zero" publicaria um número falso no PRISMA.
+            if descritores_consultados and not pagina_lida_com_sucesso:
+                raise HarvestSourceError(
+                    self.source_name,
+                    "nenhuma página de resultados pôde ser lida",
+                    "; ".join(falhas[:5]) or "causa não identificada",
+                )
+
+            aviso: Optional[str] = None
+            if descritores_com_falha:
+                aviso = (
+                    f"{len(descritores_com_falha)} de {descritores_consultados} descritores "
+                    f"ficaram incompletos: {'; '.join(falhas[:3])}"
+                )
+                logger.warning(f"[SciELO] {aviso}")
+
             if on_progress:
                 await on_progress(
                     HarvestProgress(
@@ -295,5 +379,6 @@ class SciELOHarvester(BaseHarvester):
                         total_found_so_far=total_overall,
                         phase="completed",
                         is_complete=True,
+                        error=aviso,
                     )
                 )
