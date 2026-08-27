@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online)
 
 ---
 
@@ -32,6 +32,12 @@ diagnóstico medido dos coletores SciELO e BDTD, o plano de robustez e
 velocidade que dele decorre, e a correção do zero silencioso. Mesma gramática
 — diagnóstico → execução.
 
+Os documentos **39 a 41** são o **planejamento vigente da passagem para
+serviço online**: o que quebra quando o mesmo código atende vários
+pesquisadores pela internet, o desenho alvo (PostgreSQL, titularidade, login
+com Google, VPS, landing page) e as oito fases de execução com checklist
+marcável. Mesma gramática — diagnóstico → especificação → execução.
+
 Os documentos **37 e 38** são o **planejamento vigente de proteção de dados**,
 aberto porque o aplicativo vai deixar de ser software de mesa para prestar
 serviço com contas, dados pessoais e cobrança. O doc 29 responde *quem
@@ -47,6 +53,7 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 31–33   concluído          B.I. e bibliometria — as quatro fases entregues ✅
 34–36   vigente            confiabilidade e velocidade da coleta
 37–38   vigente            LGPD — diagnóstico e checklist verificável
+39–41   vigente            serviço online — diagnóstico, especificação e execução
 ```
 
 ---
@@ -111,6 +118,20 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 > A linha de base numérica dos docs 34 e 35 é reproduzível por
 > [`backend/scripts/bench_coleta.py`](../backend/scripts/bench_coleta.py),
 > que roda sem rede e serve de portão de regressão de desempenho.
+
+---
+
+## 📌 Planejamento vigente — passagem para serviço online
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **39** | [Diagnóstico da Passagem para Serviço Online](./39_DIAGNOSTICO_ONLINE.md) | 30 achados medidos no código: titularidade ausente, chaves de IA globais, esquema sem migração versionada, jobs em memória de processo, identidade e operação |
+| **40** | [Especificação do RSAC Online](./40_ESPECIFICACAO_ONLINE.md) | Documento normativo: PostgreSQL e Alembic, isolamento por dependência de router, login com Google (PKCE), infraestrutura em VPS, landing page e portão de publicação |
+| **41** | [Plano de Execução — RSAC Online](./41_PLANO_EXECUCAO_ONLINE.md) | Oito fases com tarefas marcáveis, critério de aceite e plano de reparo; 26 a 39 dias de trabalho |
+
+> **Escopo decidido:** VPS único com Docker Compose em região brasileira,
+> contas individuais, chaves de IA do próprio assinante (BYOK) e cobrança
+> adiada. O doc 39 §39.2 registra o porquê de cada escolha e o que ela alivia.
 
 ---
 
