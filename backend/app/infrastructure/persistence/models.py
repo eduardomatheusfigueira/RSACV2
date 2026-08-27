@@ -36,8 +36,31 @@ def generate_uuid() -> str:
 
 
 def utcnow() -> datetime:
-    """Retorna datetime UTC atual."""
+    """Retorna datetime UTC atual, com fuso explícito."""
     return datetime.now(timezone.utc)
+
+
+def as_utc(moment: datetime | None) -> datetime | None:
+    """
+    Normaliza para UTC consciente uma data **lida do banco**.
+
+    Existe porque os dois bancos legítimos do RSAC devolvem coisas diferentes da
+    mesma coluna `DateTime(timezone=True)`:
+
+      * **PostgreSQL** armazena `timestamptz` e devolve datetime consciente;
+      * **SQLite** não tem tipo com fuso — ignora `timezone=True` e devolve
+        datetime ingênuo, contendo a hora **UTC** que foi gravada.
+
+    Comparar um consciente com um ingênuo levanta `TypeError`, e é exatamente o
+    que aconteceria ao rodar em SQLite um código escrito e testado em
+    PostgreSQL. Passar toda leitura por aqui elimina a diferença num ponto só,
+    em vez de espalhar `tzinfo=None` pelas consultas.
+    """
+    if moment is None:
+        return None
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(timezone.utc)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -51,8 +74,10 @@ class ProjectModel(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     methodology: Mapped[str] = mapped_column(String(50), nullable=False, default="PRISMA-P")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships
@@ -81,8 +106,10 @@ class ProtocolModel(Base):
     search_descriptors: Mapped[str] = mapped_column(Text, default="{}")  # JSON string
     search_filters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para recorte temporal, idiomas, etc.
     manuscript_sections: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para todas as seções do PRISMA-ScR
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     # Relationships
     project: Mapped["ProjectModel"] = relationship(back_populates="protocol")
@@ -159,11 +186,13 @@ class PaperModel(Base):
     pdf_sha256: Mapped[str] = mapped_column(String(64), default="")
     pdf_text_chars: Mapped[int] = mapped_column(Integer, default=0)
     pdf_is_scanned: Mapped[bool] = mapped_column(Boolean, default=False)
-    pdf_acquired_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    pdf_acquired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_duplicate: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     merged_into_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     # Relationships
     project: Mapped["ProjectModel"] = relationship(back_populates="papers")
@@ -195,7 +224,7 @@ class PaperSourceModel(Base):
     paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id"))
     source_name: Mapped[str] = mapped_column(String(50), nullable=False)
     source_id: Mapped[str] = mapped_column(String(200), default="")
-    harvested_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    harvested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="sources")
 
@@ -251,7 +280,7 @@ class ExtractionAnswerModel(Base):
     evidence: Mapped[str] = mapped_column(Text, default="")
     page_ref: Mapped[str] = mapped_column(String(20), default="")
     source_kind: Mapped[str] = mapped_column(String(20), default="")  # pdf | resumo | manual
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="extraction_answers")
     question: Mapped["ExtractionQuestionModel"] = relationship(back_populates="answers")
@@ -270,8 +299,8 @@ class HarvestRunModel(Base):
     descriptors_used: Mapped[str] = mapped_column(Text, default="[]")  # JSON string
     query_parameters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string (HarvestQuery snapshot)
     checkpoint: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para retomada
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     records_found: Mapped[int] = mapped_column(Integer, default=0)
     records_new: Mapped[int] = mapped_column(Integer, default=0)
     records_duplicate: Mapped[int] = mapped_column(Integer, default=0)
@@ -306,7 +335,7 @@ class AuditLogModel(Base):
     ai_model: Mapped[str] = mapped_column(String(80), default="")
     ai_context_sha256: Mapped[str] = mapped_column(String(64), default="")
     ai_response_valid: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="audit_logs")
 
@@ -331,8 +360,8 @@ class UserModel(Base):
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(String(20), default="researcher", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     sessions: Mapped[list["SessionModel"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -355,9 +384,9 @@ class SessionModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     user_agent: Mapped[str] = mapped_column(String(200), default="")
 
     user: Mapped["UserModel"] = relationship(back_populates="sessions")
@@ -379,7 +408,7 @@ class LoginAttemptModel(Base):
     username: Mapped[str] = mapped_column(String(64), nullable=False)
     client_host: Mapped[str] = mapped_column(String(64), default="")
     successful: Mapped[bool] = mapped_column(Boolean, default=False)
-    attempted_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -394,7 +423,9 @@ class SourceCredentialModel(Base):
     api_key: Mapped[str] = mapped_column(EncryptedText, default="")
     inst_token: Mapped[str] = mapped_column(EncryptedText, default="")
     custom_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -419,7 +450,9 @@ class AISettingsModel(Base):
     endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     temperature: Mapped[float] = mapped_column(Float, default=0.2)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -438,7 +471,7 @@ class DeduplicationReportModel(Base):
     sources_breakdown: Mapped[str] = mapped_column(Text, default="{}")  # JSON
     duplicates_list: Mapped[str] = mapped_column(Text, default="[]")  # JSON
     report_text: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     # Relationships
     project: Mapped["ProjectModel"] = relationship()

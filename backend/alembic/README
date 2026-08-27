@@ -1,0 +1,81 @@
+# Migrações do RSAC V2
+
+A cadeia de migrações é a **única** forma de alterar o esquema. O que existia
+antes — `create_all` mais um `ALTER TABLE ADD COLUMN` caseiro em
+`database.py` — foi aposentado na Fase 0 do doc 41: resolvia o caso da coluna
+nova e silenciava todos os outros, o que é tolerável num aplicativo de mesa e
+não é num servidor com dados de terceiros.
+
+## O básico
+
+A URL do banco **não** fica no `alembic.ini`. Ela vem de
+`settings.effective_database_url`, que por sua vez respeita `RSAC_DATABASE_URL`.
+Isso mantém uma única fonte de verdade sobre qual é o banco — e evita que uma
+senha contendo `%` quebre a interpolação do `configparser`, que foi um defeito
+real desta cadeia.
+
+```bash
+cd backend
+
+# Estado atual
+alembic current
+
+# Aplicar tudo
+alembic upgrade head
+
+# Voltar uma revisão
+alembic downgrade -1
+
+# Ver o SQL sem executar (bom para revisar antes de produção)
+alembic upgrade head --sql
+```
+
+## Criando uma revisão
+
+```bash
+alembic revision --autogenerate -m "descrição curta no infinitivo"
+```
+
+**Sempre leia o arquivo gerado antes de confiar nele.** A autogeração acerta
+tabelas e colunas e erra com regularidade em índices, tipos personalizados e
+qualquer coisa que exija mover dado. Duas armadilhas já encontradas nesta
+cadeia:
+
+- **Tipos personalizados.** `EncryptedText` seria escrito como
+  `app.security.encrypted_type.EncryptedText()` num arquivo que não importa
+  `app`. O `render_item` em `env.py` resolve, escrevendo o tipo que o banco de
+  fato vê (`sa.Text()`). Migração é registro histórico: ela não pode depender
+  de código de aplicação que talvez não exista daqui a dois anos.
+- **Conversão de tipo que reinterpreta dado.** A revisão `eb25063c7237`
+  (`timestamptz`) precisou de `postgresql_using="col AT TIME ZONE 'UTC'"`.
+  Sem isso, o PostgreSQL leria cada data como hora local do servidor: num
+  servidor em `America/Sao_Paulo`, todo o banco andaria três horas, sem erro
+  nenhum.
+
+## Bancos de mesa anteriores ao versionamento
+
+Não exigem nada de quem os usa. `app/schema.py:aplicar_migracoes` detecta um
+banco com tabelas e sem `alembic_version`, carimba a revisão inicial e segue
+migrando. É a via 2 descrita lá, e `tests/test_schema/` a cobre.
+
+Para carimbar à mão, se algum dia for preciso:
+
+```bash
+alembic stamp head
+```
+
+## Os dois bancos
+
+A mesma cadeia roda em SQLite (perfil `desktop`) e PostgreSQL (perfil
+`server`). `env.py` liga `render_as_batch` no SQLite, que não implementa
+`ALTER TABLE` para alterar ou remover coluna e precisa recriar a tabela.
+
+Uma revisão que só faça sentido num dos dois deve se proteger explicitamente:
+
+```python
+if op.get_bind().dialect.name != "postgresql":
+    return
+```
+
+A CI roda a suíte nas duas variações. Uma revisão que passe só numa delas
+não entra.

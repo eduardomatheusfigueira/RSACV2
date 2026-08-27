@@ -39,28 +39,53 @@
 > SQLite (desktop) quanto em PostgreSQL (servidor).
 > **Esforço:** 3–5 dias · **Risco:** alto — toca o esquema inteiro.
 > Fecha O-06 a O-11.
+>
+> ## ✅ **CONCLUÍDA** — 27/08/2026
+>
+> **431 testes verdes em PostgreSQL 16, 430 em SQLite** (eram 421 antes).
+> Verificação feita contra um PostgreSQL real, não simulado.
+>
+> Três coisas que só apareceram na execução, e que o plano não previa:
+>
+> 1. **O código já era quase agnóstico de dialeto.** A suíte inteira passou em
+>    PostgreSQL logo após a correção de `database.py`, sem uma única alteração
+>    de consulta. O diagnóstico superestimou este risco.
+> 2. **`%` na URL do banco quebrava a partida.** `Config.set_main_option` grava
+>    no `configparser`, que trata `%` como interpolação: uma senha de banco
+>    contendo `%` derrubaria o servidor com `ValueError: invalid interpolation
+>    syntax`, sintoma que não sugere a causa em nada. A URL saiu do `.ini`; a
+>    conexão viaja por `config.attributes`. Regressão fixada em teste.
+> 3. **A conversão para `timestamptz` deslocava todo o banco.** `ALTER COLUMN
+>    ... TYPE timestamptz` sem cláusula interpreta cada valor como hora local
+>    *do servidor*: medido num servidor em `America/Sao_Paulo`, as 12:00 UTC
+>    gravadas viravam 15:00 UTC. A revisão declara `postgresql_using="col AT
+>    TIME ZONE 'UTC'"`, e o teste roda a migração com o servidor fora de UTC
+>    para provar que o instante sobrevive.
+>
+> Os testes de *threadpool* foram verificados por mutação: desfazendo o desvio,
+> ambos falham.
 
 ### Tarefas
 
-- [ ] **0.1** Adicionar `psycopg[binary]>=3.2` a `backend/pyproject.toml`
-- [ ] **0.2** Reescrever `backend/app/database.py` derivando do dialeto (§40.2.2): `connect_args` e PRAGMAs **apenas** no ramo `is_sqlite`; `pool_size`/`max_overflow`/`pool_recycle` no ramo PostgreSQL
-- [ ] **0.3** Inicializar Alembic em `backend/alembic/`, com `env.py` lendo `settings.effective_database_url` e `target_metadata = Base.metadata`
-- [ ] **0.4** Gerar a revisão inicial a partir do esquema atual (`alembic revision --autogenerate -m "esquema inicial"`) e **conferir o arquivo gerado linha a linha** — autogeração erra em índices e tipos
-- [ ] **0.5** Remover `_migrate_missing_columns()` e trocar `create_tables()` por `alembic upgrade head` no `lifespan` (`main.py:79`)
-- [ ] **0.6** Migrar todas as colunas de data para `DateTime(timezone=True)`, em revisão própria e separada
-- [ ] **0.7** Revisar `security/sessions.py:_naive_utc` para funcionar nos dois dialetos, com teste que cria sessão, avança o relógio e confere a expiração em cada um
-- [ ] **0.8** Escrever `docs`/`README` do procedimento: `alembic stamp head` para bancos desktop preexistentes
-- [ ] **0.9** Adicionar serviço `postgres:16-alpine` ao `docker-compose.dev.yml` para desenvolvimento
-- [ ] **0.10** Estender a CI: matriz que roda a suíte inteira em **SQLite** e em **PostgreSQL**; passo `alembic check` que falha se o modelo divergir da última revisão
-- [ ] **0.11** Mover extração de texto de PDF e cálculo de *hash* para `run_in_threadpool` (§40.6)
+- [x] **0.1** Adicionar `psycopg[binary]>=3.2` a `backend/pyproject.toml`
+- [x] **0.2** Reescrever `backend/app/database.py` derivando do dialeto (§40.2.2): `connect_args` e PRAGMAs **apenas** no ramo `is_sqlite`; `pool_size`/`max_overflow`/`pool_recycle` no ramo PostgreSQL
+- [x] **0.3** Inicializar Alembic em `backend/alembic/`, com `env.py` lendo `settings.effective_database_url` e `target_metadata = Base.metadata`
+- [x] **0.4** Gerar a revisão inicial a partir do esquema atual (`alembic revision --autogenerate -m "esquema inicial"`) e **conferir o arquivo gerado linha a linha** — autogeração erra em índices e tipos
+- [x] **0.5** Remover `_migrate_missing_columns()` e trocar `create_tables()` por `alembic upgrade head` no `lifespan` (`main.py:79`)
+- [x] **0.6** Migrar todas as colunas de data para `DateTime(timezone=True)`, em revisão própria e separada
+- [x] **0.7** Revisar `security/sessions.py:_naive_utc` para funcionar nos dois dialetos, com teste que cria sessão, avança o relógio e confere a expiração em cada um
+- [x] **0.8** Escrever `docs`/`README` do procedimento: `alembic stamp head` para bancos desktop preexistentes
+- [x] **0.9** Adicionar serviço `postgres:16-alpine` ao `docker-compose.dev.yml` para desenvolvimento
+- [x] **0.10** Estender a CI: matriz que roda a suíte inteira em **SQLite** e em **PostgreSQL**; passo `alembic check` que falha se o modelo divergir da última revisão
+- [x] **0.11** Mover extração de texto de PDF e cálculo de *hash* para `run_in_threadpool` (§40.6)
 
 ### Critério de aceite
 
-- [ ] `pytest -q` verde nos dois bancos
-- [ ] `alembic upgrade head` e `alembic downgrade -1` funcionam numa base com dados
-- [ ] `alembic check` não acusa divergência
-- [ ] O app de mesa abre, lê um projeto antigo e grava — sem migração manual
-- [ ] Nenhuma ocorrência de `PRAGMA` ou `check_same_thread` fora do ramo SQLite
+- [x] `pytest -q` verde nos dois bancos
+- [x] `alembic upgrade head` e `alembic downgrade -1` funcionam numa base com dados
+- [x] `alembic check` não acusa divergência
+- [x] O app de mesa abre, lê um projeto antigo e grava — sem migração manual
+- [x] Nenhuma ocorrência de `PRAGMA` ou `check_same_thread` fora do ramo SQLite
 
 ### Se der errado
 
@@ -331,7 +356,7 @@ Uma linha por fase, para acompanhar de longe.
 | Fase | Entrega | Bloqueia | Feito |
 |---|---|---|---|
 | **P** | Domínio, Google Cloud, VPS, backup, chave `age`, encarregado | Fases 2 e 4 | ⬜ |
-| **0** | Alembic + PostgreSQL, dialeto derivado, CI em dois bancos | Tudo | ⬜ |
+| **0** | Alembic + PostgreSQL, dialeto derivado, CI em dois bancos | Tudo | ✅ |
 | **1** | Titularidade, chaves por usuário, isolamento provado | Publicação | ⬜ |
 | **2** | Login com Google, PKCE, vínculo seguro, autocadastro travado | Publicação | ⬜ |
 | **3** | Direitos do titular, ROPA, retenção, prompt sem autores, aviso | Publicação | ⬜ |

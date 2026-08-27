@@ -117,3 +117,6 @@ desktop.ini
 Material de referência/
 *.pdf
 scratch/
+
+# Ambiente virtual do backend (Fase 0 — doc 41)
+backend/.venv/

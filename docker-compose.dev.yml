@@ -1,0 +1,37 @@
+# RSAC V2 — PostgreSQL de desenvolvimento (doc 41, tarefa 0.9)
+#
+# Sobe **apenas** o banco. O backend continua rodando no host, como sempre, para
+# que o ciclo de edição e recarga não passe por reconstrução de imagem.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#   export RSAC_DATABASE_URL="postgresql+psycopg://rsac:rsac@localhost:5433/rsac"
+#   cd backend && alembic upgrade head
+#
+# E para rodar a suíte contra ele:
+#
+#   RSAC_TEST_DATABASE_URL="postgresql+psycopg://rsac:rsac@localhost:5433/rsac_test" pytest -q
+#
+# A porta é 5433, e não 5432, de propósito: quem já tem PostgreSQL instalado na
+# máquina não descobre o conflito por um erro obscuro de conexão.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rsac-postgres-dev
+    environment:
+      POSTGRES_USER: rsac
+      POSTGRES_PASSWORD: rsac
+      POSTGRES_DB: rsac
+    ports:
+      - "5433:5432"
+    volumes:
+      - rsac_pgdata_dev:/var/lib/postgresql/data
+      - ./scripts/dev-postgres-init.sql:/docker-entrypoint-initdb.d/10-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rsac -d rsac"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  rsac_pgdata_dev:

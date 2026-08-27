@@ -290,7 +290,8 @@ async def upload_paper_pdf(
         codigo = 413 if "limite de" in mensagem or "Espaço em disco" in mensagem else 400
         raise HTTPException(status_code=codigo, detail=mensagem) from exc
 
-    document = pdf_service.read_document(saved_path)
+    # Rota assíncrona: a extração vai para a thread (doc 40 §40.6).
+    document = await pdf_service.read_document_async(saved_path)
 
     paper.pdf_path = saved_path
     paper.pdf_status = "manual"

@@ -19,7 +19,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-from app.database import SessionLocal, create_tables
+from app.database import SessionLocal, engine
+from app.schema import aplicar_migracoes
 from app.infrastructure.persistence.models import UserModel
 from app.security.passwords import (
     PasswordPolicyError,
@@ -43,7 +44,7 @@ def _imprimir_credencial(username: str, senha: str, role: str) -> None:
 
 
 def create_user(args: argparse.Namespace) -> int:
-    create_tables()
+    aplicar_migracoes(engine)
     db = SessionLocal()
     try:
         username = args.username.strip()
@@ -69,7 +70,7 @@ def create_user(args: argparse.Namespace) -> int:
 
 
 def list_users(args: argparse.Namespace) -> int:
-    create_tables()
+    aplicar_migracoes(engine)
     db = SessionLocal()
     try:
         usuarios = db.query(UserModel).order_by(UserModel.created_at.asc()).all()
@@ -86,7 +87,7 @@ def list_users(args: argparse.Namespace) -> int:
 
 
 def reset_password(args: argparse.Namespace) -> int:
-    create_tables()
+    aplicar_migracoes(engine)
     db = SessionLocal()
     try:
         user = db.query(UserModel).filter(UserModel.username == args.username.strip()).first()

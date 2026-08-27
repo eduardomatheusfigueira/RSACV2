@@ -20,7 +20,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.v1.router import api_router, public_router
 from app.config import settings
-from app.database import SessionLocal, create_tables
+from app.database import SessionLocal, engine
 from app.infrastructure.persistence.models import (
     HarvestRunModel,
     PaperModel,
@@ -35,6 +35,7 @@ from app.security.middleware import (
     instalar_tratamento_de_erro,
 )
 from app.security.migration import cifrar_segredos_legados
+from app.schema import aplicar_migracoes
 from app.schemas.common import HealthResponse
 
 # ── Logging Estruturado (Console + Arquivo) ───────────────────────────
@@ -74,7 +75,15 @@ async def lifespan(app: FastAPI):
         )
     logger.info(f"Banco de dados: {settings.effective_database_url}")
     logger.info(f"Arquivo de log: {log_file}")
-    create_tables()
+
+    # ── Esquema (doc 40 §40.2.3) ──────────────────────────────────────
+    #
+    # A migração roda aqui, na partida, e não por passo manual de implantação:
+    # com um único processo de aplicação (§40.6) não há corrida possível, e o
+    # passo manual é justamente o que se esquece de fazer em produção.
+    # `aplicar_migracoes` trata sozinha o banco de mesa anterior ao
+    # versionamento, carimbando-o antes de migrar.
+    aplicar_migracoes(engine)
 
     # ── Portão de partida segura (doc 29 §29.2.4) ─────────────────────
     #
@@ -99,8 +108,6 @@ async def lifespan(app: FastAPI):
 
     # Cifra o que ainda estiver em texto claro nas colunas de segredo. Roda a
     # cada partida e é idempotente: valor já cifrado é reconhecido e ignorado.
-    from app.database import engine
-
     cifrar_segredos_legados(engine)
 
     db_boot = SessionLocal()

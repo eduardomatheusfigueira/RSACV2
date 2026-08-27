@@ -3,6 +3,8 @@
 
 """RSAC V2 — Pytest Fixtures Globais."""
 
+import os
+
 import httpx
 import pytest
 from sqlalchemy import create_engine
@@ -70,19 +72,67 @@ def anyio_backend():
     return "asyncio"
 
 
-@pytest.fixture(scope="function")
-def db_session():
-    """Cria um banco SQLite in-memory com StaticPool para manter schema entre conexões."""
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+# ── Banco dos testes ──────────────────────────────────────────────────
+#
+# Por padrão, SQLite em memória: rápido, descartável e sem nada a instalar.
+# Definindo `RSAC_TEST_DATABASE_URL`, a **mesma** suíte roda contra
+# PostgreSQL — é assim que a CI prova que o código não depende do dialeto
+# (doc 41, tarefa 0.10).
+#
+# Os dois caminhos são deliberadamente diferentes. Em memória, cada teste
+# ganha um banco novo, e é o mais simples que funciona. Em PostgreSQL, criar
+# e destruir o esquema 400 vezes custaria minutos; então o esquema é criado
+# uma vez e cada teste roda dentro de uma transação externa que é revertida
+# ao final. `join_transaction_mode="create_savepoint"` é o que faz os
+# `db.commit()` do código de produção virarem SAVEPOINT em vez de gravação
+# definitiva — sem isso, o teste sujaria o banco do teste seguinte.
+
+TEST_DATABASE_URL = os.environ.get("RSAC_TEST_DATABASE_URL", "").strip()
+
+
+@pytest.fixture(scope="session")
+def _engine_externo():
+    """Engine e esquema do banco externo, criados uma vez por execução."""
+    if not TEST_DATABASE_URL:
+        yield None
+        return
+
+    engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+    Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
+    yield engine
+    Base.metadata.drop_all(engine)
+    engine.dispose()
+
+
+@pytest.fixture(scope="function")
+def db_session(_engine_externo):
+    """Sessão de banco isolada por teste."""
+    if _engine_externo is None:
+        # SQLite em memória com StaticPool, para manter o esquema entre conexões.
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        yield session
+        session.close()
+        return
+
+    conexao = _engine_externo.connect()
+    transacao = conexao.begin()
+    Session = sessionmaker(bind=conexao, join_transaction_mode="create_savepoint")
     session = Session()
-    yield session
-    session.close()
+    try:
+        yield session
+    finally:
+        session.close()
+        if transacao.is_active:
+            transacao.rollback()
+        conexao.close()
 
 
 @pytest.fixture(scope="function")
