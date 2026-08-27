@@ -25,7 +25,7 @@ import pytest
 from alembic import command
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 
 from app.infrastructure.persistence.models import Base
 from app.schema import _alembic_config, aplicar_migracoes
@@ -103,9 +103,26 @@ def test_banco_de_mesa_legado_e_carimbado_sem_perder_dado(url_descartavel):
     usuário — que perderia o acesso ao próprio trabalho.
     """
     engine = create_engine(url_descartavel)
-    Base.metadata.create_all(engine)
+
+    # Simula fielmente a instalação anterior: o esquema **daquela época** — que
+    # é o da revisão inicial — sem nenhuma noção de Alembic. Usar
+    # `Base.metadata.create_all` aqui seria infiel, porque criaria o esquema de
+    # *hoje* e o teste passaria a exercitar um cenário que não existe: um banco
+    # sem versão mas já com as colunas das revisões seguintes.
+    with engine.begin() as conexao:
+        command.upgrade(_alembic_config(conexao), "48963bb8d65a")
+    with engine.begin() as conexao:
+        conexao.execute(text("DROP TABLE alembic_version"))
 
     with engine.begin() as conexao:
+        # O projeto precisa de dono desde a Fase 1: a conta entra antes.
+        conexao.execute(
+            text(
+                "INSERT INTO users (id, username, password_hash, role, is_active,"
+                " created_at) VALUES ('u-legado', 'antiga', 'x', 'owner', TRUE,"
+                " CURRENT_TIMESTAMP)"
+            )
+        )
         conexao.execute(
             text(
                 "INSERT INTO projects (id, title, description, methodology,"
@@ -286,3 +303,87 @@ def test_conversao_para_timestamptz_preserva_o_instante(url_descartavel):
         f"no postgresql_using (obtido: {instante})"
     )
     assert config  # a configuração de módulo continua utilizável
+
+
+@pytest.mark.skipif(
+    TEST_DATABASE_URL.startswith("postgresql"),
+    reason="o modo em lote que recria tabelas só existe no SQLite",
+)
+def test_migracao_em_sqlite_com_filhos_referenciando_o_projeto(tmp_path, monkeypatch):
+    """
+    Regressão: a migração de titularidade quebrava num banco de mesa com dados.
+
+    O SQLite não implementa `ALTER TABLE` para alterar coluna, então o modo em
+    lote do Alembic recria a tabela — cria a nova, copia, **apaga a antiga** e
+    renomeia. Com `PRAGMA foreign_keys=ON`, que é o que o perfil `desktop` usa,
+    o `DROP TABLE projects` falha porque `papers`, `protocols` e `harvest_runs`
+    referenciam o projeto.
+
+    O efeito prático seria brutal e silencioso até o momento errado: quem
+    tivesse **qualquer** estudo coletado — ou seja, todo mundo que usou o
+    produto — veria a atualização morrer com `FOREIGN KEY constraint failed` e
+    ficaria sem acesso ao próprio trabalho. O primeiro teste desta migração
+    passou justamente porque o banco tinha um projeto vazio.
+    """
+    caminho = tmp_path / "mesa_com_dados.db"
+    url = f"sqlite:///{caminho}"
+    _recarregar_settings(monkeypatch, url)
+    engine = create_engine(url)
+
+    # Esquema da instalação anterior, sem Alembic.
+    with engine.begin() as conexao:
+        command.upgrade(_alembic_config(conexao), "48963bb8d65a")
+    with engine.begin() as conexao:
+        conexao.execute(text("DROP TABLE alembic_version"))
+
+    with engine.begin() as conexao:
+        conexao.execute(
+            text(
+                "INSERT INTO users (id, username, password_hash, role, is_active,"
+                " created_at) VALUES ('u1', 'pesquisador', 'x', 'owner', 1,"
+                " '2026-01-01 00:00:00')"
+            )
+        )
+        conexao.execute(
+            text(
+                "INSERT INTO projects (id, title, description, methodology,"
+                " created_at, updated_at, is_archived) VALUES ('p1', 'Revisão', '',"
+                " 'PRISMA-ScR', '2026-01-01 00:00:00', '2026-01-01 00:00:00', 0)"
+            )
+        )
+        conexao.execute(
+            text(
+                "INSERT INTO protocols (id, project_id, objective, pico_framework,"
+                " search_descriptors, search_filters, manuscript_sections,"
+                " created_at, updated_at) VALUES ('pr1', 'p1', '', '{}', '{}', '{}',"
+                " '{}', '2026-01-01 00:00:00', '2026-01-01 00:00:00')"
+            )
+        )
+
+    engine.dispose()
+
+    # Reabre com a verificação de integridade ligada, como faz o perfil desktop.
+    engine = create_engine(url)
+
+    @event.listens_for(engine, "connect")
+    def _ligar_fk(dbapi_connection, _):  # noqa: ANN001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    aplicar_migracoes(engine)
+
+    with engine.connect() as conexao:
+        dono = conexao.execute(
+            text("SELECT owner_id FROM projects WHERE id = 'p1'")
+        ).scalar_one()
+        protocolo = conexao.execute(
+            text("SELECT project_id FROM protocols WHERE id = 'pr1'")
+        ).scalar_one()
+        quebradas = conexao.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+
+    engine.dispose()
+
+    assert dono == "u1", "o projeto existente não recebeu dono"
+    assert protocolo == "p1", "o vínculo do protocolo se perdeu na recriação"
+    assert not quebradas, f"a migração deixou referências quebradas: {quebradas}"

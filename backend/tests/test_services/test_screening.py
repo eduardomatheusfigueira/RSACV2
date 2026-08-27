@@ -9,6 +9,7 @@ from app.domain.entities import Paper, Protocol
 from app.infrastructure.ai.base import BaseAIClient, ProtocolSuggestions, ScreeningResult
 from app.infrastructure.persistence.models import CriterionModel, PaperModel, ProjectModel, ProtocolModel
 from app.services.screening_service import ScreeningService
+from tests.conftest import OWNER_ID_TESTE
 
 
 class MockAIClient(BaseAIClient):
@@ -83,7 +84,7 @@ async def test_screen_single_paper_included(db_session):
     service = ScreeningService(ai_client=mock_ai)
 
     # 1. Setup projeto e protocolo
-    proj = ProjectModel(title="Projeto IA", methodology="PRISMA-P")
+    proj = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto IA", methodology="PRISMA-P")
     db_session.add(proj)
     db_session.flush()
 
@@ -131,7 +132,7 @@ async def test_screen_single_paper_excluded(db_session):
     mock_ai = MockAIClient()
     service = ScreeningService(ai_client=mock_ai)
 
-    proj = ProjectModel(title="Projeto IA 2", methodology="PRISMA-P")
+    proj = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto IA 2", methodology="PRISMA-P")
     db_session.add(proj)
     db_session.flush()
 
@@ -173,7 +174,7 @@ async def test_screen_single_paper_marca_criterios_por_codigo(db_session):
 
     service = ScreeningService(ai_client=CodeAIClient())
 
-    proj = ProjectModel(title="Projeto Códigos", methodology="PRISMA-P")
+    proj = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Códigos", methodology="PRISMA-P")
     db_session.add(proj)
     db_session.flush()
 

@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
+from app.security.dependencies import projeto_do_usuario
 from app.database import SessionLocal
 from app.infrastructure.persistence.models import (
     AISettingsModel,
@@ -33,8 +34,19 @@ from app.services.pdf_service import PDFService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/papers/{paper_id}/extraction", tags=["extraction"])
-project_extraction_router = APIRouter(prefix="/projects/{project_id}/extraction", tags=["extraction"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/papers/{paper_id}/extraction",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["extraction"],
+)
+project_extraction_router = APIRouter(
+    prefix="/projects/{project_id}/extraction",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["extraction"],
+)
 pdf_service = PDFService()
 extraction_service = ExtractionService()
 
@@ -237,9 +249,16 @@ async def extract_answers_with_ai(
     paper_id: str,
     question_id: Optional[str] = Query(None, description="ID opcional para extrair apenas uma pergunta específica"),
     db: Session = Depends(get_db),
+    projeto: ProjectModel = Depends(projeto_do_usuario),
 ):
     """Executa a extração automática das respostas do artigo (todas ou uma específica) usando IA."""
-    settings = db.query(AISettingsModel).first()
+    # A configuração de IA é a do dono do projeto — é a chave dele que será
+    # usada, e é a preferência dele que decide se a assistência está ligada.
+    settings = (
+        db.query(AISettingsModel)
+        .filter(AISettingsModel.user_id == projeto.owner_id)
+        .first()
+    )
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
@@ -247,7 +266,7 @@ async def extract_answers_with_ai(
         )
     try:
         answers = await extraction_service.extract_answers_with_ai(
-            db, project_id, paper_id, question_id=question_id
+            db, project_id, paper_id, question_id=question_id, user_id=projeto.owner_id
         )
         return {"status": "success", "answers": answers}
     except Exception as e:

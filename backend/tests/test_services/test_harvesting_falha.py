@@ -25,6 +25,7 @@ from app.infrastructure.persistence.models import (
     ProjectModel,
 )
 from app.services.harvesting_service import HarvestingService
+from tests.conftest import OWNER_ID_TESTE
 
 
 @pytest.fixture
@@ -62,7 +63,7 @@ class _ColetorQueFalha:
 @pytest.mark.anyio
 async def test_fonte_que_falha_e_marcada_como_failed(sessao_de_coleta):
     session = sessao_de_coleta()
-    projeto = ProjectModel(title="Projeto Coleta", methodology="PRISMA-P")
+    projeto = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Coleta", methodology="PRISMA-P")
     session.add(projeto)
     session.commit()
     project_id = projeto.id

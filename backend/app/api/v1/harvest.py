@@ -23,15 +23,24 @@ from app.schemas.harvest import (
     HarvestStartRequest,
 )
 from app.security.dependencies import (
+    projeto_do_usuario,
     origem_do_websocket_e_permitida,
     require_websocket_session,
+    verificar_projeto_do_usuario,
 )
 from app.services.harvest_job_manager import harvest_job_manager
 from app.services.harvesting_service import HarvestingService, ws_manager
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/harvest", tags=["harvest"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/harvest",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["harvest"],
+)
 harvesting_service = HarvestingService()
 
 
@@ -252,7 +261,10 @@ def list_harvest_runs(
 
 
 @router.get("/sources")
-def list_available_sources(db: Session = Depends(get_db)):
+def list_available_sources(
+    db: Session = Depends(get_db),
+    projeto: ProjectModel = Depends(projeto_do_usuario),
+):
     """Retorna fontes suportadas para coleta com capacidades e status de credenciais."""
     sources_info = [
         {
@@ -282,7 +294,13 @@ def list_available_sources(db: Session = Depends(get_db)):
         },
     ]
 
-    saved_creds = {r.source_name.upper(): bool(r.api_key) for r in db.query(SourceCredentialModel).all()}
+    # Quais fontes **este** usuário tem configuradas — não as de todo mundo.
+    saved_creds = {
+        r.source_name.upper(): bool(r.api_key)
+        for r in db.query(SourceCredentialModel)
+        .filter(SourceCredentialModel.user_id == projeto.owner_id)
+        .all()
+    }
 
     result = []
     for s in sources_info:
@@ -334,6 +352,14 @@ async def harvest_websocket(
     usuario = await require_websocket_session(websocket, db)
     if not usuario:
         await websocket.close(code=1008, reason="Autenticação necessária.")
+        return
+
+    # A dependência de titularidade do router não alcança o WebSocket — lá não
+    # há requisição HTTP para responder com 404. Sem esta verificação, quem
+    # tivesse qualquer sessão válida acompanharia a coleta e a triagem de
+    # outro assinante apenas conhecendo o identificador do projeto.
+    if not verificar_projeto_do_usuario(db, project_id, usuario):
+        await websocket.close(code=1008, reason="Projeto não encontrado.")
         return
 
     await ws_manager.connect(project_id, websocket)

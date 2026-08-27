@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.security.dependencies import projeto_do_usuario
 from app.domain.enums import Decision
 from app.infrastructure.persistence.models import ProjectModel
 from app.schemas.insights import ProjectInsights
@@ -15,7 +16,14 @@ from app.services.insights_service import get_project_insights
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/insights", tags=["insights"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/insights",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["insights"],
+)
 
 
 @router.get("", response_model=ProjectInsights)

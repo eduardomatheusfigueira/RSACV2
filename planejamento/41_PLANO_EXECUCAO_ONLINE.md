@@ -100,32 +100,66 @@ desenvolvimento** — é a única base com dado real neste momento.
 > **Objetivo:** cada acervo pertence a um usuário e é inalcançável pelos demais.
 > **Esforço:** 4–6 dias · **Risco:** alto — toca todas as rotas.
 > Fecha O-01 a O-05 e o bloqueante **L-46**.
+>
+> ## ✅ **CONCLUÍDA** — 27/08/2026
+>
+> **438 testes verdes nos dois bancos** (eram 431 ao fim da Fase 0).
+>
+> A suíte de isolamento enumera as rotas pelo **esquema OpenAPI** — 25 rotas
+> com `{project_id}` — e exige 404 de todas para um segundo usuário. Verificada
+> por mutação: removendo a dependência de um único router, ela falha nomeando
+> a rota exata que escapou.
+>
+> Três achados da execução:
+>
+> 1. **A migração quebrava o app de mesa de quem tinha dados.** O SQLite não
+>    altera coluna sem recriar a tabela, e com `PRAGMA foreign_keys=ON` o
+>    `DROP TABLE projects` falha porque `papers` e `protocols` a referenciam.
+>    O primeiro teste passou só porque o banco tinha um projeto **vazio** —
+>    qualquer instalação real teria morrido com `FOREIGN KEY constraint failed`
+>    e deixado o pesquisador sem acesso ao próprio trabalho. A migração passou
+>    a suspender a verificação e a conferir `PRAGMA foreign_key_check` ao
+>    final; há teste de regressão com projeto, artigo e protocolo.
+> 2. **Enumerar rotas por `app.routes` encontrava zero.** O FastAPI aninha as
+>    rotas incluídas em `_IncludedRouter`, um objeto interno cuja forma já
+>    mudou entre versões. A enumeração passou a sair do esquema OpenAPI, que é
+>    API pública. O piso mínimo afirmado no teste (`>= 15`) foi o que impediu
+>    que ele passasse verificando nada.
+> 3. **`require_owner` deixou de ser o critério certo.** Com contas
+>    individuais, todo assinante gere as próprias chaves; negar por papel
+>    protegia a chave de quem convidava, mas só porque havia **uma**
+>    configuração no banco inteiro. A garantia nova é mais forte e está em
+>    `test_credencial_de_um_nao_vaza_para_outro`: a chave de A não aparece — nem
+>    mascarada — para B.
+>
+> A migração recusa-se a adivinhar: com dados sem dono e mais de uma conta
+> ativa, ela **falha** em vez de atribuir o acervo a alguém.
 
 ### Tarefas
 
-- [ ] **1.1** `ProjectModel.owner_id` — FK `users.id`, `nullable=False`, indexado
-- [ ] **1.2** `AISettingsModel.user_id` — FK única: uma configuração por usuário
-- [ ] **1.3** `SourceCredentialModel` — chave única composta `(user_id, source_name)`
-- [ ] **1.4** Revisão Alembic que cria as colunas e **atribui tudo à conta ativa mais antiga** (a única, no desktop)
-- [ ] **1.5** Criar `projeto_do_usuario` em `security/dependencies.py`, devolvendo **404** e nunca 403 (§40.3.2)
-- [ ] **1.6** Aplicar a dependência nos nove roteadores com `/projects/{project_id}` no prefixo: `papers`, `protocols`, `harvest`, `deduplication`, `extraction` (os dois), `export`, `insights`, `screening_ai`
-- [ ] **1.7** `api/v1/projects.py` — `GET ""` e `GET "/{id}/stats"` filtram por `owner_id`; `POST ""` grava o dono
-- [ ] **1.8** `api/v1/ai.py` — trocar as dez ocorrências de `db.query(AISettingsModel).first()` por consulta escopada ao usuário corrente
-- [ ] **1.9** `api/v1/settings.py` — credenciais de fonte por usuário
-- [ ] **1.10** `infrastructure/ai/factory.py:25` — receber o usuário e resolver a configuração dele
-- [ ] **1.11** `services/profile_service.py` — exportação e importação restritas ao usuário corrente (O-05)
-- [ ] **1.12** Trocar `require_owner` por titularidade de recurso nas rotas de credencial; manter `require_owner` **apenas** na gestão de contas (§40.3.3)
-- [ ] **1.13** Corrigir a cascata de `DELETE /projects/{id}`: chamar `PDFService.delete_pdf` para cada paper (fecha **L-24**)
-- [ ] **1.14** Escrever `backend/tests/test_security/test_tenancy_isolation.py` que **enumera `app.routes`** e prova 404 para o segundo usuário em toda rota com `{project_id}`/`{paper_id}`
-- [ ] **1.15** Teste: usuário A salva chave de IA; usuário B não a vê nem a utiliza
-- [ ] **1.16** Frontend: nada muda (a API já é a mesma) — confirmar que nenhuma tela dependia de configuração global de IA
+- [x] **1.1** `ProjectModel.owner_id` — FK `users.id`, `nullable=False`, indexado
+- [x] **1.2** `AISettingsModel.user_id` — FK única: uma configuração por usuário
+- [x] **1.3** `SourceCredentialModel` — chave única composta `(user_id, source_name)`
+- [x] **1.4** Revisão Alembic que cria as colunas e **atribui tudo à conta ativa mais antiga** (a única, no desktop)
+- [x] **1.5** Criar `projeto_do_usuario` em `security/dependencies.py`, devolvendo **404** e nunca 403 (§40.3.2)
+- [x] **1.6** Aplicar a dependência nos nove roteadores com `/projects/{project_id}` no prefixo: `papers`, `protocols`, `harvest`, `deduplication`, `extraction` (os dois), `export`, `insights`, `screening_ai`
+- [x] **1.7** `api/v1/projects.py` — `GET ""` e `GET "/{id}/stats"` filtram por `owner_id`; `POST ""` grava o dono
+- [x] **1.8** `api/v1/ai.py` — trocar as dez ocorrências de `db.query(AISettingsModel).first()` por consulta escopada ao usuário corrente
+- [x] **1.9** `api/v1/settings.py` — credenciais de fonte por usuário
+- [x] **1.10** `infrastructure/ai/factory.py:25` — receber o usuário e resolver a configuração dele
+- [x] **1.11** `services/profile_service.py` — exportação e importação restritas ao usuário corrente (O-05)
+- [x] **1.12** Trocar `require_owner` por titularidade de recurso nas rotas de credencial; manter `require_owner` **apenas** na gestão de contas (§40.3.3)
+- [x] **1.13** Corrigir a cascata de `DELETE /projects/{id}`: chamar `PDFService.delete_pdf` para cada paper (fecha **L-24**)
+- [x] **1.14** Escrever `backend/tests/test_security/test_tenancy_isolation.py` que **enumera `app.routes`** e prova 404 para o segundo usuário em toda rota com `{project_id}`/`{paper_id}`
+- [x] **1.15** Teste: usuário A salva chave de IA; usuário B não a vê nem a utiliza
+- [x] **1.16** Frontend: nada muda (a API já é a mesma) — confirmar que nenhuma tela dependia de configuração global de IA
 
 ### Critério de aceite
 
-- [ ] `test_tenancy_isolation.py` verde, e **falha** se alguém adicionar rota sem isolamento (verificar com uma rota de teste propositalmente desprotegida)
-- [ ] Nenhuma consulta a `ProjectModel`, `AISettingsModel` ou `SourceCredentialModel` sem filtro de usuário: `grep -rn "query(ProjectModel)\|query(AISettingsModel)\|query(SourceCredentialModel)" backend/app` revisado item a item
-- [ ] Excluir projeto remove os PDFs do disco (teste confere o sistema de arquivos)
-- [ ] Perfil `desktop` intacto: uma conta, tudo dela
+- [x] `test_tenancy_isolation.py` verde, e **falha** se alguém adicionar rota sem isolamento (verificar com uma rota de teste propositalmente desprotegida)
+- [x] Nenhuma consulta a `ProjectModel`, `AISettingsModel` ou `SourceCredentialModel` sem filtro de usuário: `grep -rn "query(ProjectModel)\|query(AISettingsModel)\|query(SourceCredentialModel)" backend/app` revisado item a item
+- [x] Excluir projeto remove os PDFs do disco (teste confere o sistema de arquivos)
+- [x] Perfil `desktop` intacto: uma conta, tudo dela
 
 ### Se der errado
 
@@ -357,7 +391,7 @@ Uma linha por fase, para acompanhar de longe.
 |---|---|---|---|
 | **P** | Domínio, Google Cloud, VPS, backup, chave `age`, encarregado | Fases 2 e 4 | ⬜ |
 | **0** | Alembic + PostgreSQL, dialeto derivado, CI em dois bancos | Tudo | ✅ |
-| **1** | Titularidade, chaves por usuário, isolamento provado | Publicação | ⬜ |
+| **1** | Titularidade, chaves por usuário, isolamento provado | Publicação | ✅ |
 | **2** | Login com Google, PKCE, vínculo seguro, autocadastro travado | Publicação | ⬜ |
 | **3** | Direitos do titular, ROPA, retenção, prompt sem autores, aviso | Publicação | ⬜ |
 | **4** | VPS, Compose, Caddy/TLS, cifra em repouso, backup **restaurado** | Publicação | ⬜ |

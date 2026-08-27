@@ -167,10 +167,10 @@ class ScreeningService:
     def __init__(self, ai_client: Optional[BaseAIClient] = None):
         self.ai_client = ai_client
 
-    def _get_client(self, db: Session) -> BaseAIClient:
+    def _get_client(self, db: Session, user_id: Optional[str] = None) -> BaseAIClient:
         if self.ai_client:
             return self.ai_client
-        return AIFactory.get_client(db)
+        return AIFactory.get_client(db, user_id=user_id)
 
     async def screen_single_paper(
         self,
@@ -205,7 +205,7 @@ class ScreeningService:
         paper_entity = _to_paper_entity(paper_model)
         protocol_entity = _to_protocol_entity(protocol_model)
 
-        client = self._get_client(db)
+        client = self._get_client(db, user_id=actor.user_id if actor else None)
         result = await client.analyze_screening(paper_entity, protocol_entity)
 
         # Hash do contexto que produziu a decisão (doc 29 §29.9.3). Guardar o

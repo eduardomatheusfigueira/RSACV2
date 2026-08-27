@@ -22,6 +22,15 @@ SENHA_TESTE = "senha-de-teste-12345"
 OWNER_USERNAME = "dono_teste"
 RESEARCHER_USERNAME = "pesquisador_teste"
 
+# Identificadores fixos das contas de teste.
+#
+# Desde a Fase 1 do doc 41 todo projeto tem dono, e `projects.owner_id` é uma
+# chave estrangeira que o PostgreSQL faz valer. Fixar os identificadores
+# permite que um teste crie o projeto direto no banco — sem passar pela API —
+# e ainda assim ele pertença à conta que o cliente autenticado usa.
+OWNER_ID_TESTE = "conta-dono-de-teste"
+RESEARCHER_ID_TESTE = "conta-pesquisador-de-teste"
+
 
 @pytest.fixture(autouse=True)
 def dns_de_teste(monkeypatch, request):
@@ -118,6 +127,7 @@ def db_session(_engine_externo):
         Base.metadata.create_all(engine)
         Session = sessionmaker(bind=engine)
         session = Session()
+        _semear_conta_dona(session)
         yield session
         session.close()
         return
@@ -126,6 +136,7 @@ def db_session(_engine_externo):
     transacao = conexao.begin()
     Session = sessionmaker(bind=conexao, join_transaction_mode="create_savepoint")
     session = Session()
+    _semear_conta_dona(session)
     try:
         yield session
     finally:
@@ -135,20 +146,39 @@ def db_session(_engine_externo):
         conexao.close()
 
 
+def _semear_conta_dona(session) -> None:
+    """
+    Garante a conta dona antes de qualquer teste tocar o banco.
+
+    Sem ela, todo teste que cria um projeto direto no banco falharia na chave
+    estrangeira `projects.owner_id` — que o PostgreSQL faz valer e o SQLite,
+    sem o PRAGMA, não. Semear aqui mantém os dois bancos com o mesmo
+    comportamento, que é o ponto da matriz da CI.
+    """
+    if session.query(UserModel).filter(UserModel.id == OWNER_ID_TESTE).first():
+        return
+    session.add(
+        UserModel(
+            id=OWNER_ID_TESTE,
+            username=OWNER_USERNAME,
+            password_hash=hash_password(SENHA_TESTE),
+            role="owner",
+        )
+    )
+    session.commit()
+
+
 @pytest.fixture(scope="function")
 def contas(db_session):
     """Provisiona uma conta `owner` e uma `researcher` no banco de teste."""
-    dono = UserModel(
-        username=OWNER_USERNAME,
-        password_hash=hash_password(SENHA_TESTE),
-        role="owner",
-    )
+    dono = db_session.query(UserModel).filter(UserModel.id == OWNER_ID_TESTE).first()
     pesquisador = UserModel(
+        id=RESEARCHER_ID_TESTE,
         username=RESEARCHER_USERNAME,
         password_hash=hash_password(SENHA_TESTE),
         role="researcher",
     )
-    db_session.add_all([dono, pesquisador])
+    db_session.add(pesquisador)
     db_session.commit()
     db_session.refresh(dono)
     db_session.refresh(pesquisador)
@@ -206,9 +236,24 @@ async def anon_client(db_session, contas):
 
 
 @pytest.fixture(scope="function")
-async def anon_client_sem_contas(db_session):
+def db_session_sem_contas(db_session):
+    """
+    Sessão de uma instalação **sem nenhuma conta** provisionada.
+
+    `db_session` semeia a conta dona, porque desde a Fase 1 todo projeto
+    precisa de dono. Os testes de partida segura exigem o oposto — provar que
+    o backend se recusa a subir no perfil `server` quando não há conta —, e
+    para eles a semeadura é desfeita.
+    """
+    db_session.query(UserModel).delete()
+    db_session.commit()
+    return db_session
+
+
+@pytest.fixture(scope="function")
+async def anon_client_sem_contas(db_session_sem_contas):
     """Cliente sem sessão numa instalação sem nenhuma conta provisionada."""
-    app = _montar_app(db_session)
+    app = _montar_app(db_session_sem_contas)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client

@@ -21,6 +21,7 @@ a decisão de três vias abaixo.
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 from pathlib import Path
 
 from alembic import command
@@ -29,7 +30,6 @@ from alembic.runtime.migration import MigrationContext
 from sqlalchemy import inspect
 from sqlalchemy.engine import Engine
 
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -93,9 +93,49 @@ def aplicar_migracoes(engine: Engine) -> None:
             "Carimbando a revisão inicial antes de migrar."
         )
         _carimbar_revisao_inicial(engine)
-    with engine.begin() as conexao:
+    with _conexao_de_migracao(engine) as conexao:
         command.upgrade(_alembic_config(conexao), "head")
     logger.info("[Esquema] Banco na revisão mais recente.")
+
+
+@contextmanager
+def _conexao_de_migracao(engine: Engine):
+    """
+    Conexão sobre a qual a cadeia roda, com a integridade referencial
+    suspensa em SQLite.
+
+    O SQLite não implementa `ALTER TABLE` para alterar coluna, então o modo em
+    lote do Alembic **recria a tabela**: cria a nova, copia, apaga a antiga e
+    renomeia. Com `PRAGMA foreign_keys=ON` — que é o que o RSAC usa no perfil
+    `desktop` —, o `DROP TABLE projects` falha, porque `papers`, `protocols` e
+    `harvest_runs` a referenciam. O sintoma é uma atualização que morre com
+    `FOREIGN KEY constraint failed` num banco que estava perfeitamente
+    íntegro, e o usuário fica sem acesso ao próprio trabalho.
+
+    Suspender a verificação durante a migração é o procedimento documentado
+    para esse caso. O `PRAGMA` só tem efeito fora de transação, daí o
+    `AUTOCOMMIT`; e a verificação volta a valer na conexão seguinte, porque o
+    ajuste é por conexão, não persistente.
+    """
+    if engine.dialect.name != "sqlite":
+        with engine.begin() as conexao:
+            yield conexao
+        return
+
+    conexao = engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+    try:
+        conexao.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        yield conexao
+        # Confere que a suspensão não deixou referência quebrada para trás.
+        violacoes = conexao.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+        if violacoes:
+            raise RuntimeError(
+                "A migração deixou referências inconsistentes no banco: "
+                f"{violacoes[:5]}"
+            )
+    finally:
+        conexao.exec_driver_sql("PRAGMA foreign_keys=ON")
+        conexao.close()
 
 
 def _carimbar_revisao_inicial(engine: Engine) -> None:
@@ -108,7 +148,7 @@ def _carimbar_revisao_inicial(engine: Engine) -> None:
     """
     from alembic.script import ScriptDirectory
 
-    with engine.begin() as conexao:
+    with _conexao_de_migracao(engine) as conexao:
         config = _alembic_config(conexao)
         inicial = next(
             script.revision

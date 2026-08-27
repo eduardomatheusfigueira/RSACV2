@@ -20,9 +20,21 @@ class AIFactory:
     """Factory para instanciar e configurar o provedor de IA ativo."""
 
     @staticmethod
-    def get_client(db: Optional[Session] = None) -> BaseAIClient:
-        # 1. Tentar recuperar configurações salvas no banco
-        settings = db.query(AISettingsModel).first() if db else None
+    def get_client(db: Optional[Session] = None, user_id: Optional[str] = None) -> BaseAIClient:
+        """
+        Cliente de IA configurado com as chaves **do usuário informado**.
+
+        `user_id` é obrigatório na prática: sem ele não há configuração, e o
+        cliente cai no padrão sem chave. Isso é deliberado — a alternativa,
+        pegar a primeira linha da tabela como antes, faria a triagem de um
+        assinante rodar na cota paga de outro (doc 39, O-02).
+        """
+        # 1. Tentar recuperar a configuração daquele usuário
+        settings = (
+            db.query(AISettingsModel).filter(AISettingsModel.user_id == user_id).first()
+            if (db is not None and user_id)
+            else None
+        )
 
         if settings:
             provider = settings.provider.lower()

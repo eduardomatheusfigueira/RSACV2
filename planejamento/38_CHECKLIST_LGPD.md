@@ -6,6 +6,8 @@
 > **Base:** [`37_DIAGNOSTICO_LGPD.md`](./37_DIAGNOSTICO_LGPD.md).
 > **Norma:** Lei nº 13.709/2018, texto compilado (até a Lei nº 15.352/2026).
 > **Estado aferido em:** 27/08/2026, contra a árvore de trabalho do repositório.
+> **Reaferido em 27/08/2026** após as Fases 0 e 1 do doc 41: **L-24** e **L-46**
+> passaram a ✅, com teste de regressão e verificação por mutação.
 
 ---
 
@@ -88,7 +90,7 @@
 | **L-21** | Portabilidade a outro fornecedor, em formato de uso subsequente | 18, V; 19, §3º | `POST /api/v1/profile/export` (`api/v1/profile.py:99`) exporta o workspace, mas não é requisição de titular nem cobre dado de conta/cobrança | ⚠️ 🔜 |
 | **L-22** | Eliminação dos dados tratados com consentimento, ressalvado o art. 16 | 18, VI | Rota de exclusão de conta | ❌ 🔜 **Bloqueante** |
 | **L-23** | Informação sobre com quem houve uso compartilhado, e sobre a possibilidade e as consequências de não consentir | 18, VII e VIII | Aviso de privacidade + rota | ❌ 🔜 |
-| **L-24** | A eliminação alcança **todos** os repositórios, inclusive arquivos fora do banco | 16; 18, IV e VI | `sed -n '110,155p' backend/app/api/v1/projects.py` — a cascata não chama `PDFService.delete_pdf` (`backend/app/services/pdf_service.py:222`); os PDFs ficam em `settings.pdf_storage_dir` | ❌ **imediato** (F-02) |
+| **L-24** | A eliminação alcança **todos** os repositórios, inclusive arquivos fora do banco | 16; 18, IV e VI | `DELETE /projects/{id}` chama `PDFService.delete_pdf` para cada estudo; teste `test_excluir_projeto_apaga_os_pdfs_do_disco` confere o disco | ✅ (F-02 fechado, Fase 1) |
 | **L-25** | A correção/eliminação é comunicada aos agentes com quem houve uso compartilhado, salvo impossibilidade comprovada | 18, §6º | Procedimento; hoje inexistente | ❌ 🔜 |
 | **L-26** | Requisição de titular é atendida **sem custo** | 18, §5º | Política de atendimento | 📄 🔜 |
 | **L-27** | Havendo requisição sobre dado de terceiro em que o RSAC não é o agente (autor de publicação), a resposta comunica isso e indica o agente | 18, §4º, I | Procedimento escrito | 📄 🔜 |
@@ -131,7 +133,7 @@
 | **L-43** | Senha nunca em claro; hash moderno | 46 | `backend/app/security/passwords.py` — Argon2id, mínimo 12 caracteres | ✅ |
 | **L-44** | Sessão revogável, token guardado só em hash | 46 | `backend/app/security/sessions.py` | ✅ |
 | **L-45** | Autenticação é o padrão; rota nova nasce protegida | 46 | `backend/app/api/v1/router.py:39` (dependência no router agregador) | ✅ |
-| **L-46** | **Isolamento entre assinantes**: cada acervo só é alcançável por quem tem direito a ele | 46; 6º, VII | `grep -n "owner_id\|user_id" backend/app/infrastructure/persistence/models.py` — `ProjectModel` (linha 47) não tem dono; `api/v1/projects.py` não filtra por usuário | ❌ 🔜 **Bloqueante — crítico** (F-01) |
+| **L-46** | **Isolamento entre assinantes**: cada acervo só é alcançável por quem tem direito a ele | 46; 6º, VII | `ProjectModel.owner_id` + dependência `projeto_do_usuario` nos nove routers; `backend/tests/test_security/test_tenancy_isolation.py` enumera as rotas pelo OpenAPI e exige 404 | ✅ (F-01 fechado, Fase 1) |
 | **L-47** | Segregação de privilégio: quem tria não alcança credencial | 46 | `backend/app/security/dependencies.py`, `require_owner` | ✅ |
 | **L-48** | Credenciais cifradas em repouso | 46 | `backend/app/security/encrypted_type.py`, `crypto.py` | ✅ |
 | **L-49** | **Acervo** (banco e PDFs) cifrado em repouso no servidor — reduz gravidade de incidente | 46; 48, §3º | Só colunas de segredo usam `EncryptedText`; SQLite e `pdf_storage_dir` em claro | ❌ 🔜 **Bloqueante** (F-11) |

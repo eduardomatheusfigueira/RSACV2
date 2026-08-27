@@ -19,6 +19,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -68,9 +69,22 @@ def as_utc(moment: datetime | None) -> datetime | None:
 # ─────────────────────────────────────────────────────────────────────
 
 class ProjectModel(Base):
+    """
+    Projeto de revisão sistemática.
+
+    `owner_id` é o que torna o RSAC utilizável por mais de uma pessoa. Sem ele
+    — como era até a Fase 1 do doc 41 — qualquer conta autenticada lia, editava
+    e apagava o acervo de qualquer outra: aceitável quando o único cliente era
+    o Electron na própria máquina, e vazamento entre controladores distintos
+    assim que o backend passou a atender vários pesquisadores (doc 39, O-01).
+    """
+
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    owner_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     methodology: Mapped[str] = mapped_column(String(50), nullable=False, default="PRISMA-P")
@@ -416,10 +430,24 @@ class LoginAttemptModel(Base):
 # ─────────────────────────────────────────────────────────────────────
 
 class SourceCredentialModel(Base):
+    """
+    Credencial de base científica — **por usuário e por fonte**.
+
+    `source_name` era único no banco inteiro, então o token institucional de
+    uma universidade servia a todas as outras contas — o que, além do
+    vazamento, viola o contrato de licença da base (doc 39, O-03).
+    """
+
     __tablename__ = "source_credentials"
+    __table_args__ = (
+        UniqueConstraint("user_id", "source_name", name="uq_source_credentials_user_source"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    source_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    source_name: Mapped[str] = mapped_column(String(50), nullable=False)
     api_key: Mapped[str] = mapped_column(EncryptedText, default="")
     inst_token: Mapped[str] = mapped_column(EncryptedText, default="")
     custom_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -433,9 +461,22 @@ class SourceCredentialModel(Base):
 # ─────────────────────────────────────────────────────────────────────
 
 class AISettingsModel(Base):
+    """
+    Configuração de IA — **uma por usuário**.
+
+    Era uma linha só no banco inteiro, lida em dez pontos como
+    `db.query(AISettingsModel).first()`. Com contas individuais e chave do
+    próprio assinante (BYOK), isso significava que o segundo a salvar
+    sobrescrevia a chave do primeiro, e que a triagem de um rodava na cota paga
+    do outro (doc 39, O-02).
+    """
+
     __tablename__ = "ai_settings"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, unique=True, index=True
+    )
     ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     provider: Mapped[str] = mapped_column(String(50), nullable=False, default="gemini")
     model: Mapped[str] = mapped_column(String(100), nullable=False, default="gemini-3.6-flash")
