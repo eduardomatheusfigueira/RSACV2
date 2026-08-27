@@ -5,6 +5,7 @@
 
 import json
 import logging
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
@@ -127,31 +128,109 @@ async def cancel_harvest(
     return {"status": "cancelled", "message": "Coleta cancelada com sucesso."}
 
 
+# Execuções iniciadas dentro desta janela pertencem à mesma leva de coleta.
+_JANELA_DA_LEVA = timedelta(minutes=10)
+
+
 @router.get("/status")
 def get_harvest_status(
     project_id: str,
     db: Session = Depends(get_db),
 ):
-    """Retorna o estado atual da tarefa de coleta do projeto."""
-    info = harvest_job_manager.get_job_info(project_id)
-    if info:
-        return info
+    """
+    Retorna o estado atual da coleta do projeto, por fonte.
 
-    last_run = (
+    A interface consulta este endpoint em laço para saber quando a coleta
+    terminou e quanto cada base trouxe. Antes a resposta não trazia
+    `is_complete` nem `progress`, então o painel zerava a cada consulta e a
+    tela ficava "coletando" para sempre — inclusive quando uma fonte havia
+    falhado.
+    """
+    info = harvest_job_manager.get_job_info(project_id)
+    em_execucao = info is not None
+
+    runs = (
         db.query(HarvestRunModel)
         .filter(HarvestRunModel.project_id == project_id)
         .order_by(HarvestRunModel.started_at.desc())
-        .first()
+        .limit(30)
+        .all()
     )
-    if last_run:
+
+    if not runs:
         return {
             "project_id": project_id,
-            "status": last_run.status,
-            "last_run_id": last_run.id,
-            "completed_at": last_run.completed_at.isoformat() if last_run.completed_at else None,
+            "status": "running" if em_execucao else "idle",
+            "is_complete": not em_execucao,
+            "sources": (info or {}).get("sources", []),
+            "progress": {},
+            "total_found": 0,
+            "total_new": 0,
+            "total_duplicate": 0,
         }
 
-    return {"project_id": project_id, "status": "idle"}
+    # Recortar a leva mais recente (as execuções disparadas juntas)
+    anchor = runs[0].started_at
+    da_leva = [
+        r for r in runs
+        if r.started_at is not None and anchor is not None and (anchor - r.started_at) <= _JANELA_DA_LEVA
+    ] or [runs[0]]
+
+    progress: dict = {}
+    for r in da_leva:
+        if r.source_name in progress:
+            continue  # a execução mais recente da fonte já foi considerada
+        progress[r.source_name] = {
+            "status": r.status,
+            "run_id": r.id,
+            "total_found": r.records_found or 0,
+            "total_new": r.records_new or 0,
+            "total_duplicate": r.records_duplicate or 0,
+            "error": r.error_message,
+            "started_at": r.started_at.isoformat() if r.started_at else None,
+            "completed_at": r.completed_at.isoformat() if r.completed_at else None,
+        }
+
+    total_found = sum(p["total_found"] for p in progress.values())
+    total_new = sum(p["total_new"] for p in progress.values())
+    total_duplicate = sum(p["total_duplicate"] for p in progress.values())
+
+    if em_execucao:
+        status = "running"
+    elif any(p["status"] == "failed" for p in progress.values()):
+        status = "failed"
+    elif any(p["status"] == "cancelled" for p in progress.values()):
+        status = "cancelled"
+    else:
+        status = da_leva[0].status
+
+    falhas = [
+        f"{fonte}: {dados['error'] or 'falha não detalhada'}"
+        for fonte, dados in progress.items()
+        if dados["status"] == "failed"
+    ]
+    avisos = [
+        f"{fonte}: {dados['error']}"
+        for fonte, dados in progress.items()
+        if dados["status"] == "completed" and dados["error"]
+    ]
+
+    return {
+        "project_id": project_id,
+        "status": status,
+        "is_complete": not em_execucao,
+        "sources": (info or {}).get("sources", list(progress.keys())),
+        "started_at": (info or {}).get("started_at")
+        or (da_leva[0].started_at.isoformat() if da_leva[0].started_at else None),
+        "last_run_id": runs[0].id,
+        "completed_at": runs[0].completed_at.isoformat() if runs[0].completed_at else None,
+        "progress": progress,
+        "total_found": total_found,
+        "total_new": total_new,
+        "total_duplicate": total_duplicate,
+        "failures": falhas,
+        "warnings": avisos,
+    }
 
 
 @router.get("/runs", response_model=HarvestRunListResponse)

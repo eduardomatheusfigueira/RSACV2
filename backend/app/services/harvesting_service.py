@@ -129,6 +129,25 @@ class HarvestingService:
             new_count = 0
             dup_count = 0
 
+            # Coletar em lotes de 25 registros para evitar fsync O(N^2).
+            # Definidos fora do `try` porque o tratamento de falha também
+            # precisa gravar o lote pendente.
+            batch_records: List[RawPaperRecord] = []
+
+            def _persist_batch_sync(records: List[RawPaperRecord]):
+                session = SessionLocal()
+                try:
+                    n_c, d_c, summaries = self.dedup_service.process_batch(
+                        session, project_id, records
+                    )
+                    return n_c, d_c, summaries
+                finally:
+                    session.close()
+
+            # Aviso de coleta parcial emitido pelo coletor no evento final —
+            # é gravado na execução para que a incompletude fique registrada.
+            aviso_do_coletor: Dict[str, Optional[str]] = {"mensagem": None}
+
             try:
                 source_creds = creds.get(source_name.upper(), {})
                 harvester = HarvesterFactory.get_harvester(
@@ -139,6 +158,8 @@ class HarvestingService:
                 )
 
                 async def on_progress_callback(prog: HarvestProgress):
+                    if prog.error:
+                        aviso_do_coletor["mensagem"] = prog.error
                     await ws_manager.broadcast(
                         project_id,
                         {
@@ -153,19 +174,6 @@ class HarvestingService:
                             "error": prog.error,
                         },
                     )
-
-                # Coletar em lotes de 25 registros para evitar fsync O(N^2)
-                batch_records: List[RawPaperRecord] = []
-
-                def _persist_batch_sync(records: List[RawPaperRecord]):
-                    session = SessionLocal()
-                    try:
-                        n_c, d_c, summaries = self.dedup_service.process_batch(
-                            session, project_id, records
-                        )
-                        return n_c, d_c, summaries
-                    finally:
-                        session.close()
 
                 async for raw_record in harvester.harvest(query=query, on_progress=on_progress_callback):
                     found_count += 1
@@ -216,6 +224,7 @@ class HarvestingService:
                     run_obj.records_found = found_count
                     run_obj.records_new = new_count
                     run_obj.records_duplicate = dup_count
+                    run_obj.error_message = aviso_do_coletor["mensagem"]
                     db.commit()
                 db.close()
 
@@ -228,6 +237,7 @@ class HarvestingService:
                         "records_found": found_count,
                         "records_new": new_count,
                         "records_duplicate": dup_count,
+                        "warning": aviso_do_coletor["mensagem"],
                     },
                 )
 
@@ -248,6 +258,22 @@ class HarvestingService:
 
             except Exception as e:
                 logger.error(f"[Harvesting] Falha no coletor {source_name}: {e}")
+
+                # Uma fonte pode falhar depois de já ter entregue registros. O
+                # lote pendente (< 25) é gravado antes de marcar a execução como
+                # falha: descartá-lo perderia trabalho já recuperado da base.
+                if batch_records:
+                    try:
+                        b_new, b_dup, _ = await asyncio.to_thread(_persist_batch_sync, list(batch_records))
+                        new_count += b_new
+                        dup_count += b_dup
+                    except Exception as persist_error:
+                        logger.error(
+                            f"[Harvesting] Falha ao gravar o lote pendente de {source_name}: {persist_error}"
+                        )
+                    finally:
+                        batch_records.clear()
+
                 db = SessionLocal()
                 run_obj = db.query(HarvestRunModel).filter(HarvestRunModel.id == run_id).first()
                 if run_obj:

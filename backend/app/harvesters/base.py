@@ -13,6 +13,27 @@ from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 
+class HarvestSourceError(RuntimeError):
+    """
+    Falha que impede a fonte de entregar resultados confiáveis.
+
+    Erro de rede, bloqueio (403/429 persistente) ou mudança de layout que zera a
+    raspagem **não podem** terminar como coleta bem-sucedida com zero registros:
+    o número de recuperados vai para o fluxograma PRISMA. Coletores levantam esta
+    exceção para que a execução seja marcada `failed` com mensagem visível, em vez
+    de `completed` com zero.
+    """
+
+    def __init__(self, source_name: str, motivo: str, detalhes: Optional[str] = None):
+        self.source_name = source_name
+        self.motivo = motivo
+        self.detalhes = detalhes
+        mensagem = f"[{source_name}] {motivo}"
+        if detalhes:
+            mensagem = f"{mensagem} ({detalhes})"
+        super().__init__(mensagem)
+
+
 @dataclass(frozen=True)
 class HarvestQuery:
     """Recorte de busca completo e imutável para uma sessão de coleta."""

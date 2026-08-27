@@ -67,7 +67,9 @@ export function HarvestPage(): JSX.Element {
   const [maxRecords, setMaxRecords] = useState<number>(0) // 0 = Ilimitado
   const [isHarvesting, setIsHarvesting] = useState(false)
   const [isDeduplicating, setIsDeduplicating] = useState(false)
-  const [progress, setProgress] = useState<Record<string, { status: string; total_found: number }>>({})
+  const [progress, setProgress] = useState<
+    Record<string, { status: string; total_found: number; error?: string | null }>
+  >({})
   const [totalFound, setTotalFound] = useState(0)
   const [totalNew, setTotalNew] = useState(0)
   const [totalDuplicate, setTotalDuplicate] = useState(0)
@@ -84,6 +86,7 @@ export function HarvestPage(): JSX.Element {
   const [isDedupModalOpen, setIsDedupModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const logConsoleRef = useRef<HTMLDivElement | null>(null)
   const feedScrollRef = useRef<HTMLDivElement | null>(null)
 
@@ -92,6 +95,17 @@ export function HarvestPage(): JSX.Element {
       loadInitialData(id)
     }
   }, [id])
+
+  /* O laço de status precisa morrer junto com a tela: sem isto ele seguia
+     consultando o backend depois que a pessoa navegava para outra página. */
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [])
 
   // WebSocket for real-time paper harvest events
   useEffect(() => {
@@ -121,8 +135,53 @@ export function HarvestPage(): JSX.Element {
             if (msg.total_found !== undefined) setTotalFound(msg.total_found)
             if (msg.total_new !== undefined) setTotalNew(msg.total_new)
             if (msg.total_duplicate !== undefined) setTotalDuplicate(msg.total_duplicate)
+          } else if (msg.type === 'harvest_progress') {
+            setProgress((prev) => ({
+              ...prev,
+              [msg.source]: {
+                status: msg.phase === 'completed' ? 'completed' : 'running',
+                total_found: msg.total_found ?? prev[msg.source]?.total_found ?? 0,
+                error: msg.error ?? prev[msg.source]?.error ?? null,
+              },
+            }))
           } else if (msg.type === 'harvest_source_completed') {
+            setProgress((prev) => ({
+              ...prev,
+              [msg.source]: {
+                status: 'completed',
+                total_found: msg.records_found ?? prev[msg.source]?.total_found ?? 0,
+                error: msg.warning ?? null,
+              },
+            }))
+            /* Coleta parcial não é sucesso silencioso: se o coletor avisou que
+               descritores ficaram incompletos, quem vai publicar o PRISMA
+               precisa saber antes de usar o número. */
+            if (msg.warning) {
+              toast.warning(`${msg.source}: coleta incompleta`, { description: String(msg.warning) })
+            }
             // Refresh runs
+            api.listHarvestRuns(id).then((res) => setHarvestRuns(res.items)).catch(() => {})
+          } else if (msg.type === 'harvest_source_failed') {
+            setProgress((prev) => ({
+              ...prev,
+              [msg.source]: {
+                status: 'failed',
+                total_found: prev[msg.source]?.total_found ?? 0,
+                error: msg.error ?? 'Falha não detalhada',
+              },
+            }))
+            toast.error(`Falha na coleta em ${msg.source}`, {
+              description: String(msg.error || 'A base não respondeu. Nenhum registro foi recuperado.'),
+            })
+            api.listHarvestRuns(id).then((res) => setHarvestRuns(res.items)).catch(() => {})
+          } else if (msg.type === 'harvest_error') {
+            toast.error('Coleta não pôde ser iniciada', {
+              description: String(msg.message || 'Erro desconhecido.'),
+            })
+            setIsHarvesting(false)
+          } else if (msg.type === 'harvest_cancelled') {
+            setIsHarvesting(false)
+          } else if (msg.type === 'harvest_all_completed') {
             api.listHarvestRuns(id).then((res) => setHarvestRuns(res.items)).catch(() => {})
           }
         } catch (err) {
@@ -234,13 +293,19 @@ export function HarvestPage(): JSX.Element {
       })
 
       // Polling de status da coleta
+      if (pollRef.current) clearInterval(pollRef.current)
       const pollInterval = setInterval(async () => {
         try {
           const statusRes = await api.getHarvestStatus(id)
-          setProgress(statusRes.progress || {})
+          /* Só sobrescrever o painel quando a resposta realmente traz progresso:
+             substituir por `{}` zerava as contagens a cada 1,5 s. */
+          if (statusRes.progress && Object.keys(statusRes.progress).length > 0) {
+            setProgress(statusRes.progress)
+          }
 
           if (statusRes.is_complete) {
             clearInterval(pollInterval)
+            pollRef.current = null
             setIsHarvesting(false)
             setTotalFound(statusRes.total_found || 0)
             setTotalNew(statusRes.total_new || statusRes.total_found || 0)
@@ -254,21 +319,35 @@ export function HarvestPage(): JSX.Element {
             setHarvestRuns(runsRes.items || [])
             setCollectedPapers(papersRes.items || [])
 
+            const falhas: string[] = statusRes.failures || []
+            const avisos: string[] = statusRes.warnings || []
+
             /* Uma coleta multibase leva minutos; a pessoa sai da tela. O aviso
                é anunciado por leitor de tela e alcança quem já mudou de aba. */
-            toast.success('Coleta multibase concluída', {
-              description: `${statusRes.total_new || statusRes.total_found || 0} trabalhos novos · ${statusRes.total_duplicate || 0} duplicatas unificadas.`,
-            })
+            if (falhas.length > 0) {
+              toast.error(`Coleta concluída com ${falhas.length} base(s) em falha`, {
+                description: falhas.join(' · '),
+              })
+            } else {
+              toast.success('Coleta multibase concluída', {
+                description: `${statusRes.total_new || statusRes.total_found || 0} trabalhos novos · ${statusRes.total_duplicate || 0} duplicatas unificadas.`,
+              })
+            }
+            avisos.forEach((aviso) =>
+              toast.warning('Coleta parcial', { description: aviso })
+            )
           }
         } catch (err) {
           console.error('Erro no polling de status:', err)
           clearInterval(pollInterval)
+          pollRef.current = null
           setIsHarvesting(false)
           toast.error('A coleta foi interrompida', {
             description: 'Falha ao consultar o andamento. O que já foi recuperado está no acervo.',
           })
         }
       }, 1500)
+      pollRef.current = pollInterval
     } catch (err: any) {
       console.error('Erro ao iniciar coleta:', err)
       setIsHarvesting(false)
@@ -706,7 +785,9 @@ export function HarvestPage(): JSX.Element {
                 {(() => {
                   const feitas = selectedSources.filter((s) => progress[s]?.status === 'completed').length
                   const rodando = selectedSources.filter((s) => progress[s]?.status === 'running').length
-                  const comErro = selectedSources.filter((s) => progress[s]?.status === 'error').length
+                  const comErro = selectedSources.filter(
+                    (s) => progress[s]?.status === 'error' || progress[s]?.status === 'failed'
+                  ).length
                   const partes = [`${feitas} de ${selectedSources.length} bases concluídas`]
                   if (rodando) partes.push(`${rodando} em execução`)
                   if (comErro) partes.push(`${comErro} com erro`)
@@ -720,7 +801,7 @@ export function HarvestPage(): JSX.Element {
                   const srcObj = sources.find((s) => s.id === srcId)
                   const isRunning = p?.status === 'running'
                   const isDone = p?.status === 'completed'
-                  const isError = p?.status === 'error'
+                  const isError = p?.status === 'error' || p?.status === 'failed'
 
                   return (
                     <div key={srcId} className="source-progress-row">
@@ -732,6 +813,11 @@ export function HarvestPage(): JSX.Element {
                       </div>
                       <div className="source-progress-count">
                         <span>{p?.total_found ?? 0} registros</span>
+                        {p?.error ? (
+                          <span className="source-progress-erro" title={String(p.error)}>
+                            {String(p.error)}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   )
