@@ -220,7 +220,7 @@ def create_app() -> FastAPI:
     expose_docs = settings.expose_api_docs
 
     app = FastAPI(
-        title="RSAC API",
+        title="Revsist API",
         description="Revisão Sistemática Assistida por Computador — Backend API",
         version=settings.app_version,
         lifespan=lifespan,

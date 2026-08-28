@@ -4,7 +4,7 @@
 """
 RSAC V2 — Build Executável Desktop
 Compila o executável unificado do aplicativo com PyInstaller:
-- RSAC.exe (Aplicativo Desktop com Backend Integrado)
+- Revsist.exe (Aplicativo Desktop com Backend Integrado)
 """
 
 import os
@@ -46,18 +46,18 @@ def ensure_icon_ico():
 
 
 def create_batch_launcher():
-    """Cria o arquivo Iniciar_RSAC.bat na raiz para conveniência."""
-    launcher_bat = ROOT_DIR / "Iniciar_RSAC.bat"
+    """Cria o arquivo Iniciar_Revsist.bat na raiz para conveniência."""
+    launcher_bat = ROOT_DIR / "Iniciar_Revsist.bat"
     with open(launcher_bat, "w", encoding="utf-8") as f:
         f.write("@echo off\n")
-        f.write("title RSAC V2 — Aplicativo Desktop\n")
-        f.write("if exist \"RSAC.exe\" (\n")
-        f.write("    start \"\" \"RSAC.exe\"\n")
+        f.write("title Revsist — Aplicativo Desktop\n")
+        f.write("if exist \"Revsist.exe\" (\n")
+        f.write("    start \"\" \"Revsist.exe\"\n")
         f.write(") else (\n")
         f.write("    python scripts\\launcher.py\n")
         f.write(")\n")
 
-    print("[✓] Arquivo Iniciar_RSAC.bat atualizado na raiz.")
+    print("[✓] Arquivo Iniciar_Revsist.bat atualizado na raiz.")
 
 
 def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
@@ -115,8 +115,8 @@ def build_exe(script_path: Path, output_name: str, icon_path: Path | None):
 def main():
     icon_path = ensure_icon_ico()
 
-    # Compilar RSAC.exe único
-    ok = build_exe(SCRIPTS_DIR / "launcher.py", "RSAC", icon_path)
+    # Compilar Revsist.exe único
+    ok = build_exe(SCRIPTS_DIR / "launcher.py", "Revsist", icon_path)
 
     create_batch_launcher()
 
@@ -135,8 +135,8 @@ def main():
     print("\n" + "═" * 60)
     if ok:
         print("🎉 SUCESSO! Executável oficial gerado na raiz:")
-        print(f"  👉 {ROOT_DIR / 'RSAC.exe'}")
-        print(f"  👉 {ROOT_DIR / 'Iniciar_RSAC.bat'}")
+        print(f"  👉 {ROOT_DIR / 'Revsist.exe'}")
+        print(f"  👉 {ROOT_DIR / 'Iniciar_Revsist.bat'}")
     else:
         print("⚠️ Houve falhas durante a compilação. Verifique os logs acima.")
     print("═" * 60 + "\n")

@@ -46,7 +46,7 @@
 
 | ID | Exigência | Art. | Como conferir | Estado |
 |---|---|---|---|---|
-| **L-01** | Está declarado por escrito em quais conjuntos o RSAC é **controlador** e em quais é **operador** | 5º, VI e VII | `37_DIAGNOSTICO_LGPD.md` §37.2.2 | ✅ |
+| **L-01** | Está declarado por escrito em quais conjuntos o Revsist é **controlador** e em quais é **operador** | 5º, VI e VII | `37_DIAGNOSTICO_LGPD.md` §37.2.2 | ✅ |
 | **L-02** | Existe inventário atualizado dos dados pessoais tratados, com onde vivem no código | 37; 6º, X | `37_DIAGNOSTICO_LGPD.md` §37.3; conferir contra `grep -n "Mapped\[str\]" backend/app/infrastructure/persistence/models.py` | ✅ |
 | **L-03** | O inventário é reaferido a cada modelo novo com dado pessoal | 6º, X | Revisão de PR que altere `models.py` | 📄 |
 | **L-04** | Os Termos de Uso contêm cláusula de operador com as instruções documentadas do controlador e proibição de uso próprio dos dados da revisão | 39; 42, §1º, I | Artefato jurídico | 📄 🔜 **Bloqueante** |
@@ -93,7 +93,7 @@
 | **L-24** | A eliminação alcança **todos** os repositórios, inclusive arquivos fora do banco | 16; 18, IV e VI | `DELETE /projects/{id}` chama `PDFService.delete_pdf` para cada estudo; teste `test_excluir_projeto_apaga_os_pdfs_do_disco` confere o disco | ✅ (F-02 fechado, Fase 1) |
 | **L-25** | A correção/eliminação é comunicada aos agentes com quem houve uso compartilhado, salvo impossibilidade comprovada | 18, §6º | Procedimento; hoje inexistente | ❌ 🔜 |
 | **L-26** | Requisição de titular é atendida **sem custo** | 18, §5º | Política de atendimento | 📄 🔜 |
-| **L-27** | Havendo requisição sobre dado de terceiro em que o RSAC não é o agente (autor de publicação), a resposta comunica isso e indica o agente | 18, §4º, I | Procedimento escrito | 📄 🔜 |
+| **L-27** | Havendo requisição sobre dado de terceiro em que o Revsist não é o agente (autor de publicação), a resposta comunica isso e indica o agente | 18, §4º, I | Procedimento escrito | 📄 🔜 |
 
 ---
 
@@ -218,7 +218,7 @@
 | ID | Exigência | Art. | Como conferir | Estado |
 |---|---|---|---|---|
 | **L-85** | Os Termos deixam claro que o assinante é o controlador do que carrega e responde pela licitude daquele tratamento | 39; 42 | Artefato jurídico | 📄 🔜 **Bloqueante** |
-| **L-86** | O RSAC não usa o conteúdo do assinante para finalidade própria (treinar modelo, gerar métrica identificável) | 39; 6º, I | Revisão de código de qualquer rotina que leia acervo de terceiro | 🔜 |
+| **L-86** | O Revsist não usa o conteúdo do assinante para finalidade própria (treinar modelo, gerar métrica identificável) | 39; 6º, I | Revisão de código de qualquer rotina que leia acervo de terceiro | 🔜 |
 | **L-87** | Anonimização ou pseudonimização é oferecida sempre que possível nos estudos | 7º, IV; 11, II, "c"; 13, §4º | Não há função de anonimização no acervo | ⚠️ |
 | **L-88** | Há trava por projeto que impede envio de conteúdo a terceiro quando o projeto for de saúde sob art. 13 | 13, §2º | Inexistente — ver L-41 | ❌ 🔜 |
 

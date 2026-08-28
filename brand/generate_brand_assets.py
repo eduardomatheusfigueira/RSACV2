@@ -125,6 +125,14 @@ def mark_group(stroke: str = "currentColor", accent: str | None = None,
 
 _GLYPHS = json.loads((BRAND / "wordmark_glyphs.json").read_text(encoding="utf-8"))
 
+# A palavra da assinatura. Ficava escrita à mão em cinco lugares; virou
+# constante quando o produto passou a se chamar **Revsist**, para que a troca
+# fosse uma linha e não uma caça.
+#
+# O símbolo não muda: o monograma é o "R" de *Revisão* construído como lupa, e
+# a leitura continua exata para Revsist. O que muda é só o logotipo ao lado.
+WORDMARK = "REVSIST"
+
 
 def text_group(text: str, size: float, x: float, y: float, fill: str,
                tracking: float = 0.0) -> tuple[str, float]:
@@ -246,8 +254,8 @@ def lockup(on_dark: bool = True, with_beta: bool = True) -> str:
     track = 4.0
     x_text = MARK_W + gap
     base = 62.0                    # linha-base do logotipo
-    tw = text_width("RSAC", cap, track)
-    word, _ = text_group("RSAC", cap, x_text, base, ink, track)
+    tw = text_width(WORDMARK, cap, track)
+    word, _ = text_group(WORDMARK, cap, x_text, base, ink, track)
 
     vcap = 17.0
     ver, _ = text_group("V2", vcap, x_text + 1.5, base + 26, sub, 8.0)
@@ -335,7 +343,7 @@ def installer_sidebar(w: int = 164, h: int = 314) -> str:
     y = my + mh
 
     inner = w - 20.0
-    word = text_centered("RSAC", 22.0, w / 2, y + 40, CORNSILK, 6.0, inner)
+    word = text_centered(WORDMARK, 22.0, w / 2, y + 40, CORNSILK, 6.0, inner)
     ver = text_centered("V2", 9.5, w / 2, y + 58, MUTED_CAPTION_ON_DARK, 7.0, inner)
     tag1 = text_centered("PLATAFORMA DE REVISÃO", 6.5, w / 2, h - 30, OLIVE_LEAF, 3.0, inner)
     tag2 = text_centered("SISTEMÁTICA ASSISTIDA", 6.5, w / 2, h - 20, OLIVE_LEAF, 3.0, inner)
@@ -357,14 +365,25 @@ def installer_header(w: int = 150, h: int = 57) -> str:
     """Faixa superior das demais telas do instalador NSIS."""
     mh = 34.0
     k = mh / MARK_H
-    cap = 14.0
-    tw = text_width("RSAC", cap, 5.0)
     x_text = 12 + MARK_W * k + 10
-    word, _ = text_group("RSAC", cap, x_text, 26, CORNSILK, 5.0)
-    vcap = 7.0
-    ver, _ = text_group("V2", vcap, x_text + 1, 39, MUTED_CAPTION_ON_DARK, 5.0)
     sh = 13.0
     sw = text_width("BETA", sh * 0.46, 14.0) + sh * 0.84
+
+    # A faixa do NSIS tem largura fixa (150 px), e o logotipo cresceu de quatro
+    # para sete letras com a mudança de nome. Em vez de reajustar o corpo à mão
+    # — que voltaria a quebrar na próxima troca —, o tamanho é calculado a
+    # partir do que sobra: marca, respiro, palavra, selo e margem direita.
+    # Sem isto o selo BETA saía cortado pela borda.
+    disponivel = w - x_text - 10.0 - 9.0 - sw
+    cap = 14.0
+    largura_natural = text_width(WORDMARK, cap, 5.0)
+    if largura_natural > disponivel:
+        cap *= disponivel / largura_natural
+    tracking = 5.0 * cap / 14.0
+    tw = text_width(WORDMARK, cap, tracking)
+    word, _ = text_group(WORDMARK, cap, x_text, 26, CORNSILK, tracking)
+    vcap = 7.0
+    ver, _ = text_group("V2", vcap, x_text + 1, 39, MUTED_CAPTION_ON_DARK, 5.0)
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}">
  <rect width="{w}" height="{h}" fill="{FOREST_DEEP}"/>
  <g transform="translate(12 {(h - mh) / 2:.2f}) scale({k:.5f})">{mark_group(CORNSILK, SUNLIT_CLAY)}</g>

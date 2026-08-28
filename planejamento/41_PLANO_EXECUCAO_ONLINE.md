@@ -1,4 +1,4 @@
-# 41 — Plano de Execução: RSAC Online
+# 41 — Plano de Execução: Revsist Online
 
 > **Este é o documento de trabalho.** Oito fases, cada uma com tarefas
 > marcáveis, critério de aceite verificável e o que fazer se der errado.
@@ -25,7 +25,7 @@
 ### Trabalho preparatório (pode ser feito hoje, 1–2 h)
 
 - [x] **P1** Registrar domínio — **Concluído: `revsist.com`** (Nome oficial do app: **Revsist**; logotipo e identidade visual mantidos)
-- [ ] **P2** Criar projeto no Google Cloud Console e a credencial OAuth (§40.4.6)
+- [ ] **P2** Criar projeto no Google Cloud Console e a credencial OAuth (§40.4.6) — URI de redirecionamento: `https://revsist.com/api/v1/auth/google/callback`
 - [ ] **P3** Contratar VPS em **região brasileira** (§39.5) — 4 vCPU / 8 GB / 80 GB
 - [ ] **P4** Criar conta de armazenamento de backup (Backblaze B2 ou S3)
 - [ ] **P5** Gerar par de chaves `age` para cifra de backup; **guardar a chave privada fora do servidor**
@@ -305,7 +305,7 @@ por CLI.
 
 ### Critério de aceite
 
-- [ ] `https://<domínio>` responde com nota **A** no SSL Labs, HSTS ativo
+- [ ] `https://revsist.com` responde com nota **A** no SSL Labs, HSTS ativo
 - [ ] Postgres inacessível de fora: `nmap` do exterior não vê 5432
 - [ ] Backup roda, é cifrado, chega ao destino — e a **restauração foi executada** com tempo anotado
 - [ ] Enviar PDF de 60 MB devolve `413` com mensagem clara

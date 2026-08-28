@@ -8,6 +8,16 @@
 
 ## Como ler esta pasta
 
+> **Sobre o nome.** O produto chamava-se **RSAC V2** e passou a chamar-se
+> **Revsist** (`revsist.com`). Os documentos **01 a 36** são registro histórico
+> e mantêm o nome antigo de propósito: reescrevê-los falsearia o que estava
+> escrito quando cada decisão foi tomada. Os documentos vigentes (37 em diante)
+> e o código usam o nome novo. Os identificadores técnicos — o prefixo `RSAC_`
+> das variáveis de ambiente e a pasta de dados — **não** mudaram, e o porquê
+> está em [`brand/IDENTIDADE_VISUAL.md`](../brand/IDENTIDADE_VISUAL.md).
+
+
+
 Os documentos **01 a 21** são **histórico**. Descrevem o planejamento que levou
 o produto ao estado consolidado de 17/08/2026 e devem ser lidos como registro
 de decisão, não como lista de pendências.
