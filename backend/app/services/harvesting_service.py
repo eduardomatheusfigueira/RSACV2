@@ -30,6 +30,7 @@ from app.harvesters.factory import HarvesterFactory
 from app.infrastructure.persistence.models import (
     HarvestRunModel,
     ProtocolModel,
+    ProjectModel,
     SourceCredentialModel,
 )
 from app.services.dedup_service import DeduplicationService
@@ -77,11 +78,23 @@ class HarvestingService:
         self.dedup_service = DeduplicationService()
         self._source_semaphore = asyncio.Semaphore(3)  # Máximo de 3 fontes em paralelo
 
-    def _load_credentials(self, db) -> Dict[str, dict]:
-        """Carrega credenciais de API salvas para cada fonte."""
+    def _load_credentials(self, db, owner_id: Optional[str] = None) -> Dict[str, dict]:
+        """
+        Credenciais de coleta **do dono do projeto**.
+
+        A coleta roda em segundo plano, sem requisição HTTP de onde tirar o
+        usuário corrente — então o dono vem do próprio projeto, que é a
+        resposta certa: a busca é feita em nome de quem é titular do acervo.
+        Sem o filtro, o token institucional de uma universidade seria usado
+        pela coleta de outra (doc 39, O-03), o que além do vazamento viola o
+        contrato de licença da base.
+        """
         creds = {}
         try:
-            records = db.query(SourceCredentialModel).all()
+            consulta = db.query(SourceCredentialModel)
+            if owner_id:
+                consulta = consulta.filter(SourceCredentialModel.user_id == owner_id)
+            records = consulta.all()
             for r in records:
                 creds[r.source_name.upper()] = {
                     "api_key": r.api_key,
@@ -375,7 +388,14 @@ class HarvestingService:
                 fetch_details=fetch_details,
             )
 
-            creds = self._load_credentials(db)
+            # O dono do projeto é quem responde pela coleta: as credenciais
+            # usadas são as dele, não as da primeira linha da tabela.
+            dono = (
+                db.query(ProjectModel.owner_id)
+                .filter(ProjectModel.id == project_id)
+                .scalar()
+            )
+            creds = self._load_credentials(db, owner_id=dono)
 
         finally:
             db.close()

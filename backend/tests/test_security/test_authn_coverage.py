@@ -21,16 +21,23 @@ from app.main import create_app
 # A lista **completa** de rotas que respondem sem sessão (§29.3.1).
 #
 # Acrescentar algo aqui é uma decisão de segurança e deve ser justificada no
-# mesmo commit. Hoje são quatro caminhos, todos sem dado de negócio:
-#   /health        — o lançador precisa saber se o processo subiu
-#   /auth/status   — o cliente precisa saber se mostra login ou a aplicação
-#   /auth/login    — porta de entrada
-#   /auth/local    — troca do token local por sessão, só no perfil desktop
+# mesmo commit. Hoje são seis caminhos, todos sem dado de negócio:
+#   /health          — o lançador precisa saber se o processo subiu
+#   /auth/status     — o cliente precisa saber se mostra login ou a aplicação
+#   /auth/login      — porta de entrada
+#   /auth/local      — troca do token local por sessão, só no perfil desktop
+#   /auth/google/*   — as duas pernas do fluxo OAuth (doc 40 §40.4). Precisam
+#                      responder sem sessão pela própria natureza: são o que
+#                      **cria** a sessão. O que as protege não é autenticação,
+#                      e sim o `state` de uso único com PKCE, e o limite da
+#                      família `auth` no limitador de taxa.
 ROTAS_PUBLICAS = {
     "/api/v1/health",
     "/api/v1/auth/status",
     "/api/v1/auth/login",
     "/api/v1/auth/local",
+    "/api/v1/auth/google/start",
+    "/api/v1/auth/google/callback",
 }
 
 # Corpos mínimos para as rotas que validam o schema antes de olhar a sessão.
@@ -127,6 +134,18 @@ async def test_rotas_publicas_respondem_sem_sessao(anon_client, caminho):
     elif caminho == "/api/v1/auth/local":
         res = await anon_client.post(caminho, json={"token": "x" * 12})
         assert res.status_code in (401, 403, 409)
+    elif caminho == "/api/v1/auth/google/start":
+        # Sem credencial de aplicativo configurada — o caso da suíte — a rota
+        # responde 503. O que importa aqui é que ela **responde**: não pede
+        # sessão, porque é ela que cria a sessão.
+        res = await anon_client.get(caminho)
+        assert res.status_code in (307, 503)
+    elif caminho == "/api/v1/auth/google/callback":
+        # Sem `state` válido, devolve o navegador à tela de login em vez de um
+        # erro de API: quem chega aqui é um navegador voltando do Google.
+        res = await anon_client.get(caminho, follow_redirects=False)
+        assert res.status_code == 303
+        assert "/app/login?erro=" in res.headers["location"]
     else:
         res = await anon_client.get(caminho)
         assert res.status_code == 200

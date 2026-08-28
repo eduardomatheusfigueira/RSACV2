@@ -21,7 +21,7 @@ from app.schemas.ai import (
     ProtocolSuggestRequest,
 )
 from app.security import mask_secret_list
-from app.security.dependencies import require_owner
+from app.security.dependencies import require_session
 from app.security.egress import EgressBlocked, validar_url
 from app.security.middleware import erro_interno
 
@@ -62,6 +62,22 @@ def _keys_by_provider(settings: AISettingsModel) -> dict[str, List[str]]:
     return {"gemini": gemini, "qwen": qwen, "local": local}
 
 
+def _settings_do_usuario(db: Session, usuario: UserModel) -> AISettingsModel | None:
+    """Configuração de IA de quem está pedindo — nunca a de outro."""
+    return (
+        db.query(AISettingsModel).filter(AISettingsModel.user_id == usuario.id).first()
+    )
+
+
+def _obter_ou_criar_settings(db: Session, usuario: UserModel) -> AISettingsModel:
+    """Configuração do usuário, criando-a vazia na primeira gravação."""
+    settings = _settings_do_usuario(db, usuario)
+    if settings is None:
+        settings = AISettingsModel(user_id=usuario.id)
+        db.add(settings)
+    return settings
+
+
 def _build_settings_response(settings: AISettingsModel) -> AISettingsResponse:
     """
     Monta a resposta pública das configurações de IA.
@@ -95,10 +111,10 @@ def _build_settings_response(settings: AISettingsModel) -> AISettingsResponse:
 @router.get("/settings", response_model=AISettingsResponse)
 def get_ai_settings(
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """Configurações de IA ativas e a máscara das chaves de cada provedor."""
-    settings = db.query(AISettingsModel).first()
+    settings = _settings_do_usuario(db, usuario)
     if not settings:
         return AISettingsResponse(
             ai_enabled=True,
@@ -116,13 +132,10 @@ def get_ai_settings(
 def update_ai_settings(
     data: AISettingsUpdate,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """Atualiza as configurações e chaves dos provedores de IA mantendo isolamento total."""
-    settings = db.query(AISettingsModel).first()
-    if not settings:
-        settings = AISettingsModel()
-        db.add(settings)
+    settings = _obter_ou_criar_settings(db, usuario)
 
     provider = data.provider.lower()
 
@@ -182,7 +195,7 @@ def update_ai_settings(
 def delete_provider_keys(
     provider: str,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """
     Remove todas as chaves de um provedor.
@@ -197,7 +210,7 @@ def delete_provider_keys(
             detail=f"Provedor '{provider}' não é suportado. Use gemini, qwen ou local.",
         )
 
-    settings = db.query(AISettingsModel).first()
+    settings = _settings_do_usuario(db, usuario)
     if not settings:
         raise HTTPException(status_code=404, detail="Nenhuma configuração de IA cadastrada.")
 
@@ -215,16 +228,19 @@ def delete_provider_keys(
 
 
 @router.post("/test")
-async def test_ai_connection(db: Session = Depends(get_db)):
+async def test_ai_connection(
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
     """Testa conectividade com o provedor de IA ativo."""
-    settings = db.query(AISettingsModel).first()
+    settings = _settings_do_usuario(db, usuario)
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
             detail="Os recursos de IA estão desativados nas Configurações (Modo 100% Manual). Ative a IA para testar a conexão.",
         )
 
-    client = AIFactory.get_client(db)
+    client = AIFactory.get_client(db, user_id=usuario.id)
     success = await client.test_connection()
     if not success:
         raise HTTPException(
@@ -240,16 +256,20 @@ async def test_ai_connection(db: Session = Depends(get_db)):
 
 
 @router.post("/suggest-protocol")
-async def suggest_protocol(data: ProtocolSuggestRequest, db: Session = Depends(get_db)):
+async def suggest_protocol(
+    data: ProtocolSuggestRequest,
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
     """Gera sugestões de PICO, descritores em pares e critérios via IA."""
-    settings = db.query(AISettingsModel).first()
+    settings = _settings_do_usuario(db, usuario)
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
             detail="Os recursos de IA estão desativados nas Configurações (Modo 100% Manual).",
         )
 
-    client = AIFactory.get_client(db)
+    client = AIFactory.get_client(db, user_id=usuario.id)
     try:
         suggestions = await client.generate_protocol_suggestions(
             title=data.title,
@@ -265,16 +285,20 @@ async def suggest_protocol(data: ProtocolSuggestRequest, db: Session = Depends(g
 
 
 @router.post("/assist-field", response_model=FieldAssistResponse)
-async def assist_field(data: FieldAssistRequest, db: Session = Depends(get_db)):
+async def assist_field(
+    data: FieldAssistRequest,
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
     """Preenche, corrige ou aprimora o conteúdo de um campo específico com IA baseada nas diretrizes do item."""
-    settings = db.query(AISettingsModel).first()
+    settings = _settings_do_usuario(db, usuario)
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
             detail="Os recursos de IA estão desativados nas Configurações (Modo 100% Manual). Ative a IA para usar o assistente.",
         )
 
-    client = AIFactory.get_client(db)
+    client = AIFactory.get_client(db, user_id=usuario.id)
     try:
         result = await client.assist_field(
             field_label=data.field_label,

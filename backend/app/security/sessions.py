@@ -23,7 +23,12 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.infrastructure.persistence.models import LoginAttemptModel, SessionModel, UserModel
+from app.infrastructure.persistence.models import (
+    LoginAttemptModel,
+    SessionModel,
+    UserModel,
+    as_utc,
+)
 
 # Nome do cookie de sessão. Prefixo `rsac_` para não colidir com nada servido
 # no mesmo host em implantações compartilhadas.
@@ -40,14 +45,20 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _naive_utc(moment: datetime) -> datetime:
-    """
-    SQLite guarda datetime sem fuso; comparar aware com naive levanta erro.
-
-    Normalizar na fronteira do banco — e não espalhar `tzinfo=None` pelas
-    consultas — mantém o resto do módulo trabalhando em UTC consciente.
-    """
-    return moment.astimezone(timezone.utc).replace(tzinfo=None) if moment.tzinfo else moment
+# Gravação e leitura seguem regras opostas, e é deliberado:
+#
+#   * **grava-se sempre consciente.** Em PostgreSQL a coluna é `timestamptz` e
+#     guarda o instante correto seja qual for o fuso do servidor; em SQLite o
+#     fuso é descartado na gravação, e o que fica é a hora UTC — que é o que se
+#     quer.
+#   * **lê-se sempre por `as_utc`**, porque só o PostgreSQL devolve o fuso de
+#     volta. Sem isso, o mesmo código que funciona no servidor levanta
+#     `TypeError` no aplicativo de mesa ao comparar consciente com ingênuo.
+#
+# A versão anterior fazia o inverso — normalizava tudo para ingênuo na
+# gravação — e funcionava enquanto SQLite era o único banco. Em PostgreSQL,
+# gravar ingênuo faz o banco assumir o fuso do servidor: com o servidor fora de
+# UTC, a sessão expiraria horas antes ou depois do devido, silenciosamente.
 
 
 def hash_token(token: str) -> str:
@@ -70,13 +81,13 @@ def create_session(db: Session, user: UserModel, user_agent: str = "") -> tuple[
     record = SessionModel(
         user_id=user.id,
         token_hash=hash_token(token),
-        expires_at=_naive_utc(expires),
-        last_seen_at=_naive_utc(_utcnow()),
+        expires_at=expires,
+        last_seen_at=_utcnow(),
         user_agent=(user_agent or "")[:200],
     )
     db.add(record)
 
-    user.last_login_at = _naive_utc(_utcnow())
+    user.last_login_at = _utcnow()
     db.commit()
     db.refresh(record)
 
@@ -101,8 +112,8 @@ def resolve_session(db: Session, token: Optional[str]) -> Optional[UserModel]:
     if not record:
         return None
 
-    agora = _naive_utc(_utcnow())
-    if record.expires_at <= agora:
+    agora = _utcnow()
+    if as_utc(record.expires_at) <= agora:
         db.delete(record)
         db.commit()
         return None
@@ -114,7 +125,7 @@ def resolve_session(db: Session, token: Optional[str]) -> Optional[UserModel]:
     # Renovação por atividade: quem está usando não é deslogado no meio de uma
     # triagem só porque o relógio bateu no TTL.
     record.last_seen_at = agora
-    record.expires_at = _naive_utc(_utcnow() + timedelta(hours=settings.session_ttl_hours))
+    record.expires_at = _utcnow() + timedelta(hours=settings.session_ttl_hours)
     db.commit()
 
     return user
@@ -158,7 +169,7 @@ def register_login_attempt(
             username=(username or "")[:64],
             client_host=(client_host or "")[:64],
             successful=successful,
-            attempted_at=_naive_utc(_utcnow()),
+            attempted_at=_utcnow(),
         )
     )
     if successful:
@@ -171,7 +182,7 @@ def register_login_attempt(
 
 def failed_attempts_recentes(db: Session, username: str) -> int:
     """Falhas da conta dentro da janela corrente."""
-    limite = _naive_utc(_utcnow() - timedelta(minutes=LOGIN_WINDOW_MINUTES))
+    limite = _utcnow() - timedelta(minutes=LOGIN_WINDOW_MINUTES)
     return (
         db.query(LoginAttemptModel)
         .filter(

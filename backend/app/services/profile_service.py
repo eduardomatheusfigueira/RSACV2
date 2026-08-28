@@ -62,9 +62,9 @@ class ProfileService:
     # 1. GESTÃO DE CHAVES DE API
     # ─────────────────────────────────────────────────────────────────
 
-    def export_keys(self, db: Session) -> Dict[str, Any]:
+    def export_keys(self, db: Session, user_id: str) -> Dict[str, Any]:
         """Exporta todas as chaves de API cadastradas em formato estruturado padronizado."""
-        settings = db.query(AISettingsModel).first()
+        settings = db.query(AISettingsModel).filter(AISettingsModel.user_id == user_id).first()
         gemini_keys = _parse_keys_list(settings.gemini_api_keys_encrypted if settings else None)
         qwen_keys = _parse_keys_list(settings.qwen_api_keys_encrypted if settings else None)
         local_keys = _parse_keys_list(settings.local_api_keys_encrypted if settings else None)
@@ -75,7 +75,11 @@ class ProfileService:
         if not qwen_keys and settings and settings.provider == "qwen" and legacy_keys:
             qwen_keys = legacy_keys
 
-        creds = db.query(SourceCredentialModel).all()
+        creds = (
+            db.query(SourceCredentialModel)
+            .filter(SourceCredentialModel.user_id == user_id)
+            .all()
+        )
         sources_dict = {}
         for c in creds:
             sources_dict[c.source_name.upper()] = {
@@ -135,7 +139,7 @@ class ProfileService:
         profile.pop("secrets", None)
         return profile
 
-    def import_keys(self, db: Session, raw_input: Any) -> Dict[str, Any]:
+    def import_keys(self, db: Session, raw_input: Any, user_id: str) -> Dict[str, Any]:
         """
         Importa chaves a partir de JSON estruturado ou arquivo texto tipo .env.
         Salva isoladamente chaves do Gemini, Qwen e credenciais de bases científicas.
@@ -224,9 +228,9 @@ class ProfileService:
                         }
 
         # 1. Salvar no AISettingsModel
-        settings = db.query(AISettingsModel).first()
+        settings = db.query(AISettingsModel).filter(AISettingsModel.user_id == user_id).first()
         if not settings:
-            settings = AISettingsModel()
+            settings = AISettingsModel(user_id=user_id)
             db.add(settings)
 
         if gemini_keys:
@@ -241,11 +245,14 @@ class ProfileService:
         for src_name, cred_data in sources_dict.items():
             s_model = (
                 db.query(SourceCredentialModel)
-                .filter(SourceCredentialModel.source_name == src_name)
+                .filter(
+                    SourceCredentialModel.user_id == user_id,
+                    SourceCredentialModel.source_name == src_name,
+                )
                 .first()
             )
             if not s_model:
-                s_model = SourceCredentialModel(source_name=src_name)
+                s_model = SourceCredentialModel(user_id=user_id, source_name=src_name)
                 db.add(s_model)
 
             if "api_key" in cred_data and cred_data["api_key"] is not None:
@@ -272,13 +279,20 @@ class ProfileService:
     # 2. GESTÃO DE PERFIL COMPLETO (WORKSPACE & SESSÃO)
     # ─────────────────────────────────────────────────────────────────
 
-    def export_profile(self, db: Session, session_prefs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def export_profile(
+        self,
+        db: Session,
+        user_id: str,
+        session_prefs: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Exporta o perfil completo de sessão, preferências, configurações de IA,
         credenciais e todos os projetos com seus dados (estudos, extrações, protocolos).
         """
         # 1. Configurações de IA
-        ai_settings_model = db.query(AISettingsModel).first()
+        ai_settings_model = (
+            db.query(AISettingsModel).filter(AISettingsModel.user_id == user_id).first()
+        )
         ai_settings_data = {
             "ai_enabled": ai_settings_model.ai_enabled if ai_settings_model else True,
             "provider": ai_settings_model.provider if ai_settings_model else "gemini",
@@ -293,7 +307,11 @@ class ProfileService:
 
         # 2. Credenciais de Fontes
         source_creds_list = []
-        for cred in db.query(SourceCredentialModel).all():
+        for cred in (
+            db.query(SourceCredentialModel)
+            .filter(SourceCredentialModel.user_id == user_id)
+            .all()
+        ):
             source_creds_list.append({
                 "source_name": cred.source_name,
                 "api_key": cred.api_key or "",
@@ -303,7 +321,8 @@ class ProfileService:
 
         # 3. Projetos completos
         projects_list = []
-        projects = db.query(ProjectModel).all()
+        # A exportação leva **apenas** o acervo de quem pediu.
+        projects = db.query(ProjectModel).filter(ProjectModel.owner_id == user_id).all()
 
         for p in projects:
             p_data = {
@@ -477,7 +496,11 @@ class ProfileService:
         }
 
     def import_profile(
-        self, db: Session, profile_data: Dict[str, Any], merge_mode: str = "merge"
+        self,
+        db: Session,
+        profile_data: Dict[str, Any],
+        user_id: str,
+        merge_mode: str = "merge",
     ) -> Dict[str, Any]:
         """
         Restaura o perfil completo (sessão, chaves, configurações e projetos).
@@ -490,9 +513,9 @@ class ProfileService:
         # 1. Restaurar Configurações de IA
         ai_data = profile_data.get("ai_settings", {})
         if ai_data:
-            settings = db.query(AISettingsModel).first()
+            settings = db.query(AISettingsModel).filter(AISettingsModel.user_id == user_id).first()
             if not settings:
-                settings = AISettingsModel()
+                settings = AISettingsModel(user_id=user_id)
                 db.add(settings)
 
             settings.ai_enabled = ai_data.get("ai_enabled", True)
@@ -521,11 +544,14 @@ class ProfileService:
                 continue
             model = (
                 db.query(SourceCredentialModel)
-                .filter(SourceCredentialModel.source_name == s_name)
+                .filter(
+                    SourceCredentialModel.user_id == user_id,
+                    SourceCredentialModel.source_name == s_name,
+                )
                 .first()
             )
             if not model:
-                model = SourceCredentialModel(source_name=s_name)
+                model = SourceCredentialModel(user_id=user_id, source_name=s_name)
                 db.add(model)
             model.api_key = sc.get("api_key", "").strip()
             model.inst_token = sc.get("inst_token", "").strip()
@@ -538,9 +564,15 @@ class ProfileService:
             if not p_id:
                 continue
 
-            project = db.query(ProjectModel).filter(ProjectModel.id == p_id).first()
+            # Sem o filtro de dono, importar um perfil com o identificador de um
+            # projeto alheio sobrescreveria o acervo daquela pessoa (doc 39, O-05).
+            project = (
+                db.query(ProjectModel)
+                .filter(ProjectModel.id == p_id, ProjectModel.owner_id == user_id)
+                .first()
+            )
             if not project:
-                project = ProjectModel(id=p_id)
+                project = ProjectModel(id=p_id, owner_id=user_id)
                 db.add(project)
 
             project.title = p_in.get("title", "Projeto Importado")

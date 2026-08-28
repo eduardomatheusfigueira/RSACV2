@@ -13,7 +13,7 @@ from app.api.deps import get_db
 from app.harvesters.factory import HarvesterFactory
 from app.infrastructure.persistence.models import SourceCredentialModel, UserModel
 from app.schemas.settings import SourceCredentialResponse, SourceCredentialUpdate
-from app.security.dependencies import require_owner
+from app.security.dependencies import require_session
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +33,15 @@ def _mask_key(key: str | None) -> str:
 @router.get("", response_model=List[SourceCredentialResponse])
 def list_source_credentials(
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """Lista todas as fontes com seus respectivos status de credenciais configuradas."""
     available_sources = HarvesterFactory.get_all_available()
     saved_creds = {
-        r.source_name.upper(): r for r in db.query(SourceCredentialModel).all()
+        r.source_name.upper(): r
+        for r in db.query(SourceCredentialModel)
+        .filter(SourceCredentialModel.user_id == usuario.id)
+        .all()
     }
 
     result = []
@@ -67,7 +70,7 @@ def update_source_credential(
     source_name: str,
     data: SourceCredentialUpdate,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """Salva ou atualiza a chave de API/token institucional de uma base científica."""
     s_upper = source_name.upper()
@@ -76,11 +79,14 @@ def update_source_credential(
 
     cred = (
         db.query(SourceCredentialModel)
-        .filter(SourceCredentialModel.source_name == s_upper)
+        .filter(
+            SourceCredentialModel.user_id == usuario.id,
+            SourceCredentialModel.source_name == s_upper,
+        )
         .first()
     )
     if not cred:
-        cred = SourceCredentialModel(source_name=s_upper)
+        cred = SourceCredentialModel(user_id=usuario.id, source_name=s_upper)
         db.add(cred)
 
     if data.api_key is not None:
@@ -110,13 +116,16 @@ def update_source_credential(
 def delete_source_credential(
     source_name: str,
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """Remove as credenciais salvas de uma base científica."""
     s_upper = source_name.upper()
     cred = (
         db.query(SourceCredentialModel)
-        .filter(SourceCredentialModel.source_name == s_upper)
+        .filter(
+            SourceCredentialModel.user_id == usuario.id,
+            SourceCredentialModel.source_name == s_upper,
+        )
         .first()
     )
     if cred:

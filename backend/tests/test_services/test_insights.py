@@ -24,10 +24,11 @@ from app.infrastructure.persistence.models import (
     ProtocolModel,
 )
 from app.services.insights_service import _dividir_autores, _ranking, get_project_insights
+from tests.conftest import OWNER_ID_TESTE
 
 
 def _novo_projeto(db_session, titulo="Projeto de indicadores"):
-    proj = ProjectModel(title=titulo, methodology="PRISMA-P")
+    proj = ProjectModel(owner_id=OWNER_ID_TESTE, title=titulo, methodology="PRISMA-P")
     db_session.add(proj)
     db_session.flush()
     proto = ProtocolModel(project_id=proj.id, objective="Obj")

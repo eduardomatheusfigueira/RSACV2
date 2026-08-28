@@ -19,6 +19,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -36,8 +37,31 @@ def generate_uuid() -> str:
 
 
 def utcnow() -> datetime:
-    """Retorna datetime UTC atual."""
+    """Retorna datetime UTC atual, com fuso explícito."""
     return datetime.now(timezone.utc)
+
+
+def as_utc(moment: datetime | None) -> datetime | None:
+    """
+    Normaliza para UTC consciente uma data **lida do banco**.
+
+    Existe porque os dois bancos legítimos do RSAC devolvem coisas diferentes da
+    mesma coluna `DateTime(timezone=True)`:
+
+      * **PostgreSQL** armazena `timestamptz` e devolve datetime consciente;
+      * **SQLite** não tem tipo com fuso — ignora `timezone=True` e devolve
+        datetime ingênuo, contendo a hora **UTC** que foi gravada.
+
+    Comparar um consciente com um ingênuo levanta `TypeError`, e é exatamente o
+    que aconteceria ao rodar em SQLite um código escrito e testado em
+    PostgreSQL. Passar toda leitura por aqui elimina a diferença num ponto só,
+    em vez de espalhar `tzinfo=None` pelas consultas.
+    """
+    if moment is None:
+        return None
+    if moment.tzinfo is None:
+        return moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(timezone.utc)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -45,14 +69,29 @@ def utcnow() -> datetime:
 # ─────────────────────────────────────────────────────────────────────
 
 class ProjectModel(Base):
+    """
+    Projeto de revisão sistemática.
+
+    `owner_id` é o que torna o RSAC utilizável por mais de uma pessoa. Sem ele
+    — como era até a Fase 1 do doc 41 — qualquer conta autenticada lia, editava
+    e apagava o acervo de qualquer outra: aceitável quando o único cliente era
+    o Electron na própria máquina, e vazamento entre controladores distintos
+    assim que o backend passou a atender vários pesquisadores (doc 39, O-01).
+    """
+
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    owner_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     methodology: Mapped[str] = mapped_column(String(50), nullable=False, default="PRISMA-P")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships
@@ -81,8 +120,10 @@ class ProtocolModel(Base):
     search_descriptors: Mapped[str] = mapped_column(Text, default="{}")  # JSON string
     search_filters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para recorte temporal, idiomas, etc.
     manuscript_sections: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para todas as seções do PRISMA-ScR
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     # Relationships
     project: Mapped["ProjectModel"] = relationship(back_populates="protocol")
@@ -159,11 +200,13 @@ class PaperModel(Base):
     pdf_sha256: Mapped[str] = mapped_column(String(64), default="")
     pdf_text_chars: Mapped[int] = mapped_column(Integer, default=0)
     pdf_is_scanned: Mapped[bool] = mapped_column(Boolean, default=False)
-    pdf_acquired_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    pdf_acquired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_duplicate: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     merged_into_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     # Relationships
     project: Mapped["ProjectModel"] = relationship(back_populates="papers")
@@ -195,7 +238,7 @@ class PaperSourceModel(Base):
     paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id"))
     source_name: Mapped[str] = mapped_column(String(50), nullable=False)
     source_id: Mapped[str] = mapped_column(String(200), default="")
-    harvested_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    harvested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="sources")
 
@@ -251,7 +294,7 @@ class ExtractionAnswerModel(Base):
     evidence: Mapped[str] = mapped_column(Text, default="")
     page_ref: Mapped[str] = mapped_column(String(20), default="")
     source_kind: Mapped[str] = mapped_column(String(20), default="")  # pdf | resumo | manual
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="extraction_answers")
     question: Mapped["ExtractionQuestionModel"] = relationship(back_populates="answers")
@@ -270,8 +313,8 @@ class HarvestRunModel(Base):
     descriptors_used: Mapped[str] = mapped_column(Text, default="[]")  # JSON string
     query_parameters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string (HarvestQuery snapshot)
     checkpoint: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para retomada
-    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     records_found: Mapped[int] = mapped_column(Integer, default=0)
     records_new: Mapped[int] = mapped_column(Integer, default=0)
     records_duplicate: Mapped[int] = mapped_column(Integer, default=0)
@@ -306,7 +349,7 @@ class AuditLogModel(Base):
     ai_model: Mapped[str] = mapped_column(String(80), default="")
     ai_context_sha256: Mapped[str] = mapped_column(String(64), default="")
     ai_response_valid: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     paper: Mapped["PaperModel"] = relationship(back_populates="audit_logs")
 
@@ -328,11 +371,38 @@ class UserModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    # Opcional desde o login com Google (doc 40 §40.4.2): uma conta criada por
+    # OAuth não tem senha, e inventar uma seria pior — viraria uma credencial
+    # que ninguém conhece e que mesmo assim autentica.
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(String(20), default="researcher", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # ── Identidade (doc 40 §40.4.2) ────────────────────────────────────
+    # Sem e-mail não há como responder a requisição de titular (art. 18),
+    # recuperar conta, nem vincular a identidade que o Google devolve.
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # O identificador **estável** do Google. O vínculo é por ele, e não pelo
+    # e-mail: dentro de um domínio corporativo um endereço pode ser reatribuído
+    # a outra pessoa, e o `sub` não.
+    google_sub: Mapped[str | None] = mapped_column(
+        String(64), unique=True, nullable=True, index=True
+    )
+    display_name: Mapped[str] = mapped_column(String(200), default="")
+    # "password" | "google" | "both"
+    auth_provider: Mapped[str] = mapped_column(
+        String(20), default="password", nullable=False
+    )
+    # Prova do aceite dos Termos e do Aviso de Privacidade (art. 8º, §2º):
+    # quando e de qual versão.
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    terms_version: Mapped[str] = mapped_column(String(20), default="")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     sessions: Mapped[list["SessionModel"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
@@ -355,9 +425,9 @@ class SessionModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     user_agent: Mapped[str] = mapped_column(String(200), default="")
 
     user: Mapped["UserModel"] = relationship(back_populates="sessions")
@@ -379,7 +449,36 @@ class LoginAttemptModel(Base):
     username: Mapped[str] = mapped_column(String(64), nullable=False)
     client_host: Mapped[str] = mapped_column(String(64), default="")
     successful: Mapped[bool] = mapped_column(Boolean, default=False)
-    attempted_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class OAuthStateModel(Base):
+    """
+    Estado de uma autenticação com Google em curso (doc 40 §40.4.1).
+
+    Guardar isto no servidor — e não num cookie assinado — é a mesma decisão
+    que levou o RSAC a usar sessão com estado em vez de JWT: o que está no
+    banco pode ser invalidado na hora. Aqui isso importa porque o `state` é de
+    **uso único**: ele é apagado ao ser consumido, o que fecha a repetição do
+    callback. Um cookie assinado continuaria válido até vencer.
+
+    O `code_verifier` é a metade privada do PKCE. Nunca sai do servidor: o que
+    vai ao Google é o desafio (o SHA-256 dele), e é a apresentação do
+    verificador na troca que prova que quem resgata o código é quem o pediu.
+    """
+
+    __tablename__ = "oauth_states"
+    __table_args__ = (Index("ix_oauth_states_expires_at", "expires_at"),)
+
+    state: Mapped[str] = mapped_column(String(64), primary_key=True)
+    code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
+    nonce: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Caminho **interno** para onde voltar depois do login. Nunca uma URL
+    # absoluta: aceitar uma faria do callback um redirecionador aberto, e o
+    # link de login viraria isca de phishing com o domínio do RSAC na barra.
+    redirect_after: Mapped[str] = mapped_column(String(200), default="/app")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -387,14 +486,30 @@ class LoginAttemptModel(Base):
 # ─────────────────────────────────────────────────────────────────────
 
 class SourceCredentialModel(Base):
+    """
+    Credencial de base científica — **por usuário e por fonte**.
+
+    `source_name` era único no banco inteiro, então o token institucional de
+    uma universidade servia a todas as outras contas — o que, além do
+    vazamento, viola o contrato de licença da base (doc 39, O-03).
+    """
+
     __tablename__ = "source_credentials"
+    __table_args__ = (
+        UniqueConstraint("user_id", "source_name", name="uq_source_credentials_user_source"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
-    source_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    source_name: Mapped[str] = mapped_column(String(50), nullable=False)
     api_key: Mapped[str] = mapped_column(EncryptedText, default="")
     inst_token: Mapped[str] = mapped_column(EncryptedText, default="")
     custom_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -402,9 +517,22 @@ class SourceCredentialModel(Base):
 # ─────────────────────────────────────────────────────────────────────
 
 class AISettingsModel(Base):
+    """
+    Configuração de IA — **uma por usuário**.
+
+    Era uma linha só no banco inteiro, lida em dez pontos como
+    `db.query(AISettingsModel).first()`. Com contas individuais e chave do
+    próprio assinante (BYOK), isso significava que o segundo a salvar
+    sobrescrevia a chave do primeiro, e que a triagem de um rodava na cota paga
+    do outro (doc 39, O-02).
+    """
+
     __tablename__ = "ai_settings"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id"), nullable=False, unique=True, index=True
+    )
     ai_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     provider: Mapped[str] = mapped_column(String(50), nullable=False, default="gemini")
     model: Mapped[str] = mapped_column(String(100), nullable=False, default="gemini-3.6-flash")
@@ -419,7 +547,9 @@ class AISettingsModel(Base):
     endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     temperature: Mapped[float] = mapped_column(Float, default=0.2)
     max_tokens: Mapped[int] = mapped_column(Integer, default=4096)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -438,7 +568,7 @@ class DeduplicationReportModel(Base):
     sources_breakdown: Mapped[str] = mapped_column(Text, default="{}")  # JSON
     duplicates_list: Mapped[str] = mapped_column(Text, default="[]")  # JSON
     report_text: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     # Relationships
     project: Mapped["ProjectModel"] = relationship()

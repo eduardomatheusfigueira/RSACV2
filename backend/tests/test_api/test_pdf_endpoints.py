@@ -11,6 +11,7 @@ from app.api.v1 import extraction as extraction_api
 from app.infrastructure.persistence.models import PaperModel, ProjectModel
 from app.services.pdf_resolver import ResolutionAttempt
 from app.services.pdf_service import PDFAcquisition
+from tests.conftest import OWNER_ID_TESTE
 
 
 def _make_pdf(paginas: list[str]) -> bytes:
@@ -38,7 +39,7 @@ CORPO = (
 def projeto_com_artigo(db_session, tmp_path):
     extraction_api.pdf_service.storage_dir = tmp_path
 
-    projeto = ProjectModel(title="Revisão PDF", methodology="PRISMA-P")
+    projeto = ProjectModel(owner_id=OWNER_ID_TESTE, title="Revisão PDF", methodology="PRISMA-P")
     db_session.add(projeto)
     db_session.flush()
 

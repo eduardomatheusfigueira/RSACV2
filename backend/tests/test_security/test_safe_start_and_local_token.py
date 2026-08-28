@@ -37,13 +37,14 @@ def _app_com_perfil(db_session, monkeypatch, perfil: DeploymentProfile):
 
 # ── Portão de partida segura ──────────────────────────────────────────
 
-def test_perfil_server_sem_contas_recusa_subir(db_session, monkeypatch, tmp_path):
+def test_perfil_server_sem_contas_recusa_subir(db_session_sem_contas, monkeypatch, tmp_path):
     """
     O caso que originou todo o diagnóstico: backend publicado sem autenticação.
 
     O `lifespan` roda ao entrar no `TestClient`; sem conta provisionada ele
     levanta, e o processo não chega a atender requisição nenhuma.
     """
+    db_session = db_session_sem_contas
     monkeypatch.setattr(local_token_module, "TOKEN_FILENAME", "token_de_teste")
     app = _app_com_perfil(db_session, monkeypatch, DeploymentProfile.SERVER)
 
@@ -199,32 +200,48 @@ async def test_decisao_de_triagem_registra_quem_decidiu(async_client, db_session
 
 @pytest.mark.anyio
 async def test_autoria_distingue_dois_operadores(async_client, researcher_client, db_session):
-    """Dois operadores no mesmo servidor deixam trilhas distinguíveis."""
-    projeto = (
-        await async_client.post(
-            "/api/v1/projects", json={"title": "Projeto compartilhado", "methodology": "PRISMA-ScR"}
-        )
-    ).json()
-    paper = (
-        await async_client.post(
-            f"/api/v1/projects/{projeto['id']}/papers",
-            json={"title": "Estudo com duas revisões", "decision": "Pendente"},
-        )
-    ).json()
+    """
+    Dois operadores no mesmo servidor deixam trilhas distinguíveis.
+
+    Antes da Fase 1 do doc 41 este teste operava sobre **um** projeto, porque
+    não havia titularidade e qualquer conta alcançava o acervo de qualquer
+    outra. Com contas individuais, cada um trabalha no próprio projeto — e a
+    trilha de auditoria continua tendo de dizer de quem foi cada decisão, que é
+    o que sustenta a reprodutibilidade da revisão.
+    """
+    async def _projeto_com_estudo(cliente, titulo):
+        projeto = (
+            await cliente.post(
+                "/api/v1/projects", json={"title": titulo, "methodology": "PRISMA-ScR"}
+            )
+        ).json()
+        paper = (
+            await cliente.post(
+                f"/api/v1/projects/{projeto['id']}/papers",
+                json={"title": "Estudo em avaliação", "decision": "Pendente"},
+            )
+        ).json()
+        return projeto, paper
+
+    projeto_dono, paper_dono = await _projeto_com_estudo(async_client, "Revisão do dono")
+    projeto_pesq, paper_pesq = await _projeto_com_estudo(
+        researcher_client, "Revisão do pesquisador"
+    )
 
     await async_client.patch(
-        f"/api/v1/projects/{projeto['id']}/papers/{paper['id']}", json={"decision": "Incluído"}
+        f"/api/v1/projects/{projeto_dono['id']}/papers/{paper_dono['id']}",
+        json={"decision": "Incluído"},
     )
     await researcher_client.patch(
-        f"/api/v1/projects/{projeto['id']}/papers/{paper['id']}", json={"decision": "Excluído"}
+        f"/api/v1/projects/{projeto_pesq['id']}/papers/{paper_pesq['id']}",
+        json={"decision": "Excluído"},
     )
 
-    registros = (
-        db_session.query(AuditLogModel)
-        .filter(AuditLogModel.paper_id == paper["id"])
-        .order_by(AuditLogModel.created_at.asc())
+    autoria = {
+        r.paper_id: r.username
+        for r in db_session.query(AuditLogModel)
+        .filter(AuditLogModel.paper_id.in_([paper_dono["id"], paper_pesq["id"]]))
         .all()
-    )
-    autores = [r.username for r in registros]
-    assert "dono_teste" in autores
-    assert "pesquisador_teste" in autores
+    }
+    assert autoria.get(paper_dono["id"]) == "dono_teste"
+    assert autoria.get(paper_pesq["id"]) == "pesquisador_teste"

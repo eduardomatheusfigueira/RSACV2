@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.security.dependencies import projeto_do_usuario
 from app.infrastructure.persistence.models import (
     CriterionModel,
     ExtractionAnswerModel,
@@ -27,7 +28,14 @@ from app.schemas.protocol import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/protocol", tags=["protocols"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/protocol",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["protocols"],
+)
 
 
 def _serialize_protocol(protocol: ProtocolModel) -> ProtocolResponse:

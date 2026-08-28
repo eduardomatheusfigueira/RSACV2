@@ -25,7 +25,7 @@ from starlette.requests import HTTPConnection
 
 from app.api.deps import get_db
 from app.config import settings
-from app.infrastructure.persistence.models import UserModel
+from app.infrastructure.persistence.models import ProjectModel, UserModel
 from app.security.local_token import matches_local_token
 from app.security.sessions import SESSION_COOKIE, resolve_session
 
@@ -190,3 +190,72 @@ async def require_websocket_session(websocket: WebSocket, db: Session) -> Option
             .first()
         )
     return None
+
+
+# ── Titularidade do acervo (doc 40 §40.3.2) ───────────────────────────
+
+
+def projeto_do_usuario(
+    project_id: str,
+    request: HTTPConnection,
+    usuario: Optional[UserModel] = Depends(require_session),
+    db: Session = Depends(get_db),
+) -> Optional[ProjectModel]:
+    """
+    Exige que o projeto da URL pertença a quem está pedindo.
+
+    Como `require_session`, esta verificação é declarada **no router**, e não
+    rota a rota: todos os nove roteadores de projeto já carregam
+    `/projects/{project_id}` no prefixo, então a dependência alcança tudo o que
+    existe hoje — e, o que importa mais, alcança sozinha o que for escrito
+    amanhã. Uma rota nova nasce isolada, e esquecer deixou de ser possível.
+
+    **Devolve 404, nunca 403.** Um 403 confirmaria que aquele projeto existe, e
+    o identificador é um UUID: negar a existência é a única resposta que não
+    entrega nada a quem estiver sondando. É a mesma decisão já tomada no
+    confinamento de caminho da SPA, em `main.py`.
+
+    No escopo de WebSocket sai de lado, como `require_session`: lá não há
+    requisição HTTP para responder com 404, e quem decide é a própria rota,
+    que consegue fechar a conexão com o código 1008. `verificar_projeto_do_usuario`
+    é a forma que as rotas de WebSocket usam.
+    """
+    if request.scope.get("type") == "websocket":
+        return None
+
+    projeto = (
+        db.query(ProjectModel)
+        .filter(
+            ProjectModel.id == project_id,
+            ProjectModel.owner_id == (usuario.id if usuario else None),
+        )
+        .first()
+    )
+    if projeto is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projeto não encontrado.",
+        )
+
+    request.state.projeto = projeto
+    return projeto
+
+
+def verificar_projeto_do_usuario(
+    db: Session, project_id: str, usuario: Optional[UserModel]
+) -> bool:
+    """
+    Versão sem HTTP da verificação acima, para o handshake de WebSocket.
+
+    O canal de progresso é por projeto: sem isto, quem tivesse sessão válida
+    acompanharia a coleta e a triagem de qualquer outro assinante apenas
+    adivinhando — ou vazando — um identificador de projeto.
+    """
+    if usuario is None:
+        return False
+    return (
+        db.query(ProjectModel.id)
+        .filter(ProjectModel.id == project_id, ProjectModel.owner_id == usuario.id)
+        .first()
+        is not None
+    )

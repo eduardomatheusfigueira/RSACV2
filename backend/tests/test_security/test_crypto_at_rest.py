@@ -148,22 +148,33 @@ def test_migracao_cifra_valores_legados(tmp_path):
     engine = create_engine(f"sqlite:///{caminho}")
     Base.metadata.create_all(engine)
 
-    # Grava em claro por SQL direto, como fazia a versão anterior.
+    # Grava em claro por SQL direto, como fazia a versão anterior. A conta
+    # dona entra antes porque, desde a Fase 1 do doc 41, configuração de IA e
+    # credencial de fonte têm titular.
     with engine.begin() as conn:
         conn.execute(
             text(
-                "INSERT INTO ai_settings (id, ai_enabled, provider, model, "
+                "INSERT INTO users (id, username, password_hash, role, is_active, "
+                "email_verified, display_name, auth_provider, terms_version, "
+                "created_at) VALUES ('u1', 'dono', 'x', 'owner', 1, 0, '', "
+                "'password', '', '2026-08-19 10:00:00')"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO ai_settings (id, user_id, ai_enabled, provider, model, "
                 "api_keys_encrypted, gemini_api_keys_encrypted, qwen_api_keys_encrypted, "
                 "local_api_keys_encrypted, temperature, max_tokens, updated_at) "
-                "VALUES ('1', 1, 'gemini', 'gemini-3.6-flash', :legado, :legado, '[]', '[]', "
-                "0.2, 4096, '2026-08-19 10:00:00')"
+                "VALUES ('1', 'u1', 1, 'gemini', 'gemini-3.6-flash', :legado, :legado, "
+                "'[]', '[]', 0.2, 4096, '2026-08-19 10:00:00')"
             ),
             {"legado": json.dumps([CHAVE_GEMINI])},
         )
         conn.execute(
             text(
-                "INSERT INTO source_credentials (id, source_name, api_key, inst_token, updated_at) "
-                "VALUES ('1', 'SCOPUS', :chave, '', '2026-08-19 10:00:00')"
+                "INSERT INTO source_credentials (id, user_id, source_name, api_key, "
+                "inst_token, updated_at) "
+                "VALUES ('1', 'u1', 'SCOPUS', :chave, '', '2026-08-19 10:00:00')"
             ),
             {"chave": CHAVE_SCOPUS},
         )
@@ -201,8 +212,17 @@ def test_migracao_e_idempotente(tmp_path):
     with engine.begin() as conn:
         conn.execute(
             text(
-                "INSERT INTO source_credentials (id, source_name, api_key, inst_token, updated_at) "
-                "VALUES ('1', 'SCOPUS', :chave, '', '2026-08-19 10:00:00')"
+                "INSERT INTO users (id, username, password_hash, role, is_active, "
+                "email_verified, display_name, auth_provider, terms_version, "
+                "created_at) VALUES ('u1', 'dono', 'x', 'owner', 1, 0, '', "
+                "'password', '', '2026-08-19 10:00:00')"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO source_credentials (id, user_id, source_name, api_key, "
+                "inst_token, updated_at) "
+                "VALUES ('1', 'u1', 'SCOPUS', :chave, '', '2026-08-19 10:00:00')"
             ),
             {"chave": CHAVE_SCOPUS},
         )

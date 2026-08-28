@@ -40,6 +40,7 @@ class ExtractionService:
         project_id: str,
         paper_id: str,
         question_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> List[Dict[str, str]]:
         """
         Extrai respostas para todas as perguntas do protocolo (ou apenas uma pergunta específica)
@@ -71,7 +72,7 @@ class ExtractionService:
 
         prompt = self._build_prompt(context_text, questions_list_text, source_kind)
 
-        client = AIFactory.get_client(db)
+        client = AIFactory.get_client(db, user_id=user_id)
         if hasattr(client, "_call_gemini_api"):
             data = await client._call_gemini_api(prompt)
         elif hasattr(client, "_call_chat_completion"):

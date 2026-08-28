@@ -6,6 +6,7 @@
 from app.harvesters.base import RawPaperRecord
 from app.infrastructure.persistence.models import ProjectModel, PaperModel
 from app.services.dedup_service import DeduplicationService, generate_blocking_key
+from tests.conftest import OWNER_ID_TESTE
 
 
 def test_generate_blocking_key():
@@ -18,7 +19,7 @@ def test_generate_blocking_key():
 def test_doi_exact_deduplication(db_session):
     dedup = DeduplicationService()
 
-    project = ProjectModel(title="Projeto Teste Dedup", methodology="PRISMA-ScR")
+    project = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Teste Dedup", methodology="PRISMA-ScR")
     db_session.add(project)
     db_session.commit()
 
@@ -50,7 +51,7 @@ def test_doi_exact_deduplication(db_session):
 def test_title_exact_normalized_deduplication(db_session):
     dedup = DeduplicationService()
 
-    project = ProjectModel(title="Projeto Teste Dedup", methodology="PRISMA-ScR")
+    project = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Teste Dedup", methodology="PRISMA-ScR")
     db_session.add(project)
     db_session.commit()
 
@@ -79,7 +80,7 @@ def test_title_exact_normalized_deduplication(db_session):
 def test_fuzzy_title_deduplication(db_session):
     dedup = DeduplicationService()
 
-    project = ProjectModel(title="Projeto Teste Dedup", methodology="PRISMA-ScR")
+    project = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Teste Dedup", methodology="PRISMA-ScR")
     db_session.add(project)
     db_session.commit()
 
@@ -107,7 +108,7 @@ def test_fuzzy_title_deduplication(db_session):
 def test_process_batch_persistence(db_session):
     dedup = DeduplicationService()
 
-    project = ProjectModel(title="Projeto Batch", methodology="PRISMA-ScR")
+    project = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Batch", methodology="PRISMA-ScR")
     db_session.add(project)
     db_session.commit()
 

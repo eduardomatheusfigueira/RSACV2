@@ -9,12 +9,20 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.security.dependencies import projeto_do_usuario
 from app.infrastructure.persistence.models import ProjectModel
 from app.services.export_service import ExportService, cabecalho_de_download
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/export", tags=["export"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/export",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["export"],
+)
 export_service = ExportService()
 
 
