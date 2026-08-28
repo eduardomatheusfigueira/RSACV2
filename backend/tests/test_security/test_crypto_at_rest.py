@@ -155,8 +155,9 @@ def test_migracao_cifra_valores_legados(tmp_path):
         conn.execute(
             text(
                 "INSERT INTO users (id, username, password_hash, role, is_active, "
-                "created_at) VALUES ('u1', 'dono', 'x', 'owner', 1, "
-                "'2026-08-19 10:00:00')"
+                "email_verified, display_name, auth_provider, terms_version, "
+                "created_at) VALUES ('u1', 'dono', 'x', 'owner', 1, 0, '', "
+                "'password', '', '2026-08-19 10:00:00')"
             )
         )
         conn.execute(
@@ -212,8 +213,9 @@ def test_migracao_e_idempotente(tmp_path):
         conn.execute(
             text(
                 "INSERT INTO users (id, username, password_hash, role, is_active, "
-                "created_at) VALUES ('u1', 'dono', 'x', 'owner', 1, "
-                "'2026-08-19 10:00:00')"
+                "email_verified, display_name, auth_provider, terms_version, "
+                "created_at) VALUES ('u1', 'dono', 'x', 'owner', 1, 0, '', "
+                "'password', '', '2026-08-19 10:00:00')"
             )
         )
         conn.execute(

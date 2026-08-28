@@ -399,6 +399,8 @@ export interface AuthStatus {
   has_accounts: boolean
   /** O perfil desktop aceita o token local em vez de usuário e senha. */
   local_token_accepted: boolean
+  /** Há credencial de aplicativo Google configurada neste servidor. */
+  google_login_enabled: boolean
   authenticated: boolean
   user?: AuthUser | null
 }

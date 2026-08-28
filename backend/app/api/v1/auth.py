@@ -16,8 +16,13 @@ Este módulo tem duas metades com regimes opostos, e a distinção é deliberada
 from __future__ import annotations
 
 import logging
+import re
+import secrets
+from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -36,11 +41,13 @@ from app.schemas.auth import (
 )
 from app.security.dependencies import (
     ROLE_OWNER,
+    ROLE_RESEARCHER,
     extrair_token,
     require_owner,
     require_session,
     usuario_atual_opcional,
 )
+from app.security import google_oauth, oauth_state
 from app.security.local_token import matches_local_token, read_local_token
 from app.security.passwords import (
     PasswordPolicyError,
@@ -128,6 +135,7 @@ def auth_status(
         deployment_profile=settings.deployment_profile.value,
         has_accounts=total_contas > 0,
         local_token_accepted=(not settings.is_server_profile) and bool(read_local_token()),
+        google_login_enabled=google_oauth.esta_configurado(),
         authenticated=usuario is not None,
         user=_serializar(usuario) if usuario else None,
     )
@@ -152,7 +160,19 @@ def login(
         )
 
     user = db.query(UserModel).filter(UserModel.username == username).first()
-    senha_confere = bool(user) and verify_password(user.password_hash, data.password)
+
+    # Conta criada por Google não tem senha. `verify_password` já devolveria
+    # `False` para um hash ausente, mas a mensagem sairia como "usuário ou senha
+    # inválidos" — e a pessoa ficaria tentando lembrar de uma senha que nunca
+    # existiu. Aqui a resposta diz o que fazer.
+    if user and user.password_hash is None and user.is_active:
+        register_login_attempt(db, username, client_host, successful=False)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Esta conta entra com Google. Use o botão “Entrar com Google”.",
+        )
+
+    senha_confere = bool(user) and verify_password(user.password_hash or "", data.password)
 
     if not user or not senha_confere or not user.is_active:
         register_login_attempt(db, username, client_host, successful=False)
@@ -166,6 +186,195 @@ def login(
     register_login_attempt(db, username, client_host, successful=True)
     logger.info("[Auth] Login bem-sucedido: %s (%s)", user.username, user.role)
     return _emitir_sessao(db, user, request, response)
+
+
+# ── Entrada com Google (doc 40 §40.4) ─────────────────────────────────
+
+
+def _redirect_uri(request: Request) -> str:
+    """
+    Endereço de retorno registrado no Google Cloud.
+
+    Preferimos `RSAC_PUBLIC_BASE_URL` a derivar da requisição: atrás de um
+    túnel ou proxy, o `Host` que chega pode não ser o nome público, e o Google
+    compara o `redirect_uri` **literalmente** com o que está cadastrado.
+    """
+    base = (settings.public_base_url or "").rstrip("/")
+    if not base:
+        base = str(request.base_url).rstrip("/")
+    return f"{base}/api/v1/auth/google/callback"
+
+
+def _admitido(email: str) -> bool:
+    """A lista de admissão aceita este endereço? Vazia = qualquer um."""
+    admitidos = settings.dominios_admitidos
+    if not admitidos:
+        return True
+    email = email.lower()
+    dominio = "@" + email.split("@")[-1]
+    return email in admitidos or dominio in admitidos
+
+
+@public_auth_router.get("/google/start")
+def iniciar_login_com_google(
+    request: Request,
+    redirect_after: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Inicia o fluxo: grava o estado e manda o navegador ao Google."""
+    if not google_oauth.esta_configurado():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Entrada com Google não está disponível nesta instalação.",
+        )
+
+    verificador = google_oauth.gerar_verificador()
+    nonce = secrets.token_urlsafe(24)
+    estado = oauth_state.criar(
+        db, code_verifier=verificador, nonce=nonce, redirect_after=redirect_after
+    )
+
+    destino = google_oauth.montar_url_de_autorizacao(
+        state=estado.state,
+        nonce=nonce,
+        code_challenge=google_oauth.desafio_de(verificador),
+        redirect_uri=_redirect_uri(request),
+    )
+    return RedirectResponse(destino, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+
+@public_auth_router.get("/google/callback")
+async def concluir_login_com_google(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Conclui o fluxo: valida o que voltou, resolve a conta e emite a sessão.
+
+    Erros respondem com redirecionamento para a tela de login carregando um
+    motivo curto, e não com JSON: quem está aqui é um navegador que acabou de
+    voltar do Google, e uma página de erro de API seria um beco sem saída.
+    """
+    if error:
+        logger.info("[OAuth] Fluxo cancelado no Google: %s", error)
+        return _voltar_ao_login("cancelado")
+
+    registro = oauth_state.consumir(db, state)
+    if registro is None or not code:
+        # Estado ausente, vencido ou já usado. Não se distingue qual: para quem
+        # tenta reapresentar um callback, os três casos devem parecer o mesmo.
+        return _voltar_ao_login("estado_invalido")
+
+    try:
+        id_token = await google_oauth.trocar_codigo_por_id_token(
+            code=code,
+            code_verifier=registro.code_verifier,
+            redirect_uri=_redirect_uri(request),
+        )
+        identidade = await google_oauth.validar_id_token(
+            id_token, nonce_esperado=registro.nonce
+        )
+    except google_oauth.IdentidadeRecusada as exc:
+        logger.warning("[OAuth] Identidade recusada: %s", exc)
+        return _voltar_ao_login("recusado")
+    except google_oauth.GoogleOAuthIndisponivel:
+        return _voltar_ao_login("indisponivel")
+
+    usuario = _resolver_conta(db, identidade)
+    if usuario is None:
+        return _voltar_ao_login("nao_admitido")
+    if not usuario.is_active:
+        return _voltar_ao_login("conta_inativa")
+
+    resposta = RedirectResponse(
+        registro.redirect_after, status_code=status.HTTP_303_SEE_OTHER
+    )
+    token, _ = create_session(db, usuario, user_agent=request.headers.get("User-Agent", ""))
+    _definir_cookie(resposta, token, request)
+    logger.info("[Auth] Entrada com Google: %s", usuario.username)
+    return resposta
+
+
+def _voltar_ao_login(motivo: str) -> RedirectResponse:
+    return RedirectResponse(f"/app/login?erro={motivo}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+def _resolver_conta(db: Session, identidade) -> Optional[UserModel]:
+    """
+    Encontra ou cria a conta desta identidade.
+
+    A ordem importa e está em doc 40 §40.4.3:
+
+    1. Já existe alguém com este `google_sub`? É ele — o `sub` é estável, ao
+       contrário do e-mail, que dentro de um domínio corporativo pode ser
+       reatribuído a outra pessoa.
+    2. Existe conta com este e-mail? Vincula. Só é seguro porque
+       `validar_id_token` já exigiu `email_verified`; sem essa trava, este seria
+       o passo por onde se toma a conta de outro.
+    3. Não existe? Cria — sempre como `researcher`. Autocadastro **nunca**
+       concede `owner`: essa conta nasce só pela linha de comando.
+    """
+    usuario = (
+        db.query(UserModel).filter(UserModel.google_sub == identidade.sub).first()
+    )
+    if usuario:
+        usuario.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+        return usuario
+
+    por_email = (
+        db.query(UserModel).filter(UserModel.email == identidade.email).first()
+    )
+    if por_email:
+        por_email.google_sub = identidade.sub
+        por_email.email_verified = True
+        por_email.auth_provider = "both" if por_email.password_hash else "google"
+        if not por_email.display_name:
+            por_email.display_name = identidade.nome
+        db.commit()
+        logger.info("[Auth] Conta %s vinculada ao Google.", por_email.username)
+        return por_email
+
+    if not _admitido(identidade.email):
+        logger.info("[Auth] Autocadastro recusado pela lista de admissão.")
+        return None
+
+    novo = UserModel(
+        username=_username_disponivel(db, identidade.email),
+        password_hash=None,
+        role=ROLE_RESEARCHER,
+        email=identidade.email,
+        email_verified=True,
+        google_sub=identidade.sub,
+        display_name=identidade.nome,
+        auth_provider="google",
+        terms_accepted_at=datetime.now(timezone.utc),
+        terms_version=settings.terms_version,
+    )
+    db.add(novo)
+    db.commit()
+    db.refresh(novo)
+    logger.info("[Auth] Conta criada por entrada com Google: %s", novo.username)
+    return novo
+
+
+def _username_disponivel(db: Session, email: str) -> str:
+    """
+    Nome de usuário a partir do e-mail, com sufixo se já houver colisão.
+
+    O nome continua sendo a identificação visível nas trilhas de auditoria, e
+    duas pessoas de instituições diferentes podem ter a mesma parte local.
+    """
+    base = re.sub(r"[^A-Za-z0-9._-]", "", email.split("@")[0])[:48] or "pesquisador"
+    candidato = base
+    sufixo = 1
+    while db.query(UserModel).filter(UserModel.username == candidato).first():
+        sufixo += 1
+        candidato = f"{base}-{sufixo}"[:64]
+    return candidato
 
 
 @public_auth_router.post("/local", response_model=LoginResponse)

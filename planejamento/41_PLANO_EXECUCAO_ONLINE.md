@@ -173,37 +173,65 @@ falhar explicitamente se houver mais de uma conta ativa, em vez de escolher uma.
 
 > **Objetivo:** entrar com Google, sem quebrar senha nem token local.
 > **Esforço:** 3–4 dias · **Risco:** médio. Fecha O-16 a O-20.
+>
+> ## ✅ **CONCLUÍDA** — 28/08/2026
+>
+> **465 testes verdes nos dois bancos** (eram 438 ao fim da Fase 1), sendo 25
+> só do OAuth. A tela foi verificada no navegador, contra um servidor real.
+>
+> A suíte gera um par de chaves RSA próprio e finge ser o Google, o que permite
+> derrubar **cada uma** das seis validações isoladamente. Verificada por
+> mutação: removendo a checagem de `aud`, de `nonce` ou de `email_verified`, os
+> testes correspondentes falham.
+>
+> Dois achados da execução:
+>
+> 1. **`RSAC_CORS_ORIGINS=https://rsac.exemplo.br` derrubava a partida.** O
+>    comentário do `config.py` prometia aceitar valores separados por vírgula,
+>    mas o pydantic-settings só desserializa JSON — e o erro
+>    (`error parsing value for field "cors_origins"`) não diz o que ele quer.
+>    O exemplo de `.env` do doc 40 §40.7.3 usava exatamente a forma que quebra:
+>    a implantação da Fase 4 teria morrido na primeira subida. Corrigido com
+>    `NoDecode` mais um validador; as duas formas passaram a funcionar.
+> 2. **A autogeração do Alembic criava colunas `NOT NULL` sem valor padrão.**
+>    Funciona em banco vazio e falha em qualquer instalação com uma conta — que
+>    é justamente a que existe, porque o backend se recusa a subir sem conta no
+>    perfil `server`. As colunas passaram a entrar com `server_default`, que é
+>    removido em seguida.
+>
+> O `downgrade` desta revisão recusa-se a rodar se houver conta que só entra
+> com Google: reverter a deixaria sem credencial nenhuma.
 
 ### Tarefas
 
-- [ ] **2.1** Adicionar dependências de verificação de JWT (`authlib` ou `joserfc` + `httpx`) — a verificação do `id_token` é **local**, contra a JWKS do Google, com cache
-- [ ] **2.2** `UserModel`: `email`, `email_verified`, `google_sub`, `display_name`, `auth_provider`; `password_hash` passa a `nullable=True` (§40.4.2)
-- [ ] **2.3** Criar `OAuthStateModel` com TTL de 10 min e uso único
-- [ ] **2.4** Revisão Alembic para 2.2 e 2.3
-- [ ] **2.5** `GET /api/v1/auth/google/start` no **`public_auth_router`** — gera `state`, `nonce` e `code_verifier` (PKCE S256), grava e redireciona
-- [ ] **2.6** `GET /api/v1/auth/google/callback` — consome o `state` (apagando-o), troca o código, e aplica **as seis validações** de §40.4.3
-- [ ] **2.7** Recusar login quando `email_verified` for falso, com mensagem clara — **a trava contra tomada de conta**
-- [ ] **2.8** Vínculo: `google_sub` → e-mail verificado → criação nova com `role="researcher"` (§40.4.3)
-- [ ] **2.9** Descartar a foto do perfil na leitura; **não** gravar (art. 6º, III)
-- [ ] **2.10** Emitir sessão pelo `create_session` existente e redirecionar para `/app`
-- [ ] **2.11** Lista de admissão opcional por `RSAC_SIGNUP_ALLOWLIST` (vazia = aberto) — é o modo "por convite" da v1
-- [ ] **2.12** Registrar aceite de Termos e Aviso com data, versão e origem
-- [ ] **2.13** `_familia_da_rota` (`security/middleware.py:83`) passa a casar `/auth/google` na família `auth`
-- [ ] **2.14** Login por senha recusa explicitamente conta sem hash, com mensagem "esta conta entra com Google"
-- [ ] **2.15** `AuthStatusResponse` ganha `google_login_enabled`, para a tela decidir o que mostrar
-- [ ] **2.16** Frontend: botão "Entrar com Google" na `LoginPage`, seguindo as diretrizes de marca do Google; senha recolhida atrás de "outras formas de entrar"
-- [ ] **2.17** Expurgo de `OAuthStateModel` vencido na rotina de retenção (Fase 3)
-- [ ] **2.18** Suíte `backend/tests/test_security/test_oauth_google.py`: `aud` errado, `iss` errado, `exp` vencido, `nonce` divergente, `state` reutilizado, `email_verified=false`, vínculo por e-mail, criação nova, e **tentativa de autocadastro com `role=owner`**
+- [x] **2.1** Adicionar dependências de verificação de JWT (`authlib` ou `joserfc` + `httpx`) — a verificação do `id_token` é **local**, contra a JWKS do Google, com cache
+- [x] **2.2** `UserModel`: `email`, `email_verified`, `google_sub`, `display_name`, `auth_provider`; `password_hash` passa a `nullable=True` (§40.4.2)
+- [x] **2.3** Criar `OAuthStateModel` com TTL de 10 min e uso único
+- [x] **2.4** Revisão Alembic para 2.2 e 2.3
+- [x] **2.5** `GET /api/v1/auth/google/start` no **`public_auth_router`** — gera `state`, `nonce` e `code_verifier` (PKCE S256), grava e redireciona
+- [x] **2.6** `GET /api/v1/auth/google/callback` — consome o `state` (apagando-o), troca o código, e aplica **as seis validações** de §40.4.3
+- [x] **2.7** Recusar login quando `email_verified` for falso, com mensagem clara — **a trava contra tomada de conta**
+- [x] **2.8** Vínculo: `google_sub` → e-mail verificado → criação nova com `role="researcher"` (§40.4.3)
+- [x] **2.9** Descartar a foto do perfil na leitura; **não** gravar (art. 6º, III)
+- [x] **2.10** Emitir sessão pelo `create_session` existente e redirecionar para `/app`
+- [x] **2.11** Lista de admissão opcional por `RSAC_SIGNUP_ALLOWLIST` (vazia = aberto) — é o modo "por convite" da v1
+- [x] **2.12** Registrar aceite de Termos e Aviso com data, versão e origem
+- [x] **2.13** `_familia_da_rota` (`security/middleware.py:83`) passa a casar `/auth/google` na família `auth`
+- [x] **2.14** Login por senha recusa explicitamente conta sem hash, com mensagem "esta conta entra com Google"
+- [x] **2.15** `AuthStatusResponse` ganha `google_login_enabled`, para a tela decidir o que mostrar
+- [x] **2.16** Frontend: botão "Entrar com Google" na `LoginPage`, seguindo as diretrizes de marca do Google; senha recolhida atrás de "outras formas de entrar"
+- [x] **2.17** Expurgo de `OAuthStateModel` vencido na rotina de retenção (Fase 3)
+- [x] **2.18** Suíte `backend/tests/test_security/test_oauth_google.py`: `aud` errado, `iss` errado, `exp` vencido, `nonce` divergente, `state` reutilizado, `email_verified=false`, vínculo por e-mail, criação nova, e **tentativa de autocadastro com `role=owner`**
 
 ### Critério de aceite
 
-- [ ] Entrar com Google numa conta nova cria usuário `researcher` e sessão válida
-- [ ] Entrar com Google num e-mail já cadastrado **vincula**, não duplica
-- [ ] Cada uma das seis validações rejeitada isoladamente pela suíte
-- [ ] `email_verified=false` **não** entra
-- [ ] Login por senha do `owner` continua funcionando
-- [ ] Perfil `desktop` entra pelo token local, sem passar pelo Google
-- [ ] Rota de OAuth cai no limite de 10 tentativas por 15 min
+- [x] Entrar com Google numa conta nova cria usuário `researcher` e sessão válida
+- [x] Entrar com Google num e-mail já cadastrado **vincula**, não duplica
+- [x] Cada uma das seis validações rejeitada isoladamente pela suíte
+- [x] `email_verified=false` **não** entra
+- [x] Login por senha do `owner` continua funcionando
+- [x] Perfil `desktop` entra pelo token local, sem passar pelo Google
+- [x] Rota de OAuth cai no limite de 10 tentativas por 15 min
 
 ### Se der errado
 
@@ -392,7 +420,7 @@ Uma linha por fase, para acompanhar de longe.
 | **P** | Domínio, Google Cloud, VPS, backup, chave `age`, encarregado | Fases 2 e 4 | ⬜ |
 | **0** | Alembic + PostgreSQL, dialeto derivado, CI em dois bancos | Tudo | ✅ |
 | **1** | Titularidade, chaves por usuário, isolamento provado | Publicação | ✅ |
-| **2** | Login com Google, PKCE, vínculo seguro, autocadastro travado | Publicação | ⬜ |
+| **2** | Login com Google, PKCE, vínculo seguro, autocadastro travado | Publicação | ✅ |
 | **3** | Direitos do titular, ROPA, retenção, prompt sem autores, aviso | Publicação | ⬜ |
 | **4** | VPS, Compose, Caddy/TLS, cifra em repouso, backup **restaurado** | Publicação | ⬜ |
 | **5** | Landing estática, auto-hospedada, sem terceiros | Publicação | ⬜ |

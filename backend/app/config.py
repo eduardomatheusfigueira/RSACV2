@@ -9,10 +9,11 @@ com suporte a variáveis de ambiente e valores padrão.
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 
 import platformdirs
-from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode
 
 
 class DeploymentProfile(str, Enum):
@@ -55,13 +56,29 @@ class Settings(BaseSettings):
     # Hosts aceitos no cabeçalho `Host` (perfil `server`). Vazio = sem
     # restrição, porque o nome do túnel Cloudflare muda a cada execução e
     # exigir configuração aqui inviabilizaria o uso normal.
-    trusted_hosts: list[str] = []
+    trusted_hosts: Annotated[list[str], NoDecode] = []
 
     # ── Chave-mestra da cifra de segredos (doc 29 §29.4.1) ────────────
     # Obrigatória no perfil `server`: lá um arquivo de chave ao lado do banco
     # seria lido pela mesma falha que leria o banco. Fora do `server`, a
     # ausência faz o backend gerar `<data_dir>/master.key` com permissão 0600.
     secret_key: Optional[str] = None
+
+    # ── Entrada com Google (doc 40 §40.4) ─────────────────────────────
+    # Vazias desativam o login com Google; o backend continua subindo, e a tela
+    # de login mostra apenas as vias disponíveis. É o que mantém o perfil
+    # `desktop` — que entra pelo token local — sem nenhuma configuração extra.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Endereço público do serviço, usado para montar o `redirect_uri` do OAuth.
+    # Precisa coincidir **exatamente** com o cadastrado no Google Cloud.
+    public_base_url: str = ""
+    # Lista de admissão do autocadastro: domínios (`@usp.br`) ou endereços
+    # completos, separados por vírgula. Vazia = qualquer conta Google entra.
+    # É o modo "por convite" da v1, sem escrever código de convite.
+    signup_allowlist: str = ""
+    # Versão do Aviso de Privacidade e dos Termos vigente, registrada no aceite.
+    terms_version: str = "2026-08"
 
     # ── Sessões (doc 29 §29.3.3) ──────────────────────────────────────
     # Validade da sessão, renovada por atividade: quem está triando não é
@@ -79,7 +96,7 @@ class Settings(BaseSettings):
     # Origens extras autorizadas no perfil `server`. Aceita lista JSON ou
     # valores separados por vírgula em RSAC_CORS_ORIGINS. No perfil `desktop`
     # o loopback já é liberado por `cors_allow_origin_regex`.
-    cors_origins: list[str] = []
+    cors_origins: Annotated[list[str], NoDecode] = []
 
     # ── Aquisição de PDFs ─────────────────────────────────────────────
     # E-mail de contato usado nas APIs acadêmicas de acesso aberto.
@@ -99,6 +116,33 @@ class Settings(BaseSettings):
     ai_context_budget_chars: int = 28000
 
     # ── Perímetro derivado do perfil ──────────────────────────────────
+
+    @field_validator("cors_origins", "trusted_hosts", mode="before")
+    @classmethod
+    def _lista_separada_por_virgula(cls, valor):
+        """
+        Aceita `a,b` além de `["a","b"]` nas listas vindas do ambiente.
+
+        Sem isto, `RSAC_CORS_ORIGINS=https://rsac.exemplo.br` — que é a forma
+        que qualquer pessoa escreve num arquivo `.env` — derruba a partida com
+        `error parsing value for field "cors_origins"`, uma mensagem que não
+        diz o que ela quer. O comentário destes campos já prometia as duas
+        formas; o que faltava era cumprir.
+
+        O `NoDecode` nas anotações é a metade indispensável: sem ele o
+        pydantic-settings tenta desserializar JSON **antes** de qualquer
+        validador, e a exceção acontece longe daqui.
+        """
+        import json
+
+        if isinstance(valor, str):
+            texto = valor.strip()
+            if not texto:
+                return []
+            if texto.startswith("["):
+                return json.loads(texto)
+            return [parte.strip() for parte in texto.split(",") if parte.strip()]
+        return valor
 
     @property
     def is_server_profile(self) -> bool:
@@ -122,6 +166,20 @@ class Settings(BaseSettings):
         if self.deployment_profile is DeploymentProfile.CI:
             return ["http://testserver"]
         return [o.strip().rstrip("/") for o in self.cors_origins if o and o.strip()]
+
+    @property
+    def google_login_enabled(self) -> bool:
+        """Há credencial de aplicativo configurada para o Google?"""
+        return bool(self.google_client_id and self.google_client_secret)
+
+    @property
+    def dominios_admitidos(self) -> list[str]:
+        """Lista de admissão do autocadastro, normalizada."""
+        return [
+            item.strip().lower()
+            for item in self.signup_allowlist.split(",")
+            if item.strip()
+        ]
 
     @property
     def expose_api_docs(self) -> bool:

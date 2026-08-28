@@ -82,7 +82,7 @@ LIMITES: dict[str, tuple[int, int]] = {
 
 def _familia_da_rota(caminho: str, metodo: str) -> str:
     """Classifica a requisição na família de limite correspondente."""
-    if "/auth/login" in caminho or "/auth/local" in caminho:
+    if "/auth/login" in caminho or "/auth/local" in caminho or "/auth/google" in caminho:
         return "auth"
     if "/ai/" in caminho or "/screening/ai" in caminho:
         return "ai"

@@ -371,9 +371,36 @@ class UserModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    # Opcional desde o login com Google (doc 40 §40.4.2): uma conta criada por
+    # OAuth não tem senha, e inventar uma seria pior — viraria uma credencial
+    # que ninguém conhece e que mesmo assim autentica.
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     role: Mapped[str] = mapped_column(String(20), default="researcher", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # ── Identidade (doc 40 §40.4.2) ────────────────────────────────────
+    # Sem e-mail não há como responder a requisição de titular (art. 18),
+    # recuperar conta, nem vincular a identidade que o Google devolve.
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # O identificador **estável** do Google. O vínculo é por ele, e não pelo
+    # e-mail: dentro de um domínio corporativo um endereço pode ser reatribuído
+    # a outra pessoa, e o `sub` não.
+    google_sub: Mapped[str | None] = mapped_column(
+        String(64), unique=True, nullable=True, index=True
+    )
+    display_name: Mapped[str] = mapped_column(String(200), default="")
+    # "password" | "google" | "both"
+    auth_provider: Mapped[str] = mapped_column(
+        String(20), default="password", nullable=False
+    )
+    # Prova do aceite dos Termos e do Aviso de Privacidade (art. 8º, §2º):
+    # quando e de qual versão.
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    terms_version: Mapped[str] = mapped_column(String(20), default="")
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -423,6 +450,35 @@ class LoginAttemptModel(Base):
     client_host: Mapped[str] = mapped_column(String(64), default="")
     successful: Mapped[bool] = mapped_column(Boolean, default=False)
     attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class OAuthStateModel(Base):
+    """
+    Estado de uma autenticação com Google em curso (doc 40 §40.4.1).
+
+    Guardar isto no servidor — e não num cookie assinado — é a mesma decisão
+    que levou o RSAC a usar sessão com estado em vez de JWT: o que está no
+    banco pode ser invalidado na hora. Aqui isso importa porque o `state` é de
+    **uso único**: ele é apagado ao ser consumido, o que fecha a repetição do
+    callback. Um cookie assinado continuaria válido até vencer.
+
+    O `code_verifier` é a metade privada do PKCE. Nunca sai do servidor: o que
+    vai ao Google é o desafio (o SHA-256 dele), e é a apresentação do
+    verificador na troca que prova que quem resgata o código é quem o pediu.
+    """
+
+    __tablename__ = "oauth_states"
+    __table_args__ = (Index("ix_oauth_states_expires_at", "expires_at"),)
+
+    state: Mapped[str] = mapped_column(String(64), primary_key=True)
+    code_verifier: Mapped[str] = mapped_column(String(128), nullable=False)
+    nonce: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Caminho **interno** para onde voltar depois do login. Nunca uma URL
+    # absoluta: aceitar uma faria do callback um redirecionador aberto, e o
+    # link de login viraria isca de phishing com o domínio do RSAC na barra.
+    redirect_after: Mapped[str] = mapped_column(String(200), default="/app")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 # ─────────────────────────────────────────────────────────────────────

@@ -58,6 +58,9 @@ class AuthStatusResponse(BaseModel):
     deployment_profile: str
     has_accounts: bool
     local_token_accepted: bool
+    # Sem isto a tela teria de adivinhar se mostra o botão do Google — e
+    # mostrá-lo numa instalação sem credencial levaria a um 503 no clique.
+    google_login_enabled: bool = False
     authenticated: bool = False
     user: Optional[UserResponse] = None
 
