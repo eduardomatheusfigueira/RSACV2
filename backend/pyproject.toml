@@ -16,6 +16,9 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "sqlalchemy>=2.0.36",
     "alembic>=1.14.0",
+    # Driver PostgreSQL do perfil `server` (doc 40 §40.2.1). O perfil
+    # `desktop` continua em SQLite, que é embutido no Python.
+    "psycopg[binary]>=3.2.0",
     "httpx>=0.28.0",
     "pymupdf>=1.25.0",
     "openpyxl>=3.1.5",
@@ -30,6 +33,9 @@ dependencies = [
     "cryptography>=44.0.0",
     # Hash de senhas das contas de acesso (app/security/passwords.py)
     "argon2-cffi>=23.1.0",
+    # Verificação local do id_token do Google (app/security/google_oauth.py).
+    # `joserfc` é o sucessor mantido de `authlib.jose`, que está depreciado.
+    "joserfc>=1.0.0",
     # Análise de XML de terceiros resistente a expansão de entidades
     "defusedxml>=0.7.1",
     "lxml>=5.3.0",

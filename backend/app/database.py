@@ -3,39 +3,101 @@
 
 """
 RSAC V2 — Database Engine e Session Management.
-Configura SQLAlchemy engine com SQLite WAL mode e gerenciamento de sessões.
+
+O engine é derivado do **dialeto da URL**, e não fixado em SQLite (doc 40
+§40.2.2). A razão é que o RSAC passou a ter dois bancos legítimos: SQLite no
+perfil `desktop`, onde é a escolha certa — um arquivo, zero administração —,
+e PostgreSQL no perfil `server`, onde um arquivo único em WAL com coleta e
+triagem concorrentes de vários assinantes vira contenção e ponto único de
+corrupção.
+
+Nada aqui decide qual banco usar. Quem decide é `settings.effective_database_url`,
+e este módulo apenas se adapta ao que recebe.
 """
 
 import logging
 from typing import Generator
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
-from app.infrastructure.persistence.models import Base
 
 logger = logging.getLogger(__name__)
 
+
+# ── Dialeto ───────────────────────────────────────────────────────────
+
+def _is_sqlite(url: str) -> bool:
+    """
+    O dialeto é lido da URL, não do perfil de implantação.
+
+    Separar as duas coisas é deliberado: a suíte de testes roda o perfil `ci`
+    contra os dois bancos, e amarrar o dialeto ao perfil tornaria essa
+    verificação impossível de escrever.
+    """
+    return make_url(url).get_backend_name() == "sqlite"
+
+
 # ── Engine ────────────────────────────────────────────────────────────
 
-engine = create_engine(
-    settings.effective_database_url,
-    connect_args={"check_same_thread": False, "timeout": 30},
-    echo=settings.debug,
-    pool_pre_ping=True,
-)
+def _build_engine(url: str) -> Engine:
+    """
+    Constrói o engine com os argumentos que **aquele** dialeto aceita.
+
+    `check_same_thread` e `timeout` são argumentos do driver do SQLite; passá-los
+    ao psycopg levanta `TypeError` na primeira conexão. O caminho inverso é
+    igualmente verdadeiro: `pool_size` não se aplica ao `SingletonThreadPool`
+    que o SQLite usa em arquivo.
+    """
+    if _is_sqlite(url):
+        return create_engine(
+            url,
+            connect_args={"check_same_thread": False, "timeout": 30},
+            echo=settings.debug,
+            pool_pre_ping=True,
+        )
+
+    return create_engine(
+        url,
+        echo=settings.debug,
+        pool_pre_ping=True,
+        # Dimensionado para o desenho de um worker do doc 40 §40.6: o trabalho
+        # do RSAC é espera de rede, não CPU, e um laço de eventos sozinho não
+        # consome mais que isto de conexões simultâneas.
+        pool_size=5,
+        max_overflow=10,
+        # Devolve conexões antes do tempo em que um proxy ou o próprio
+        # PostgreSQL as encerraria por ociosidade.
+        pool_recycle=1800,
+    )
 
 
-@event.listens_for(engine, "connect")
-def _set_sqlite_pragmas(dbapi_connection, connection_record):
-    """Configura PRAGMAs do SQLite para performance e integridade."""
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
-    cursor.close()
+engine = _build_engine(settings.effective_database_url)
+
+
+def _register_sqlite_pragmas(target: Engine) -> None:
+    """
+    Aplica os PRAGMAs de SQLite na conexão.
+
+    Fica atrás de uma verificação de dialeto porque antes era um listener
+    global: em PostgreSQL, ele executava `PRAGMA journal_mode=WAL` em **toda**
+    conexão nova e derrubava o pool inteiro.
+    """
+
+    @event.listens_for(target, "connect")
+    def _set_sqlite_pragmas(dbapi_connection, connection_record):  # noqa: ANN001
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
+        cursor.close()
+
+
+if _is_sqlite(settings.effective_database_url):
+    _register_sqlite_pragmas(engine)
 
 
 # ── Session Factory ───────────────────────────────────────────────────
@@ -52,55 +114,27 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-# ── Criação de Tabelas e Migrações Automáticas ───────────────────────
-
-def _migrate_missing_columns() -> None:
-    """
-    Migra automaticamente colunas novas adicionadas aos modelos ORM para bancos
-    SQLite já existentes, evitando erros de 'table has no column named...'.
-    """
-    try:
-        from sqlalchemy import inspect
-        inspector = inspect(engine)
-        existing_tables = inspector.get_table_names()
-
-        with engine.connect() as conn:
-            for table_name, table in Base.metadata.tables.items():
-                if table_name in existing_tables:
-                    existing_columns = {col["name"] for col in inspector.get_columns(table_name)}
-                    for column in table.columns:
-                        if column.name not in existing_columns:
-                            col_type = column.type.compile(engine.dialect)
-                            default_clause = ""
-                            if column.default is not None and hasattr(column.default, "arg"):
-                                arg = column.default.arg
-                                if isinstance(arg, str):
-                                    default_clause = f" DEFAULT '{arg}'"
-                                elif isinstance(arg, (int, float)):
-                                    default_clause = f" DEFAULT {arg}"
-                                elif isinstance(arg, bool):
-                                    default_clause = " DEFAULT 1" if arg else " DEFAULT 0"
-                            elif str(col_type).upper().startswith("TEXT") or str(col_type).upper().startswith("VARCHAR"):
-                                default_clause = " DEFAULT ''"
-
-                            sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}{default_clause}"
-                            logger.info(f"Migração automática de esquema: {sql}")
-                            conn.execute(text(sql))
-                            conn.commit()
-                            logger.info(f"Coluna '{column.name}' adicionada à tabela '{table_name}' com sucesso.")
-    except Exception as e:
-        logger.warning(f"Aviso na verificação de migrações automáticas: {e}")
-
+# ── Esquema ───────────────────────────────────────────────────────────
 
 def create_tables() -> None:
-    """Cria todas as tabelas e sincroniza colunas no banco de dados."""
+    """
+    Sincroniza o esquema do banco.
+
+    Em produção quem manda é o Alembic (`app/schema.py`, chamado no `lifespan`).
+    Esta função permanece para os testes, que criam um banco descartável por
+    execução e não têm por que pagar o custo de uma cadeia de migrações — e
+    para o perfil `desktop`, onde a migração também roda, mas o `create_all`
+    é a rede de segurança de um banco recém-criado.
+    """
+    from app.infrastructure.persistence.models import Base
+
     logger.info(f"Sincronizando tabelas no banco: {settings.effective_database_url}")
     Base.metadata.create_all(bind=engine)
-    _migrate_missing_columns()
-    logger.info("Tabelas e colunas sincronizadas com sucesso.")
+    logger.info("Tabelas sincronizadas com sucesso.")
 
 
 def drop_tables() -> None:
     """Remove todas as tabelas (CUIDADO — apenas para testes)."""
-    Base.metadata.drop_all(bind=engine)
+    from app.infrastructure.persistence.models import Base
 
+    Base.metadata.drop_all(bind=engine)

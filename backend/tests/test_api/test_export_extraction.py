@@ -5,12 +5,13 @@
 
 import pytest
 from app.infrastructure.persistence.models import CriterionModel, ExtractionQuestionModel, PaperModel, ProjectModel, ProtocolModel
+from tests.conftest import OWNER_ID_TESTE
 
 
 @pytest.mark.anyio
 async def test_extraction_and_export_flow(async_client, db_session):
     # 1. Setup projeto com protocolo e critérios
-    proj = ProjectModel(title="Revisão Export Teste", methodology="PRISMA-P")
+    proj = ProjectModel(owner_id=OWNER_ID_TESTE, title="Revisão Export Teste", methodology="PRISMA-P")
     db_session.add(proj)
     db_session.flush()
 

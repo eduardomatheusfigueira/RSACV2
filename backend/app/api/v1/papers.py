@@ -16,10 +16,9 @@ from app.infrastructure.persistence.models import (
     PaperCriterionModel,
     PaperModel,
     PaperSourceModel,
-    ProjectModel,
     UserModel,
 )
-from app.security.dependencies import require_session
+from app.security.dependencies import projeto_do_usuario, require_session
 from app.schemas.paper import (
     PaperCreate,
     PaperListResponse,
@@ -29,7 +28,14 @@ from app.schemas.paper import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/papers", tags=["papers"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/papers",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["papers"],
+)
 
 
 def _normalize_title(title: str) -> str:

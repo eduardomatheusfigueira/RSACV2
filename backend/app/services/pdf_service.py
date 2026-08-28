@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
+from starlette.concurrency import run_in_threadpool
 
 from app.config import settings
 from app.services.pdf_resolver import (
@@ -142,6 +143,26 @@ class PDFService:
         target_path.write_bytes(content)
         self._invalidate_text_cache(str(target_path))
         return str(target_path)
+
+    def _persistir_e_extrair(
+        self, project_id: str, paper_id: str, content: bytes
+    ) -> tuple[str, PDFDocument, str]:
+        """
+        Parte síncrona e pesada da aquisição, reunida para caber num só desvio
+        para a thread.
+
+        Manter as três operações juntas evita três saltos de contexto onde um
+        basta — e deixa explícito, em um lugar, o que não pode rodar no laço.
+        """
+        file_path = self.save_pdf_bytes(project_id, paper_id, content)
+        document = extract_document(file_path)
+        return file_path, document, self.sha256_of(content)
+
+    async def read_document_async(
+        self, file_path: str, use_cache: bool = True
+    ) -> PDFDocument:
+        """`read_document` fora do laço de eventos, para uso em rota assíncrona."""
+        return await run_in_threadpool(self.read_document, file_path, use_cache)
 
     async def save_uploaded_stream(self, project_id: str, paper_id: str, upload) -> tuple[str, int, str]:
         """
@@ -261,8 +282,16 @@ class PDFService:
                 message=self._failure_message(ref, attempts),
             )
 
-        file_path = self.save_pdf_bytes(project_id, paper_id, resolved.content)
-        document = extract_document(file_path)
+        # Gravar em disco, abrir o PDF no PyMuPDF e calcular o SHA-256 são as
+        # três únicas operações do RSAC que ocupam CPU de verdade — o resto é
+        # espera de rede. Num servidor com um único worker (doc 40 §40.6), fazê-las
+        # aqui no laço de eventos congela **todas** as outras requisições
+        # enquanto durarem: com a aquisição em lote buscando três PDFs de tese
+        # ao mesmo tempo, isso são segundos de servidor parado, e a barra de
+        # progresso de quem está triando trava junto.
+        file_path, document, sha256 = await run_in_threadpool(
+            self._persistir_e_extrair, project_id, paper_id, resolved.content
+        )
 
         return PDFAcquisition(
             success=True,
@@ -271,7 +300,7 @@ class PDFService:
             strategy=resolved.strategy,
             label=resolved.label,
             size_bytes=len(resolved.content),
-            sha256=self.sha256_of(resolved.content),
+            sha256=sha256,
             page_count=document.page_count,
             is_scanned=document.is_scanned,
             text_chars=document.char_count,

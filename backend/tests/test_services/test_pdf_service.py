@@ -205,3 +205,90 @@ async def test_download_pdf_compat_resolve_landing_page(service):
 
     assert caminho is not None
     assert caminho.endswith("paper1.pdf")
+
+
+# ── O laço de eventos não pode travar (doc 40 §40.6) ──────────────────
+
+
+@pytest.mark.anyio
+async def test_extracao_de_pdf_nao_roda_no_laco_de_eventos(service):
+    """
+    A parte pesada da aquisição precisa sair para uma thread.
+
+    Gravar em disco, abrir o PDF no PyMuPDF e calcular o SHA-256 são as únicas
+    operações do RSAC que ocupam CPU de verdade. No desenho de produção há um
+    **único** worker (doc 40 §40.6), escolhido porque todo o resto do trabalho é
+    espera de rede e um laço de eventos sozinho dá conta. Essa escolha só se
+    sustenta enquanto a CPU sair do laço: rodando ali, a aquisição em lote de
+    três teses congelaria todas as outras requisições por segundos — inclusive
+    a barra de progresso de quem estivesse triando.
+
+    O teste afirma o mecanismo, não o tempo: a extração tem de acontecer em uma
+    thread diferente da que roda o laço.
+    """
+    import threading
+
+    from app.services import pdf_service as modulo
+
+    thread_do_laco = threading.current_thread()
+    threads_da_extracao: list[threading.Thread] = []
+
+    extrair_original = modulo.extract_document
+
+    def extrair_registrando(file_path: str):
+        threads_da_extracao.append(threading.current_thread())
+        return extrair_original(file_path)
+
+    modulo.extract_document = extrair_registrando
+    try:
+        conteudo = _make_pdf(PAGINAS)
+        pdf_url = "https://repositorio.org/artigo.pdf"
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if str(request.url) == pdf_url:
+                return httpx.Response(
+                    200, content=conteudo, headers={"content-type": "application/pdf"}
+                )
+            return httpx.Response(404)
+
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), follow_redirects=True
+        ) as client:
+            resultado = await service.acquire_pdf(
+                "proj1", "paper1", PaperRef(download_url=pdf_url), client=client
+            )
+    finally:
+        modulo.extract_document = extrair_original
+
+    assert resultado.success is True
+    assert threads_da_extracao, "a extração não chegou a ser chamada"
+    assert threads_da_extracao[0] is not thread_do_laco, (
+        "extract_document rodou na thread do laço de eventos — "
+        "a aquisição voltou a bloquear o servidor inteiro"
+    )
+
+
+@pytest.mark.anyio
+async def test_read_document_async_sai_do_laco(service, tmp_path):
+    """A leitura usada pela rota de upload segue a mesma regra."""
+    import threading
+
+    caminho = tmp_path / "doc.pdf"
+    caminho.write_bytes(_make_pdf(PAGINAS))
+
+    thread_do_laco = threading.current_thread()
+    threads: list[threading.Thread] = []
+
+    leitura_original = service.read_document
+
+    def ler_registrando(file_path: str, use_cache: bool = True):
+        threads.append(threading.current_thread())
+        return leitura_original(file_path, use_cache)
+
+    service.read_document = ler_registrando
+    documento = await service.read_document_async(str(caminho))
+
+    assert documento.page_count == 3
+    assert threads and threads[0] is not thread_do_laco, (
+        "read_document_async executou no laço — a rota de upload voltou a bloquear"
+    )

@@ -20,7 +20,7 @@ from app.schemas.profile import (
     ProfileImportResponse,
 )
 from app.infrastructure.persistence.models import UserModel
-from app.security.dependencies import require_owner
+from app.security.dependencies import require_session
 from app.security.secret_box import (
     SecretBoxError,
     decrypt_envelope,
@@ -39,7 +39,7 @@ profile_service = ProfileService()
 def export_keys(
     request: KeysExportRequest = Body(...),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """
     Exporta as credenciais cadastradas em um arquivo **cifrado com senha**.
@@ -50,7 +50,7 @@ def export_keys(
     e o que sai é um envelope que ninguém abre sem a senha (doc 29 §29.4.3).
     """
     try:
-        payload = profile_service.export_keys(db)
+        payload = profile_service.export_keys(db, usuario.id)
         return encrypt_payload(payload, request.export_password)
     except SecretBoxError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -63,7 +63,7 @@ def export_keys(
 def import_keys(
     request: KeysImportRequest = Body(...),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """
     Importa um arquivo de chaves — envelope cifrado ou backup legado em claro.
@@ -88,7 +88,7 @@ def import_keys(
         if target_input is None:
             raise ValueError("Nenhum conteúdo informado para importação.")
 
-        return profile_service.import_keys(db, target_input)
+        return profile_service.import_keys(db, target_input, usuario.id)
     except SecretBoxError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
@@ -100,7 +100,7 @@ def import_keys(
 def export_full_profile(
     request: ProfileExportRequest = Body(default_factory=ProfileExportRequest),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """
     Exporta o perfil completo de sessão, preferências, configurações de IA,
@@ -108,7 +108,7 @@ def export_full_profile(
     """
     try:
         session_prefs = request.session_preferences.model_dump() if request.session_preferences else {}
-        profile = profile_service.export_profile(db, session_prefs)
+        profile = profile_service.export_profile(db, usuario.id, session_prefs)
 
         # As credenciais saem do pacote por padrão; com `include_secrets` elas
         # voltam, mas dentro de um envelope cifrado (doc 29 §29.4.2).
@@ -127,7 +127,7 @@ def export_full_profile(
 def import_full_profile(
     profile_data: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-    _: UserModel = Depends(require_owner),
+    usuario: UserModel = Depends(require_session),
 ):
     """
     Restaura um perfil completo de sessão e workspace.
@@ -147,7 +147,7 @@ def import_full_profile(
             password = profile_data.get("export_password") or data.get("export_password") or ""
             data = profile_service.restore_secrets(dict(data), decrypt_envelope(secrets, password))
 
-        return profile_service.import_profile(db, data)
+        return profile_service.import_profile(db, data, usuario.id)
     except SecretBoxError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:

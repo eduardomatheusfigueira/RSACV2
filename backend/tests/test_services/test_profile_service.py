@@ -16,6 +16,7 @@ from app.infrastructure.persistence.models import (
     SourceCredentialModel,
 )
 from app.services.profile_service import ProfileService
+from tests.conftest import OWNER_ID_TESTE
 
 
 def test_keys_isolation_and_export(db_session):
@@ -23,6 +24,7 @@ def test_keys_isolation_and_export(db_session):
 
     # 1. Configurar configurações com chaves distintas para Gemini e Qwen
     settings = AISettingsModel(
+        user_id=OWNER_ID_TESTE,
         provider="gemini",
         model="gemini-3.6-flash",
         gemini_api_keys_encrypted=json.dumps(["AIzaSy_GEMINI_KEY_1", "AIzaSy_GEMINI_KEY_2"]),
@@ -32,14 +34,14 @@ def test_keys_isolation_and_export(db_session):
     db_session.add(settings)
 
     # 2. Configurar credenciais de bases científicas
-    scopus = SourceCredentialModel(source_name="SCOPUS", api_key="scopus_key_123", inst_token="scopus_token_abc")
-    pubmed = SourceCredentialModel(source_name="PUBMED", api_key="ncbi_key_456")
-    openalex = SourceCredentialModel(source_name="OPENALEX", api_key="researcher@university.edu")
+    scopus = SourceCredentialModel(user_id=OWNER_ID_TESTE, source_name="SCOPUS", api_key="scopus_key_123", inst_token="scopus_token_abc")
+    pubmed = SourceCredentialModel(user_id=OWNER_ID_TESTE, source_name="PUBMED", api_key="ncbi_key_456")
+    openalex = SourceCredentialModel(user_id=OWNER_ID_TESTE, source_name="OPENALEX", api_key="researcher@university.edu")
     db_session.add_all([scopus, pubmed, openalex])
     db_session.commit()
 
     # 3. Exportar chaves
-    exported = service.export_keys(db_session)
+    exported = service.export_keys(db_session, OWNER_ID_TESTE)
 
     assert exported["schema_version"] == "rsac_api_keys_v1"
     assert exported["gemini_api_keys"] == ["AIzaSy_GEMINI_KEY_1", "AIzaSy_GEMINI_KEY_2"]
@@ -64,7 +66,7 @@ def test_keys_import_json_and_env(db_session):
         },
     }
 
-    result = service.import_keys(db_session, json_payload)
+    result = service.import_keys(db_session, json_payload, OWNER_ID_TESTE)
     assert result["status"] == "ok"
     assert result["gemini_keys_count"] == 2
     assert result["qwen_keys_count"] == 1
@@ -87,7 +89,7 @@ def test_keys_import_json_and_env(db_session):
     OPENALEX_EMAIL=env_user@edu.br
     """
 
-    res_env = service.import_keys(db_session, env_text)
+    res_env = service.import_keys(db_session, env_text, OWNER_ID_TESTE)
     assert res_env["status"] == "ok"
     assert res_env["gemini_keys_count"] == 2
     assert res_env["qwen_keys_count"] == 1
@@ -102,6 +104,7 @@ def test_full_profile_export_and_restoration(db_session):
 
     # 1. Criar projeto completo no banco
     project = ProjectModel(
+        owner_id=OWNER_ID_TESTE,
         id="proj-1234-uuid",
         title="Revisão Sistemática em Arranjos Produtivos Locais",
         description="Avaliação de políticas públicas para APLs regionais.",
@@ -172,6 +175,7 @@ def test_full_profile_export_and_restoration(db_session):
     db_session.add(answer)
 
     settings = AISettingsModel(
+        user_id=OWNER_ID_TESTE,
         provider="qwen",
         model="qwen3.8-max",
         gemini_api_keys_encrypted=json.dumps(["AIza_GEMINI_BACKUP"]),
@@ -187,7 +191,7 @@ def test_full_profile_export_and_restoration(db_session):
         "sidebar_collapsed": True,
         "ai_enabled": True,
     }
-    profile_data = service.export_profile(db_session, session_prefs)
+    profile_data = service.export_profile(db_session, OWNER_ID_TESTE, session_prefs)
 
     assert profile_data["schema_version"] == "rsac_profile_v1"
     assert profile_data["session_preferences"]["theme"] == "lava-steel"
@@ -208,7 +212,7 @@ def test_full_profile_export_and_restoration(db_session):
     db_session.commit()
 
     # Restaurar
-    import_res = service.import_profile(db_session, profile_data)
+    import_res = service.import_profile(db_session, profile_data, OWNER_ID_TESTE)
     assert import_res["status"] == "ok"
     assert import_res["projects_imported"] == 1
     assert import_res["papers_imported"] == 1

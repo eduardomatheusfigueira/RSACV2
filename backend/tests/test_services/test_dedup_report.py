@@ -6,13 +6,14 @@
 import pytest
 from app.infrastructure.persistence.models import PaperModel, PaperSourceModel, ProjectModel
 from app.services.dedup_service import DeduplicationService
+from tests.conftest import OWNER_ID_TESTE
 
 
 def test_run_project_deduplication_and_report_generation(db_session):
     dedup = DeduplicationService()
 
     # 1. Criar projeto
-    project = ProjectModel(title="Projeto Deduplicação Relatório", methodology="PRISMA-ScR")
+    project = ProjectModel(owner_id=OWNER_ID_TESTE, title="Projeto Deduplicação Relatório", methodology="PRISMA-ScR")
     db_session.add(project)
     db_session.commit()
 

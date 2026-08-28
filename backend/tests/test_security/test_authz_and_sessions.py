@@ -10,7 +10,15 @@ import pytest
 
 from tests.conftest import RESEARCHER_USERNAME, SENHA_TESTE
 
-# Rotas que tocam credenciais — exclusivas de `owner` (§29.3.4).
+# Rotas que tocam credenciais.
+#
+# Até a Fase 1 do doc 41 elas eram exclusivas de `owner` (§29.3.4), porque
+# havia **uma** configuração de IA no banco inteiro e negá-la ao colaborador
+# era a única forma de proteger a chave de quem o convidou. Com contas
+# individuais e chave do próprio assinante (doc 40 §40.3.3), a pergunta deixou
+# de ser "quem tem papel para ver a chave" e passou a ser "de quem é a chave":
+# cada conta gere a sua, e nenhuma alcança a de outra. A garantia ficou mais
+# forte, e é o que `test_credencial_de_um_nao_vaza_para_outro` verifica.
 ROTAS_DE_SEGREDO = [
     ("GET", "/api/v1/ai/settings", None),
     ("GET", "/api/v1/settings/sources", None),
@@ -24,13 +32,48 @@ ROTAS_DE_SEGREDO = [
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("metodo,caminho,corpo", ROTAS_DE_SEGREDO)
-async def test_researcher_nao_alcanca_credenciais(researcher_client, metodo, caminho, corpo):
+async def test_rotas_de_credencial_respondem_pelo_proprio_usuario(
+    researcher_client, metodo, caminho, corpo
+):
     """
-    Um colaborador convidado para triar estudos não chega às chaves de API de
-    quem o convidou — nem mascaradas.
+    As rotas de credencial atendem qualquer conta — sempre sobre a dela.
+
+    O que se verifica aqui é que elas **respondem**, e não que negam: negar
+    deixou de ser a proteção quando cada assinante passou a ter as próprias
+    chaves. A proteção agora é o escopo, provado no teste seguinte.
     """
     res = await researcher_client.request(metodo, caminho, json=corpo)
-    assert res.status_code == 403, f"{metodo} {caminho} liberou para researcher"
+    assert res.status_code != 403, f"{metodo} {caminho} negou o acesso à própria credencial"
+    assert res.status_code < 500, f"{metodo} {caminho} falhou: {res.status_code}"
+
+
+@pytest.mark.anyio
+async def test_credencial_de_um_nao_vaza_para_outro(async_client, researcher_client):
+    """
+    A chave de API de uma conta é invisível para a outra.
+
+    É o achado O-02 do doc 39: `AISettingsModel` era uma linha única no banco,
+    lida em dez pontos como `.first()`. Com dois assinantes e chave própria
+    (BYOK), isso significava que o segundo a salvar sobrescrevia a chave do
+    primeiro — e que a triagem de um rodava na cota paga do outro.
+    """
+    salvou = await async_client.put(
+        "/api/v1/ai/settings",
+        json={"provider": "gemini", "model": "gemini-3.6-flash",
+              "api_keys": ["AIzaSyCHAVE-SECRETA-DO-DONO-000"]},
+    )
+    assert salvou.status_code == 200
+    assert salvou.json()["has_api_keys"] is True
+
+    do_pesquisador = await researcher_client.get("/api/v1/ai/settings")
+    assert do_pesquisador.status_code == 200
+    assert do_pesquisador.json()["has_api_keys"] is False, (
+        "a chave do dono apareceu na configuração do colaborador"
+    )
+
+    corpo = do_pesquisador.text
+    assert "CHAVE-SECRETA-DO-DONO" not in corpo
+    assert "AIzaSy" not in corpo
 
 
 @pytest.mark.anyio
@@ -45,7 +88,7 @@ async def test_researcher_opera_a_revisao_normalmente(researcher_client):
 
 
 @pytest.mark.anyio
-async def test_owner_alcanca_as_credenciais(async_client):
+async def test_owner_alcanca_as_proprias_credenciais(async_client):
     assert (await async_client.get("/api/v1/ai/settings")).status_code == 200
     assert (await async_client.get("/api/v1/settings/sources")).status_code == 200
 

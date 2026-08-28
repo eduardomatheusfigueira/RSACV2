@@ -161,6 +161,19 @@ class APIClient {
   }
 
   /**
+   * Endereço que inicia a entrada com Google.
+   *
+   * É uma navegação de página inteira, e não uma requisição: o fluxo OAuth
+   * termina num redirecionamento que precisa gravar o cookie de sessão no
+   * navegador. Buscar isto por `fetch` traria o HTML do Google para dentro de
+   * um XHR e não abriria sessão nenhuma.
+   */
+  googleLoginUrl(destino = '/app'): string {
+    const base = this.baseUrl.replace(/\/$/, '')
+    return `${base}/auth/google/start?redirect_after=${encodeURIComponent(destino)}`
+  }
+
+  /**
    * Configura a URL base a partir da porta (chamado pelo Electron ou ambiente local).
    */
   setPort(port: number): void {

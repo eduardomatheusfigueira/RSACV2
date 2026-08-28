@@ -19,9 +19,11 @@ from app.api.deps import get_db
 from app.infrastructure.persistence.models import AISettingsModel, ProjectModel, UserModel
 from app.schemas.ai import BatchScreeningRequest
 from app.security.dependencies import (
+    projeto_do_usuario,
     origem_do_websocket_e_permitida,
     require_session,
     require_websocket_session,
+    verificar_projeto_do_usuario,
 )
 from app.security.middleware import erro_interno
 from app.services.harvesting_service import ws_manager
@@ -29,7 +31,14 @@ from app.services.screening_service import AuditActor, ScreeningService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/projects/{project_id}/screening/ai", tags=["screening_ai"])
+# A titularidade entra como dependência do router, e não rota a rota (doc 40
+# §40.3.2): é o mesmo padrão de `require_session`, e é o que faz uma rota
+# nova nascer isolada sem depender de ninguém lembrar.
+router = APIRouter(
+    prefix="/projects/{project_id}/screening/ai",
+    dependencies=[Depends(projeto_do_usuario)],
+    tags=["screening_ai"],
+)
 screening_service = ScreeningService()
 
 
@@ -123,6 +132,14 @@ async def screening_websocket(
     usuario = await require_websocket_session(websocket, db)
     if not usuario:
         await websocket.close(code=1008, reason="Autenticação necessária.")
+        return
+
+    # A dependência de titularidade do router não alcança o WebSocket — lá não
+    # há requisição HTTP para responder com 404. Sem esta verificação, quem
+    # tivesse qualquer sessão válida acompanharia a coleta e a triagem de
+    # outro assinante apenas conhecendo o identificador do projeto.
+    if not verificar_projeto_do_usuario(db, project_id, usuario):
+        await websocket.close(code=1008, reason="Projeto não encontrado.")
         return
 
     await ws_manager.connect(project_id, websocket)

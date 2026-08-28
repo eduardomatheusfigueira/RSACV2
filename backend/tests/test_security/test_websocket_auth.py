@@ -19,16 +19,34 @@ from starlette.websockets import WebSocketDisconnect
 
 from app.api.deps import get_db
 from app.main import create_app
-from tests.conftest import OWNER_USERNAME, SENHA_TESTE
+from tests.conftest import OWNER_ID_TESTE, OWNER_USERNAME, SENHA_TESTE
+
+# O identificador precisa ser o de um projeto que **existe e pertence** à conta
+# de teste: desde a Fase 1 do doc 41 o canal também confere titularidade, e não
+# só sessão. Sem isso, quem tivesse qualquer sessão válida acompanharia a
+# coleta e a triagem de outro assinante só conhecendo o identificador.
+PROJETO_TESTE = "projeto-teste"
 
 CANAIS = [
-    "/api/v1/projects/projeto-teste/harvest/ws",
-    "/api/v1/projects/projeto-teste/screening/ai/ws",
+    f"/api/v1/projects/{PROJETO_TESTE}/harvest/ws",
+    f"/api/v1/projects/{PROJETO_TESTE}/screening/ai/ws",
 ]
 
 
 @pytest.fixture
 def client(db_session, contas):
+    from app.infrastructure.persistence.models import ProjectModel
+
+    db_session.add(
+        ProjectModel(
+            id=PROJETO_TESTE,
+            owner_id=OWNER_ID_TESTE,
+            title="Projeto do canal de teste",
+            methodology="PRISMA-ScR",
+        )
+    )
+    db_session.commit()
+
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db_session
     with TestClient(app) as c:

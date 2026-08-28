@@ -21,11 +21,16 @@ from app.infrastructure.persistence.models import (
     PaperSourceModel,
     ProjectModel,
     ProtocolModel,
+    UserModel,
 )
 from app.schemas.project import ProjectCreate, ProjectListResponse, ProjectResponse, ProjectUpdate
+from app.security.dependencies import projeto_do_usuario, require_session
+from app.services.pdf_service import PDFService
 from app.security.middleware import erro_interno
 
 logger = logging.getLogger(__name__)
+
+pdf_service = PDFService()
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -34,9 +39,10 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 def list_projects(
     archived: Optional[bool] = Query(None, description="Filtrar por arquivamento"),
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
 ):
-    """Lista todos os projetos."""
-    query = db.query(ProjectModel)
+    """Lista os projetos **de quem está pedindo**."""
+    query = db.query(ProjectModel).filter(ProjectModel.owner_id == usuario.id)
     if archived is not None:
         query = query.filter(ProjectModel.is_archived == archived)
     query = query.order_by(ProjectModel.updated_at.desc())
@@ -52,9 +58,11 @@ def list_projects(
 def create_project(
     data: ProjectCreate,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
 ):
-    """Cria um novo projeto de revisão sistemática."""
+    """Cria um novo projeto de revisão sistemática, pertencente a quem o criou."""
     project = ProjectModel(
+        owner_id=usuario.id,
         title=data.title,
         description=data.description,
         methodology=data.methodology,
@@ -75,26 +83,19 @@ def create_project(
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
-    project_id: str,
-    db: Session = Depends(get_db),
+    project: ProjectModel = Depends(projeto_do_usuario),
 ):
     """Obtém detalhes de um projeto específico."""
-    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
     return ProjectResponse.model_validate(project)
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)
 def update_project(
-    project_id: str,
     data: ProjectUpdate,
     db: Session = Depends(get_db),
+    project: ProjectModel = Depends(projeto_do_usuario),
 ):
     """Atualiza um projeto existente."""
-    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
 
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -111,15 +112,36 @@ def update_project(
 def delete_project(
     project_id: str,
     db: Session = Depends(get_db),
+    project: ProjectModel = Depends(projeto_do_usuario),
 ):
     """Exclui um projeto e todos os dados associados com cascata rigorosa."""
-    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
-
     try:
         # 1. Coleta IDs de Papers vinculados ao projeto
         paper_ids = [r[0] for r in db.query(PaperModel.id).filter(PaperModel.project_id == project_id).all()]
+
+        # 1b. Apaga os PDFs do disco **antes** de perder os identificadores.
+        #
+        # A cascata era rigorosa no banco e ignorava o sistema de arquivos: o
+        # PDF — a peça com maior densidade de dado pessoal do acervo, porque
+        # traz nomes, vínculos e às vezes dados de saúde de terceiros —
+        # sobrevivia à exclusão do projeto que o trouxe. É o achado F-02 do
+        # doc 37 e o item L-24 do checklist: o art. 16 da LGPD exige que a
+        # eliminação alcance todos os repositórios, não só o principal.
+        #
+        # A remoção do arquivo não pode derrubar a exclusão: um PDF que não
+        # sai deixa lixo em disco, mas um erro aqui deixaria o usuário sem
+        # conseguir apagar o próprio projeto.
+        removidos = 0
+        for paper_id in paper_ids:
+            try:
+                if pdf_service.delete_pdf(project_id, paper_id):
+                    removidos += 1
+            except OSError as exc:
+                logger.warning(
+                    "[Projects] PDF de %s não pôde ser removido: %s", paper_id, exc
+                )
+        if removidos:
+            logger.info("[Projects] %d PDF(s) removidos do disco.", removidos)
 
         # 2. Deleta entidades filhas dos papers
         if paper_ids:
@@ -165,11 +187,9 @@ def delete_project(
 def get_project_stats(
     project_id: str,
     db: Session = Depends(get_db),
+    project: ProjectModel = Depends(projeto_do_usuario),
 ):
     """Retorna estatísticas do projeto (contadores PRISMA)."""
-    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
 
     from sqlalchemy import func, or_
 

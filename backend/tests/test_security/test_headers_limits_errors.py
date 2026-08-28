@@ -239,6 +239,21 @@ CANAIS = [
 
 @pytest.fixture
 def ws_client(db_session, contas):
+    # O canal confere titularidade além da sessão (doc 41, Fase 1), então o
+    # projeto do caminho precisa existir e pertencer à conta de teste.
+    from app.infrastructure.persistence.models import ProjectModel
+    from tests.conftest import OWNER_ID_TESTE
+
+    db_session.add(
+        ProjectModel(
+            id="projeto-teste",
+            owner_id=OWNER_ID_TESTE,
+            title="Projeto do canal de teste",
+            methodology="PRISMA-ScR",
+        )
+    )
+    db_session.commit()
+
     app = create_app()
     app.dependency_overrides[get_db] = lambda: db_session
     with TestClient(app) as c:
