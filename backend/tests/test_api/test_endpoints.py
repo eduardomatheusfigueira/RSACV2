@@ -196,3 +196,81 @@ async def test_ai_assist_field_endpoint(async_client):
     # Por padrão sem chaves ou IA desativada, retorna 400 explicativo
     assert res.status_code in (400, 500)
 
+
+@pytest.mark.anyio
+async def test_protocol_update_preserves_evaluations_and_foreign_keys(async_client):
+    """Testa que salvar o protocolo não quebra chaves estrangeiras com paper_criteria e extraction_answers."""
+    # 1. Criar projeto
+    res = await async_client.post(
+        "/api/v1/projects",
+        json={"title": "Projeto Protocolo Teste FK", "methodology": "PRISMA-ScR"},
+    )
+    assert res.status_code == 201
+    project_id = res.json()["id"]
+
+    # 2. Configurar protocolo com critérios e perguntas de extração
+    put_res = await async_client.put(
+        f"/api/v1/projects/{project_id}/protocol",
+        json={
+            "objective": "Objetivo inicial",
+            "criteria": [
+                {"text": "Critério 1 - Inclusão", "is_exclusion": False, "order": 0},
+                {"text": "Critério 2 - Exclusão", "is_exclusion": True, "order": 1},
+            ],
+            "extraction_questions": [
+                {"text": "Pergunta 1", "order": 0},
+            ],
+        },
+    )
+    assert put_res.status_code == 200
+    proto_data = put_res.json()
+    crit_1_id = proto_data["criteria"][0]["id"]
+    crit_2_id = proto_data["criteria"][1]["id"]
+    q_1_id = proto_data["extraction_questions"][0]["id"]
+
+    # 3. Adicionar paper e avaliar critérios
+    paper_res = await async_client.post(
+        f"/api/v1/projects/{project_id}/papers",
+        json={"title": "Estudo Avaliado", "authors": "Autor 1", "year": "2024"},
+    )
+    assert paper_res.status_code == 201
+    paper_id = paper_res.json()["id"]
+
+    eval_res = await async_client.patch(
+        f"/api/v1/projects/{project_id}/papers/{paper_id}",
+        json={"criteria_evaluations": {crit_1_id: True, crit_2_id: False}},
+    )
+    assert eval_res.status_code == 200
+
+    # 4. Atualizar protocolo enviando os critérios e perguntas existentes + novos
+    update_res = await async_client.put(
+        f"/api/v1/projects/{project_id}/protocol",
+        json={
+            "objective": "Objetivo atualizado",
+            "criteria": [
+                {"id": crit_1_id, "text": "Critério 1 - Texto Atualizado", "is_exclusion": False, "order": 0},
+                {"id": crit_2_id, "text": "Critério 2 - Exclusão", "is_exclusion": True, "order": 1},
+                {"text": "Critério 3 - Novo", "is_exclusion": False, "order": 2},
+            ],
+            "extraction_questions": [
+                {"id": q_1_id, "text": "Pergunta 1 - Atualizada", "order": 0},
+                {"text": "Pergunta 2 - Nova", "order": 1},
+            ],
+        },
+    )
+    assert update_res.status_code == 200
+    updated_proto = update_res.json()
+    assert updated_proto["objective"] == "Objetivo atualizado"
+    assert len(updated_proto["criteria"]) == 3
+    assert updated_proto["criteria"][0]["id"] == crit_1_id
+    assert updated_proto["criteria"][0]["text"] == "Critério 1 - Texto Atualizado"
+    assert len(updated_proto["extraction_questions"]) == 2
+    assert updated_proto["extraction_questions"][0]["id"] == q_1_id
+
+    # 5. Verificar que as avaliações no paper permanecem íntegras
+    paper_check = await async_client.get(f"/api/v1/projects/{project_id}/papers/{paper_id}")
+    assert paper_check.status_code == 200
+    assert paper_check.json()["criteria_evaluations"][crit_1_id] is True
+    assert paper_check.json()["criteria_evaluations"][crit_2_id] is False
+
+

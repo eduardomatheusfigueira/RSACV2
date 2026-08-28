@@ -302,6 +302,9 @@ export function HarvestPage(): JSX.Element {
           if (statusRes.progress && Object.keys(statusRes.progress).length > 0) {
             setProgress(statusRes.progress)
           }
+          if (statusRes.total_found !== undefined) setTotalFound(statusRes.total_found)
+          if (statusRes.total_new !== undefined) setTotalNew(statusRes.total_new)
+          if (statusRes.total_duplicate !== undefined) setTotalDuplicate(statusRes.total_duplicate)
 
           if (statusRes.is_complete) {
             clearInterval(pollInterval)

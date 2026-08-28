@@ -36,18 +36,18 @@ class GeminiAIClient(BaseAIClient):
 
     BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
     FALLBACK_MODELS = (
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3.5-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-2.5-pro",
     )
 
     def __init__(
         self,
         api_keys: List[str],
-        model_name: str = "gemini-3.6-flash",
+        model_name: str = "gemini-2.5-flash",
         temperature: float = 0.2,
     ):
-        super().__init__(provider_name="gemini", model_name=model_name)
+        super().__init__(provider_name="gemini", model_name=model_name or "gemini-2.5-flash")
         self.api_keys = [k.strip() for k in api_keys if k.strip()]
         self.current_key_idx = 0
         self.temperature = temperature
@@ -86,13 +86,15 @@ class GeminiAIClient(BaseAIClient):
         if not self.api_keys:
             raise ValueError("Nenhuma API Key do Google Gemini cadastrada nas Configurações.")
 
-        max_attempts = len(self.api_keys) * 2
+        # Priorizar chaves válidas de formato Google AI Studio (iniciadas em AIzaSy)
+        valid_keys = [k for k in self.api_keys if k.startswith("AIzaSy")]
+        keys_to_try = valid_keys if valid_keys else self.api_keys
+
         models_to_try = [self.model_name] + [m for m in self.FALLBACK_MODELS if m != self.model_name]
 
         for model in models_to_try:
-            for attempt in range(max_attempts):
-                current_key = self._get_current_key()
-                url = f"{self.BASE_URL}/{model}:generateContent?key={current_key}"
+            for key in keys_to_try:
+                url = f"{self.BASE_URL}/{model}:generateContent?key={key}"
 
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
@@ -103,7 +105,7 @@ class GeminiAIClient(BaseAIClient):
                 }
 
                 try:
-                    async with httpx.AsyncClient(timeout=60.0) as client:
+                    async with httpx.AsyncClient(timeout=45.0) as client:
                         res = await client.post(url, json=payload)
 
                         if res.status_code == 200:
@@ -118,27 +120,24 @@ class GeminiAIClient(BaseAIClient):
                             return json.loads(cleaned)
 
                         elif res.status_code == 429:
-                            logger.warning(f"[Gemini] Rate limit atingido na chave {self.current_key_idx}. Rotacionando chave...")
-                            self._rotate_key()
-                            await asyncio.sleep(1.0)
+                            logger.warning(f"[Gemini] Rate limit no modelo '{model}'. Tentando próxima chave...")
+                            await asyncio.sleep(0.3)
                             continue
 
                         elif res.status_code in (400, 404):
-                            logger.warning(f"[Gemini] Modelo '{model}' retornou {res.status_code}. Tentando próximo modelo fallback...")
-                            break
+                            logger.warning(f"[Gemini] Modelo '{model}' retornou {res.status_code}. Tentando próximo...")
+                            continue
 
                         else:
-                            logger.error(f"[Gemini] Erro na API (HTTP {res.status_code}): {res.text}")
-                            self._rotate_key()
-                            await asyncio.sleep(1.0)
+                            logger.warning(f"[Gemini] Erro na API (HTTP {res.status_code}): {res.text[:100]}")
+                            continue
 
                 except json.JSONDecodeError as e:
                     logger.error(f"[Gemini] Falha ao decodificar JSON gerado: {e}")
                     raise RuntimeError("O modelo Gemini não retornou um JSON válido.")
                 except Exception as e:
-                    logger.warning(f"[Gemini] Falha na requisição: {e}. Rotacionando chave...")
-                    self._rotate_key()
-                    await asyncio.sleep(1.0)
+                    logger.warning(f"[Gemini] Falha na requisição: {e}")
+                    continue
 
         raise RuntimeError("Não foi possível obter resposta válida dos modelos Gemini configurados.")
 

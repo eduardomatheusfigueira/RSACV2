@@ -47,10 +47,18 @@ NAVEGADOR = (
 )
 
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+
 def titulo(texto: str) -> None:
-    print("\n" + "═" * 72)
+    print("\n" + "=" * 72)
     print(f"  {texto}")
-    print("═" * 72)
+    print("=" * 72)
+
 
 
 def verificar_ambiente() -> None:
@@ -72,52 +80,50 @@ def verificar_ambiente() -> None:
 
 
 async def diagnosticar_scielo(descritor: str) -> None:
-    titulo("2. SciELO — search.scielo.org")
+    titulo("2. SciELO — Crossref REST API (Membros SciELO)")
     harvester = SciELOHarvester()
-    params = {"q": descritor, "lang": "pt", "count": "15", "from": "1", "output": "site"}
+    member_filter = ",".join(f"member:{m}" for m in harvester.MEMBER_IDS)
+    params = {"query": descritor, "filter": member_filter, "rows": "5", "cursor": "*"}
 
     async with httpx.AsyncClient(timeout=40.0, follow_redirects=True, headers=harvester.headers) as client:
         try:
-            aquecimento = await client.get(harvester.SEARCH_URL)
-            print(f"  Aquecimento da sessão : HTTP {aquecimento.status_code}")
+            res = await client.get(harvester.BASE_URL, params=params)
         except Exception as e:
-            print(f"{FALHA} Não foi possível alcançar {harvester.SEARCH_URL}: {type(e).__name__}: {e}")
-            print("       → sem rota de rede até o portal (firewall, proxy ou DNS).")
+            print(f"{FALHA} Não foi possível alcançar {harvester.BASE_URL}: {type(e).__name__}: {e}")
+            print("       → sem rota de rede até a API (firewall, proxy ou DNS).")
+            return
+
+        print(f"  API Crossref SciELO   : HTTP {res.status_code} · {len(res.text)} bytes")
+        if res.status_code == 403:
+            print(f"{FALHA} 403: bloqueio de acesso.")
+            return
+        if res.status_code != 200:
+            print(f"{FALHA} Status inesperado HTTP {res.status_code}.")
             return
 
         try:
-            res = await client.get(harvester.SEARCH_URL, params=params)
+            data = res.json()
         except Exception as e:
-            print(f"{FALHA} Busca falhou: {type(e).__name__}: {e}")
+            print(f"{FALHA} Resposta não é JSON válido: {e}")
             return
 
-        print(f"  Busca                 : HTTP {res.status_code} · {len(res.text)} bytes")
-        if res.status_code == 403:
-            print(f"{FALHA} 403: o portal classificou a requisição como robô (WAF).")
-            return
-        if res.status_code != 200:
-            print(f"{FALHA} Status inesperado — o coletor tentará novamente e desistirá.")
-            return
-
-        soup = make_soup(res.text)
-        itens = soup.find_all(class_="item")
-        total_hits = soup.find(id="TotalHits")
-        print(f"  #TotalHits            : {total_hits.text.strip() if total_hits else '(ausente)'}")
-        print(f"  div.item encontrados  : {len(itens)}")
+        message = data.get("message", {})
+        total_results = message.get("total-results", 0)
+        itens = message.get("items", [])
+        print(f"  total-results         : {total_results}")
+        print(f"  itens na página       : {len(itens)}")
 
         if not itens:
-            print(
-                f"{FALHA} Nenhum item reconhecido. Se a página anuncia resultados, "
-                "o layout do portal mudou e `parse_scielo_item` precisa ser ajustado."
-            )
-            trecho = soup.get_text(" ", strip=True)[:300]
-            print(f"       Trecho da página: {trecho}")
+            print(f"{AVISO} Nenhum item retornado para o descritor '{descritor}'.")
             return
 
-        from app.harvesters.scielo import parse_scielo_item
+        from app.harvesters.scielo import parse_crossref_scielo_item
 
-        registro = parse_scielo_item(itens[0], descriptor=descritor)
+        registro = parse_crossref_scielo_item(itens[0], descriptor=descritor)
         print(f"{OK} Primeiro registro: {registro.title[:80]!r} ({registro.year}) DOI={registro.doi}")
+        print(f"       Periódico: {registro.journal}")
+        print(f"       Autores: {registro.authors[:70]}")
+
 
 
 async def diagnosticar_bdtd(descritor: str) -> None:

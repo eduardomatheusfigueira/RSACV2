@@ -12,7 +12,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.infrastructure.persistence.models import (
     CriterionModel,
+    ExtractionAnswerModel,
     ExtractionQuestionModel,
+    PaperCriterionModel,
     ProjectModel,
     ProtocolModel,
 )
@@ -121,28 +123,63 @@ def update_protocol(
     if data.search_filters is not None:
         protocol.search_filters = json.dumps(data.search_filters, ensure_ascii=False)
 
-    # Atualizar critérios se fornecidos
+    # Atualizar critérios se fornecidos (preservando IDs e integridade referencial)
     if data.criteria is not None:
-        db.query(CriterionModel).filter(CriterionModel.protocol_id == protocol.id).delete()
-        for idx, crit_data in enumerate(data.criteria):
-            crit = CriterionModel(
-                protocol_id=protocol.id,
-                text=crit_data.text,
-                is_exclusion=crit_data.is_exclusion,
-                order=idx,
-            )
-            db.add(crit)
+        existing_criteria = {c.id: c for c in protocol.criteria}
+        kept_crit_ids = set()
 
-    # Atualizar perguntas de extração se fornecidas
+        for idx, crit_data in enumerate(data.criteria):
+            crit_id = getattr(crit_data, "id", None)
+            if crit_id and crit_id in existing_criteria:
+                crit = existing_criteria[crit_id]
+                crit.text = crit_data.text
+                crit.is_exclusion = crit_data.is_exclusion
+                crit.order = idx
+                kept_crit_ids.add(crit_id)
+            else:
+                crit_kwargs = {
+                    "protocol_id": protocol.id,
+                    "text": crit_data.text,
+                    "is_exclusion": crit_data.is_exclusion,
+                    "order": idx,
+                }
+                if crit_id:
+                    crit_kwargs["id"] = crit_id
+                new_crit = CriterionModel(**crit_kwargs)
+                db.add(new_crit)
+
+        for c_id, c_obj in existing_criteria.items():
+            if c_id not in kept_crit_ids:
+                db.query(PaperCriterionModel).filter(PaperCriterionModel.criterion_id == c_id).delete()
+                db.delete(c_obj)
+
+    # Atualizar perguntas de extração se fornecidas (preservando IDs e integridade referencial)
     if data.extraction_questions is not None:
-        db.query(ExtractionQuestionModel).filter(ExtractionQuestionModel.protocol_id == protocol.id).delete()
+        existing_questions = {q.id: q for q in protocol.extraction_questions}
+        kept_q_ids = set()
+
         for idx, q_data in enumerate(data.extraction_questions):
-            question = ExtractionQuestionModel(
-                protocol_id=protocol.id,
-                text=q_data.text,
-                order=idx,
-            )
-            db.add(question)
+            q_id = getattr(q_data, "id", None)
+            if q_id and q_id in existing_questions:
+                question = existing_questions[q_id]
+                question.text = q_data.text
+                question.order = idx
+                kept_q_ids.add(q_id)
+            else:
+                q_kwargs = {
+                    "protocol_id": protocol.id,
+                    "text": q_data.text,
+                    "order": idx,
+                }
+                if q_id:
+                    q_kwargs["id"] = q_id
+                new_q = ExtractionQuestionModel(**q_kwargs)
+                db.add(new_q)
+
+        for q_id, q_obj in existing_questions.items():
+            if q_id not in kept_q_ids:
+                db.query(ExtractionAnswerModel).filter(ExtractionAnswerModel.question_id == q_id).delete()
+                db.delete(q_obj)
 
     db.commit()
     db.refresh(protocol)

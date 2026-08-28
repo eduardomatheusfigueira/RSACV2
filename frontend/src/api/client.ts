@@ -65,6 +65,18 @@ const BACKEND_URL_KEY = 'rsac_api_url'
 /** Chamado quando o backend responde 401 — a aplicação volta para o login. */
 type UnauthorizedHandler = () => void
 
+export class ApiError extends Error {
+  status: number
+  detail: string
+
+  constructor(status: number, detail: string) {
+    super(detail)
+    this.name = 'ApiError'
+    this.status = status
+    this.detail = detail
+  }
+}
+
 class APIClient {
   private port: number = 8000
 
@@ -324,7 +336,7 @@ class APIClient {
           this.setSessionToken(null)
           this.onUnauthorized?.()
         }
-        throw new Error(errorMsg)
+        throw new ApiError(response.status, errorMsg)
       }
 
       // 204 No Content
@@ -337,6 +349,10 @@ class APIClient {
       logStore.success(source, `${method} ${path} [${response.status} OK]`, `Resposta:\n${JSON.stringify(data, null, 2).slice(0, 1000)}`, duration)
       return data
     } catch (err: any) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+
       // Erro de rede: recuar para a porta padrão 8000 só faz sentido onde o
       // backend poderia estar na máquina de quem abriu a página. O comentário
       // aqui dizia "apenas em dev local", mas o código não impunha isso.
@@ -351,9 +367,7 @@ class APIClient {
         return this.request<T>(path, options)
       }
       const duration = Math.round(performance.now() - startTime)
-      if (!err.message?.includes('falhou')) {
-        logStore.error(source, `${method} ${path} erro de rede`, `Detalhe: ${err.message}\nTempo: ${duration}ms`)
-      }
+      logStore.error(source, `${method} ${path} erro de rede`, `Detalhe: ${err.message}\nTempo: ${duration}ms`)
       throw err
     }
   }

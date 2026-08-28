@@ -134,12 +134,20 @@ class HarvestingService:
             # precisa gravar o lote pendente.
             batch_records: List[RawPaperRecord] = []
 
-            def _persist_batch_sync(records: List[RawPaperRecord]):
+            def _persist_batch_sync(records: List[RawPaperRecord], cur_found: Optional[int] = None):
                 session = SessionLocal()
                 try:
                     n_c, d_c, summaries = self.dedup_service.process_batch(
                         session, project_id, records
                     )
+                    # Atualiza o status intermediário do run para que o polling de /status mostre os números em tempo real
+                    if cur_found is not None:
+                        run_rec = session.query(HarvestRunModel).filter(HarvestRunModel.id == run_id).first()
+                        if run_rec:
+                            run_rec.records_found = cur_found
+                            run_rec.records_new = (run_rec.records_new or 0) + n_c
+                            run_rec.records_duplicate = (run_rec.records_duplicate or 0) + d_c
+                            session.commit()
                     return n_c, d_c, summaries
                 finally:
                     session.close()
@@ -184,7 +192,7 @@ class HarvestingService:
                         batch_records.clear()
 
                         b_new, b_dup, summaries = await asyncio.to_thread(
-                            _persist_batch_sync, batch_to_process
+                            _persist_batch_sync, batch_to_process, found_count
                         )
                         new_count += b_new
                         dup_count += b_dup
@@ -210,7 +218,7 @@ class HarvestingService:
                 # Processar lote remanescente
                 if batch_records:
                     b_new, b_dup, summaries = await asyncio.to_thread(
-                        _persist_batch_sync, batch_records
+                        _persist_batch_sync, batch_records, found_count
                     )
                     new_count += b_new
                     dup_count += b_dup
@@ -264,7 +272,7 @@ class HarvestingService:
                 # falha: descartá-lo perderia trabalho já recuperado da base.
                 if batch_records:
                     try:
-                        b_new, b_dup, _ = await asyncio.to_thread(_persist_batch_sync, list(batch_records))
+                        b_new, b_dup, _ = await asyncio.to_thread(_persist_batch_sync, list(batch_records), found_count)
                         new_count += b_new
                         dup_count += b_dup
                     except Exception as persist_error:

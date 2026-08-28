@@ -66,7 +66,7 @@ async def test_scielo_falha_de_rede_nao_vira_coleta_vazia():
     harvester = SciELOHarvester()
     harvester.MAX_TENTATIVAS = 1  # encurta o backoff exponencial no teste
 
-    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_html("", status=503))), \
+    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_json({}, status=503))), \
             patch("asyncio.sleep", new=AsyncMock()):
         with pytest.raises(HarvestSourceError) as exc:
             await _coletar(harvester, HarvestQuery(descriptors=["turismo"]))
@@ -77,11 +77,11 @@ async def test_scielo_falha_de_rede_nao_vira_coleta_vazia():
 
 @pytest.mark.anyio
 async def test_scielo_bloqueio_403_e_reportado():
-    """403 do WAF é reportado como falha da fonte, e não como busca sem resultados."""
+    """403 é reportado como falha da fonte, e não como busca sem resultados."""
     harvester = SciELOHarvester()
     harvester.MAX_TENTATIVAS = 1
 
-    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_html("", status=403))), \
+    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_json({}, status=403))), \
             patch("asyncio.sleep", new=AsyncMock()):
         with pytest.raises(HarvestSourceError):
             await _coletar(harvester, HarvestQuery(descriptors=["turismo"]))
@@ -89,11 +89,11 @@ async def test_scielo_bloqueio_403_e_reportado():
 
 @pytest.mark.anyio
 async def test_scielo_busca_legitimamente_vazia_nao_e_erro():
-    """A página de 'nenhum resultado' é resposta válida: zero registros, sem exceção."""
+    """Busca com total-results = 0 é resposta válida: zero registros, sem exceção."""
     harvester = SciELOHarvester()
-    html = "<html><body><p>Nenhum resultado encontrado para a sua busca.</p></body></html>"
+    payload = {"status": "ok", "message": {"total-results": 0, "items": []}}
 
-    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_html(html))), \
+    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_json(payload))), \
             patch("asyncio.sleep", new=AsyncMock()):
         registros = await _coletar(harvester, HarvestQuery(descriptors=["termo inexistente"]))
 
@@ -101,22 +101,19 @@ async def test_scielo_busca_legitimamente_vazia_nao_e_erro():
 
 
 @pytest.mark.anyio
-async def test_scielo_layout_alterado_e_denunciado():
-    """A página anuncia resultados mas nenhum item casa com o parser → falha explícita."""
+async def test_scielo_resposta_invalida_e_denunciada():
+    """Resposta com JSON corrompido/não-parseável gera falha explícita."""
     harvester = SciELOHarvester()
-    html = """
-    <html><body>
-      <div id="TotalHits">128</div>
-      <section class="resultado"><article class="novo-layout">Trabalho</article></section>
-    </body></html>
-    """
+    res_invalida = MagicMock()
+    res_invalida.status_code = 200
+    res_invalida.json.side_effect = ValueError("JSON Inválido")
 
-    with patch("httpx.AsyncClient", return_value=_cliente_mock(_resposta_html(html))), \
+    with patch("httpx.AsyncClient", return_value=_cliente_mock(res_invalida)), \
             patch("asyncio.sleep", new=AsyncMock()):
         with pytest.raises(HarvestSourceError) as exc:
             await _coletar(harvester, HarvestQuery(descriptors=["turismo"]))
 
-    assert "layout" in str(exc.value).lower()
+    assert "nenhuma página" in str(exc.value).lower() or "inválido" in str(exc.value).lower()
 
 
 @pytest.mark.anyio
@@ -125,26 +122,30 @@ async def test_scielo_avisa_descritor_incompleto_sem_perder_o_que_veio():
     harvester = SciELOHarvester()
     harvester.MAX_TENTATIVAS = 1
 
-    html_ok = """
-    <html><body>
-      <div id="TotalHits">1</div>
-      <div class="item" id="S0103-20032024000100005">
-        <div class="title"><a href="#">Turismo fluvial na fronteira</a></div>
-        <div class="source"><a href="#">Revista Regional</a></div>
-      </div>
-    </body></html>
-    """
+    payload_ok = {
+        "status": "ok",
+        "message": {
+            "total-results": 1,
+            "items": [
+                {
+                    "title": ["Turismo fluvial na fronteira"],
+                    "issued": {"date-parts": [[2024]]},
+                    "DOI": "10.1590/turismo.2024.01",
+                    "container-title": ["Revista Regional"],
+                }
+            ],
+        },
+    }
 
     respostas = [
-        _resposta_html(html_ok),          # aquecimento
-        _resposta_html(html_ok),          # descritor 1
-        _resposta_html("", status=500),   # descritor 2 falha
+        _resposta_json(payload_ok),       # descritor 1
+        _resposta_json({}, status=500),   # descritor 2 falha
     ]
 
     client = AsyncMock()
     client.__aenter__.return_value = client
     client.__aexit__.return_value = None
-    client.get = AsyncMock(side_effect=respostas + [_resposta_html("", status=500)] * 10)
+    client.get = AsyncMock(side_effect=respostas + [_resposta_json({}, status=500)] * 10)
 
     avisos = []
 
@@ -163,6 +164,7 @@ async def test_scielo_avisa_descritor_incompleto_sem_perder_o_que_veio():
     assert len(registros) == 1
     assert avisos, "a coleta parcial precisa ser anunciada no evento de conclusão"
     assert "incompletos" in avisos[-1]
+
 
 
 # ── BDTD ───────────────────────────────────────────────────────────────

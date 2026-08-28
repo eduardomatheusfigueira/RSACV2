@@ -16,7 +16,7 @@ class CriterionBase(BaseModel):
 
 
 class CriterionCreate(CriterionBase):
-    pass
+    id: Optional[str] = None
 
 
 class CriterionResponse(CriterionBase):
@@ -33,7 +33,7 @@ class ExtractionQuestionBase(BaseModel):
 
 
 class ExtractionQuestionCreate(ExtractionQuestionBase):
-    pass
+    id: Optional[str] = None
 
 
 class ExtractionQuestionResponse(ExtractionQuestionBase):

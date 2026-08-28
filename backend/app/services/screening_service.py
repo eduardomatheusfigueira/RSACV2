@@ -374,6 +374,26 @@ class ScreeningService:
                         )
                     except Exception as e:
                         logger.error(f"[BatchScreening] Erro no paper {pid}: {e}")
+                        processed_count += 1
+                        pending_count += 1
+                        await ws_manager.broadcast(
+                            project_id,
+                            {
+                                "type": "batch_screening_progress",
+                                "processed": processed_count,
+                                "total": total_papers,
+                                "percentage": round((processed_count / total_papers) * 100, 1),
+                                "current_paper_id": pid,
+                                "current_paper_title": ptitle or "Sem título",
+                                "decision": "Pendente",
+                                "confidence": 0.0,
+                                "justification": f"Falha na análise: {str(e)}",
+                                "included_count": included_count,
+                                "excluded_count": excluded_count,
+                                "pending_count": total_papers - processed_count,
+                                "error": str(e),
+                            },
+                        )
                     finally:
                         task_db.close()
 

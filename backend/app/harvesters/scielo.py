@@ -2,17 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — SciELO Harvester.
-Coletor assíncrono para a base Scientific Electronic Library Online (SciELO)
-utilizando raspagem resiliente de HTML (lxml), emulação de navegador, aquecimento
-de sessão, retries exponenciais para tolerância a HTTP 500/503/429 e pós-filtros locais.
+RSAC V2 — SciELO Harvester (Crossref REST API).
+Coletor assíncrono para o acervo da Scientific Electronic Library Online (SciELO)
+através da API oficial da Crossref filtrando pelos identificadores institucionais
+da SciELO (SciELO Brasil / FAPESP - member:530, SciELO Chile - member:2516,
+SciELO Espanha - member:2868), com paginação por cursor, filtros nativos de data
+e higienização de resumos JATS/XML.
 """
 
 import asyncio
 import logging
 import re
 from collections.abc import AsyncGenerator
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from bs4 import Tag
 import httpx
 
@@ -26,59 +28,134 @@ from app.harvesters.base import (
     ProgressCallback,
     RawPaperRecord,
 )
-from app.harvesters.html_parser import make_soup
 from app.harvesters.factory import register_harvester
 
 logger = logging.getLogger(__name__)
 
-# Expressões regulares pré-compiladas (padrão RSAC)
+# Expressões regulares pré-compiladas
 RE_YEAR_ID: re.Pattern = re.compile(r"S\d{4}-\d{3,4}(\d{4})")
 RE_YEAR_TEXT: re.Pattern = re.compile(r"((?:19|20)\d{2})")
-RE_TOTAL_HITS: re.Pattern = re.compile(r"de\s+(\d[\d.]*)\s")
 RE_DOI: re.Pattern = re.compile(r"(10\.\d{4,9}/[-._;()/:A-Z0-9]+)", re.IGNORECASE)
-# Página legítima de "nenhum resultado" — distingue busca vazia de bloqueio/layout quebrado
-RE_SEM_RESULTADOS: re.Pattern = re.compile(
-    r"nenhum\s+(?:resultado|artigo|registro)|"
-    r"n[ãa]o\s+(?:foram\s+encontrados|encontrou|h[áa]\s+resultados)|"
-    r"no\s+results?\s+(?:found|were\s+found)|"
-    r"sin\s+resultados",
-    re.IGNORECASE,
-)
+RE_XML_TAGS: re.Pattern = re.compile(r"<[^>]+>")
 
 
-def parse_scielo_item(item_tag: Tag, descriptor: str = "") -> RawPaperRecord:
-    """Extrai e higieniza os metadados de uma tag HTML <div class='item'> do SciELO."""
-    # 1. ID único
+def clean_crossref_abstract(raw_abstract: str) -> str:
+    """Remove tags JATS/XML (como <jats:p>, <jats:sec>) e higieniza o resumo."""
+    if not raw_abstract:
+        return ""
+    text = re.sub(r"</jats:[^>]+>", " ", raw_abstract)
+    text = re.sub(r"<jats:[^>]+>", "", text)
+    text = RE_XML_TAGS.sub(" ", text)
+    return " ".join(text.split()).strip()
+
+
+def parse_crossref_scielo_item(item: Dict[str, Any], descriptor: str = "") -> RawPaperRecord:
+    """Extrai e normaliza os metadados de uma obra retornada pela Crossref API para a SciELO."""
+    # 1. Título
+    titles = item.get("title") or []
+    title_str = str(titles[0]).strip() if titles else ""
+
+    # 2. Autores (formatados como Sobrenome, Nome)
+    authors_list: List[str] = []
+    for a in item.get("author", []):
+        family = str(a.get("family", "")).strip()
+        given = str(a.get("given", "")).strip()
+        if family and given:
+            authors_list.append(f"{family}, {given}")
+        elif family or given:
+            authors_list.append(family or given)
+    authors_str = "; ".join(authors_list)
+
+    # 3. Ano de Publicação
+    issued = (
+        (item.get("issued") or {})
+        .get("date-parts", [[""]])[0]
+    )
+    year_str = ""
+    if issued and issued[0]:
+        year_str = str(issued[0]).strip()
+    elif item.get("published-print"):
+        parts = item["published-print"].get("date-parts", [[""]])[0]
+        year_str = str(parts[0]).strip() if parts and parts[0] else ""
+    elif item.get("published-online"):
+        parts = item["published-online"].get("date-parts", [[""]])[0]
+        year_str = str(parts[0]).strip() if parts and parts[0] else ""
+
+    # 4. Resumo higienizado
+    raw_abstract = item.get("abstract", "")
+    abstract_str = clean_crossref_abstract(raw_abstract)
+
+    # 5. DOI e URLs
+    raw_doi = item.get("DOI", "")
+    doi_clean = str(raw_doi).strip() if raw_doi else None
+
+    resource_url = str(item.get("URL", "")).strip()
+    if not resource_url and doi_clean:
+        resource_url = f"https://doi.org/{doi_clean}"
+
+    # 6. Periódico / Revista
+    containers = item.get("container-title") or []
+    journal_str = str(containers[0]).strip() if containers else ""
+
+    # 7. Tipo de Pesquisa Canônico
+    raw_type = item.get("type", "journal-article")
+    canonical_type = to_canonical_doc_type("SciELO", raw_type)
+
+    return RawPaperRecord(
+        title=title_str,
+        authors=authors_str,
+        year=year_str,
+        abstract=abstract_str,
+        doi=doi_clean,
+        source_name="SciELO",
+        source_id=doi_clean or resource_url,
+        download_url=resource_url,
+        research_type=canonical_type,
+        journal=journal_str,
+        institution="SciELO",
+        matched_descriptor=descriptor,
+        extra_metadata={
+            "crossref_member": item.get("member"),
+            "publisher": item.get("publisher"),
+        },
+    )
+
+
+def parse_scielo_item(item_or_tag: Union[Dict[str, Any], Tag], descriptor: str = "") -> RawPaperRecord:
+    """
+    Parser com retrocompatibilidade: aceita tanto payload JSON da Crossref
+    quanto tags BeautifulSoup <div class='item'> de HTML legado.
+    """
+    if isinstance(item_or_tag, dict):
+        return parse_crossref_scielo_item(item_or_tag, descriptor=descriptor)
+
+    # Parsing legado de Tag HTML
+    item_tag = item_or_tag
     item_id = item_tag.get("id", "")
 
-    # 2. Título
     title_tag = item_tag.find(class_="title")
     title_str = title_tag.text.strip() if title_tag else ""
     if title_str.startswith("[SciELO Preprints] - "):
         title_str = title_str.replace("[SciELO Preprints] - ", "")
 
-    # 3. URL do artigo
     article_url = ""
     if title_tag:
         parent_a = title_tag.parent
         if parent_a and parent_a.name == "a":
             article_url = parent_a.get("href", "")
 
-    # 4. Autores
     authors_str = ""
     authors_div = item_tag.find(class_="authors")
     if authors_div:
         author_links = authors_div.find_all("a")
         authors_str = "; ".join(a.text.strip() for a in author_links if a.text.strip())
 
-    # 5. Periódico / Revista (separado de Instituição)
     journal_str = ""
     source_div = item_tag.find(class_="source")
     if source_div:
         source_link = source_div.find("a")
         journal_str = source_link.text.strip() if source_link else ""
 
-    # 6. Ano de publicação
     year_str = ""
     m = RE_YEAR_ID.search(item_id)
     if m:
@@ -90,11 +167,9 @@ def parse_scielo_item(item_tag: Tag, descriptor: str = "") -> RawPaperRecord:
                 year_str = m2.group(1)
                 break
 
-    # 7. Tipo de Pesquisa Canônico
     raw_type = "Preprint" if "preprint" in item_id.lower() else "Artigo de Periódico"
     canonical_type = to_canonical_doc_type("SciELO", raw_type)
 
-    # 8. Resumo
     abstract_divs = item_tag.find_all(class_="abstract")
     abstract_str = ""
     for ab in abstract_divs:
@@ -105,7 +180,6 @@ def parse_scielo_item(item_tag: Tag, descriptor: str = "") -> RawPaperRecord:
     if not abstract_str and abstract_divs:
         abstract_str = abstract_divs[0].text.strip()
 
-    # 9. DOI
     doi_span = item_tag.find(class_="DOIResults")
     doi_text = doi_span.text.strip() if doi_span else ""
     doi_match = RE_DOI.search(doi_text)
@@ -129,47 +203,40 @@ def parse_scielo_item(item_tag: Tag, descriptor: str = "") -> RawPaperRecord:
 
 @register_harvester("SCIELO")
 class SciELOHarvester(BaseHarvester):
-    """Coletor para SciELO com scraping de HTML via BeautifulSoup/lxml e retry inteligente."""
+    """
+    Coletor para SciELO integrado à Crossref REST API oficial com filtro
+    de membros institucionais da SciELO e paginação por cursor.
+    """
 
     capabilities = HarvesterCapabilities(
-        supports_year_range=False,  # Pós-filtro local
-        supports_language=False,  # Pós-filtro local
-        supports_document_type=False,
+        supports_year_range=True,
+        supports_language=False,
+        supports_document_type=True,
         supports_institution=False,
         supports_open_access=True,
         supports_boolean_query=True,
-        default_page_size=15,
-        max_page_size=50,
-        default_delay=1.0,
+        default_page_size=50,
+        max_page_size=100,
+        default_delay=0.25,
     )
 
-    SEARCH_URL = "https://search.scielo.org/"
-    # 403 entra na lista: o portal responde 403 quando o WAF classifica a
-    # requisição como automatizada, e o bloqueio costuma ceder ao reaquecer a
-    # sessão. Sem isso, um 403 encerrava o descritor na primeira tentativa.
-    RETRY_STATUS_CODES = {403, 429, 500, 502, 503, 504}
+    BASE_URL = "https://api.crossref.org/works"
+    # Membros oficiais da SciELO na Crossref:
+    # 530: FapUNIFESP / SciELO Brasil (acervo principal >524k obras)
+    # 2516: SciELO Chile / ANID
+    # 2868: SciELO Espanha / Repisalud
+    MEMBER_IDS = ["530", "2516", "2868"]
+
+    RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
     MAX_TENTATIVAS = 5
 
-    def __init__(self, timeout: float = 35.0):
+    def __init__(self, mailto: str = "rsac@ufsc.br", timeout: float = 35.0):
         super().__init__(source_name="SciELO", timeout=timeout)
+        self.mailto = mailto
         self.headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://search.scielo.org/",
+            "User-Agent": f"RSAC-V2/2.0 (mailto:{self.mailto})",
+            "Accept": "application/json",
         }
-
-    async def _aquecer_sessao(self, client: httpx.AsyncClient) -> None:
-        """GET na raiz para adquirir cookies de sessão antes de buscar."""
-        try:
-            await client.get(self.SEARCH_URL)
-            await asyncio.sleep(0.5)
-        except Exception as e:
-            logger.warning(f"[SciELO] Aviso ao aquecer sessão: {e}")
 
     async def harvest(
         self,
@@ -186,34 +253,36 @@ class SciELOHarvester(BaseHarvester):
             year_end = query.year_end
         else:
             descriptors = query
-            limit = float("inf") if (not max_records_per_descriptor or max_records_per_descriptor <= 0) else max_records_per_descriptor
+            limit = (
+                float("inf")
+                if (not max_records_per_descriptor or max_records_per_descriptor <= 0)
+                else max_records_per_descriptor
+            )
             page_size = self.capabilities.default_page_size
             year_start = None
             year_end = None
 
         total_overall = 0
-        # Contabilidade de confiabilidade: sem ela, uma falha de rede ou uma
-        # mudança de layout terminam como "coleta concluída com zero registros".
         descritores_consultados = 0
         descritores_com_falha: List[str] = []
         falhas: List[str] = []
         pagina_lida_com_sucesso = False
 
-        async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True, headers=self.headers) as client:
-            # 1. Warm-up da sessão HTTP para adquirir cookies de sessão
-            await self._aquecer_sessao(client)
+        # Montar filtro de membros SciELO
+        member_filter = ",".join(f"member:{m}" for m in self.MEMBER_IDS)
 
+        async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True, headers=self.headers) as client:
             for desc in descriptors:
                 desc_clean = desc.strip()
                 if not desc_clean:
                     continue
 
                 descritores_consultados += 1
+                cursor = "*"
                 page = 1
                 total_for_desc = 0
 
-                while total_for_desc < limit:
-                    offset = (page - 1) * page_size + 1
+                while total_for_desc < limit and cursor:
                     if on_progress:
                         await on_progress(
                             HarvestProgress(
@@ -225,120 +294,78 @@ class SciELOHarvester(BaseHarvester):
                             )
                         )
 
-                    params: Dict[str, str] = {
-                        "q": desc_clean,
-                        "lang": "pt",
-                        "count": str(page_size),
-                        "from": str(offset),
-                        "output": "site",
+                    # Construir filtros nativos da Crossref
+                    filter_parts = [member_filter]
+                    if year_start:
+                        filter_parts.append(f"from-pub-date:{year_start}-01-01")
+                    if year_end:
+                        filter_parts.append(f"until-pub-date:{year_end}-12-31")
+
+                    params: Dict[str, Any] = {
+                        "query": desc_clean,
+                        "filter": ",".join(filter_parts),
+                        "rows": str(min(page_size, 100)),
+                        "cursor": cursor,
                     }
 
-                    # Estratégia de retry exponencial para resiliência a oscilações do SciELO
                     res = None
                     ultimo_erro = ""
                     for attempt in range(1, self.MAX_TENTATIVAS + 1):
                         try:
-                            res = await client.get(self.SEARCH_URL, params=params)
+                            res = await client.get(self.BASE_URL, params=params)
                             if res.status_code == 200:
                                 break
                             elif res.status_code in self.RETRY_STATUS_CODES:
                                 ultimo_erro = f"HTTP {res.status_code}"
                                 backoff = 1.5 ** attempt
                                 logger.warning(
-                                    f"[SciELO] HTTP {res.status_code} na pág {page} (tentativa {attempt}/{self.MAX_TENTATIVAS}). "
-                                    f"Aguardando {backoff:.1f}s..."
+                                    f"[SciELO/Crossref] HTTP {res.status_code} na pág {page} "
+                                    f"(tentativa {attempt}/{self.MAX_TENTATIVAS}). Aguardando {backoff:.1f}s..."
                                 )
                                 await asyncio.sleep(backoff)
-                                # 403 indica bloqueio de robô: refazer o aquecimento
-                                # para renovar os cookies antes da próxima tentativa.
-                                if res.status_code == 403:
-                                    await self._aquecer_sessao(client)
                             else:
                                 ultimo_erro = f"HTTP {res.status_code}"
-                                logger.warning(f"[SciELO] HTTP {res.status_code} para '{desc_clean}' na pág {page}")
+                                logger.warning(f"[SciELO/Crossref] HTTP {res.status_code} para '{desc_clean}' na pág {page}")
                                 break
                         except Exception as e:
                             ultimo_erro = f"{type(e).__name__}: {e}"
                             backoff = 1.5 ** attempt
                             logger.warning(
-                                f"[SciELO] Erro de rede na pág {page} (tentativa {attempt}/{self.MAX_TENTATIVAS}): {e}"
+                                f"[SciELO/Crossref] Erro de rede na pág {page} "
+                                f"(tentativa {attempt}/{self.MAX_TENTATIVAS}): {e}"
                             )
                             await asyncio.sleep(backoff)
 
                     if not res or res.status_code != 200:
                         motivo = ultimo_erro or "resposta inválida"
-                        logger.error(f"[SciELO] Falha definitiva para '{desc_clean}' na pág {page}: {motivo}")
+                        logger.error(f"[SciELO/Crossref] Falha definitiva para '{desc_clean}' na pág {page}: {motivo}")
                         descritores_com_falha.append(desc_clean)
                         falhas.append(f"'{desc_clean}' pág {page}: {motivo}")
                         break
 
-                    soup = make_soup(res.text)
-                    items = soup.find_all(class_="item")
-                    texto_pagina = soup.get_text(" ", strip=True)
-
-                    # Extrair total de resultados na pág 1 (com fallback para regex)
-                    num_found = 0
-                    if page == 1:
-                        total_hits_elem = soup.find(id="TotalHits")
-                        if total_hits_elem:
-                            try:
-                                num_found = int(total_hits_elem.text.strip().replace(".", ""))
-                            except Exception:
-                                pass
-                        if not num_found:
-                            m = RE_TOTAL_HITS.search(texto_pagina)
-                            if m:
-                                try:
-                                    num_found = int(m.group(1).replace(".", ""))
-                                except Exception:
-                                    pass
-                        if num_found:
-                            logger.info(f"[SciELO] Total encontrado para '{desc_clean}': {num_found}")
-
-                    if not items:
-                        if page == 1:
-                            # Zero itens na primeira página tem três causas muito
-                            # diferentes, e tratá-las como "fim dos registros"
-                            # é o que transforma bloqueio em coleta vazia.
-                            if num_found > 0:
-                                motivo = (
-                                    f"a página anuncia {num_found} resultados mas nenhum item foi "
-                                    f"reconhecido — layout do portal provavelmente mudou"
-                                )
-                                logger.error(f"[SciELO] '{desc_clean}': {motivo}")
-                                descritores_com_falha.append(desc_clean)
-                                falhas.append(f"'{desc_clean}': {motivo}")
-                            elif RE_SEM_RESULTADOS.search(texto_pagina):
-                                pagina_lida_com_sucesso = True
-                                logger.info(f"[SciELO] Busca sem resultados para '{desc_clean}'")
-                            else:
-                                motivo = (
-                                    "resposta sem itens e sem contador de resultados — possível "
-                                    "bloqueio do portal ou mudança de layout"
-                                )
-                                logger.error(f"[SciELO] '{desc_clean}': {motivo}")
-                                descritores_com_falha.append(desc_clean)
-                                falhas.append(f"'{desc_clean}': {motivo}")
-                        else:
-                            pagina_lida_com_sucesso = True
-                            logger.info(f"[SciELO] Fim dos registros para '{desc_clean}' na pág {page}")
+                    try:
+                        data = res.json()
+                    except Exception as e:
+                        logger.error(f"[SciELO/Crossref] Resposta inválida em JSON para '{desc_clean}': {e}")
+                        descritores_com_falha.append(desc_clean)
+                        falhas.append(f"'{desc_clean}': JSON inválido ({e})")
                         break
+
+                    message = data.get("message", {})
+                    items = message.get("items", [])
+                    total_results = message.get("total-results", 0)
 
                     pagina_lida_com_sucesso = True
 
-                    for item in items:
-                        paper = parse_scielo_item(item, descriptor=desc_clean)
+                    if page == 1:
+                        logger.info(f"[SciELO/Crossref] Total encontrado para '{desc_clean}': {total_results}")
 
-                        # Pós-filtro local de anos
-                        if year_start or year_end:
-                            try:
-                                y_int = int(paper.year[:4])
-                                if year_start and y_int < year_start:
-                                    continue
-                                if year_end and y_int > year_end:
-                                    continue
-                            except ValueError:
-                                pass
+                    if not items:
+                        logger.info(f"[SciELO/Crossref] Fim dos registros para '{desc_clean}' na pág {page}")
+                        break
+
+                    for item in items:
+                        paper = parse_crossref_scielo_item(item, descriptor=desc_clean)
 
                         if paper.title:
                             yield paper
@@ -347,14 +374,16 @@ class SciELOHarvester(BaseHarvester):
                             if total_for_desc >= limit:
                                 break
 
-                    if len(items) < page_size:
+                    # Atualizar cursor para próxima página
+                    next_cursor = message.get("next-cursor")
+                    if not next_cursor or next_cursor == cursor or len(items) < page_size:
                         break
 
+                    cursor = next_cursor
                     page += 1
                     await asyncio.sleep(self.capabilities.default_delay)
 
-            # Falha total: nenhuma página foi lida com sucesso em nenhum descritor.
-            # Terminar como "concluída com zero" publicaria um número falso no PRISMA.
+            # Falha total: nenhuma página foi lida com sucesso
             if descritores_consultados and not pagina_lida_com_sucesso:
                 raise HarvestSourceError(
                     self.source_name,
@@ -382,3 +411,4 @@ class SciELOHarvester(BaseHarvester):
                         error=aviso,
                     )
                 )
+
