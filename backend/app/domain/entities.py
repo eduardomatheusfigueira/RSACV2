@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Entidades de Domínio.
+Revsist — Entidades de Domínio.
 Dataclasses puras representando os conceitos centrais do negócio.
 Portadas da V1 e expandidas para a V2.
 """

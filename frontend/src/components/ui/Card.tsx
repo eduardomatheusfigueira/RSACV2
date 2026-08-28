@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Canonical Card Component
+ * Revsist — Canonical Card Component
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

@@ -15,7 +15,7 @@ import re
 
 import pytest
 
-# Padrões dos provedores realmente usados pelo RSAC.
+# Padrões dos provedores realmente usados pelo Revsist.
 PADROES_DE_SEGREDO = [
     re.compile(r"AIzaSy[0-9A-Za-z_\-]{10,}"),   # Google Gemini
     re.compile(r"sk-[0-9A-Za-z]{16,}"),          # OpenAI-compatível / Qwen

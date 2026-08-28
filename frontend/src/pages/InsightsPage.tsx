@@ -1,11 +1,11 @@
 /**
- * RSAC V2 — Aba de Indicadores (B.I. e Bibliometria, doc 31/32/33)
+ * Revsist — Aba de Indicadores (B.I. e Bibliometria, doc 31/32/33)
  *
  * Sexto passo da esteira, entre Extração e Exportação. Mostra estatística
  * descritiva e de processo sobre o projeto — funil PRISMA e de critérios,
  * composição da amostra, rankings de periódico/autor/instituição e saúde de
  * aquisição de PDF. Não é bibliometria de citação (doc 31 §4): o dado para
- * isso não existe no RSAC hoje.
+ * isso não existe no Revsist hoje.
  *
  * Fase 2 do plano (doc 33): filtros de decisão/base/ano na interface,
  * afetando só os agregados de conteúdo — o funil PRISMA, o funil de

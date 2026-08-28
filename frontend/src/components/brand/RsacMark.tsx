@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Monograma "R-Lupa"
+ * Revsist — Monograma "R-Lupa"
  *
  * O símbolo da marca: um "R" monolinear em que o laço da letra é a LENTE de
  * uma lupa e a perna diagonal é o CABO. A geometria abaixo é a mesma declarada
@@ -38,7 +38,7 @@ export function RsacMark({
   size = 24,
   tone = 'auto',
   className = '',
-  label = 'RSAC',
+  label = 'Revsist',
 }: RsacMarkProps): JSX.Element {
   return (
     <svg

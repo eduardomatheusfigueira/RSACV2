@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Settings Page (Configurações de Inteligência Artificial, Portabilidade & Modo Manual)
+ * Revsist — Settings Page (Configurações de Inteligência Artificial, Portabilidade & Modo Manual)
  * Gerenciamento do interruptor mestre de IA (Ativar IA vs Modo 100% Manual),
  * separação estrita de chaves (Gemini vs Qwen vs Local), exportação/importação de chaves (.json / .env)
  * e backup/restauração de perfil completo de sessão e workspace.
@@ -211,7 +211,7 @@ const COLOR_THEMES: ColorThemeOption[] = [
   },
 ]
 
-// ── Modelos Exatos do RSAC ─────────────────────────────────────────────
+// ── Modelos Exatos do Revsist ─────────────────────────────────────────────
 
 const GEMINI_MODELS = [
   { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash', desc: 'Recomendado — Alta velocidade e triagem rápida', badge: 'Recomendado' },
@@ -908,7 +908,7 @@ export function SettingsPage(): JSX.Element {
             <h3>{isAiActive ? 'Recursos de Assistência Ativos' : 'Modo Manual'}</h3>
             <p>
               {isAiActive
-                ? 'A assistência auxilia na sugestão de protocolo, triagem de estudos e extração de dados conforme o padrão RSAC.'
+                ? 'A assistência auxilia na sugestão de protocolo, triagem de estudos e extração de dados conforme o padrão do Revsist.'
                 : 'O processo de revisão é conduzido integralmente pelo pesquisador, sem chamadas externas a modelos.'}
             </p>
           </div>
@@ -1064,7 +1064,7 @@ export function SettingsPage(): JSX.Element {
           <h2>Aparência & Paletas de Cores do Sistema</h2>
         </div>
         <p className="section-help">
-          Personalize a identidade visual do RSAC V2 selecionando uma das paletas de cores harmônicas projetadas para alta produtividade, contraste e leitura acadêmica prolongada.
+          Personalize a identidade visual do Revsist selecionando uma das paletas de cores harmônicas projetadas para alta produtividade, contraste e leitura acadêmica prolongada.
         </p>
 
         <div className="themes-grid">

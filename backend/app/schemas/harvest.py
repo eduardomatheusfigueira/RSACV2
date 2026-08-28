@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Coleta (Harvesting)."""
+"""Revsist — Schemas de Coleta (Harvesting)."""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional

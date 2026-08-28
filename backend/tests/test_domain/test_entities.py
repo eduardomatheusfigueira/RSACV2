@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Testes das entidades de domínio do RSAC V2."""
+"""Testes das entidades de domínio do Revsist."""
 
 from app.domain.entities import Decision, Methodology, Paper, Protocol, ScreeningSession
 

@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Canonical Badge / Chip Component
+ * Revsist — Canonical Badge / Chip Component
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

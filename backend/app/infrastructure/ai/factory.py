@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — AI Client Factory."""
+"""Revsist — AI Client Factory."""
 
 import json
 import os

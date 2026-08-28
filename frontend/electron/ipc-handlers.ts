@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — IPC Handlers (Main Process)
+ * Revsist — IPC Handlers (Main Process)
  * Handlers para mensagens IPC entre Main e Renderer.
  */
 

@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Canonical Button Component
+ * Revsist — Canonical Button Component
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

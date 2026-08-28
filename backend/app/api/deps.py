@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Dependências compartilhadas da API (Dependency Injection)."""
+"""Revsist — Dependências compartilhadas da API (Dependency Injection)."""
 
 from typing import Generator
 

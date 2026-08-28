@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Testes do ProfileService (Isolamento de Chaves, Exportação e Restauração de Perfil)."""
+"""Revsist — Testes do ProfileService (Isolamento de Chaves, Exportação e Restauração de Perfil)."""
 
 import json
 from app.infrastructure.persistence.models import (
@@ -80,7 +80,7 @@ def test_keys_import_json_and_env(db_session):
 
     # 2. Importar formato .env / texto puro
     env_text = """
-    # Chaves de API do RSAC
+    # Chaves de API do Revsist
     GEMINI_API_KEY=AIzaSy_ENV_GEMINI_1, AIzaSy_ENV_GEMINI_2
     DASHSCOPE_API_KEY=sk-ENV_QWEN_KEY
     SCOPUS_API_KEY=env_scopus_key

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Utilitários de linha de comando para contas de acesso.
+Revsist — Utilitários de linha de comando para contas de acesso.
 
 Provisionamento fora da API de propósito: a primeira conta precisa nascer antes
 de existir qualquer sessão, e uma rota "criar o primeiro usuário" aberta na
@@ -141,7 +141,7 @@ def generate_secret_key(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
-        description="Gestão de contas de acesso do RSAC V2",
+        description="Gestão de contas de acesso do Revsist",
     )
     sub = parser.add_subparsers(dest="comando", required=True)
 

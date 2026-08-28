@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RSAC V2 — Gerador da Identidade Visual
+Revsist — Gerador da Identidade Visual
 ======================================
 
 Fonte única de verdade da marca. Tudo o que o usuário vê — o ícone do .exe, o
@@ -10,7 +10,7 @@ geometria declarada aqui. Nenhum asset é desenhado à mão em outro lugar.
 
 O MONOGRAMA "R-LUPA"
 --------------------
-O "R" do RSAC é construído com um traço monolinear único, em que o laço/curva
+O "R" do Revsist é construído com um traço monolinear único, em que o laço/curva
 da letra é a LENTE de uma lupa e a perna diagonal é o CABO. Grade de 80 × 100,
 traço 14, três primitivas e quatro pontos de controle inteiros:
 

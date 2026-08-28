@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — StatusBar Component
+ * Revsist — StatusBar Component
  * Barra de status inferior com indicadores de backend, modo de IA e versão.
  */
 
@@ -50,9 +50,9 @@ export function StatusBar(): JSX.Element {
   return (
     <footer className="status-bar">
       <div className="status-bar-left">
-        <span className="status-brand" title="RSAC V2 — versão beta">
+        <span className="status-brand" title="Revsist — versão beta">
           <RsacMark size={12} tone="auto" label={null} />
-          <span className="status-brand-name">RSAC V2</span>
+          <span className="status-brand-name">Revsist</span>
           <BetaBadge tone="auto" size="xs" />
         </span>
         <span className="status-divider">|</span>

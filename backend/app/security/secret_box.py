@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Cofre de Exportação (doc 29 §29.4.3).
+Revsist — Cofre de Exportação (doc 29 §29.4.3).
 
 Cifra o pacote de credenciais com uma senha escolhida pelo usuário no momento
 da exportação. O arquivo de backup deixa de ser um JSON de chaves legível por
@@ -97,7 +97,7 @@ def is_envelope(data: Any) -> bool:
 def decrypt_envelope(envelope: Dict[str, Any], password: str) -> Dict[str, Any]:
     """Abre um envelope cifrado. Senha errada levanta `SecretBoxError`."""
     if not is_envelope(envelope):
-        raise SecretBoxError("O conteúdo informado não é um arquivo cifrado do RSAC.")
+        raise SecretBoxError("O conteúdo informado não é um arquivo cifrado do Revsist.")
     if not password or not password.strip():
         raise SecretBoxError("Este arquivo está protegido por senha. Informe a senha usada na exportação.")
 

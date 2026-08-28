@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Build Executável Desktop
+Revsist — Build Executável Desktop
 Compila o executável unificado do aplicativo com PyInstaller:
 - Revsist.exe (Aplicativo Desktop com Backend Integrado)
 """

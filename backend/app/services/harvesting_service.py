@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Serviço Orquestrador de Coleta (Harvesting Service).
+Revsist — Serviço Orquestrador de Coleta (Harvesting Service).
 Coordena a execução concorrente de múltiplos coletores científicos com:
   - Resolução de credenciais do banco
   - Resolução de filtros de busca do protocolo (anos, idiomas, tipos)

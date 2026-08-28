@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Projetos."""
+"""Revsist — Router de Projetos."""
 
 import logging
 from typing import Optional

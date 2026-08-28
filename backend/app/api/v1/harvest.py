@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Coleta, Controle de Jobs e WebSockets de Progresso."""
+"""Revsist — Router de Coleta, Controle de Jobs e WebSockets de Progresso."""
 
 import json
 import logging

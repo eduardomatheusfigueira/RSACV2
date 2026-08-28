@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Aplicação do esquema na partida (doc 40 §40.2.3).
+Revsist — Aplicação do esquema na partida (doc 40 §40.2.3).
 
 Substitui `_migrate_missing_columns`, que evoluía o banco emitindo
 `ALTER TABLE ... ADD COLUMN` para toda coluna que existisse no modelo e não no
@@ -63,7 +63,7 @@ def _revisao_atual(engine: Engine) -> str | None:
 
 
 def _tem_tabelas_da_aplicacao(engine: Engine) -> bool:
-    """O banco já tem esquema do RSAC gravado por uma versão anterior?"""
+    """O banco já tem esquema do Revsist gravado por uma versão anterior?"""
     tabelas = set(inspect(engine).get_table_names())
     tabelas.discard("alembic_version")
     return bool(tabelas)
@@ -106,7 +106,7 @@ def _conexao_de_migracao(engine: Engine):
 
     O SQLite não implementa `ALTER TABLE` para alterar coluna, então o modo em
     lote do Alembic **recria a tabela**: cria a nova, copia, apaga a antiga e
-    renomeia. Com `PRAGMA foreign_keys=ON` — que é o que o RSAC usa no perfil
+    renomeia. Com `PRAGMA foreign_keys=ON` — que é o que o Revsist usa no perfil
     `desktop` —, o `DROP TABLE projects` falha, porque `papers`, `protocols` e
     `harvest_runs` a referenciam. O sintoma é uma atualização que morre com
     `FOREIGN KEY constraint failed` num banco que estava perfeitamente

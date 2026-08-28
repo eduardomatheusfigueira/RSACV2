@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Testes da cadeia de migrações (doc 41, Fase 0).
+Revsist — Testes da cadeia de migrações (doc 41, Fase 0).
 
 O que estes testes protegem não é o Alembic — é a promessa de que **um banco de
 mesa já existente atualiza sozinho, sem perder dado**. Essa promessa vale para
-usuários reais que instalaram o RSAC antes do versionamento existir, e é a
+usuários reais que instalaram o Revsist antes do versionamento existir, e é a
 única parte da Fase 0 cujo erro não aparece em nenhuma outra suíte: um banco
 novo funciona de qualquer jeito.
 
@@ -95,7 +95,7 @@ def test_banco_vazio_sobe_ate_a_revisao_mais_recente(url_descartavel):
 
 def test_banco_de_mesa_legado_e_carimbado_sem_perder_dado(url_descartavel):
     """
-    Via 2 — a que existe por causa de quem já tem o RSAC instalado.
+    Via 2 — a que existe por causa de quem já tem o Revsist instalado.
 
     Um banco criado por `create_all`, sem `alembic_version`, precisa ser
     reconhecido como estando na revisão inicial. Sem o carimbo, o `upgrade`
@@ -252,7 +252,7 @@ def test_conversao_para_timestamptz_preserva_o_instante(url_descartavel):
 
     `ALTER COLUMN ... TYPE timestamptz` sem cláusula explícita interpreta cada
     valor como hora local **do servidor**. Num servidor em `America/Sao_Paulo`,
-    as 12:00 UTC que o RSAC gravou virariam 15:00 UTC — três horas somadas a
+    as 12:00 UTC que o Revsist gravou virariam 15:00 UTC — três horas somadas a
     todo o banco, sem erro nenhum, e o sintoma apareceria semanas depois como
     sessão expirando cedo e rotina de retenção apagando o que não devia.
 

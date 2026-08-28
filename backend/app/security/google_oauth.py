@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Entrada com Google (doc 40 §40.4).
+Revsist — Entrada com Google (doc 40 §40.4).
 
 Fluxo de código de autorização com PKCE, executado **no servidor**. O navegador
 nunca vê o `client_secret` nem o `id_token`; o que ele recebe ao final é o mesmo
@@ -124,7 +124,7 @@ def montar_url_de_autorizacao(
         "nonce": nonce,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
-        # Não se pede `offline`: o RSAC não age em nome da pessoa depois do
+        # Não se pede `offline`: o Revsist não age em nome da pessoa depois do
         # login, então um token de atualização seria uma credencial de longa
         # duração guardada sem finalidade.
         "access_type": "online",

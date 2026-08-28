@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-RSAC V2 — Agregação de B.I. e Bibliometria (doc 31, doc 32).
+Revsist — Agregação de B.I. e Bibliometria (doc 31, doc 32).
 
 Um único ponto de entrada, `get_project_insights`, monta tudo que a aba de
 Indicadores mostra. Os agregados de processo (funil PRISMA, funil de

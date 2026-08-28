@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Dashboard Page
+ * Revsist — Dashboard Page
  * Tela inicial com métricas, boas-vindas e visão geral dos projetos.
  */
 

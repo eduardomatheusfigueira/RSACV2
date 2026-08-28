@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — FastAPI Application Factory.
+Revsist — FastAPI Application Factory.
 Ponto de entrada do backend — cria e configura a aplicação FastAPI,
 logging estruturado em arquivo e reconciliação de jobs no ciclo de vida (lifespan).
 """
@@ -65,7 +65,7 @@ logger = logging.getLogger("rsac")
 async def lifespan(app: FastAPI):
     """Gerencia startup e shutdown da aplicação."""
     # Startup
-    logger.info(f"RSAC Backend v{settings.app_version} iniciando...")
+    logger.info(f"Revsist Backend v{settings.app_version} iniciando...")
     logger.info(f"Perfil de implantação: {settings.deployment_profile.value}")
     if settings.is_server_profile:
         logger.warning(
@@ -314,7 +314,7 @@ def create_app() -> FastAPI:
             <html lang="pt-BR">
             <head>
                 <meta charset="utf-8">
-                <title>RSAC V2 — Backend Ativo</title>
+                <title>Revsist — Backend Ativo</title>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #f8fafc; }
                     .card { max-width: 520px; padding: 2.5rem; background: #1e293b; border-radius: 12px; border: 1px solid #334155; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
@@ -326,7 +326,7 @@ def create_app() -> FastAPI:
             </head>
             <body>
                 <div class="card">
-                    <h2>🚀 RSAC V2 — Servidor Backend Online</h2>
+                    <h2>🚀 Revsist — Servidor Backend Online</h2>
                     <p>O backend FastAPI está operando normalmente. A interface gráfica compilada não foi encontrada em <code>frontend/dist</code>.</p>
                     <p>Execute <code>npm run build:web</code> dentro da pasta <code>frontend</code> ou utilize os inicializadores automáticos.</p>
                     <a href="/api/docs" class="btn">Documentação da API (Swagger)</a>

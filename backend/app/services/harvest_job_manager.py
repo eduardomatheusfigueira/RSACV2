@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Harvest Job Manager.
+Revsist — Harvest Job Manager.
 Gerencia o ciclo de vida de tarefas assíncronas de coleta, concorrência por projeto,
 cancelamento gracioso e prevenção de sobreposição de execuções.
 """

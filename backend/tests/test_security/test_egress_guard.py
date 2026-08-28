@@ -4,7 +4,7 @@
 """
 Guarda de requisições de saída — SSRF (doc 28 V-05, doc 29 §29.5.3).
 
-O RSAC busca PDFs em endereços que o usuário fornece e fala com o endpoint de
+O Revsist busca PDFs em endereços que o usuário fornece e fala com o endpoint de
 IA que o usuário configura. Sem guarda, o servidor vira procurador: quem
 controla a URL manda o backend requisitar o que quiser de dentro da rede onde
 ele está.

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Serviço de Exportação de Dados e Relatórios Acadêmicos.
+Revsist — Serviço de Exportação de Dados e Relatórios Acadêmicos.
 Gera planilhas Excel (.xlsx) com múltiplas abas, arquivos BibTeX (.bib)
 e dados estruturados para o diagrama de fluxo PRISMA 2020.
 """
@@ -34,7 +34,7 @@ def neutralizar_formula(valor):
     Impede que um texto vindo de base externa seja executado como fórmula
     (doc 28 V-15, doc 29 §29.9.1).
 
-    Títulos e resumos vêm de bases indexadas que o RSAC não controla. Um
+    Títulos e resumos vêm de bases indexadas que o Revsist não controla. Um
     registro preparado com `=HYPERLINK(...)` ou `=cmd|...` vira execução na
     máquina de quem abrir a planilha exportada — e o pesquisador abre a
     planilha confiando que ela é produto do próprio trabalho.

@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Ribbon Action & State Store (Zustand)
+ * Revsist — Ribbon Action & State Store (Zustand)
  * Desacopla o TopRibbonBar do DOM, substituindo clickDomByText, clickDom e clickDomByIndex
  * por registro declarativo e despacho direto de funções tipadas por página.
  */

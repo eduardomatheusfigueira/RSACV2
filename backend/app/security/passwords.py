@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Hash de Senhas (doc 29 §29.3.3).
+Revsist — Hash de Senhas (doc 29 §29.3.3).
 
 Argon2id, vencedor da Password Hashing Competition e recomendação atual da
 OWASP. O custo é deliberado: cada verificação leva dezenas de milissegundos,

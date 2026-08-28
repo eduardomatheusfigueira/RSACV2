@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Log Panel (Painel Lateral de Logs)
+ * Revsist — Log Panel (Painel Lateral de Logs)
  * Painel colapsável na lateral direita que exibe todos os eventos do sistema
  * com filtros por nível, detalhes expandíveis e timestamp preciso.
  */

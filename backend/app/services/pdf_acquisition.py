@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Orquestração da Aquisição de PDFs sobre o banco de dados.
+Revsist — Orquestração da Aquisição de PDFs sobre o banco de dados.
 
 Faz a ponte entre o `PDFService` (que não conhece ORM) e o modelo `PaperModel`:
 monta os identificadores do trabalho, dispara a busca multi-estratégia, grava a

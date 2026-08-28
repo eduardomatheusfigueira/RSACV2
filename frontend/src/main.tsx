@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — React Entry Point
+ * Revsist — React Entry Point
  */
 
 import { StrictMode } from 'react'

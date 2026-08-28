@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Database Engine e Session Management.
+Revsist — Database Engine e Session Management.
 
 O engine é derivado do **dialeto da URL**, e não fixado em SQLite (doc 40
-§40.2.2). A razão é que o RSAC passou a ter dois bancos legítimos: SQLite no
+§40.2.2). A razão é que o Revsist passou a ter dois bancos legítimos: SQLite no
 perfil `desktop`, onde é a escolha certa — um arquivo, zero administração —,
 e PostgreSQL no perfil `server`, onde um arquivo único em WAL com coleta e
 triagem concorrentes de vários assinantes vira contenção e ponto único de
@@ -64,7 +64,7 @@ def _build_engine(url: str) -> Engine:
         echo=settings.debug,
         pool_pre_ping=True,
         # Dimensionado para o desenho de um worker do doc 40 §40.6: o trabalho
-        # do RSAC é espera de rede, não CPU, e um laço de eventos sozinho não
+        # do Revsist é espera de rede, não CPU, e um laço de eventos sozinho não
         # consome mais que isto de conexões simultâneas.
         pool_size=5,
         max_overflow=10,

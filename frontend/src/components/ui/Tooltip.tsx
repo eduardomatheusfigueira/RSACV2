@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Accessible Radix Tooltip Wrapper
+ * Revsist — Accessible Radix Tooltip Wrapper
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

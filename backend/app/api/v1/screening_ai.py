@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Triagem com IA (Individual e Batch)."""
+"""Revsist — Router de Triagem com IA (Individual e Batch)."""
 
 import logging
 

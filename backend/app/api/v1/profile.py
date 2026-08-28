@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router para Backup e Restauração de Chaves e Perfil de Workspace."""
+"""Revsist — Router para Backup e Restauração de Chaves e Perfil de Workspace."""
 
 import json
 import logging

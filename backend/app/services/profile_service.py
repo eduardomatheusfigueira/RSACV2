@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Profile & API Keys Backup and Restore Service.
+Revsist — Profile & API Keys Backup and Restore Service.
 Serviço para exportação e restauração padronizada de chaves de API e perfis completos de workspace.
 """
 

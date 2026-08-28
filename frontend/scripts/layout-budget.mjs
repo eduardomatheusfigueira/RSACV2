@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Orçamento de proporção da moldura (doc 26 § 26.4, doc 24 § 24.4)
+ * Revsist — Orçamento de proporção da moldura (doc 26 § 26.4, doc 24 § 24.4)
  * ====================================================================
  *
  * Com o app em execução, mede as regiões de "moldura" (tudo que não é área

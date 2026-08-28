@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Mascaramento de Segredos (doc 29 §29.4.2).
+Revsist — Mascaramento de Segredos (doc 29 §29.4.2).
 
 Nenhuma resposta da API devolve chave de API em texto claro. O que sobe para a
 interface é a máscara: o suficiente para o usuário reconhecer *qual* chave está

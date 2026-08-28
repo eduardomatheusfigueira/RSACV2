@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Harvest Page (Coleta Multibase de Artigos)
+ * Revsist — Harvest Page (Coleta Multibase de Artigos)
  *
  * Recursos Integrados e Padronizados:
  * 1. Barra Superior de Métricas: Bases ativas, descritores, contadores (novos vs. duplicados).

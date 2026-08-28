@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Configurações de IA e Sugestão de Protocolos."""
+"""Revsist — Router de Configurações de IA e Sugestão de Protocolos."""
 
 import json
 import logging

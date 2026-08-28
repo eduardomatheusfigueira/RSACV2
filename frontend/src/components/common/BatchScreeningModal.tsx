@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Batch Screening Modal & Live Progress
+ * Revsist — Batch Screening Modal & Live Progress
  * Modal interativo para configuração e acompanhamento em tempo real
  * da triagem em lote com Inteligência Artificial.
  */

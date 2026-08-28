@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Electron Main Process
+ * Revsist — Electron Main Process
  * Gerencia lifecycle da aplicação, spawn do backend Python e criação da janela.
  */
 
@@ -12,7 +12,7 @@ import { registerIpcHandlers } from './ipc-handlers'
 
 function logToFile(msg: string) {
   try {
-    const logDir = join(process.env.LOCALAPPDATA || 'C:\\Temp', 'RSAC')
+    const logDir = join(process.env.LOCALAPPDATA || 'C:\\Temp', 'Revsist')
     mkdirSync(logDir, { recursive: true })
     appendFileSync(join(logDir, 'electron_boot.log'), `[${new Date().toISOString()}] ${msg}\n`)
   } catch {}
@@ -48,7 +48,7 @@ function createWindow(backendPort: number): void {
     minWidth: 1024,
     minHeight: 700,
     show: true,
-    title: 'RSAC V2',
+    title: 'Revsist',
     backgroundColor: BRAND_BACKGROUND,
     ...(icon ? { icon } : {}),
     webPreferences: {

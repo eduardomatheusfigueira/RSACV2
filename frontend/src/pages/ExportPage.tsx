@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Export Page (Central de Exportação & Relatórios PRISMA)
+ * Revsist — Export Page (Central de Exportação & Relatórios PRISMA)
  *
  * Layout Metodológico e Ergonômico Padronizado:
  * 1. Barra Superior de Métricas PRISMA: Identificados, Duplicatas, Triados e Incluídos.

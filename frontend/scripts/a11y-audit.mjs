@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Auditoria de acessibilidade (doc 26 § 26.4, camada 3)
+ * Revsist — Auditoria de acessibilidade (doc 26 § 26.4, camada 3)
  * ====================================================================
  *
  * axe-core injetado via Playwright nas 8 telas do doc 24 § 24.4, em 2

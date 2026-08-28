@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Projeto."""
+"""Revsist — Schemas de Projeto."""
 
 from datetime import datetime
 from typing import Optional

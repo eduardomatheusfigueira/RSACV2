@@ -1,8 +1,8 @@
-# Script de Desenvolvimento — RSAC V2
+# Script de Desenvolvimento — Revsist
 # Inicia backend Python + frontend Electron em paralelo
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  RSAC V2 — Modo Desenvolvimento" -ForegroundColor Cyan
+Write-Host "  Revsist — Modo Desenvolvimento" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 

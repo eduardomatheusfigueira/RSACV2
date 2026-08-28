@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Settings & Project Store (Zustand + localStorage Persistence)
+ * Revsist — Settings & Project Store (Zustand + localStorage Persistence)
  * Persiste preferências do usuário (tema, modo IA, projeto ativo) no localStorage,
  * para que sobrevivam a recarregamentos de página e reinícios do app.
  */

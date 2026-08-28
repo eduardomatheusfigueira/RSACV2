@@ -1,11 +1,11 @@
 /**
- * RSAC V2 — Validação e confirmação do endereço do backend (doc 29 §29.12)
+ * Revsist — Validação e confirmação do endereço do backend (doc 29 §29.12)
  *
  * O problema que este módulo resolve: o cliente aceitava `?api_url=` do
  * *search* e do fragmento, sem validar nada, e gravava em `localStorage`. O
  * próprio lançador **ensina** esse formato ao usuário, imprimindo
  * `https://<netlify>/#/?api_url=<túnel>` como o link oficial de acesso — de
- * modo que o pesquisador é treinado a clicar em links RSAC com `api_url`
+ * modo que o pesquisador é treinado a clicar em links Revsist com `api_url`
  * embutido e não tem como distinguir o legítimo do hostil.
  *
  * Um link como
@@ -16,7 +16,7 @@
  * sobrevivia ao fechamento da aba.
  */
 
-/** Sufixos de host reconhecidos como destino plausível do RSAC. */
+/** Sufixos de host reconhecidos como destino plausível do Revsist. */
 const SUFIXOS_CONHECIDOS = [
   'trycloudflare.com',
   'cfargotunnel.com',
@@ -112,7 +112,7 @@ export function analisarUrlDeBackend(entrada: string): UrlDeBackend {
  */
 export function mensagemDeConfirmacao(destino: UrlDeBackend): string {
   const linhas = [
-    `Conectar ao servidor RSAC em:`,
+    `Conectar ao servidor Revsist em:`,
     ``,
     `    ${destino.host}`,
     ``,

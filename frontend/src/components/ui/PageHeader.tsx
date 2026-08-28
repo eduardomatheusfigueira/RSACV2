@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Cabeçalho de Página Canônico
+ * Revsist — Cabeçalho de Página Canônico
  *
  * Fonte única da altura do cabeçalho. Antes existia replicado nas 8 páginas,
  * cada uma com o próprio espaçamento — 84 px no Estúdio de Protocolo e 51 px

@@ -218,7 +218,7 @@ proporção aparecem primeiro.
 
 ---
 
-## O nome: de RSAC para Revsist
+## O nome: de Revsist para Revsist
 
 O produto passou a se chamar **Revsist** quando o domínio `revsist.com` foi
 registrado. A identidade visual **não** foi refeita: o monograma continua sendo
@@ -242,7 +242,7 @@ técnicos, e isso é deliberado:
 | Identificador | Onde | Por que fica |
 |---|---|---|
 | `RSAC_` | prefixo das variáveis de ambiente | Trocar invalidaria todo `.env` existente e cada linha de documentação de implantação, em troca de nada visível |
-| `RSAC` | `app_name`, que alimenta `platformdirs.user_data_dir` | **É o caminho da pasta de dados.** Trocar faria quem já tem o app instalado abrir o programa e não encontrar o próprio acervo |
+| `Revsist` | `app_name`, que alimenta `platformdirs.user_data_dir` | **É o caminho da pasta de dados.** Trocar faria quem já tem o app instalado abrir o programa e não encontrar o próprio acervo |
 | `rsac_session` | nome do cookie | Trocar desloga todo mundo uma vez, sem nenhum ganho |
 | `rsac-*` | classes e variáveis CSS, nomes de componente, arquivos de `brand/svg/` | São identificadores internos; renomeá-los é churn com risco de quebrar referências que não se pode testar aqui (build do Windows) |
 

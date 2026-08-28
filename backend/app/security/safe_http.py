@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Cliente HTTP com guarda de saída (doc 29 §29.5.3).
+Revsist — Cliente HTTP com guarda de saída (doc 29 §29.5.3).
 
 `follow_redirects=True` do httpx é conveniente e, aqui, inseguro: um host
 público que responde `302 Location: http://169.254.169.254/` contorna qualquer

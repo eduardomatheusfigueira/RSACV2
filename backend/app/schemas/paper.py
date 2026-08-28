@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Artigos Científicos (Papers)."""
+"""Revsist — Schemas de Artigos Científicos (Papers)."""
 
 from datetime import datetime
 from typing import Dict, List, Optional

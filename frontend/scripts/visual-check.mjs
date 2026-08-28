@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Comparação visual pixel a pixel (doc 26 § 26.3, camada 2)
+ * Revsist — Comparação visual pixel a pixel (doc 26 § 26.3, camada 2)
  * ====================================================================
  *
  * Recaptura as mesmas 8 telas × 13 paletas de visual-baseline.mjs e compara

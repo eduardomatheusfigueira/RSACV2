@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Middlewares de segurança (doc 29 §29.6, §29.7, §29.8).
+Revsist — Middlewares de segurança (doc 29 §29.6, §29.7, §29.8).
 
 Três responsabilidades que não cabem em nenhuma rota específica porque valem
 para todas: cabeçalhos de resposta, limite de taxa e o tratamento de erro que

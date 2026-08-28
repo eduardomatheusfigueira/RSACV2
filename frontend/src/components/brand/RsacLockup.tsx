@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Assinatura horizontal (marca + logotipo + versão + selo)
+ * Revsist — Assinatura horizontal (marca + logotipo + versão + selo)
  *
  * Usada onde a marca precisa se apresentar por extenso: cabeçalho do app,
  * splash de inicialização e cartão "Sobre" das Configurações. Em espaços

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Sessões com estado no servidor (doc 29 §29.3.3).
+Revsist — Sessões com estado no servidor (doc 29 §29.3.3).
 
 O token vai para o cliente uma única vez; o banco guarda apenas o SHA-256 dele.
 Duas consequências que motivam o desenho:

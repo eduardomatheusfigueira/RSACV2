@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Protocolo, Critérios e Seções do Manuscrito (PRISMA-ScR)."""
+"""Revsist — Schemas de Protocolo, Critérios e Seções do Manuscrito (PRISMA-ScR)."""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional

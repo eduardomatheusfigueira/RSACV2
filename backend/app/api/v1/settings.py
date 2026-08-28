@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router para Configurações de Fontes e Credenciais de Coleta."""
+"""Revsist — Router para Configurações de Fontes e Credenciais de Coleta."""
 
 import logging
 from typing import List

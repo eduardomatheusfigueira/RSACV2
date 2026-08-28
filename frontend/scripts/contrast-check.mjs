@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Verificador de contraste WCAG nas 13 paletas (doc 26 § 26.4)
+ * Revsist — Verificador de contraste WCAG nas 13 paletas (doc 26 § 26.4)
  * ====================================================================
  *
  * O axe-core (a11y-audit.mjs) só mede o que está renderizado numa amostra de

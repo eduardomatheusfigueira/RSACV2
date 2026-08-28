@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Utilitários compartilhados da suíte de validação (doc 26)
+ * Revsist — Utilitários compartilhados da suíte de validação (doc 26)
  * ====================================================================
  *
  * Constantes e helpers usados por seed-fixture, a11y-audit, layout-budget,
@@ -45,7 +45,7 @@ export const THEMES = [
 /** Uma clara e uma escura, para as camadas que só precisam de uma amostra (doc 26 § 26.4). */
 export const THEMES_REPRESENTATIVAS = ['light', 'dark']
 
-export const TITULO_FIXTURE = 'RSAC Fixture — Validação Visual (não editar)'
+export const TITULO_FIXTURE = 'Revsist Fixture — Validação Visual (não editar)'
 
 /** As 8 telas do doc 24 § 24.4, na ordem do ribbon. `rota` recebe o id do projeto fixture. */
 export function telas(projectId) {

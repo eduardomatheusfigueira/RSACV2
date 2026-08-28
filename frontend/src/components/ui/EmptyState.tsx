@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Estado Vazio e Estado de Carregamento
+ * Revsist — Estado Vazio e Estado de Carregamento
  *
  * Substitui as 11 classes distintas de estado vazio que existiam
  * (`empty-state`, `queue-empty-state`, `terminal-empty`, `log-empty`,

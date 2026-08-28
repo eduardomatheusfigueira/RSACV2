@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Accessible Radix Dialog / Modal Wrapper
+ * Revsist — Accessible Radix Dialog / Modal Wrapper
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

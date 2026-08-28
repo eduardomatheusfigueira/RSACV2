@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — OpenAI-Compatible AI Client (Qwen / DashScope / Local LLM / Ollama).
+Revsist — OpenAI-Compatible AI Client (Qwen / DashScope / Local LLM / Ollama).
 Integração resiliente com qualquer endpoint compatível com a API OpenAI Chat Completions,
 com suporte a fallback de modelos, rotação de chaves e tratamento de formatos de resposta.
 """

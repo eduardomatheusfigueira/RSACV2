@@ -7,7 +7,7 @@ Integridade dos dados de pesquisa (doc 28 V-15 e V-16, doc 29 §29.9).
 Estes achados não são sobre confidencialidade — são sobre a **validade da
 revisão**. Uma decisão de triagem adulterada por conteúdo do próprio corpus
 contamina o resultado de um jeito que nenhuma auditoria posterior detecta com
-facilidade, e o produto do RSAC é justamente o rigor do processo.
+facilidade, e o produto do Revsist é justamente o rigor do processo.
 """
 
 import io
@@ -44,7 +44,7 @@ FORMULAS_HOSTIS = [
 @pytest.mark.parametrize("carga", FORMULAS_HOSTIS)
 def test_formula_hostil_e_neutralizada(carga):
     """
-    Títulos e resumos vêm de bases indexadas que o RSAC não controla, e o
+    Títulos e resumos vêm de bases indexadas que o Revsist não controla, e o
     pesquisador abre a planilha confiando que ela é produto do próprio trabalho.
     """
     resultado = neutralizar_formula(carga)

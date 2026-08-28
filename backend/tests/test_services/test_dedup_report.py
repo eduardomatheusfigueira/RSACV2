@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Testes para o fluxo de deduplicação e geração do Relatório de Deduplicação (RSAC V1 parity)."""
+"""Testes para o fluxo de deduplicação e geração do Relatório de Deduplicação (Revsist V1 parity)."""
 
 import pytest
 from app.infrastructure.persistence.models import PaperModel, PaperSourceModel, ProjectModel

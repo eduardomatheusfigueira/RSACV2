@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Extração de Dados e Gestão de PDFs."""
+"""Revsist — Router de Extração de Dados e Gestão de PDFs."""
 
 import json
 import logging

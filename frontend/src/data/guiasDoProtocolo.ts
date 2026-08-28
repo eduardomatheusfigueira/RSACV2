@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Guias Estruturados do Estúdio de Protocolo
+ * Revsist — Guias Estruturados do Estúdio de Protocolo
  *
  * Os guias que o Estúdio abre ao lado de cada campo — a estrutura esperada da
  * resposta e o modelo de texto inserível — eram 662 linhas de JSX espalhadas
@@ -154,7 +154,7 @@ A estratégia de busca eletrônica definitiva foi executada em DD/MM/AAAA.`,
       rotulo: 'Inserir Estrutura no Editor',
       confirmacao: 'Substituir seleção pelo modelo estruturado?',
       texto: `Etapas da Triagem:
-A seleção dos estudos foi conduzida no software RSAC V2 em duas fases: (1) avaliação inicial de títulos e resumos para exclusão de estudos fora do escopo temático/territorial; e (2) análise integral dos artigos pré-selecionados.
+A seleção dos estudos foi conduzida no software Revsist em duas fases: (1) avaliação inicial de títulos e resumos para exclusão de estudos fora do escopo temático/territorial; e (2) análise integral dos artigos pré-selecionados.
 
 Exercício Piloto de Calibração:
 Antes do início da triagem definitiva, realizou-se um teste piloto com uma amostra de 50 artigos entre os revisores para calibração e refinamento dos critérios de inclusão e exclusão.
@@ -176,7 +176,7 @@ A seleção foi realizada de forma independente por dois pesquisadores. Discrep�
       rotulo: 'Inserir Estrutura no Editor',
       confirmacao: 'Substituir processo de charting pelo modelo?',
       texto: `Formulário de Extração Padronizado:
-A extração de dados foi realizada por meio de formulário padronizado no RSAC V2, pré-testado em 10 estudos pelos pesquisadores.
+A extração de dados foi realizada por meio de formulário padronizado no Revsist, pré-testado em 10 estudos pelos pesquisadores.
 
 Procedimento de Preenchimento:
 Dois revisores extraíram independentemente as informações metodológicas, atores envolvidos, instrumentos de política pública e resultados socioeconômicos observados.
@@ -217,7 +217,7 @@ Apresentação Tabular e Mapeamento:
 Elaboração de tabelas descritivas detalhando autoria, ano, território/região de estudo, metodologia empregada e principais achados socioeconômicos.
 
 Diagramas e Representações Visuais:
-Geração de gráficos de distribuição cronológica e geográfica das pesquisas, acompanhados pelo fluxograma de seleção (identificação, triagem, elegibilidade e inclusão) que o RSAC gera na Exportação.
+Geração de gráficos de distribuição cronológica e geográfica das pesquisas, acompanhados pelo fluxograma de seleção (identificação, triagem, elegibilidade e inclusão) que o Revsist gera na Exportação.
 
 Matriz de Identificação de Lacunas (Gap Analysis):
 Construção de matriz estruturada para apontar territórios e temas com carência de evidências empíricas.`,
@@ -314,7 +314,7 @@ Fontes de Informação:
 [Bases consultadas: BDTD, SciELO, Scopus, OpenAlex, literatura cinzenta institucional e data da busca]
 
 Métodos de Charting (Extração):
-[Extração em duplicata independente com formulário padronizado no RSAC V2]
+[Extração em duplicata independente com formulário padronizado no Revsist]
 
 Resultados Esperados:
 [Mapeamento das abordagens metodológicas, instrumentos de política pública e principais lacunas identificadas]

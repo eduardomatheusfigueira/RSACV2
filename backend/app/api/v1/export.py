@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Exportação de Dados (Excel, BibTeX e PRISMA)."""
+"""Revsist — Router de Exportação de Dados (Excel, BibTeX e PRISMA)."""
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Response

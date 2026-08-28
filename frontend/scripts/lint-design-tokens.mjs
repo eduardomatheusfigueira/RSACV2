@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Verificador do Design System
+ * Revsist — Verificador do Design System
  * ======================================
  *
  * Camada 1 da validação (doc 26). Aplica as regras do doc 24 § 24.11 sobre

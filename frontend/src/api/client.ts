@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — HTTP & WebSocket Client
+ * Revsist — HTTP & WebSocket Client
  * Cliente configurado para comunicação com o backend Python.
  */
 

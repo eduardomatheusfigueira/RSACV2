@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas comuns (paginação, erros, etc.)."""
+"""Revsist — Schemas comuns (paginação, erros, etc.)."""
 
 from datetime import datetime
 from typing import Generic, TypeVar

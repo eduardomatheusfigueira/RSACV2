@@ -4,7 +4,7 @@
  * O que estes testes fixam: um link com `api_url` embutido não pode mudar o
  * destino das requisições sem que uma pessoa veja o host e confirme. O próprio
  * lançador ensina esse formato ao usuário, então ele foi treinado a clicar em
- * links do RSAC com `api_url` — e não tem como distinguir o legítimo do hostil.
+ * links do Revsist com `api_url` — e não tem como distinguir o legítimo do hostil.
  */
 
 import { describe, expect, it } from 'vitest'
@@ -84,7 +84,7 @@ describe('mensagemDeConfirmacao', () => {
     expect(mensagem).toContain('credenciais')
   })
 
-  it('avisa quando o host não é um destino esperado do RSAC', () => {
+  it('avisa quando o host não é um destino esperado do Revsist', () => {
     const mensagem = mensagemDeConfirmacao(analisarUrlDeBackend('https://backend.attacker.com'))
     expect(mensagem).toMatch(/não é um túnel/i)
   })

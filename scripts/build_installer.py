@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Build do Instalador Oficial Windows (.exe)
+Revsist — Build do Instalador Oficial Windows (.exe)
 Compila o backend Python em binário autônomo e gera o instalador Inno Setup (.exe):
 - dist_bin/Revsist-Setup.exe
 """

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Scopus Harvester (Elsevier API).
+Revsist — Scopus Harvester (Elsevier API).
 Coletor assíncrono para a base multidisciplinar Scopus via Elsevier Developer API,
 com suporte a view=COMPLETE, fallback inteligente via Abstract Retrieval API
 para extração de resumos, autenticação por API Key e Institutional Token (insttoken).

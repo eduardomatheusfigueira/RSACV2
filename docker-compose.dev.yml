@@ -1,4 +1,4 @@
-# RSAC V2 — PostgreSQL de desenvolvimento (doc 41, tarefa 0.9)
+# Revsist — PostgreSQL de desenvolvimento (doc 41, tarefa 0.9)
 #
 # Sobe **apenas** o banco. O backend continua rodando no host, como sempre, para
 # que o ciclo de edição e recarga não passe por reconstrução de imagem.

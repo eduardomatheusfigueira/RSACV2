@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Listas de Verificação das Diretrizes Metodológicas
+ * Revsist — Listas de Verificação das Diretrizes Metodológicas
  * ============================================================
  *
  * Matrizes de auditoria exibidas na aba "Checklist" do Estúdio de Protocolo.

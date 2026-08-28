@@ -1,5 +1,5 @@
 appId: br.ufsc.rsac
-productName: RSAC V2
+productName: Revsist
 copyright: Copyright © 2026 Eduardo Matheus Figueira
 directories:
   output: release
@@ -31,7 +31,7 @@ nsis:
   allowElevation: false
   createDesktopShortcut: always
   createStartMenuShortcut: true
-  shortcutName: RSAC V2
+  shortcutName: Revsist
   installerIcon: build/icon.ico
   uninstallerIcon: build/icon.ico
   uninstallDisplayName: ${productName} ${version}

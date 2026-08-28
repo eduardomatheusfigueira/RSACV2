@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""RSAC V2 — Schemas da Aba de B.I. e Bibliometria (doc 32)."""
+"""Revsist — Schemas da Aba de B.I. e Bibliometria (doc 32)."""
 
 
 from pydantic import BaseModel

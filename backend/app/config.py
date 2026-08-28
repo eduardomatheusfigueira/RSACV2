@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Configuração da Aplicação.
+Revsist — Configuração da Aplicação.
 Utiliza Pydantic BaseSettings para gerenciamento centralizado de configurações
 com suporte a variáveis de ambiente e valores padrão.
 """
@@ -20,7 +20,7 @@ class DeploymentProfile(str, Enum):
     """
     Perfil de exposição em que o backend está rodando (doc 29 §29.2).
 
-    O RSAC nasceu assumindo que o único cliente era o Electron na mesma
+    O Revsist nasceu assumindo que o único cliente era o Electron na mesma
     máquina. Quando o `server_launcher.py` passou a publicar o backend na
     internet, essa premissa deixou de valer sem que nada no código soubesse.
     O perfil torna o perímetro explícito: todo controle de segurança deriva
@@ -33,10 +33,20 @@ class DeploymentProfile(str, Enum):
 
 
 class Settings(BaseSettings):
-    """Configurações globais da aplicação RSAC V2."""
+    """Configurações globais da aplicação Revsist."""
 
     # ── Identificação ─────────────────────────────────────────────────
+    #
+    # O produto chama-se **Revsist**. `app_name` continua "RSAC" de propósito:
+    # ele não é o nome do produto, é a **chave do armazenamento** — alimenta
+    # `platformdirs.user_data_dir` mais abaixo, e portanto o caminho onde o
+    # banco e os PDFs de quem já usa o programa estão gravados. Trocá-lo faria
+    # essas pessoas abrirem o app e não encontrarem o próprio acervo.
+    #
+    # O nome visível vive em `display_name`; a decisão está registrada em
+    # `brand/IDENTIDADE_VISUAL.md`.
     app_name: str = "RSAC"
+    display_name: str = "Revsist"
     app_version: str = "2.0.0"
     debug: bool = False
 

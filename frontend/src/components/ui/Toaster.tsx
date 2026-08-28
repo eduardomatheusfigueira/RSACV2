@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Avisos Transitórios (sonner)
+ * Revsist — Avisos Transitórios (sonner)
  *
  * O padrão até aqui era `alert()` do navegador para erro e um `<span>` que
  * aparecia por três segundos no cabeçalho para sucesso. O primeiro trava a
@@ -36,7 +36,7 @@ export function Toaster(): JSX.Element {
       }}
       closeButton
       /* O container do sonner já carrega aria-live; o rótulo diz de onde vêm. */
-      containerAriaLabel="Avisos do RSAC"
+      containerAriaLabel="Avisos do Revsist"
     />
   )
 }

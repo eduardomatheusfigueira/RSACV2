@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — BDTD Harvester (Biblioteca Digital Brasileira de Teses e Dissertações).
+Revsist — BDTD Harvester (Biblioteca Digital Brasileira de Teses e Dissertações).
 Interface assíncrona com o motor VuFind da BDTD via API de busca / Search Record,
 com sanitização de descritores, respeito estrito à regra do WAF (máx. 2 filtros de API),
 pós-filtragem local de idiomas, raspagem de detalhes (orientador, instituição de defesa),

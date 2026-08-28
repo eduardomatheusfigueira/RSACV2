@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Projects Page
+ * Revsist — Projects Page
  * Listagem, criação e seleção de projetos de revisão sistemática.
  */
 

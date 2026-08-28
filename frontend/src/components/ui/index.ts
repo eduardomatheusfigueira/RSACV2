@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Canonical UI Component Library
+ * Revsist — Canonical UI Component Library
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

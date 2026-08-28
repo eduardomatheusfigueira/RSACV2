@@ -4,7 +4,7 @@
 """
 Seed Script — Criação do Projeto de Revisão de Escopo:
 'Impactos da Segurança Pública na Operacionalização do Turismo Náutico em Fronteiras Fluviais'
-Seguindo as diretrizes metodológicas do RSAC V2 (PRISMA-ScR + BDTD/SciELO 2-Term Limit).
+Seguindo as diretrizes metodológicas do Revsist (PRISMA-ScR + BDTD/SciELO 2-Term Limit).
 """
 
 import json
@@ -44,7 +44,7 @@ def seed_project():
         db.delete(existing)
         db.commit()
 
-    print("[*] Criando novo projeto no RSAC V2...")
+    print("[*] Criando novo projeto no Revsist...")
     project = ProjectModel(
         title=title,
         description=(
@@ -193,7 +193,7 @@ def seed_project():
         db.add(ExtractionQuestionModel(protocol_id=protocol.id, text=text, order=idx))
 
     db.commit()
-    print(f"[✓] Projeto criado e estruturado com sucesso no RSAC V2!")
+    print(f"[✓] Projeto criado e estruturado com sucesso no Revsist!")
     print(f"    ID do Projeto: {project.id}")
     print(f"    Título: {project.title}")
     db.close()

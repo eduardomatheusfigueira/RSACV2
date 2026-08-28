@@ -1,7 +1,7 @@
 /**
- * RSAC V2 — Deduplication Report Modal
+ * Revsist — Deduplication Report Modal
  * Exibe o Relatório de Deduplicação e Fusão de Fontes (3_relatorio_deduplicacao.txt)
- * em estrita paridade com o pop-up e recursos do RSAC V1.
+ * em estrita paridade com o pop-up e recursos do Revsist V1.
  */
 
 import { useState } from 'react'

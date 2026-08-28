@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Tela de Acesso
+ * Revsist — Tela de Acesso
  *
  * Cartão centrado sobre o fundo da aplicação. Sem barra de título nem
  * navegação: antes do login não há nada para navegar, e mostrar a moldura
@@ -123,7 +123,7 @@
 /*
  * O botão segue as diretrizes de marca do Google: fundo branco, o "G" em
  * quatro cores, texto escuro e altura confortável. Ele não usa os tokens de
- * tema do RSAC de propósito — a marca de terceiro precisa aparecer como o
+ * tema do Revsist de propósito — a marca de terceiro precisa aparecer como o
  * Google especifica, em qualquer uma das treze paletas.
  */
 .login-google {

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Launcher Principal
+Revsist — Launcher Principal
 Inicia o backend FastAPI localmente e abre a interface em janela dedicada
 de aplicativo Desktop (Chrome/Edge App Mode ou Navegador Padrão).
 """
@@ -81,7 +81,7 @@ def is_port_in_use(port: int) -> bool:
     """Verifica se o backend já está respondendo na porta."""
     try:
         url = f"http://127.0.0.1:{port}/api/v1/health"
-        req = urllib.request.Request(url, headers={"User-Agent": "RSAC-Launcher"})
+        req = urllib.request.Request(url, headers={"User-Agent": "Revsist-Launcher"})
         with urllib.request.urlopen(req, timeout=1.5) as res:
             if res.status == 200:
                 return True
@@ -183,7 +183,7 @@ def cleanup():
         return
     _is_shutting_down = True
 
-    print("\n\033[93m[*] Encerrando RSAC V2...\033[0m")
+    print("\n\033[93m[*] Encerrando Revsist...\033[0m")
 
     if _backend_proc and _backend_proc.poll() is None:
         try:
@@ -238,7 +238,7 @@ def main():
     os.system("cls" if sys.platform == "win32" else "clear")
 
     print("\033[92m" + "═" * 70)
-    print("        🚀 RSAC V2 — APLICATIVO DESKTOP")
+    print("        🚀 Revsist — APLICATIVO DESKTOP")
     print("═" * 70 + "\033[0m\n")
 
     ensure_frontend_build()
@@ -256,7 +256,7 @@ def main():
 
     os.system("cls" if sys.platform == "win32" else "clear")
     print("\033[92m" + "═" * 70)
-    print("        🚀 RSAC V2 — APLICATIVO EM EXECUÇÃO")
+    print("        🚀 Revsist — APLICATIVO EM EXECUÇÃO")
     print("═" * 70 + "\033[0m\n")
 
     print(f"  \033[92m[✓]\033[0m Backend Local:    \033[96m{local_url}\033[0m (\033[92mOnline\033[0m)")

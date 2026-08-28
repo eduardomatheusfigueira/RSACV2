@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Dependências de autenticação e autorização (doc 29 §29.3.1, §29.3.4).
+Revsist — Dependências de autenticação e autorização (doc 29 §29.3.1, §29.3.4).
 
 A decisão de projeto que mais importa aqui não é *como* a sessão é validada, e
 sim *onde* a validação é ligada: `require_session` entra como dependência do

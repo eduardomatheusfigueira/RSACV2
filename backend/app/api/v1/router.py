@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""RSAC V2 — Router agregador da API v1."""
+"""Revsist — Router agregador da API v1."""
 
 from fastapi import APIRouter, Depends
 
