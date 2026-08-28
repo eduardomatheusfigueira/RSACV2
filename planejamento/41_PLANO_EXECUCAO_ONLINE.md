@@ -24,7 +24,7 @@
 
 ### Trabalho preparatório (pode ser feito hoje, 1–2 h)
 
-- [ ] **P1** Registrar domínio (`.com.br` exige CNPJ ou CPF; `.app` força HTTPS)
+- [x] **P1** Registrar domínio — **Concluído: `revsist.com`** (Nome oficial do app: **Revsist**; logotipo e identidade visual mantidos)
 - [ ] **P2** Criar projeto no Google Cloud Console e a credencial OAuth (§40.4.6)
 - [ ] **P3** Contratar VPS em **região brasileira** (§39.5) — 4 vCPU / 8 GB / 80 GB
 - [ ] **P4** Criar conta de armazenamento de backup (Backblaze B2 ou S3)
