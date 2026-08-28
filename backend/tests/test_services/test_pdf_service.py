@@ -216,7 +216,7 @@ async def test_extracao_de_pdf_nao_roda_no_laco_de_eventos(service):
     A parte pesada da aquisição precisa sair para uma thread.
 
     Gravar em disco, abrir o PDF no PyMuPDF e calcular o SHA-256 são as únicas
-    operações do RSAC que ocupam CPU de verdade. No desenho de produção há um
+    operações do Revsist que ocupam CPU de verdade. No desenho de produção há um
     **único** worker (doc 40 §40.6), escolhido porque todo o resto do trabalho é
     espera de rede e um laço de eventos sozinho dá conta. Essa escolha só se
     sustenta enquanto a CPU sair do laço: rodando ali, a aquisição em lote de

@@ -1,6 +1,6 @@
-# RSAC V2 — Identidade Visual
+# Revsist — Identidade Visual
 
-Manual da marca do **RSAC V2 — Revisão Sistemática Assistida por Computador**.
+Manual da marca do **Revsist — Revisão Sistemática Assistida por Computador**.
 Este documento é normativo: descreve o que a marca é, como ela é construída e
 onde ela aparece. Toda arte é derivada de uma única fonte de verdade,
 [`generate_brand_assets.py`](generate_brand_assets.py) — nada é desenhado à mão
@@ -10,10 +10,10 @@ fora dele.
 
 ## 1. O símbolo — monograma "R-Lupa"
 
-O símbolo é a letra **R** de *Revisão*, construída com um traço monolinear em
+O símbolo é a letra **R** de *Revisão* — e, desde a mudança de nome, também o R de *Revsist*, construída com um traço monolinear em
 que **o laço da letra é a lente de uma lupa** e **a perna diagonal é o cabo**.
 
-A escolha não é decorativa. O RSAC existe para uma tarefa específica: procurar,
+A escolha não é decorativa. O Revsist existe para uma tarefa específica: procurar,
 filtrar e examinar literatura científica com rigor. A lupa é o gesto dessa
 tarefa; o R é o nome. Fundir os dois em um traço só significa que a marca diz o
 que o produto faz sem precisar de uma segunda camada de ilustração.
@@ -74,7 +74,7 @@ Consequência direta: a caixa de tinta resultante é **exatamente 0..80 × 0..10
 
 A marca **não tem cor própria fixa dentro do aplicativo**. Ela é pigmentada
 pelos tokens do design system, e por isso acompanha automaticamente as **13
-paletas** do RSAC V2.
+paletas** do Revsist.
 
 | Parte | Origem da cor |
 |---|---|
@@ -124,7 +124,7 @@ Nos assets estáticos os contornos são **vetorizados** a partir de
 (licença SIL OFL 1.1). Assim, o resultado não depende de nenhuma fonte instalada
 na máquina que gera os arquivos.
 
-**Ordem da assinatura:** símbolo → `RSAC` → selo `BETA`, com `V2` na
+**Ordem da assinatura:** símbolo → `REVSIST` → selo `BETA`, com `V2` na
 segunda linha, alinhado à esquerda do logotipo.
 
 Variantes disponíveis: `sm` (22 px), `md` (34 px) e `lg` (56 px) de altura de
@@ -134,7 +134,7 @@ símbolo.
 
 ## 4. Selo BETA
 
-O RSAC V2 está em desenvolvimento, e o selo comunica isso de forma permanente
+O Revsist está em desenvolvimento, e o selo comunica isso de forma permanente
 enquanto durar esse estágio.
 
 Segue a linguagem de **etiqueta de engenharia** do design system — mono,
@@ -162,10 +162,10 @@ Quando o produto sair de beta, remova o selo em três lugares: `RsacLockup`,
 
 | Local | Elemento |
 |---|---|
-| Splash de inicialização | Monograma + `RSAC` + selo, antes mesmo do React montar |
-| Barra de título (ribbon) | Monograma 19 px, tom `brand`, `RSAC v2` + selo |
-| Sidebar | Monograma 24 px, tom `brand`, `RSAC v2` + selo |
-| Barra de status | Monograma 12 px, tom `auto`, `RSAC V2` + selo |
+| Splash de inicialização | Monograma + `Revsist` + selo, antes mesmo do React montar |
+| Barra de título (ribbon) | Monograma 19 px, tom `brand`, `Revsist v2` + selo |
+| Sidebar | Monograma 24 px, tom `brand`, `Revsist v2` + selo |
+| Barra de status | Monograma 12 px, tom `auto`, `Revsist` + selo |
 | Configurações → Aparência | Assinatura `lg` demonstrando a re-pigmentação pelo tema |
 | Aba do navegador / dev | `favicon.svg` |
 | Janela (Linux e dev) | `resources/icon.png` |
@@ -215,3 +215,35 @@ E, como a splash roda antes do React, também em:
 Depois de qualquer alteração, rode o gerador novamente e confira o resultado a
 **16, 24, 32 e 48 px** antes de dar o commit: é nesses tamanhos que erros de
 proporção aparecem primeiro.
+
+---
+
+## O nome: de Revsist para Revsist
+
+O produto passou a se chamar **Revsist** quando o domínio `revsist.com` foi
+registrado. A identidade visual **não** foi refeita: o monograma continua sendo
+o "R" construído como lupa, e a leitura só ficou mais direta — antes era o R de
+*Revisão*, agora é também a inicial do próprio nome. O que mudou foi uma
+palavra, e ela vive numa constante única (`WORDMARK`, em
+[`generate_brand_assets.py`](generate_brand_assets.py)); antes estava escrita à
+mão em cinco lugares.
+
+A troca de quatro para sete letras teve uma consequência concreta: na faixa
+superior do instalador, que tem largura fixa de 150 px, o logotipo empurrou o
+selo `BETA` para fora da borda. O `installer_header` passou a calcular o corpo
+do texto a partir do espaço que sobra — marca, respiro, palavra, selo e margem
+—, de modo que a próxima mudança de nome não quebre o layout de novo.
+
+### O que **não** foi renomeado, e por quê
+
+A renomeação alcançou o que as pessoas veem. Não alcançou os identificadores
+técnicos, e isso é deliberado:
+
+| Identificador | Onde | Por que fica |
+|---|---|---|
+| `RSAC_` | prefixo das variáveis de ambiente | Trocar invalidaria todo `.env` existente e cada linha de documentação de implantação, em troca de nada visível |
+| `Revsist` | `app_name`, que alimenta `platformdirs.user_data_dir` | **É o caminho da pasta de dados.** Trocar faria quem já tem o app instalado abrir o programa e não encontrar o próprio acervo |
+| `rsac_session` | nome do cookie | Trocar desloga todo mundo uma vez, sem nenhum ganho |
+| `rsac-*` | classes e variáveis CSS, nomes de componente, arquivos de `brand/svg/` | São identificadores internos; renomeá-los é churn com risco de quebrar referências que não se pode testar aqui (build do Windows) |
+
+A regra que organiza tudo isso: **prosa muda, identificador fica**.

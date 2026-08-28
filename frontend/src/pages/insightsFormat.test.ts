@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Testes da Aba de Indicadores (doc 33 Fases 1 e 2)
+ * Revsist — Testes da Aba de Indicadores (doc 33 Fases 1 e 2)
  *
  * O projeto não tem infraestrutura de teste de renderização de componente
  * (nenhuma das 8 páginas existentes tem — só `backendUrl.test.ts`, sobre

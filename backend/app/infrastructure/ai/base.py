@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Base AI Client Interface.
+Revsist — Base AI Client Interface.
 Define o contrato para integração com múltiplos provedores de IA
 (Google Gemini, Alibaba Qwen e Modelos Locais via OpenAI format).
 """

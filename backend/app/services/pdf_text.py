@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Pipeline de Texto de PDF (extração, limpeza, seções e contexto).
+Revsist — Pipeline de Texto de PDF (extração, limpeza, seções e contexto).
 
 Extrair texto de PDF acadêmico não é `page.get_text()`. O que sai dali vem com
 cabeçalhos e rodapés repetidos em toda página, palavras quebradas por hífen na

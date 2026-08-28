@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — SciELO Harvester (Crossref REST API).
+Revsist — SciELO Harvester (Crossref REST API).
 Coletor assíncrono para o acervo da Scientific Electronic Library Online (SciELO)
 através da API oficial da Crossref filtrando pelos identificadores institucionais
 da SciELO (SciELO Brasil / FAPESP - member:530, SciELO Chile - member:2516,
@@ -234,7 +234,7 @@ class SciELOHarvester(BaseHarvester):
         super().__init__(source_name="SciELO", timeout=timeout)
         self.mailto = mailto
         self.headers = {
-            "User-Agent": f"RSAC-V2/2.0 (mailto:{self.mailto})",
+            "User-Agent": f"Revsist/2.0 (mailto:{self.mailto})",
             "Accept": "application/json",
         }
 

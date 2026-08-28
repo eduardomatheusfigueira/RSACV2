@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Python Backend Manager
+ * Revsist — Python Backend Manager
  * Gerencia o spawn e lifecycle do processo Python (FastAPI + uvicorn).
  */
 

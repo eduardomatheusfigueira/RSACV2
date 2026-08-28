@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Professional Desktop Ribbon Bar
+ * Revsist — Professional Desktop Ribbon Bar
  *
  * Design philosophy:
  * Each tab shows ONLY the tools that matter for that exact stage of the systematic review.
@@ -157,11 +157,11 @@ export function TopRibbonBar(): JSX.Element {
           type="button"
           className="ribbon-brand rsac-on-brand"
           onClick={() => navigate('/')}
-          title="RSAC — Revisão Sistemática Assistida por Computador (v2, beta)"
+          title="Revsist — Revisão Sistemática Assistida por Computador (v2, beta)"
           aria-label="Ir para o início"
         >
           <RsacMark size={19} tone="brand" label={null} />
-          <span className="brand-name">RSAC<span className="brand-ver">v2</span></span>
+          <span className="brand-name">Revsist<span className="brand-ver">v2</span></span>
           <BetaBadge tone="brand" size="xs" />
         </button>
 

@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Screening Page (Triagem 1)
+ * Revsist — Screening Page (Triagem 1)
  *
  * Novo Layout Metodológico Otimizado para Leitura e Avaliação:
  * 1. Fila Horizontal de Estudos (no topo): com filtros de status, busca rápida e paginação.

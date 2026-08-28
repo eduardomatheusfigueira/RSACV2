@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Protocolo de Revisão Sistemática e Scoping Review (PRISMA-ScR)."""
+"""Revsist — Router de Protocolo de Revisão Sistemática e Scoping Review (PRISMA-ScR)."""
 
 import json
 import logging

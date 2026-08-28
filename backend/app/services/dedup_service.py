@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Serviço de Deduplicação de Artigos Otimizado.
+Revsist — Serviço de Deduplicação de Artigos Otimizado.
 Estratégia de 3 passes escalável com chaves de bloqueio (blocking keys):
   1. DOI Match (exato com índice composto project_id + doi)
   2. Título Normalizado (exato com índice composto project_id + title_normalized)
@@ -412,7 +412,7 @@ class DeduplicationService:
         total_duplicates = len(duplicatas_encontradas)
         dup_rate = round((total_duplicates / total_raw_count * 100), 1) if total_raw_count > 0 else 0.0
 
-        # 4. Montar o texto estruturado do Relatório de Deduplicação (padrão RSAC V1)
+        # 4. Montar o texto estruturado do Relatório de Deduplicação (padrão Revsist V1)
         now_str = datetime.now().strftime("%d/%m/%Y às %H:%M:%S")
         report_lines = [
             "==================================================",

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Deduplicação e Relatório Consolidado."""
+"""Revsist — Router de Deduplicação e Relatório Consolidado."""
 
 import logging
 

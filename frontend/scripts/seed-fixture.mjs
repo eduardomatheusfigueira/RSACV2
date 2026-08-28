@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Semeador da fixture de validação (doc 26 § 26.3)
+ * Revsist — Semeador da fixture de validação (doc 26 § 26.3)
  * ====================================================================
  *
  * Cria (ou recria do zero) um projeto determinístico para a comparação

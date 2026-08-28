@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Migração dos segredos gravados em texto claro (doc 29 §29.4.1).
+Revsist — Migração dos segredos gravados em texto claro (doc 29 §29.4.1).
 
 Bancos criados antes da Fase 2 têm chaves de API em claro nas colunas
 `*_encrypted`. `EncryptedText` já as **lê** sem quebrar, mas enquanto elas não

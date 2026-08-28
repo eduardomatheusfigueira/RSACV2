@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Exportação de Dados (Excel, BibTeX e PRISMA)."""
+"""Revsist — Router de Exportação de Dados (Excel, BibTeX e PRISMA)."""
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -41,7 +41,7 @@ def export_to_excel(
     return StreamingResponse(
         excel_stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers=cabecalho_de_download(f"RSAC_Export_{project.title[:30]}", "xlsx"),
+        headers=cabecalho_de_download(f"Revsist_Export_{project.title[:30]}", "xlsx"),
     )
 
 
@@ -61,7 +61,7 @@ def export_to_bibtex(
     return Response(
         content=bib_text,
         media_type="text/plain; charset=utf-8",
-        headers=cabecalho_de_download(f"RSAC_References_{project.title[:30]}", "bib"),
+        headers=cabecalho_de_download(f"Revsist_References_{project.title[:30]}", "bib"),
     )
 
 

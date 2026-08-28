@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Log Store (Zustand)
+ * Revsist — Log Store (Zustand)
  * Gerencia o registro centralizado de eventos do sistema.
  * Toda chamada de API, WebSocket, e ação relevante é registrada aqui.
  *

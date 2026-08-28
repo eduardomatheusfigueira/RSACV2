@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * RSAC V2 — Referência da comparação visual (doc 26 § 26.3, camada 2)
+ * Revsist — Referência da comparação visual (doc 26 § 26.3, camada 2)
  * ====================================================================
  *
  * Grava a captura de 8 telas × 13 paletas (104 imagens, 1440×900) em

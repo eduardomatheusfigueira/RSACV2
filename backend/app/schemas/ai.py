@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Inteligência Artificial."""
+"""Revsist — Schemas de Inteligência Artificial."""
 
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field

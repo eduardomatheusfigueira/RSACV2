@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Filtro de log que mascara credenciais (doc 29 §29.4.4).
+Revsist — Filtro de log que mascara credenciais (doc 29 §29.4.4).
 
 Rede de segurança, não a defesa principal. A defesa é não escrever segredo em
 log; este filtro existe para o caso em que alguém escreve mesmo assim — numa
@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 import re
 
-# Padrões dos provedores realmente usados pelo RSAC, mais o cabeçalho de
+# Padrões dos provedores realmente usados pelo Revsist, mais o cabeçalho de
 # autorização e o token de sessão do próprio app.
 PADROES = [
     re.compile(r"AIzaSy[0-9A-Za-z_\-]{20,}"),                      # Google Gemini

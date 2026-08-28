@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Testes de Integração dos Endpoints de Perfil e Chaves."""
+"""Revsist — Testes de Integração dos Endpoints de Perfil e Chaves."""
 
 import pytest
 

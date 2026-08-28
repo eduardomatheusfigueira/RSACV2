@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — PubMed Harvester (NCBI E-utilities).
+Revsist — PubMed Harvester (NCBI E-utilities).
 Coletor assíncrono para a base biomédica PubMed com paginação completa (retstart),
 lotes de efetch de 100 PMIDs, preservação de rótulos estruturados de resumo
 e controle de taxa de requisições.

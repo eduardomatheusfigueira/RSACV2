@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Guarda de requisições de saída (doc 28 V-05, doc 29 §29.5.3).
+Revsist — Guarda de requisições de saída (doc 28 V-05, doc 29 §29.5.3).
 
-O RSAC busca PDFs em endereços que o usuário fornece e conversa com o endpoint
+O Revsist busca PDFs em endereços que o usuário fornece e conversa com o endpoint
 de IA que o usuário configura. Sem guarda, isso faz do servidor um procurador:
 quem controla a URL manda o backend requisitar o que quiser **de dentro da
 rede onde ele está** — metadados de nuvem, serviços que só escutam em loopback,

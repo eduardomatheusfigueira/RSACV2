@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Token local do perfil desktop (doc 29 §29.3.2).
+Revsist — Token local do perfil desktop (doc 29 §29.3.2).
 
 O problema que este módulo resolve: autenticar o app de mesa sem transformar o
-uso local numa tela de login. Se a proteção atrapalhar quem roda o RSAC na
+uso local numa tela de login. Se a proteção atrapalhar quem roda o Revsist na
 própria máquina, ela será contornada — e aí não protege ninguém.
 
 A solução é a mesma de Jupyter e do Docker Desktop: no primeiro start o backend

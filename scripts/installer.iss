@@ -1,8 +1,8 @@
-#define MyAppName "RSAC V2"
+#define MyAppName "Revsist"
 #define MyAppVersion "2.0.0"
 #define MyAppPublisher "Eduardo Matheus Figueira"
 #define MyAppURL "https://github.com/eduardomatheusfigueira/RSACV2"
-#define MyAppExeName "RSAC V2.exe"
+#define MyAppExeName "Revsist.exe"
 
 [Setup]
 AppId={{D37F8E45-927A-4C2E-8E11-3705C2B4E991}
@@ -15,7 +15,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist_bin
-OutputBaseFilename=RSAC-Setup
+OutputBaseFilename=Revsist-Setup
 SetupIconFile=..\brand\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/fast

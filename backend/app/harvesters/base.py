@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Base Harvester Interface & Domain Contract.
+Revsist — Base Harvester Interface & Domain Contract.
 Define os contratos, estruturas de dados e classe base para todos os coletores.
 """
 
@@ -141,7 +141,7 @@ ProgressCallback = Callable[[HarvestProgress], Awaitable[None]]
 
 
 class BaseHarvester(ABC):
-    """Classe base abstrata para todos os harvesters científicos do RSAC."""
+    """Classe base abstrata para todos os harvesters científicos do Revsist."""
 
     capabilities: HarvesterCapabilities = HarvesterCapabilities()
 

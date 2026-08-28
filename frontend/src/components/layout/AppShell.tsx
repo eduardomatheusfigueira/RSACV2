@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — AppShell Component
+ * Revsist — AppShell Component
  * Layout principal profissional de alta produtividade (TopRibbonBar + Full Workspace + Right Dock LogPanel + StatusBar).
  */
 

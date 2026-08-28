@@ -17,7 +17,7 @@ async def test_health_check(async_client):
 
 @pytest.mark.anyio
 async def test_search_descriptors_rules_validation(async_client):
-    """Testa validação das regras de descritores de busca RSAC."""
+    """Testa validação das regras de descritores de busca do Revsist."""
     res = await async_client.post(
         "/api/v1/projects",
         json={"title": "Projeto Regras", "methodology": "PRISMA-P"},

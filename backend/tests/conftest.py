@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Pytest Fixtures Globais."""
+"""Revsist — Pytest Fixtures Globais."""
 
 import os
 

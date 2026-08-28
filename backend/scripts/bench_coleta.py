@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Banco de medição da coleta (sem rede).
+Revsist — Banco de medição da coleta (sem rede).
 
 Mede, com transporte HTTP simulado de latência conhecida, o que os coletores
 BDTD e SciELO fazem com o tempo, e o que a deduplicação incremental custa e
@@ -377,7 +377,7 @@ def bloco_dedup() -> None:
 
 async def principal() -> None:
     alvo = sys.argv[1] if len(sys.argv) > 1 else "tudo"
-    print("RSAC V2 — banco de medição da coleta (sem rede)")
+    print("Revsist — banco de medição da coleta (sem rede)")
     if alvo in ("tudo", "rede"):
         await bloco_rede()
     if alvo in ("tudo", "dedup"):

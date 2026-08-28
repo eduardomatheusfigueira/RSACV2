@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Modelos ORM (SQLAlchemy 2.x).
+Revsist — Modelos ORM (SQLAlchemy 2.x).
 Mapeamento objeto-relacional para todas as tabelas do banco de dados SQLite.
 """
 
@@ -45,7 +45,7 @@ def as_utc(moment: datetime | None) -> datetime | None:
     """
     Normaliza para UTC consciente uma data **lida do banco**.
 
-    Existe porque os dois bancos legítimos do RSAC devolvem coisas diferentes da
+    Existe porque os dois bancos legítimos do Revsist devolvem coisas diferentes da
     mesma coluna `DateTime(timezone=True)`:
 
       * **PostgreSQL** armazena `timestamptz` e devolve datetime consciente;
@@ -72,7 +72,7 @@ class ProjectModel(Base):
     """
     Projeto de revisão sistemática.
 
-    `owner_id` é o que torna o RSAC utilizável por mais de uma pessoa. Sem ele
+    `owner_id` é o que torna o Revsist utilizável por mais de uma pessoa. Sem ele
     — como era até a Fase 1 do doc 41 — qualquer conta autenticada lia, editava
     e apagava o acervo de qualquer outra: aceitável quando o único cliente era
     o Electron na própria máquina, e vazamento entre controladores distintos
@@ -360,7 +360,7 @@ class AuditLogModel(Base):
 
 class UserModel(Base):
     """
-    Conta de acesso ao RSAC.
+    Conta de acesso ao Revsist.
 
     A senha nunca é guardada — só o hash Argon2id, que `app/security/passwords`
     produz e verifica. `role` separa quem opera a revisão de quem administra as
@@ -457,7 +457,7 @@ class OAuthStateModel(Base):
     Estado de uma autenticação com Google em curso (doc 40 §40.4.1).
 
     Guardar isto no servidor — e não num cookie assinado — é a mesma decisão
-    que levou o RSAC a usar sessão com estado em vez de JWT: o que está no
+    que levou o Revsist a usar sessão com estado em vez de JWT: o que está no
     banco pode ser invalidado na hora. Aqui isso importa porque o `state` é de
     **uso único**: ele é apagado ao ser consumido, o que fecha a repetição do
     callback. Um cookie assinado continuaria válido até vencer.
@@ -475,7 +475,7 @@ class OAuthStateModel(Base):
     nonce: Mapped[str] = mapped_column(String(64), nullable=False)
     # Caminho **interno** para onde voltar depois do login. Nunca uma URL
     # absoluta: aceitar uma faria do callback um redirecionador aberto, e o
-    # link de login viraria isca de phishing com o domínio do RSAC na barra.
+    # link de login viraria isca de phishing com o domínio do Revsist na barra.
     redirect_after: Mapped[str] = mapped_column(String(200), default="/app")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

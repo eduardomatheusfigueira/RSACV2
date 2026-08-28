@@ -1,4 +1,4 @@
-# RSAC V2 — Integração Contínua
+# Revsist — Integração Contínua
 #
 # O portão que torna durável o que as Fases 0–5 corrigiram: um PR que
 # reintroduza qualquer achado do doc 28 falha aqui, em vez de chegar ao
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   backend:
-    # O RSAC tem dois bancos legítimos, e a matriz é o que impede que um deles
+    # O Revsist tem dois bancos legítimos, e a matriz é o que impede que um deles
     # regrida em silêncio: SQLite é o perfil `desktop`, que já tem usuários;
     # PostgreSQL é o perfil `server`, para onde o produto está indo (doc 40
     # §40.2.1). Código que funciona só num dos dois é defeito, não escolha.

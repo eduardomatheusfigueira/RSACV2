@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Exceções de Domínio."""
+"""Revsist — Exceções de Domínio."""
 
 
 class RSACError(Exception):
-    """Exceção base do RSAC."""
+    """Exceção base do Revsist."""
     pass
 
 

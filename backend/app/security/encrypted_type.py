@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Tipo de coluna cifrada (doc 29 §29.4.1).
+Revsist — Tipo de coluna cifrada (doc 29 §29.4.1).
 
 `EncryptedText` cifra ao gravar e decifra ao ler, de modo que o resto da
 aplicação continua tratando a coluna como texto comum. Isso importa porque a

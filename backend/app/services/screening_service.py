@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Serviço de Triagem com Inteligência Artificial (Screening Service).
+Revsist — Serviço de Triagem com Inteligência Artificial (Screening Service).
 Executa a triagem automatizada (individual e em lote) com guardrails estritos
 de zero alucinação e persistência de auditoria.
 """

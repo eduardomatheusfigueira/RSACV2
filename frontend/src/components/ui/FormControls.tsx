@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Canonical Form Controls (Input, Textarea, Select, FormGroup)
+ * Revsist — Canonical Form Controls (Input, Textarea, Select, FormGroup)
  * Design System: Contemporary Neo-Retro System Aesthetic
  */
 

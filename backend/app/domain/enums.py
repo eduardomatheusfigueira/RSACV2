@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Enumeradores de Domínio.
+Revsist — Enumeradores de Domínio.
 Tipos enumerados utilizados em todas as camadas da aplicação.
 """
 
@@ -69,7 +69,7 @@ class DocumentType(str, Enum):
 
 
 def to_canonical_doc_type(source: str, raw_format: str | None) -> str:
-    """Normaliza o tipo de documento bruto da base para o vocabulário canônico do RSAC."""
+    """Normaliza o tipo de documento bruto da base para o vocabulário canônico do Revsist."""
     if not raw_format:
         return DocumentType.OUTRO.value
 

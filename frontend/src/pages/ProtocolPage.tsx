@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Protocol Page & Complete Manuscript Drafting Studio (PRISMA-ScR & PRISMA 2020)
+ * Revsist — Protocol Page & Complete Manuscript Drafting Studio (PRISMA-ScR & PRISMA 2020)
  * Especializado em Ciências Sociais Aplicadas & Desenvolvimento Regional.
  *
  * Estrutura Metodológica com Separação Temporal Rigorosa:
@@ -1581,7 +1581,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             </div>
 
             <p className="section-help">
-              Conforme {getFieldItemRef('search_descriptors')} e Diretrizes RSAC: Formulação em <strong>pares de termos com AND</strong> (máximo 2 termos por expressão e sugestão de ~5 pares por idioma), garantindo perfeita compatibilidade com o motor VuFind da BDTD.
+              Conforme {getFieldItemRef('search_descriptors')} e Diretrizes Revsist: Formulação em <strong>pares de termos com AND</strong> (máximo 2 termos por expressão e sugestão de ~5 pares por idioma), garantindo perfeita compatibilidade com o motor VuFind da BDTD.
             </p>
 
             {helpOpen.descriptors && (
@@ -1994,7 +1994,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                     <strong>Por que o Pós-Filtro Local é necessário?</strong>
                     <p>
                       Em servidores como o da <strong>BDTD (VuFind)</strong>, o envio de múltiplos filtros combinados aciona o Firewall de Aplicação Web (WAF) retornando erro <code>429 (Too Many Requests)</code>.
-                      Ao aplicar o filtro de idioma localmente em memória após a recuperação, o RSAC V2 garante 100% de conformidade com o protocolo sem risco de sobrecarga ou bloqueio.
+                      Ao aplicar o filtro de idioma localmente em memória após a recuperação, o Revsist garante 100% de conformidade com o protocolo sem risco de sobrecarga ou bloqueio.
                     </p>
                   </div>
                 </div>
@@ -2034,7 +2034,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             <textarea
               rows={5}
               className="protocol-textarea"
-              placeholder="Ex: A triagem foi conduzida em duas etapas independentes através do sistema RSAC V2. Previamente, realizou-se exercício de calibração com amostra piloto de 50 artigos para alinhamento de critérios. Divergências na decisão foram resolvidas por consenso entre os revisores..."
+              placeholder="Ex: A triagem foi conduzida em duas etapas independentes através do sistema Revsist. Previamente, realizou-se exercício de calibração com amostra piloto de 50 artigos para alinhamento de critérios. Divergências na decisão foram resolvidas por consenso entre os revisores..."
               value={manuscript.selection_process}
               onChange={(e) => updateManuscriptField('selection_process', e.target.value)}
             />
@@ -2064,7 +2064,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
             <textarea
               rows={4}
               className="protocol-textarea"
-              placeholder="Ex: A extração de dados foi realizada por meio de formulário padronizado e calibrado no RSAC V2, cobrindo metadados bibliográficos, setor econômico analisado, modelo de governança, impactos no desenvolvimento local e limitações reportadas..."
+              placeholder="Ex: A extração de dados foi realizada por meio de formulário padronizado e calibrado no Revsist, cobrindo metadados bibliográficos, setor econômico analisado, modelo de governança, impactos no desenvolvimento local e limitações reportadas..."
               value={manuscript.data_charting_process}
               onChange={(e) => updateManuscriptField('data_charting_process', e.target.value)}
             />

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Cifra de segredos em repouso (doc 29 §29.4.1).
+Revsist — Cifra de segredos em repouso (doc 29 §29.4.1).
 
 O que este módulo corrige: as colunas do banco chamadas `*_encrypted`
 guardavam `json.dumps(lista)` puro. O sufixo era falso, e o dano específico do

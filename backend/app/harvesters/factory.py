@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Harvester Factory & Source Registry.
+Revsist — Harvester Factory & Source Registry.
 Registro centralizado e fábrica para instanciação dinâmica de coletores científicos
 com injeção de credenciais e capacidades.
 """

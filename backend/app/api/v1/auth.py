@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Router de Autenticação e Contas (doc 29 §29.3).
+Revsist — Router de Autenticação e Contas (doc 29 §29.3).
 
 Este módulo tem duas metades com regimes opostos, e a distinção é deliberada:
 

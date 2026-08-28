@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Grupo do Ribbon
+ * Revsist — Grupo do Ribbon
  *
  * O ribbon tem 29 grupos e os 29 repetiam a mesma casca: um contêiner, um
  * invólucro de ferramentas e o rótulo embaixo. São 559 das 1025 linhas do

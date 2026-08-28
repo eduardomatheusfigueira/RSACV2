@@ -8,7 +8,7 @@ Este é o portão do bloqueante crítico. Até a Fase 1, `ProjectModel` não tin
 dono e **nenhuma** rota filtrava por usuário: qualquer conta autenticada lia,
 editava e apagava o acervo de qualquer outra. Enquanto o único cliente era o
 Electron na própria máquina isso era irrelevante; publicado o serviço para dois
-assinantes, é entregar o acervo de um ao outro — e, como o RSAC ocupa a posição
+assinantes, é entregar o acervo de um ao outro — e, como o Revsist ocupa a posição
 de **operador** (doc 37 §37.2.2), vazamento entre controladores distintos.
 
 O teste que importa aqui é `test_nenhuma_rota_de_projeto_escapa_do_isolamento`:

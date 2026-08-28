@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Tela de Acesso
+ * Revsist — Tela de Acesso
  *
  * A porta que o modo servidor não tinha. Aparece apenas quando o backend
  * reporta que não há sessão válida — no app de mesa o token local resolve

@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Preload Script (Context Bridge)
+ * Revsist — Preload Script (Context Bridge)
  * Expõe APIs seguras do Node.js para o Renderer Process via contextBridge.
  */
 

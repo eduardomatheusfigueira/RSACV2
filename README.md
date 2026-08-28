@@ -1,11 +1,11 @@
-# RSAC V2 — Revisão Sistemática Assistida por Computador
+# Revsist — Revisão Sistemática Assistida por Computador
 
 <div align="center">
 
-<img src="brand/svg/rsac-lockup-dark.svg#gh-dark-mode-only" alt="RSAC V2" height="76" />
-<img src="brand/svg/rsac-lockup-light.svg#gh-light-mode-only" alt="RSAC V2" height="76" />
+<img src="brand/svg/rsac-lockup-dark.svg#gh-dark-mode-only" alt="Revsist" height="76" />
+<img src="brand/svg/rsac-lockup-light.svg#gh-light-mode-only" alt="Revsist" height="76" />
 
-![RSAC V2 Release](https://img.shields.io/badge/RSAC_V2-v2.0.0-274c77?style=flat-square)
+![Revsist Release](https://img.shields.io/badge/Revsist-v2.0.0-274c77?style=flat-square)
 ![Estágio](https://img.shields.io/badge/Estágio-BETA-6096ba?style=flat-square)
 ![Python Version](https://img.shields.io/badge/Python-3.12+-274c77?style=flat-square)
 ![Node Version](https://img.shields.io/badge/Node-20+-274c77?style=flat-square)
@@ -19,7 +19,7 @@
 
 ## Visão Geral
 
-O RSAC V2 é uma ferramenta desenvolvida para apoiar a condução de revisões sistemáticas e revisões de escopo da literatura. O sistema implementa fluxos de trabalho alinhados aos principais padrões metodológicos internacionais de síntese de evidências, integrando coleta em bases de dados, desduplicação de registros, leitura de documentos completos em formato PDF, triagem por critérios explícitos e extração estruturada de dados.
+O Revsist é uma ferramenta desenvolvida para apoiar a condução de revisões sistemáticas e revisões de escopo da literatura. O sistema implementa fluxos de trabalho alinhados aos principais padrões metodológicos internacionais de síntese de evidências, integrando coleta em bases de dados, desduplicação de registros, leitura de documentos completos em formato PDF, triagem por critérios explícitos e extração estruturada de dados.
 
 A arquitetura é dividida em:
 - **Backend**: API construída em Python (FastAPI, SQLAlchemy 2.0 e SQLite), responsável pela persistência, rotinas de coleta assíncrona, desduplicação e processamento de arquivos.
@@ -94,7 +94,7 @@ A arquitetura é dividida em:
 
 ```
 +-------------------------------------------------------------+
-|                      RSAC V2 Sistema                        |
+|                      Revsist — Sistema                      |
 +------------------------------+------------------------------+
 |      Camada de Interface     |      Camada de Serviços      |
 |                              |                              |
@@ -110,16 +110,16 @@ A arquitetura é dividida em:
 
 ## Como Executar
 
-O RSAC V2 é um aplicativo desktop local e direto:
+O Revsist é um aplicativo desktop local e direto:
 
 ### 1. Executável / Lançador Rápido
 Basta executar o aplicativo nativo na raiz do projeto:
 ```bat
-RSAC.exe
+Revsist.exe
 ```
 Ou pelo inicializador em lote:
 ```bat
-Iniciar_RSAC.bat
+Iniciar_Revsist.bat
 ```
 Ou via terminal Python:
 ```bash
@@ -239,7 +239,7 @@ O plano de segurança ([`30_PLANO_EXECUCAO_SEGURANCA.md`](./planejamento/30_PLAN
 
 ## Indicadores (B.I. e Bibliometria)
 
-A aba **Indicadores**, entre Extração e Exportação, mostra estatística descritiva e de processo da revisão: funil PRISMA e de critérios, composição da amostra, rankings de periódico/autor/instituição, saúde de aquisição de PDF e proveniência de IA. Não é bibliometria de citação — o RSAC não coleta contagem de citações nem palavras-chave por artigo hoje.
+A aba **Indicadores**, entre Extração e Exportação, mostra estatística descritiva e de processo da revisão: funil PRISMA e de critérios, composição da amostra, rankings de periódico/autor/instituição, saúde de aquisição de PDF e proveniência de IA. Não é bibliometria de citação — o Revsist não coleta contagem de citações nem palavras-chave por artigo hoje.
 
 O plano de B.I. ([`33_PLANO_EXECUCAO_BI.md`](./planejamento/33_PLANO_EXECUCAO_BI.md)) foi **concluído** em quatro fases, cobertas por 31 testes de backend e verificadas ao vivo contra um servidor real. Diagnóstico do que o modelo de dados sustenta em [`31_DIAGNOSTICO_BI.md`](./planejamento/31_DIAGNOSTICO_BI.md); contrato normativo em [`32_ESPECIFICACAO_BI.md`](./planejamento/32_ESPECIFICACAO_BI.md).
 

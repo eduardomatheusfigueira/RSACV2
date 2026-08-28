@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Assinatura horizontal (marca + logotipo + versão + selo)
+ * Revsist — Assinatura horizontal (marca + logotipo + versão + selo)
  *
  * Usada onde a marca precisa se apresentar por extenso: cabeçalho do app,
  * splash de inicialização e cartão "Sobre" das Configurações. Em espaços
@@ -37,7 +37,7 @@ export function RsacLockup({
       <RsacMark size={MARK_PX[size]} tone={tone} label={null} />
       <div className="rsac-lockup-text">
         <div className="rsac-lockup-title-row">
-          <span className="rsac-lockup-word">RSAC</span>
+          <span className="rsac-lockup-word">REVSIST</span>
           {showBeta && (
             <BetaBadge
               tone={tone === 'brand' ? 'brand' : 'auto'}

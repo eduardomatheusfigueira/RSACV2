@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Fábrica de parser de HTML tolerante a ambiente.
+Revsist — Fábrica de parser de HTML tolerante a ambiente.
 
 Os coletores SciELO e BDTD raspam HTML com `BeautifulSoup(html, "lxml")`. O
 `lxml` é referenciado **apenas por string**, então nenhuma análise estática

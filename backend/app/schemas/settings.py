@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas para Configurações de Fontes e Credenciais."""
+"""Revsist — Schemas para Configurações de Fontes e Credenciais."""
 
 from datetime import datetime
 from typing import Optional

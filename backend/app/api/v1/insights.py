@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-"""RSAC V2 — Router da Aba de B.I. e Bibliometria (doc 32)."""
+"""Revsist — Router da Aba de B.I. e Bibliometria (doc 32)."""
 
 import logging
 

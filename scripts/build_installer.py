@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Build do Instalador Oficial Windows (.exe)
+Revsist — Build do Instalador Oficial Windows (.exe)
 Compila o backend Python em binário autônomo e gera o instalador Inno Setup (.exe):
-- dist_bin/RSAC-Setup.exe
+- dist_bin/Revsist-Setup.exe
 """
 
 import os
@@ -52,7 +52,7 @@ def find_iscc() -> str:
 
 def main():
     print("═" * 65)
-    print("       🚀 GERANDO INSTALADOR OFICIAL DO RSAC V2 (.EXE)")
+    print("       🚀 GERANDO INSTALADOR OFICIAL DO REVSIST (.EXE)")
     print("═" * 65)
 
     # 1. Compilar o backend em pacote autônomo
@@ -97,7 +97,7 @@ def main():
     iss_file = SCRIPTS_DIR / "installer.iss"
     run_cmd(f'"{iscc_path}" /Qp "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
 
-    setup_file = DIST_DIR / "RSAC-Setup.exe"
+    setup_file = DIST_DIR / "Revsist-Setup.exe"
     print("\n" + "═" * 65)
     print("🎉 SUCESSO! O instalador autônomo está pronto para distribuição:")
     print(f"  📦 {setup_file}")

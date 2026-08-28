@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Catálogo de Diretrizes Metodológicas
+ * Revsist — Catálogo de Diretrizes Metodológicas
  * ==============================================
  *
  * Descreve, para cada metodologia aceita pelo backend, o que a interface
@@ -476,7 +476,7 @@ export const PROTOCOL_CATALOG: Record<Methodology, ProtocolDefinition> = {
 
 /**
  * Ordem de apresentação nos seletores. Segue a frequência de uso esperada no
- * público-alvo do RSAC (Ciências Sociais Aplicadas e Desenvolvimento Regional):
+ * público-alvo do Revsist (Ciências Sociais Aplicadas e Desenvolvimento Regional):
  * as extensões PRISMA primeiro, depois os corpos metodológicos por campo, e
  * "Outra" por último.
  */

@@ -1,6 +1,6 @@
 # 39 — Diagnóstico da Passagem para Serviço Online
 
-> **Pergunta deste documento:** o RSAC V2 funciona como aplicativo de mesa.
+> **Pergunta deste documento:** o Revsist funciona como aplicativo de mesa.
 > O que exatamente quebra — ou passa a estar errado — quando o mesmo código
 > atende vários pesquisadores pela internet?
 > **Decisões de escopo já tomadas** (§39.2): VPS único com Docker Compose,
@@ -13,7 +13,7 @@
 
 ## 39.1 O erro de premissa que este documento desfaz
 
-O RSAC nasceu com uma premissa que o `config.py` já reconhece e nomeia: *o
+O Revsist nasceu com uma premissa que o `config.py` já reconhece e nomeia: *o
 único cliente é o Electron na mesma máquina*. O plano de segurança (docs 28–30)
 tratou a parte visível dessa premissa — o perímetro de rede — criando o
 `DeploymentProfile` e derivando dele CORS, documentação da API, cifra de
@@ -76,7 +76,7 @@ e a fase do doc 41 que o fecha.
 | **O-05** | Exportação e importação de perfil operam sobre o banco inteiro | `services/profile_service.py`; `api/v1/profile.py:99,126` | `POST /profile/import` de um assinante sobrescreve dados de todos | **1** |
 
 > **O-01 é o bloqueante crítico** (é o `L-46` do doc 38). Publicar sem ele para
-> dois assinantes é entregar o acervo de um ao outro — e, como o RSAC será
+> dois assinantes é entregar o acervo de um ao outro — e, como o Revsist será
 > **operador**, é vazamento entre controladores distintos.
 
 **A boa notícia estrutural.** Todo router com escopo de projeto já carrega
@@ -151,7 +151,7 @@ desenho está em §40.3.
 | **O-27** | Não existe landing page | `frontend/src/pages/` só tem telas de aplicação | A raiz do domínio hoje serve a SPA ou o cartão de fallback do backend (`main.py:302-330`) | **5** |
 | **O-28** | O backend serve a SPA no *catch-all* | `main.py:288-301` | Funciona, mas põe o Python no caminho de todo arquivo estático; num VPS, isso é trabalho do Caddy | **4/5** |
 | **O-29** | A SPA descobre o backend por `sessionStorage` e query string | `frontend/src/api/client.ts:99-170`, `api/backendUrl.ts` | Desenho correto para o desktop; em produção a origem é fixa e essa flexibilidade vira superfície desnecessária | **5** |
-| **O-30** | O app de mesa precisa continuar funcionando | `Iniciar_RSAC.bat`, `scripts/launcher.py`, `electron-vite` | Nenhuma mudança pode quebrar o perfil `desktop` — é o produto que já existe e tem usuários | **todas** |
+| **O-30** | O app de mesa precisa continuar funcionando | `Iniciar_Revsist.bat`, `scripts/launcher.py`, `electron-vite` | Nenhuma mudança pode quebrar o perfil `desktop` — é o produto que já existe e tem usuários | **todas** |
 
 ---
 
@@ -218,7 +218,7 @@ mais no aviso de privacidade. As duas saídas:
 | **VPS em região brasileira** — Vultr (São Paulo), Magalu Cloud, Locaweb, Oracle Cloud (São Paulo) | Um pouco mais caro que Hetzner | Nenhuma obrigação de art. 33. Latência menor para o público-alvo. **Recomendado** |
 | **VPS fora do Brasil** — Hetzner, DigitalOcean | Mais barato | Assinar as cláusulas-padrão/DPA do provedor, arquivar o documento e declarar a transferência no aviso de privacidade (L-37, L-38) |
 
-A recomendação é a primeira, e não por rigor jurídico: **o público do RSAC é
+A recomendação é a primeira, e não por rigor jurídico: **o público do Revsist é
 brasileiro**, e latência de rede aparece em cada requisição de triagem. A
 conformidade vem junto de graça.
 

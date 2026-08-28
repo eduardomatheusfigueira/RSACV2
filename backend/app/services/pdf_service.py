@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Serviço de Aquisição, Armazenamento e Leitura de PDFs.
+Revsist — Serviço de Aquisição, Armazenamento e Leitura de PDFs.
 
 Responsabilidades:
   * **Aquisição** — delega ao `PDFResolver` a busca multi-estratégia do arquivo
@@ -283,7 +283,7 @@ class PDFService:
             )
 
         # Gravar em disco, abrir o PDF no PyMuPDF e calcular o SHA-256 são as
-        # três únicas operações do RSAC que ocupam CPU de verdade — o resto é
+        # três únicas operações do Revsist que ocupam CPU de verdade — o resto é
         # espera de rede. Num servidor com um único worker (doc 40 §40.6), fazê-las
         # aqui no laço de eventos congela **todas** as outras requisições
         # enquanto durarem: com a aquisição em lote buscando três PDFs de tese

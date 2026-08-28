@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas de Autenticação e Contas (doc 29 §29.3)."""
+"""Revsist — Schemas de Autenticação e Contas (doc 29 §29.3)."""
 
 from datetime import datetime
 from typing import List, Optional

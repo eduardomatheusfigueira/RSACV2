@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Ambiente do Alembic (doc 40 §40.2.3).
+Revsist — Ambiente do Alembic (doc 40 §40.2.3).
 
 Duas decisões que este arquivo carrega:
 

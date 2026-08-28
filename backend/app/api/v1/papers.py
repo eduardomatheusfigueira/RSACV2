@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Router de Artigos (Papers)."""
+"""Revsist — Router de Artigos (Papers)."""
 
 import logging
 import math

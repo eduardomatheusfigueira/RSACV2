@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Estado da autenticação com Google (doc 40 §40.4.1).
+Revsist — Estado da autenticação com Google (doc 40 §40.4.1).
 
 Três decisões concentradas num arquivo pequeno:
 
@@ -13,7 +13,7 @@ Três decisões concentradas num arquivo pequeno:
   Google e não deixam estado pendurado.
 * **Destino interno.** O caminho de retorno é validado na gravação, não na
   leitura: aceitar uma URL absoluta faria do callback um redirecionador aberto,
-  e o link de login viraria isca de phishing com o domínio do RSAC na barra de
+  e o link de login viraria isca de phishing com o domínio do Revsist na barra de
   endereços.
 """
 

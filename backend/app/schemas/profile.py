@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""RSAC V2 — Schemas para Exportação e Importação de Chaves e Perfis."""
+"""Revsist — Schemas para Exportação e Importação de Chaves e Perfis."""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional

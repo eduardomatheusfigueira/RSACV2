@@ -1,4 +1,4 @@
-# Regras e Diretrizes do Projeto RSAC V2
+# Regras e Diretrizes do Projeto Revsist
 
 ## 1. Estratégia de Elaboração de Descritores de Busca
 

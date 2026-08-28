@@ -1,1 +1,1 @@
-# Tests for RSAC V2 harvesters
+# Tests for Revsist harvesters

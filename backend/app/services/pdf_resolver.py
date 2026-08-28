@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Resolvedor Multi-Estratégia de PDFs (Localizador de Texto Completo).
+Revsist — Resolvedor Multi-Estratégia de PDFs (Localizador de Texto Completo).
 
 O problema que este módulo resolve: o campo `download_url` coletado pelos
 harvesters quase nunca é o link direto do arquivo PDF. É uma *landing page*

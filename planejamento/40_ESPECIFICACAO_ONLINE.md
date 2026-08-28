@@ -1,6 +1,6 @@
-# 40 — Especificação do RSAC Online
+# 40 — Especificação do Revsist Online
 
-> **Documento normativo.** Descreve o desenho alvo do RSAC V2 como serviço:
+> **Documento normativo.** Descreve o desenho alvo do Revsist como serviço:
 > persistência, titularidade, identidade com Google, infraestrutura, landing
 > page e amarração com a LGPD. O que está aqui é decisão tomada; o *como fazer*
 > e em que ordem está no [`41_PLANO_EXECUCAO_ONLINE.md`](./41_PLANO_EXECUCAO_ONLINE.md).
@@ -66,7 +66,7 @@
 
 **PostgreSQL 16.** Não é preferência: o SQLite em WAL num único arquivo, com
 coleta e triagem escrevendo em paralelo para vários assinantes, é contenção e
-ponto único de corrupção (O-11). O RSAC já usa SQLAlchemy 2.0 com tipagem
+ponto único de corrupção (O-11). O Revsist já usa SQLAlchemy 2.0 com tipagem
 declarativa, então a mudança concentra-se em três arquivos.
 
 O perfil `desktop` **continua em SQLite**. O `effective_database_url` já
@@ -132,7 +132,7 @@ divergir da última revisão).
 
 ### 40.2.5 Ponte do desktop para o serviço
 
-Quem já usa o RSAC de mesa precisa levar o trabalho. O caminho oficial é o que
+Quem já usa o Revsist de mesa precisa levar o trabalho. O caminho oficial é o que
 já existe: `POST /api/v1/profile/export` gera o pacote, `POST /profile/import`
 o restaura — com duas mudanças obrigatórias na Fase 1:
 
@@ -302,7 +302,7 @@ não deixa margem: dado desnecessário não se trata. O escopo pedido é
 |---|---|
 | Assinatura confere com a JWKS do Google, com cache respeitando `Cache-Control` | Token forjado |
 | `iss` ∈ {`accounts.google.com`, `https://accounts.google.com`} | Emissor errado |
-| `aud` == `client_id` do RSAC | Token emitido para **outro** aplicativo — o ataque clássico de reúso de token |
+| `aud` == `client_id` do Revsist | Token emitido para **outro** aplicativo — o ataque clássico de reúso de token |
 | `exp` no futuro, `iat` no passado, com folga de relógio de 60 s | Token vencido |
 | `nonce` == o gravado no `OAuthStateModel` | Repetição |
 | `email_verified` é `true` | **Recusa o login** |
@@ -360,10 +360,10 @@ Entrar com Google **cria a conta** se ela não existir. Três travas:
 | Item | Valor |
 |---|---|
 | Tipo de credencial | OAuth 2.0 Client ID → *Web application* |
-| Origem JavaScript autorizada | `https://<domínio>` |
-| URI de redirecionamento | `https://<domínio>/api/v1/auth/google/callback` |
+| Origem JavaScript autorizada | `https://revsist.com` |
+| URI de redirecionamento | `https://revsist.com/api/v1/auth/google/callback` |
 | Escopos | `openid`, `email`, `profile` — **nada além** |
-| Tela de consentimento | *External*, publicada; logo do RSAC; links de Termos e Privacidade obrigatórios |
+| Tela de consentimento | *External*, publicada; logo do Revsist; links de Termos e Privacidade obrigatórios |
 | Segredos | `RSAC_GOOGLE_CLIENT_ID`, `RSAC_GOOGLE_CLIENT_SECRET` no arquivo de ambiente (0600), nunca no repositório |
 
 Escopos `openid email profile` **não** exigem verificação de aplicativo pelo
@@ -481,7 +481,7 @@ os quatro divergem.
 
 **Decisão para a v1: `uvicorn --workers 1`, com escala vertical.**
 
-A conta que sustenta: o trabalho pesado do RSAC é **espera de rede** — coleta em
+A conta que sustenta: o trabalho pesado do Revsist é **espera de rede** — coleta em
 bases bibliográficas, busca de PDF, chamada de IA — e tudo isso já é
 `async`/`httpx`. Um único laço de eventos atende dezenas de requisições
 concorrentes sem esforço. O que não é assíncrono e ocupa CPU é a extração de
@@ -537,8 +537,9 @@ repositório** (o `.gitignore` já cobre `.env`). Mínimo obrigatório:
 RSAC_DEPLOYMENT_PROFILE=server
 RSAC_SECRET_KEY=<32+ bytes aleatórios>      # já obrigatório em server (main.py:88)
 RSAC_DATABASE_URL=postgresql+psycopg://...
-RSAC_CORS_ORIGINS=https://<domínio>       # aceita lista separada por vírgula
-RSAC_TRUSTED_HOSTS=<domínio>
+RSAC_CORS_ORIGINS=https://revsist.com     # aceita lista separada por vírgula
+RSAC_TRUSTED_HOSTS=revsist.com
+RSAC_PUBLIC_BASE_URL=https://revsist.com
 RSAC_GOOGLE_CLIENT_ID=...
 RSAC_GOOGLE_CLIENT_SECRET=...
 RSAC_CONTACT_EMAIL=<e-mail de contato acadêmico>
@@ -653,7 +654,7 @@ desligada sob `prefers-reduced-motion`. Nada mais.
 
 | # | Seção | Conteúdo | Por que existe |
 |---|---|---|---|
-| 1 | **Hero** | Monograma; título em uma linha do que o RSAC faz; subtítulo com a promessa metodológica; **[Entrar com Google]** e [Ver como funciona]; etiqueta `BETA` visível | Quem chega precisa saber em 5 s o que é e entrar em 1 clique |
+| 1 | **Hero** | Monograma; título em uma linha do que o Revsist faz; subtítulo com a promessa metodológica; **[Entrar com Google]** e [Ver como funciona]; etiqueta `BETA` visível | Quem chega precisa saber em 5 s o que é e entrar em 1 clique |
 | 2 | **O problema** | Três números honestos sobre o custo de uma revisão manual, com fonte citada | Estabelece competência: quem cita fonte na landing cita no produto |
 | 3 | **O fluxo** | Diagrama SVG **inline** das seis etapas: Protocolo → Coleta → Deduplicação → Triagem → Extração → Síntese | É o produto inteiro numa figura; SVG inline não custa requisição |
 | 4 | **Diretrizes suportadas** | As 11, nomeadas com versão (PRISMA 2020, PRISMA-ScR 2018, PRISMA-P 2015, JBI, Cochrane/MECIR, Campbell/MECCIR, CEE/ROSES, EBSE, PRIOR, Methodi Ordinatio, Personalizada) | **A seção mais persuasiva para este público.** Ninguém finge suportar 11 diretrizes |

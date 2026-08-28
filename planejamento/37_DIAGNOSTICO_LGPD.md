@@ -2,7 +2,7 @@
 
 > **Lei nº 13.709/2018 (LGPD), texto compilado** — inclui as alterações das
 > Leis nº 13.853/2019, nº 14.010/2020, nº 14.460/2022 e nº 15.352/2026.
-> **Objeto:** o RSAC V2 como está hoje (aplicativo de mesa) e como será quando
+> **Objeto:** o Revsist como está hoje (aplicativo de mesa) e como será quando
 > for publicado como serviço com contas, dados pessoais de autores e cobrança.
 > **Companheiro obrigatório:** [`38_CHECKLIST_LGPD.md`](./38_CHECKLIST_LGPD.md),
 > que transforma este diagnóstico em itens verificáveis contra `arquivo:linha`.
@@ -17,7 +17,7 @@ alcança: *o que estamos autorizados a fazer com o que está lá dentro, e o que
 devemos ao titular daqueles dados?*
 
 São perguntas independentes. Um sistema pode ter Argon2id, sessões revogáveis,
-cifra de segredos e guarda de saída — o RSAC tem tudo isso — e ainda assim
+cifra de segredos e guarda de saída — o Revsist tem tudo isso — e ainda assim
 tratar dado pessoal sem base legal, mandá-lo para fora do país sem salvaguarda
 e não ter como responder a quem pedir sua eliminação. A LGPD não pergunta se o
 sistema é seguro; pergunta se o tratamento é **legítimo, necessário,
@@ -35,7 +35,7 @@ jurídico aplicável**, como a §37.2 detalha.
 
 ### 37.2.1 Hoje — o desenvolvedor não é agente de tratamento
 
-No perfil `desktop`, o RSAC roda na máquina do pesquisador, grava em
+No perfil `desktop`, o Revsist roda na máquina do pesquisador, grava em
 `platformdirs.user_data_dir` (`app/config.py`, `data_dir`) e fala com o
 provedor de IA usando **a chave do próprio usuário**. Nenhum dado pessoal
 chega a quem escreveu o programa. Distribuir software não é tratar dados: o
@@ -58,14 +58,14 @@ definido no art. 5º, XVIII.
 
 ### 37.2.2 Amanhã — duas funções ao mesmo tempo
 
-Quando o RSAC for hospedado e cobrado, o desenvolvedor deixa de ser terceiro e
+Quando o Revsist for hospedado e cobrado, o desenvolvedor deixa de ser terceiro e
 passa a ocupar **duas posições simultâneas**, com deveres diferentes:
 
-| Conjunto de dados | Papel do RSAC | Por quê |
+| Conjunto de dados | Papel do Revsist | Por quê |
 |---|---|---|
-| Conta, e-mail, CPF, endereço de cobrança, histórico de pagamento, logs de acesso | **Controlador** (art. 5º, VI) | A decisão sobre finalidade e meios é do RSAC: ele decide cobrar, como cobrar, o que guardar e por quanto tempo. |
-| Projetos, metadados bibliográficos, PDFs, matriz de extração — o conteúdo da revisão do assinante | **Operador** (art. 5º, VII) | Quem decide o que coletar, de quais bases e com que critérios é o pesquisador (ou a instituição dele). O RSAC executa em nome dele. |
-| Métricas de uso agregadas para melhorar o produto | **Controlador** | Finalidade própria do RSAC — e por isso precisa de base legal própria (legítimo interesse, art. 7º, IX, com o teste do art. 10). |
+| Conta, e-mail, CPF, endereço de cobrança, histórico de pagamento, logs de acesso | **Controlador** (art. 5º, VI) | A decisão sobre finalidade e meios é do Revsist: ele decide cobrar, como cobrar, o que guardar e por quanto tempo. |
+| Projetos, metadados bibliográficos, PDFs, matriz de extração — o conteúdo da revisão do assinante | **Operador** (art. 5º, VII) | Quem decide o que coletar, de quais bases e com que critérios é o pesquisador (ou a instituição dele). O Revsist executa em nome dele. |
+| Métricas de uso agregadas para melhorar o produto | **Controlador** | Finalidade própria do Revsist — e por isso precisa de base legal própria (legítimo interesse, art. 7º, IX, com o teste do art. 10). |
 
 Essa dupla função tem três consequências práticas que precisam existir **em
 código e em contrato**, não só em política:
@@ -73,7 +73,7 @@ código e em contrato**, não só em política:
 1. **Contrato de operador (art. 39).** O operador trata "segundo as instruções
    fornecidas pelo controlador". Os Termos de Uso precisam conter a cláusula
    que documenta essas instruções, os limites do tratamento e a proibição de
-   uso próprio dos dados da revisão do assinante. Sem isso, o RSAC responde
+   uso próprio dos dados da revisão do assinante. Sem isso, o Revsist responde
    como controlador daquilo — e, pelo art. 42, §1º, I, o operador que
    descumpre as instruções **equipara-se ao controlador** e responde
    solidariamente.
@@ -81,7 +81,7 @@ código e em contrato**, não só em política:
    consequência direta do papel de operador: os dados de um controlador não
    podem alcançar outro. Ver achado **F-01**.
 3. **Repasse de requisições.** Se um autor exercer o art. 18 contra o
-   pesquisador, o RSAC precisa ter como cumprir a determinação do controlador
+   pesquisador, o Revsist precisa ter como cumprir a determinação do controlador
    — o que exige as rotas de acesso, correção e eliminação que hoje não
    existem (achado **F-03**).
 
@@ -89,7 +89,7 @@ código e em contrato**, não só em política:
 
 O texto anexado traz quatro pontos de alteração pela Lei nº 15.352/2026. Três
 são de estrutura da ANPD (Cap. IX, art. 55-A, art. 55-C, incisos V-A
-Procuradoria, V-B Auditoria e VI) e um interessa diretamente ao RSAC:
+Procuradoria, V-B Auditoria e VI) e um interessa diretamente ao Revsist:
 
 > **art. 5º, VIII** — "encarregado: pessoa indicada **pelo controlador e
 > operador** para atuar como canal de comunicação entre o controlador, os
@@ -99,7 +99,7 @@ A redação anterior falava apenas do controlador. A definição passou a alcan�
 o operador. O art. 41, *caput*, continua redigido como dever do controlador —
 mas a definição legal agora inclui o operador, o que recomenda tratar a
 indicação do encarregado como exigível também na posição de operador. Como o
-RSAC ocupará as duas posições, a questão é acadêmica: **haverá encarregado de
+Revsist ocupará as duas posições, a questão é acadêmica: **haverá encarregado de
 qualquer modo** (ver item L-31 do checklist).
 
 ---
@@ -108,7 +108,7 @@ qualquer modo** (ver item L-31 do checklist).
 
 O art. 5º, I define dado pessoal como "informação relacionada a pessoa natural
 identificada ou **identificável**". O nome de um autor num registro
-bibliográfico satisfaz a definição sem margem de dúvida — e o RSAC já os trata,
+bibliográfico satisfaz a definição sem margem de dúvida — e o Revsist já os trata,
 hoje, aos milhares.
 
 ### 37.3.1 O que o código já guarda (verificado)
@@ -127,7 +127,7 @@ hoje, aos milhares.
 | Autoria das decisões de triagem | `models.py:300-301` (`AuditLogModel.user_id`, `username`) | Operador | Comum |
 | Log de execução | `<data_dir>/logs/harvest.log` (`main.py:44-56`) | Misto | Comum |
 
-**Consequência que costuma passar despercebida:** o RSAC **já é** um sistema de
+**Consequência que costuma passar despercebida:** o Revsist **já é** um sistema de
 tratamento de dados pessoais de terceiros. A mudança para serviço online não
 inaugura o tratamento — ela apenas transfere para o desenvolvedor a
 responsabilidade por um tratamento que já acontece.
@@ -174,7 +174,7 @@ genéricas são **nulas** (art. 8º, §4º).
 **Dado sensível (art. 11).** O serviço não deveria coletar nenhum dado sensível
 dos assinantes. O risco está em outra porta: o **conteúdo** que o assinante
 carrega. Uma revisão sistemática em saúde traz PDFs com dados de saúde de
-terceiros. Ali o RSAC é operador e a hipótese aplicável é a do controlador —
+terceiros. Ali o Revsist é operador e a hipótese aplicável é a do controlador —
 art. 11, II, "c" (estudos por órgão de pesquisa, com anonimização sempre que
 possível). O art. 13, §2º acrescenta uma restrição dura para estudos em saúde
 pública: **"não permitida, em circunstância alguma, a transferência dos dados a
@@ -229,7 +229,7 @@ bloqueio (art. 5º, XIII) do dado para restauração.
 
 ## 37.6 Transferência internacional (arts. 33 a 36)
 
-Este é o ponto onde o RSAC tem exposição concreta **hoje**, não amanhã.
+Este é o ponto onde o Revsist tem exposição concreta **hoje**, não amanhã.
 
 Destinos de saída medidos no código:
 
@@ -242,7 +242,7 @@ Destinos de saída medidos no código:
 
 Enquanto o app é de mesa, quem transfere é o pesquisador, com a chave dele —
 e o desenvolvedor não é parte. **Hospedado, a transferência passa a ser feita
-pelo RSAC**, e o art. 33 exige uma das hipóteses:
+pelo Revsist**, e o art. 33 exige uma das hipóteses:
 
 - **art. 33, I** — país com grau de proteção adequado. Não é utilizável de
   imediato: depende de reconhecimento pela ANPD, e os EUA e a China não contam
@@ -292,11 +292,11 @@ atendimento.
 
 Dois grupos de titulares, com caminhos diferentes:
 
-- **Assinante do serviço** (titular direto, RSAC controlador): precisa de
+- **Assinante do serviço** (titular direto, Revsist controlador): precisa de
   acesso, correção, portabilidade, eliminação da conta e informação sobre
   compartilhamento. Cabe rota autenticada no produto.
-- **Autor de publicação** (titular indireto, RSAC operador): a requisição
-  chega ao controlador — o pesquisador — ou diretamente ao RSAC, que deve
+- **Autor de publicação** (titular indireto, Revsist operador): a requisição
+  chega ao controlador — o pesquisador — ou diretamente ao Revsist, que deve
   encaminhá-la. O art. 18, §4º cobre exatamente esse caso: quando a
   providência imediata é impossível, responder comunicando que **não é o
   agente de tratamento** e indicando quem é. Isso precisa de um canal público
@@ -310,11 +310,11 @@ cobrança: **decisão automatizada antifraude que recuse uma assinatura afeta o
 titular de forma inequívoca** e dispara o direito de revisão e o dever de
 informar critérios (art. 20, §1º, observados segredo comercial e industrial).
 
-Vale registrar o que o RSAC já faz certo aqui: `AuditLogModel`
+Vale registrar o que o Revsist já faz certo aqui: `AuditLogModel`
 (`models.py:288-311`) grava `ai_provider`, `ai_model`, `ai_context_sha256`,
 `ai_response_valid`, `user_id` e `username`. Essa é, em substância, a
 infraestrutura de prestação de contas que o art. 6º, X exige e que o art. 20,
-§1º pressupõe. Poucos sistemas têm isso; o RSAC construiu por razão
+§1º pressupõe. Poucos sistemas têm isso; o Revsist construiu por razão
 metodológica e colheu conformidade de brinde.
 
 ---
@@ -386,7 +386,7 @@ Dois detalhes que mudam o desenho do sistema:
   direta entre controlador e titular. Ter canal de atendimento funcionando é o
   que torna essa via possível.
 
-O RSAC não tem hoje procedimento de resposta a incidente com responsável,
+O Revsist não tem hoje procedimento de resposta a incidente com responsável,
 prazo e modelo de comunicação. O art. 50, §2º, I, "g" exige "planos de resposta
 a incidentes e remediação" como parte do programa de governança.
 
@@ -448,7 +448,7 @@ pequeno porte, *startups* e pessoas naturais que tratam dados com fins
 econômicos. O regime traz flexibilizações relevantes (entre elas, a dispensa da
 indicação formal de encarregado, desde que se mantenha **canal de comunicação
 com o titular**, e prazos diferenciados). Verificar o enquadramento antes de
-dimensionar o programa: se o RSAC nascer como microempresa, boa parte do custo
+dimensionar o programa: se o Revsist nascer como microempresa, boa parte do custo
 de conformidade formal é reduzida — **nenhuma** das obrigações substantivas
 (base legal, transparência, direitos, segurança, comunicação de incidente) é
 dispensada.

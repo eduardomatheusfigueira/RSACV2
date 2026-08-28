@@ -1,7 +1,7 @@
 {
   "name": "rsac-v2",
   "version": "2.0.0",
-  "description": "RSAC V2 — Revisão Sistemática Assistida por Computador",
+  "description": "Revsist — Revisão Sistemática Assistida por Computador",
   "main": "out/main/index.js",
   "author": "Eduardo Matheus Figueira",
   "license": "MIT",

@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Google Gemini AI Client.
+Revsist — Google Gemini AI Client.
 Integração com a API Google Gemini (via v1beta REST)
-com suporte a rotação de API keys, modelos configurados no RSAC e output JSON estruturado.
+com suporte a rotação de API keys, modelos configurados no Revsist e output JSON estruturado.
 """
 
 import asyncio

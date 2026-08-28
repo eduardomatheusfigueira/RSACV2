@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Extraction Page (Triagem 2 / Extração de Dados)
+ * Revsist — Extraction Page (Triagem 2 / Extração de Dados)
  *
  * Layout Metodológico Otimizado e Ergonômico:
  * 1. Fila Horizontal de Estudos Incluídos (no topo): busca rápida, contagem e esteira de cards.

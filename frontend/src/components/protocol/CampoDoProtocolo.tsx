@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Campo do Estúdio de Protocolo
+ * Revsist — Campo do Estúdio de Protocolo
  *
  * O Estúdio tinha 18 cartões de campo somando 1755 linhas — 58% do arquivo — e
  * os 18 repetiam a mesma anatomia: etiqueta do item na diretriz, título com

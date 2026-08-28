@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Script de Configuração e Estruturação da Revisão Sistemática.
+Revsist — Script de Configuração e Estruturação da Revisão Sistemática.
 Configura o projeto, protocolo, critérios, descritores em pares (regras VuFind/BDTD)
 e matriz de extração completa para Ciências Sociais Aplicadas e Desenvolvimento Regional.
 """
@@ -93,7 +93,7 @@ def setup_systematic_review():
             "manuscript_title": "Mapeamento e Rigor Metodológico de Revisões Sistemáticas e Bibliometrias em Políticas Públicas e Desenvolvimento Regional no Brasil: Uma Scoping Review",
             "structured_summary": "Contexto: Crescimento expressivo de revisões de literatura em Ciências Sociais Aplicadas. Objetivo: Mapear a conformidade metodológica e o ferramental de RS e bibliometrias. Métodos: Scoping review orientada por PRISMA-ScR consultando SciELO, BDTD e OpenAlex. Síntese: Categorização da tipologia real, protocolos e softwares.",
             "rationale": "A proliferação de estudos autodeclarados como revisões sistemáticas ou bibliométricas sem protocolo formal ou reprodutibilidade exige uma auditoria crítica em Políticas Públicas e Desenvolvimento Regional.",
-            "protocol_registration": "Protocolo registrado no Open Science Framework (OSF) e repositório institucional do projeto RSAC.",
+            "protocol_registration": "Protocolo registrado no Open Science Framework (OSF) e repositório institucional do projeto Revsist.",
             "info_sources": "Bases eletrônicas indexadas: SciELO (artigos de periódicos), BDTD/IBICT (teses e dissertações defendidas) e OpenAlex (artigos revisados por pares).",
             "search_strategy_notes": "Descritores combinados rigorosamente em pares booleanos (máximo 2 termos por expressão com operador AND) atendendo às limitações do VuFind/BDTD.",
             "selection_process": "Triagem independente de títulos e resumos (Triagem 1) seguida por extração de texto integral (Triagem 2) com resolução de discrepâncias por consenso.",

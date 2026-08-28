@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — AIAssistButton
+ * Revsist — AIAssistButton
  * Botão contemporâneo e inteligente de assistência de IA por campo de texto.
  * Permite preencher, corrigir, revisar estilo acadêmico e adequar às diretrizes metodológicas.
  */

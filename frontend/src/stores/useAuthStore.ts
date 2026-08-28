@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Auth Store (Zustand, sem persistência)
+ * Revsist — Auth Store (Zustand, sem persistência)
  *
  * Guarda a identidade da sessão corrente. Não usa o middleware `persist` de
  * propósito: quem persiste a sessão é o backend (cookie `HttpOnly`) e, no caso

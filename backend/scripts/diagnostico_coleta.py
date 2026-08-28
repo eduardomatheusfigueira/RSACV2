@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Diagnóstico ao vivo da coleta SciELO e BDTD.
+Revsist — Diagnóstico ao vivo da coleta SciELO e BDTD.
 
 Roda fora da aplicação e responde, em uma execução, por que uma das duas fontes
 volta zerada. Verifica, em ordem:
@@ -229,7 +229,7 @@ async def main() -> None:
     parser.add_argument("--descritor", default="turismo", help="Descritor usado nas sondagens.")
     args = parser.parse_args()
 
-    print("\n RSAC V2 — Diagnóstico de coleta (SciELO e BDTD)")
+    print("\n Revsist — Diagnóstico de coleta (SciELO e BDTD)")
     print(f" Descritor de sondagem: {args.descritor!r}")
 
     verificar_ambiente()

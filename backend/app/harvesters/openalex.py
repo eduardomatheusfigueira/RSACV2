@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — OpenAlex Harvester.
+Revsist — OpenAlex Harvester.
 Coletor assíncrono para a base OpenAlex (grafo global com mais de 250M de trabalhos)
 com paginação por cursor (sem teto de 10k), busca focada em título e resumo
 (`title_and_abstract.search`), reconstrução de resumo invertido e pool de cortesia.
@@ -96,7 +96,7 @@ class OpenAlexHarvester(BaseHarvester):
             open_access_only = False
 
         headers = {
-            "User-Agent": f"RSAC-V2 (mailto:{self.mailto})",
+            "User-Agent": f"Revsist/2.0 (mailto:{self.mailto})",
             "Accept": "application/json",
         }
         if self.api_key:

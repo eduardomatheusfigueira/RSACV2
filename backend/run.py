@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Entry Point do Backend.
+Revsist — Entry Point do Backend.
 Inicia o servidor uvicorn com configuração via argumentos de linha de comando.
 """
 
@@ -13,7 +13,7 @@ import uvicorn
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RSAC V2 Backend Server")
+    parser = argparse.ArgumentParser(description="Revsist Backend Server")
     parser.add_argument("--host", default="127.0.0.1", help="Host do servidor")
     parser.add_argument("--port", type=int, default=8000, help="Porta do servidor")
     parser.add_argument("--reload", action="store_true", help="Hot-reload em desenvolvimento")

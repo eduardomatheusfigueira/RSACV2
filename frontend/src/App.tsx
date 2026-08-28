@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — Root Application Component
+ * Revsist — Root Application Component
  * Configura roteamento, TanStack Query e inicializa conexão com backend.
  */
 

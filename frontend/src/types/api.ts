@@ -1,5 +1,5 @@
 /**
- * RSAC V2 — TypeScript Types (espelhando schemas Pydantic do backend)
+ * Revsist — TypeScript Types (espelhando schemas Pydantic do backend)
  */
 
 // ── Enums ─────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RSAC V2 — Serviço de Extração de Dados Estruturados (Triagem 2).
+Revsist — Serviço de Extração de Dados Estruturados (Triagem 2).
 Responde às perguntas do protocolo com base no texto completo do PDF e metadados,
 utilizando IA com ancoragem empírica rigorosa e citação de trechos comprovatórios.
 """
@@ -145,7 +145,7 @@ class ExtractionService:
         estejam sempre visíveis junto ao texto integral do artigo.
         """
         # Metadados e resumo vêm de bases externas; o texto do PDF vem de um
-        # arquivo que o RSAC não produziu. Tudo aqui é dado a analisar, e o
+        # arquivo que o Revsist não produziu. Tudo aqui é dado a analisar, e o
         # delimitador é o que diz isso ao modelo (doc 29 §29.9.2).
         header = (
             "==================== METADADOS DO ARTIGO ====================\n"

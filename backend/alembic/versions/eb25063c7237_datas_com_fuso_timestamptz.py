@@ -8,7 +8,7 @@ Converte as 21 colunas de data para `timestamptz` no PostgreSQL.
 
 **Por que a conversão não é trivial.** `ALTER COLUMN ... TYPE timestamptz` sem
 mais nada faz o PostgreSQL interpretar cada valor armazenado como hora local
-*do servidor* e convertê-la para UTC. O RSAC sempre gravou UTC, então num
+*do servidor* e convertê-la para UTC. O Revsist sempre gravou UTC, então num
 servidor configurado em `America/Sao_Paulo` essa conversão somaria três horas a
 toda data do banco — silenciosamente, sem erro, e o sintoma apareceria depois
 como sessão que expira na hora errada e retenção que apaga cedo demais. O
