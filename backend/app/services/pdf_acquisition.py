@@ -23,6 +23,7 @@ from app.config import settings
 from app.infrastructure.persistence.models import PaperModel
 from app.services.pdf_resolver import HTML_HEADERS, PaperRef
 from app.services.pdf_service import PDFAcquisition, PDFService
+from app.services import ropa_service
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,21 @@ async def acquire_for_paper(
         paper.project_id, paper.id, build_paper_ref(paper), client=client
     )
     apply_acquisition(paper, result)
+
+    if result.success:
+        owner_id = paper.project.owner_id if paper.project else None
+        ropa_service.registrar(
+            db,
+            operation="pdf_fetch",
+            legal_basis="art7_V_execucao_de_contrato",
+            purpose="Obtenção de texto completo de artigo científico em acesso aberto",
+            data_categories=["documento", "referencia_bibliografica"],
+            user_id=owner_id,
+            recipient=result.strategy or "open_access_repository",
+            international=True,
+            commit=False,
+        )
+
     db.commit()
     return result
 

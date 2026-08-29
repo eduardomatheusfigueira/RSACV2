@@ -1,0 +1,123 @@
+# ==============================================================================
+# Revsist — Composição Docker de Produção (doc 40 §40.7.2, doc 41 Fase 4)
+# ==============================================================================
+#
+# Serviços:
+#   * caddy   — Proxy reverso, TLS automático, compressão e proteção HTTP
+#   * api     — Backend FastAPI (1 worker, non-root, healthcheck)
+#   * db      — PostgreSQL 16 isolado (SEM PORTA PÚBLICA, apenas rede interna)
+#   * backup  — Rotina diária de backup em cron, dump binário + PDFs cifrados
+# ==============================================================================
+
+services:
+  # ── Caddy (Proxy Reverso e TLS Automático) ──────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: rsac-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3 QUIC
+    environment:
+      - RSAC_PUBLIC_DOMAIN=${RSAC_PUBLIC_DOMAIN:-revsist.com}
+      - RSAC_CONTACT_EMAIL=${RSAC_CONTACT_EMAIL:-contato@revsist.org}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./frontend/out/renderer:/srv/frontend:ro
+    networks:
+      - web
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ── API Backend (FastAPI / Uvicorn) ─────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rsac-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - RSAC_DEPLOYMENT_PROFILE=server
+      - RSAC_DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-rsac}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-rsac}
+      - RSAC_DATA_DIR=/data
+    volumes:
+      - rsac_data:/data
+    networks:
+      - web
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Banco de Dados (PostgreSQL 16) ──────────────────────────────────────────
+  # NOTA DE SEGURANÇA (§40.7.2): Sem mapeamento de porta externa. Apenas o
+  # contêiner da API e o de Backup acessam o banco pela rede 'internal'.
+  db:
+    image: postgres:16-alpine
+    container_name: rsac-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rsac}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-rsac}
+    volumes:
+      - rsac_pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rsac} -d ${POSTGRES_DB:-rsac}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Backup Diário Criptografado (Cron) ───────────────────────────────────────
+  backup:
+    image: alpine:3.20
+    container_name: rsac-backup
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-rsac}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-rsac}
+      - POSTGRES_HOST=db
+      - BACKUP_RETENTION_DAYS=30
+      - AGE_RECIPIENT_KEY=${AGE_RECIPIENT_KEY:-}
+    volumes:
+      - rsac_data:/data:ro
+      - rsac_backups:/backups
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    networks:
+      - internal
+    entrypoint: >
+      /bin/sh -c "
+      apk add --no-cache postgresql16-client tar gzip age bash curl &&
+      chmod +x /usr/local/bin/backup.sh &&
+      echo '0 3 * * * /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1' > /etc/crontabs/root &&
+      exec crond -f -l 2"
+    depends_on:
+      db:
+        condition: service_healthy
+
+networks:
+  web:
+    driver: bridge
+  internal:
+    internal: true
+
+volumes:
+  rsac_pgdata:
+    name: rsac_pgdata
+  rsac_data:
+    name: rsac_data
+  rsac_backups:
+    name: rsac_backups
+  caddy_data:
+    name: caddy_data
+  caddy_config:
+    name: caddy_config

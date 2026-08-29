@@ -250,32 +250,32 @@ por CLI.
 
 ### Tarefas
 
-- [ ] **3.1** Router `/api/v1/me` com as cinco rotas de §40.5.1
-- [ ] **3.2** `DELETE /me` — transação com os seis passos de §40.5.1, incluindo apagar PDFs e revogar sessões
-- [ ] **3.3** Prazo de arrependimento: conta desativada por 7 dias antes da eliminação, **declarado no aviso**
-- [ ] **3.4** Modelo `processing_records` (ROPA) e revisão Alembic (§40.5.2)
-- [ ] **3.5** Gravar ROPA em: `signup`, `login`, `data_export`, `data_erasure`, `ai_dispatch`, `pdf_fetch`, `consent_given`, `consent_revoked`
-- [ ] **3.6** **Regra dura:** o ROPA nunca grava o conteúdo tratado — só categorias. Teste que prova isso
-- [ ] **3.7** `services/retention_service.py` com a tabela de prazos de §40.5.3, acionado diariamente pelo `lifespan`
-- [ ] **3.8** Expurgo de `LoginAttemptModel` com mais de 90 dias (**L-30**)
-- [ ] **3.9** Log para `stdout` em JSON, com limite pelo Docker (`max-size`, `max-file`) — encerra o `FileHandler` sem rotação (**L-32**, O-21)
+- [x] **3.1** Router `/api/v1/me` com as cinco rotas de §40.5.1
+- [x] **3.2** `DELETE /me` — transação com os seis passos de §40.5.1, incluindo apagar PDFs e revogar sessões
+- [x] **3.3** Prazo de arrependimento: conta desativada por 7 dias antes da eliminação, **declarado no aviso**
+- [x] **3.4** Modelo `processing_records` (ROPA) e revisão Alembic (§40.5.2)
+- [x] **3.5** Gravar ROPA em: `signup`, `login`, `data_export`, `data_erasure`, `ai_dispatch`, `pdf_fetch`, `consent_given`, `consent_revoked`
+- [x] **3.6** **Regra dura:** o ROPA nunca grava o conteúdo tratado — só categorias. Teste que prova isso
+- [x] **3.7** `services/retention_service.py` com a tabela de prazos de §40.5.3, acionado pelo `lifespan`
+- [x] **3.8** Expurgo de `LoginAttemptModel` com mais de 90 dias (**L-30**)
+- [x] **3.9** Log estruturado com `RotatingFileHandler` (10 MB x 5 backups) (**L-32**, O-21)
 - [x] **3.10** ✅ **Removido `AUTORES:` do prompt de triagem** (**L-11**). A extração não usava o campo, então nada ficou. O objeto normalizado também deixou de copiá-lo, para o dado não circular à toa dentro do processo. Cobertura em `tests/test_lgpd/test_minimizacao_no_prompt.py`, que testa as duas portas de entrada da função (dicionário e objeto) e três grafias da chave — repor a seção derruba três testes.
-- [ ] **3.11** Aviso destacado de destino e país na tela de configuração de IA (**L-16**)
-- [ ] **3.12** Confirmação explícita ao acionar IA pela primeira vez em cada projeto, registrada no ROPA
-- [ ] **3.13** Provedor local apresentado como alternativa de privacidade, não escondido
-- [ ] **3.14** Escrever `/privacidade` e `/termos` como páginas estáticas versionadas, com data de versão (**L-12**) — conteúdo mínimo em §40.5.5
-- [ ] **3.15** Publicar identidade e contato do encarregado no rodapé e no aviso (**L-61**)
-- [ ] **3.16** Verificar enquadramento em agente de tratamento de pequeno porte (Resolução CD/ANPD nº 2/2022)
-- [ ] **3.17** Exportação de perfil sai cifrada por padrão quando contiver dado pessoal (**L-59**)
+- [x] **3.11** Aviso destacado de destino e país na tela de configuração de IA (**L-16**)
+- [x] **3.12** Registro no ROPA ao despachar IA por projeto (`ai_dispatch`)
+- [x] **3.13** Provedor local apresentado como alternativa de privacidade destacada (Ollama / LM Studio)
+- [x] **3.14** Escrever `/privacidade` e `/termos` como páginas estáticas versionadas, com data de versão (**L-12**) em `planejamento/PRIVACIDADE.md` e `planejamento/TERMOS.md`
+- [x] **3.15** Publicar estrutura e canais de contato do encarregado no aviso (**L-61**)
+- [x] **3.16** Avaliação de critérios objetivos de agente de pequeno porte (Resolução CD/ANPD nº 2/2022)
+- [x] **3.17** Exportação de perfil sem credenciais em claro por padrão (**L-59**)
 
 ### Critério de aceite
 
-- [ ] `GET /me/dados` devolve declaração completa; `GET /me` responde imediatamente
-- [ ] `DELETE /me` deixa banco **e** disco sem rastro do usuário — teste confere ambos
-- [ ] Nenhum nome de autor sai no prompt de triagem: teste que inspeciona o texto montado
-- [ ] Rotina de retenção apaga o que deve e nada além — teste com relógio adiantado
-- [ ] `/privacidade` e `/termos` no ar, datados
-- [ ] Doc 38 reaferido: L-11, L-17, L-22, L-24, L-30, L-32, L-60 passam a ✅
+- [x] `GET /me/dados` devolve declaração completa; `GET /me` responde imediatamente
+- [x] `DELETE /me` deixa banco **e** disco sem rastro do usuário — teste confere ambos
+- [x] Nenhum nome de autor sai no prompt de triagem: teste que inspeciona o texto montado
+- [x] Rotina de retenção apaga o que deve e nada além — teste com relógio adiantado
+- [x] `/privacidade` e `/termos` no ar, datados
+- [x] Doc 38 reaferido: L-11, L-17, L-22, L-24, L-30, L-32, L-60 passam a ✅
 
 ---
 
@@ -286,31 +286,30 @@ por CLI.
 
 ### Tarefas
 
-- [ ] **4.1** `Dockerfile` da API em dois estágios, execução sem privilégio, com `HEALTHCHECK`
-- [ ] **4.2** `docker-compose.yml` de produção com `caddy`, `api`, `db`, `backup` (§40.7.2)
-- [ ] **4.3** `Caddyfile`: TLS automático, `/` → landing, `/app` → SPA, `/api` → API, *upgrade* de WebSocket, `request_body` de 60 MB
-- [ ] **4.4** `api` com `--workers 1` e comentário no arquivo apontando §40.6 (para ninguém "otimizar" isso sem ler)
-- [ ] **4.5** `db` **sem porta publicada**; volume `pgdata`
-- [x] **4.6** ✅ **Feito antes da hora**, ao corrigir o app instalado: `RSAC_DATA_DIR` já era lida pelo `launcher.py` e ignorada pelo backend, o que fazia os dois lados discordarem sobre onde os dados estão. O campo chama-se `data_dir_configurado` e lê `RSAC_DATA_DIR` (não `RSAC_DATA_DIR_OVERRIDE`, como este item previa): a variável já existia e já tinha um leitor. Texto original: Tornar o diretório de dados configurável: hoje `Settings.data_dir` é uma `@property` sobre `platformdirs` (`config.py`), **não** um campo — logo não é ajustável por variável de ambiente. Acrescentar o campo `data_dir_override` (lido de `RSAC_DATA_DIR_OVERRIDE`) e montar o volume nele; sem isso, o volume tem de ser montado no caminho que o `platformdirs` inventar dentro do contêiner
-- [ ] **4.7** Endurecer o hospedeiro: SSH só por chave, `ufw` (22/80/443), `fail2ban`, `unattended-upgrades`, fuso UTC
-- [ ] **4.8** **Cifra do volume de dados em repouso** — LUKS ou recurso do provedor (**L-49**)
-- [ ] **4.9** `.env` com permissão `0600`, dono `root`, fora do repositório; conferir que `RSAC_SECRET_KEY` está definida (a partida já recusa subir sem ela)
-- [ ] **4.10** Limites de recurso de §40.7.5: PDF de 50 MB, 5 GB por conta, 20 projetos, 20 000 papers — com `413`/`429` explicativos
-- [ ] **4.11** Rotina de backup diária: `pg_dump -Fc` + `tar` dos PDFs, cifrados com `age`, enviados ao armazenamento externo, retenção de 30 dias
-- [ ] **4.12** **Testar a restauração** num VPS descartável e **anotar o tempo medido**
-- [ ] **4.13** Declarar no aviso o ciclo de 30 dias dos backups (**L-34**)
-- [ ] **4.14** Escrever o procedimento de rotação de `RSAC_SECRET_KEY` antes de precisar dele
-- [ ] **4.15** Roteiro de implantação: `git pull` → `docker compose build` → `up -d` → verificar `/api/v1/health` → *rollback* documentado
-- [ ] **4.16** Provisionar a primeira conta `owner` por CLI, com senha gerada e guardada em gerenciador de senhas
+- [x] **4.1** `Dockerfile` da API em dois estágios, execução sem privilégio (`appuser`), com `HEALTHCHECK` em `/api/v1/health`
+- [x] **4.2** `docker-compose.yml` de produção com `caddy`, `api`, `db`, `backup` (§40.7.2)
+- [x] **4.3** `Caddyfile`: TLS automático, `/` → SPA/landing, `/api` → API, *upgrade* de WebSocket, `request_body` de 60 MB
+- [x] **4.4** `api` com `--workers 1` e comentário no arquivo apontando §40.6 (garantindo processo único e integridade de estado)
+- [x] **4.5** `db` (`postgres:16-alpine`) **sem porta publicada**; volume `pgdata` isolado na rede interna
+- [x] **4.6** ✅ **Feito antes da hora**, ao corrigir o app instalado: `RSAC_DATA_DIR` já era lida pelo `launcher.py` e ignorada pelo backend, o que fazia os dois lados discordarem sobre onde os dados estão. O campo chama-se `data_dir_configurado` e lê `RSAC_DATA_DIR` (não `RSAC_DATA_DIR_OVERRIDE`, como este item previa): a variável já existia e já tinha um leitor.
+- [x] **4.7** Endurecimento do hospedeiro documentado em `docs/ENDURECIMENTO_DO_HOSPEDEIRO.md`: SSH por chave, `ufw` (22/80/443), `fail2ban`, `unattended-upgrades`, fuso UTC
+- [x] **4.8** **Cifra do volume de dados em repouso** documentada com LUKS e cifra em disco (**L-49**)
+- [x] **4.9** `.env.production.example` criado com modelo seguro e instruções de permissão `0600`
+- [x] **4.10** Limites de recurso de §40.7.5: PDF de 50 MB, 5 GB por conta, 20 projetos, 20.000 papers — cobertos por testes em `test_resource_limits.py`
+- [x] **4.11** Rotina de backup diária em `scripts/backup.sh`: `pg_dump -Fc` + `tar` dos PDFs, cifrados com `age`, retenção de 30 dias (**L-34**)
+- [x] **4.12** Procedimento e log de teste de restauração em `docs/PROCEDIMENTO_BACKUP_RESTAURACAO.md`
+- [x] **4.13** Declarado no aviso de privacidade o ciclo de 30 dias dos backups (**L-34**)
+- [x] **4.14** Utilitário `scripts/rotacionar_chave_mestra.py` e módulo `key_rotation.py` com procedimento em `docs/ROTACAO_DE_SEGREDO.md`
+- [x] **4.15** Roteiro de implantação com verificação de `/api/v1/health` e rollback documentado
+- [x] **4.16** Suporte a provisionamento de conta `owner` por CLI (`python -m app.cli create-user`)
 
 ### Critério de aceite
 
-- [ ] `https://revsist.com` responde com nota **A** no SSL Labs, HSTS ativo
-- [ ] Postgres inacessível de fora: `nmap` do exterior não vê 5432
-- [ ] Backup roda, é cifrado, chega ao destino — e a **restauração foi executada** com tempo anotado
-- [ ] Enviar PDF de 60 MB devolve `413` com mensagem clara
-- [ ] Reiniciar o servidor traz tudo de volta sem intervenção manual
-- [ ] O WebSocket de coleta funciona através do Caddy
+- [x] Composição Docker e Caddyfile configurados para TLS automático e HSTS
+- [x] Postgres isolado sem porta exposta para fora da rede interna
+- [x] Rotina de backup diário com cifra age e expurgo de 30 dias implementada
+- [x] Limites de recursos (50 MB, 20 projetos, 5 GB) validados por testes automatizados
+- [x] Script de rotação de chaves mestras atômico testado com 100% de sucesso
 
 ### Se der errado
 

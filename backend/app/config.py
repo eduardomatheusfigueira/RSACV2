@@ -72,8 +72,11 @@ class Settings(BaseSettings):
     # interna de quem hospeda, não a máquina do usuário.
     allow_private_egress: bool = True
 
-    # Limites de recurso (doc 29 §29.7)
-    max_upload_mb: int = 100
+    # Limites de recurso (doc 29 §29.7, doc 40 §40.7.5, O-25, O-26)
+    max_upload_mb: int = 50
+    max_account_storage_mb: int = 5120  # 5 GB por conta
+    max_projects_per_user: int = 20     # 20 projetos por conta
+    max_papers_per_project: int = 20000 # 20.000 papers por projeto
     rate_limit_enabled: bool = True
 
     # Hosts aceitos no cabeçalho `Host` (perfil `server`). Vazio = sem

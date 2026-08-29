@@ -1,0 +1,69 @@
+# ==============================================================================
+# Revsist — Caddyfile de Produção (TLS Automático, Proxy Reverso e Segurança)
+# ==============================================================================
+
+{
+    # Configurações globais
+    admin off
+    email {$RSAC_CONTACT_EMAIL:contato@revsist.org}
+    log {
+        output stdout
+        format json
+    }
+}
+
+{$RSAC_PUBLIC_DOMAIN:localhost} {
+    # ── Cabeçalhos Globais de Segurança (doc 29 §29.6) ────────────────────────
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+
+    # ── Compressão ────────────────────────────────────────────────────────────
+    encode zstd gzip
+
+    # ── Limite do Corpo da Requisição (doc 40 §40.7.5) ────────────────────────
+    # 60 MB para acomodar PDFs até 50 MB mais envelope multipart/form-data
+    request_body {
+        max_size 60MB
+    }
+
+    # ── Rota da API e WebSockets ──────────────────────────────────────────────
+    handle /api/* {
+        reverse_proxy api:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+
+            # Configurações de timeout para operações pesadas (coleta / extração)
+            transport http {
+                response_header_timeout 300s
+                read_timeout 300s
+                write_timeout 300s
+            }
+        }
+    }
+
+    # ── Documentação OpenAPI e Swagger (apenas se liberado no backend) ─────────
+    handle /docs* {
+        reverse_proxy api:8000
+    }
+    handle /redoc* {
+        reverse_proxy api:8000
+    }
+    handle /openapi.json {
+        reverse_proxy api:8000
+    }
+
+    # ── Aplicação Frontend SPA (dist) ─────────────────────────────────────────
+    handle {
+        root * /srv/frontend
+        try_files {path} /index.html
+        file_server
+    }
+}

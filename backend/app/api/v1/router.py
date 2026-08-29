@@ -17,6 +17,7 @@ from app.api.v1.extraction import (
 )
 from app.api.v1.harvest import router as harvest_router
 from app.api.v1.insights import router as insights_router
+from app.api.v1.me import router as me_router
 from app.api.v1.papers import router as papers_router
 from app.api.v1.profile import router as profile_router
 from app.api.v1.projects import router as projects_router
@@ -54,6 +55,7 @@ public_router.include_router(public_auth_router)
 
 # Incluir sub-routers
 api_router.include_router(auth_router)
+api_router.include_router(me_router)
 api_router.include_router(projects_router)
 api_router.include_router(protocols_router)
 api_router.include_router(papers_router)
@@ -67,4 +69,5 @@ api_router.include_router(project_extraction_router)
 api_router.include_router(export_router)
 api_router.include_router(insights_router)
 api_router.include_router(profile_router)
+
 

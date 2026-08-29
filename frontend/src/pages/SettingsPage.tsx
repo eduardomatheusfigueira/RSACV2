@@ -1175,6 +1175,34 @@ export function SettingsPage(): JSX.Element {
               </button>
             </div>
 
+            {/* Aviso Destacado de Destino e Transferência Internacional (LGPD Art. 16, Art. 33) */}
+            {provider === 'gemini' && (
+              <div className="provider-privacy-notice">
+                <Globe size={16} />
+                <span>
+                  <strong>Transferência Internacional (LGPD Art. 33):</strong> Destino Google AI Studio (Estados Unidos). Ao acionar a IA com sua chave de API própria, apenas o título e o resumo de artigos são enviados para análise de critérios.
+                </span>
+              </div>
+            )}
+
+            {provider === 'qwen' && (
+              <div className="provider-privacy-notice">
+                <Globe size={16} />
+                <span>
+                  <strong>Transferência Internacional (LGPD Art. 33):</strong> Destino Alibaba Cloud DashScope / OpenRouter (Singapura / Internacional). O processamento ocorre na região configurada.
+                </span>
+              </div>
+            )}
+
+            {provider === 'local' && (
+              <div className="provider-privacy-notice local-privacy">
+                <ShieldCheck size={16} />
+                <span>
+                  <strong>Privacidade Total (LGPD Conforme):</strong> Nenhum dado ou texto científico sai do seu computador. O processamento é executado 100% localmente via Ollama ou LM Studio.
+                </span>
+              </div>
+            )}
+
             {/* Models Catalog List */}
             <div className="model-catalog-section">
               <label className="section-sublabel">

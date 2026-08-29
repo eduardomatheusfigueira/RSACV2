@@ -28,6 +28,7 @@ from app.security.secret_box import (
     is_envelope,
 )
 from app.services.profile_service import ProfileService
+from app.services import ropa_service
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,17 @@ def export_keys(
     """
     try:
         payload = profile_service.export_keys(db, usuario.id)
-        return encrypt_payload(payload, request.export_password)
+        envelope = encrypt_payload(payload, request.export_password)
+        ropa_service.registrar(
+            db,
+            operation="data_export",
+            legal_basis="art7_VI_exercicio_de_direitos",
+            purpose="Exportação de credenciais e chaves de API cifradas pelo usuário",
+            data_categories=["credencial"],
+            user_id=usuario.id,
+            commit=True,
+        )
+        return envelope
     except SecretBoxError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as e:
@@ -115,6 +126,20 @@ def export_full_profile(
         secrets = profile_service.extract_secrets(profile)
         if request.include_secrets:
             profile["secrets"] = encrypt_payload(secrets, request.export_password or "")
+
+        ropa_service.registrar(
+            db,
+            operation="data_export",
+            legal_basis="art7_VI_exercicio_de_direitos",
+            purpose="Exportação completa de perfil, workspace e projetos pelo usuário",
+            data_categories=[
+                "identificacao",
+                "conteudo_de_pesquisa",
+                "referencia_bibliografica",
+            ],
+            user_id=usuario.id,
+            commit=True,
+        )
         return profile
     except SecretBoxError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

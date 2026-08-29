@@ -165,6 +165,31 @@
   color: var(--color-text-secondary);
 }
 
+/* Privacy & International Transfer Notice (LGPD Art. 16, Art. 33) */
+.provider-privacy-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.provider-privacy-notice strong {
+  color: var(--color-text-primary);
+}
+
+.provider-privacy-notice.local-privacy {
+  border-left-color: var(--color-success, #10b981);
+  background: rgba(16, 185, 129, 0.08);
+}
+
 /* Models Catalog List */
 .model-options-list {
   display: flex;

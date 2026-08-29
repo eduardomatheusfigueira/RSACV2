@@ -23,6 +23,7 @@ from app.infrastructure.persistence.models import (
     ProtocolModel,
     UserModel,
 )
+from app.config import settings
 from app.schemas.project import ProjectCreate, ProjectListResponse, ProjectResponse, ProjectUpdate
 from app.security.dependencies import projeto_do_usuario, require_session
 from app.services.pdf_service import PDFService
@@ -61,6 +62,19 @@ def create_project(
     usuario: UserModel = Depends(require_session),
 ):
     """Cria um novo projeto de revisão sistemática, pertencente a quem o criou."""
+    # Verificar teto de projetos por conta (§40.7.5, O-25)
+    total_existente = (
+        db.query(ProjectModel).filter(ProjectModel.owner_id == usuario.id).count()
+    )
+    if total_existente >= settings.max_projects_per_user:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Limite de {settings.max_projects_per_user} projetos atingido para esta conta. "
+                "Exclua ou arquive projetos anteriores antes de criar um novo."
+            ),
+        )
+
     project = ProjectModel(
         owner_id=usuario.id,
         title=data.title,

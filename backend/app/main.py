@@ -43,11 +43,22 @@ from app.security.migration import cifrar_segredos_legados
 from app.schema import aplicar_migracoes
 from app.schemas.common import HealthResponse
 
-# ── Logging Estruturado (Console + Arquivo) ───────────────────────────
+from logging.handlers import RotatingFileHandler
+from app.services.retention_service import executar_rotina_retencao
+
+# ── Logging Estruturado (Console + Arquivo Rotativo) ───────────────────
 
 log_dir = Path(settings.data_dir) / "logs"
 log_dir.mkdir(parents=True, exist_ok=True)
 log_file = log_dir / "harvest.log"
+
+# Rotação diária / limite de 10 MB com até 5 arquivos antigos (L-32, O-21)
+file_handler = RotatingFileHandler(
+    log_file,
+    maxBytes=10 * 1024 * 1024,
+    backupCount=5,
+    encoding="utf-8",
+)
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -55,7 +66,7 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(log_file, encoding="utf-8"),
+        file_handler,
     ],
 )
 # Rede de segurança contra credencial escrita em log por engano (§29.4.4).
@@ -179,7 +190,15 @@ async def lifespan(app: FastAPI):
             db.commit()
         db.close()
     except Exception as e:
-        logger.error(f"[Lifespan] Erro ao reconciliar execuções de coleta: {e}")
+        logger.error(f"[Lifespan] Erro ao reconciliar coletas: {e}")
+
+    # ── Rotina de Retenção e Expurgo (LGPD Art. 15 e 16, L-30) ─────────
+    try:
+        db_ret = SessionLocal()
+        executar_rotina_retencao(db_ret, commit=True)
+        db_ret.close()
+    except Exception as exc:
+        logger.warning("[Lifespan] Erro ao executar rotina de retenção: %s", exc)
 
     # Limpar rótulos de origem automática herdados de versões anteriores nas observações
     try:

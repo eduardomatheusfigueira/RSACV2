@@ -64,6 +64,7 @@ from app.security.sessions import (
     revoke_all_sessions,
     revoke_session,
 )
+from app.services import ropa_service
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +190,15 @@ def login(
         )
 
     register_login_attempt(db, username, client_host, successful=True)
+    ropa_service.registrar(
+        db,
+        operation="login",
+        legal_basis="art7_V_execucao_de_contrato",
+        purpose="Autenticação de usuário no sistema",
+        data_categories=["identificacao", "credencial", "conexao"],
+        user_id=user.id,
+        commit=True,
+    )
     logger.info("[Auth] Login bem-sucedido: %s (%s)", user.username, user.role)
     return _emitir_sessao(db, user, request, response)
 
@@ -299,6 +309,15 @@ async def concluir_login_com_google(
     )
     token, _ = create_session(db, usuario, user_agent=request.headers.get("User-Agent", ""))
     _definir_cookie(resposta, token, request)
+    ropa_service.registrar(
+        db,
+        operation="login",
+        legal_basis="art7_V_execucao_de_contrato",
+        purpose="Autenticação de usuário via Google OAuth",
+        data_categories=["identificacao", "contato", "identificador_externo", "conexao"],
+        user_id=usuario.id,
+        commit=True,
+    )
     logger.info("[Auth] Entrada com Google: %s", usuario.username)
     return resposta
 
@@ -360,6 +379,25 @@ def _resolver_conta(db: Session, identidade) -> Optional[UserModel]:
         terms_version=settings.terms_version,
     )
     db.add(novo)
+    db.flush()
+    ropa_service.registrar(
+        db,
+        operation="signup",
+        legal_basis="art7_V_execucao_de_contrato",
+        purpose="Cadastro de nova conta de usuário via Google OAuth",
+        data_categories=["identificacao", "contato", "identificador_externo", "consentimento"],
+        user_id=novo.id,
+        commit=False,
+    )
+    ropa_service.registrar(
+        db,
+        operation="consent_given",
+        legal_basis="art7_I_consentimento",
+        purpose="Aceite dos Termos de Uso e do Aviso de Privacidade",
+        data_categories=["consentimento"],
+        user_id=novo.id,
+        commit=False,
+    )
     db.commit()
     db.refresh(novo)
     logger.info("[Auth] Conta criada por entrada com Google: %s", novo.username)
@@ -500,6 +538,16 @@ def criar_usuario(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     db.add(user)
+    db.flush()
+    ropa_service.registrar(
+        db,
+        operation="signup",
+        legal_basis="art7_V_execucao_de_contrato",
+        purpose="Criação de conta de usuário por administrador",
+        data_categories=["identificacao", "credencial"],
+        user_id=user.id,
+        commit=False,
+    )
     db.commit()
     db.refresh(user)
     logger.info("[Auth] Conta criada: %s (%s)", user.username, user.role)
@@ -533,6 +581,15 @@ def desativar_usuario(
         )
 
     user.is_active = False
+    ropa_service.registrar(
+        db,
+        operation="data_erasure",
+        legal_basis="art7_II_obrigacao_legal",
+        purpose="Desativação de conta de usuário por administrador",
+        data_categories=["identificacao"],
+        user_id=user.id,
+        commit=False,
+    )
     db.commit()
     revoke_all_sessions(db, user.id)
     return {"status": "ok", "message": f"Conta '{user.username}' desativada."}

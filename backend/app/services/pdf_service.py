@@ -126,6 +126,13 @@ class PDFService:
     def get_pdf_path(self, project_id: str, paper_id: str) -> Path:
         return self.get_project_pdf_dir(project_id) / f"{paper_id}.pdf"
 
+    def calculate_project_storage_bytes(self, project_id: str) -> int:
+        """Calcula o tamanho total em bytes dos PDFs armazenados para um projeto (§40.7.5)."""
+        proj_dir = self.storage_dir / project_id
+        if not proj_dir.exists() or not proj_dir.is_dir():
+            return 0
+        return sum(f.stat().st_size for f in proj_dir.glob("*.pdf") if f.is_file())
+
     def _text_cache_path(self, pdf_path: str) -> Path:
         return Path(pdf_path).with_suffix(".txt")
 

@@ -30,6 +30,7 @@ from app.infrastructure.persistence.models import (
     ProtocolModel,
 )
 from app.services.harvesting_service import ws_manager
+from app.services import ropa_service
 
 logger = logging.getLogger(__name__)
 
@@ -235,7 +236,7 @@ class ScreeningService:
         if clean_just:
             paper_model.observations = clean_just
 
-        # Log de Auditoria
+        # Log de Auditoria Metodológica
         audit = AuditLogModel(
             paper_id=paper_model.id,
             action="ai_screening",
@@ -250,6 +251,21 @@ class ScreeningService:
             ai_response_valid=result.response_valid,
         )
         db.add(audit)
+
+        # Registro ROPA da operação com IA (LGPD Art. 37, doc 40 §40.5.2)
+        is_intl = (result.provider or "").lower() not in ("local", "ollama", "lmstudio")
+        owner_id = actor.user_id if actor else (paper_model.project.owner_id if paper_model.project else None)
+        ropa_service.registrar(
+            db,
+            operation="ai_dispatch",
+            legal_basis="art7_V_execucao_de_contrato",
+            purpose="Triagem de artigo científico assistida por inteligência artificial",
+            data_categories=["conteudo_de_pesquisa", "referencia_bibliografica"],
+            user_id=owner_id,
+            recipient=result.provider or "ai_provider",
+            international=is_intl,
+            commit=False,
+        )
 
         # Persistir avaliações de critérios, tolerando as variações de chave dos provedores
         inc_map = _build_criterion_map(
