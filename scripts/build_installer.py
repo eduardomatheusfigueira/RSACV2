@@ -55,6 +55,15 @@ def main():
     print("       🚀 GERANDO INSTALADOR OFICIAL DO REVSIST (.EXE)")
     print("═" * 65)
 
+    # 0. Limpeza de artefatos anteriores para evitar bloqueios de arquivo
+    for path_to_clean in [
+        FRONTEND_DIR / "resources" / "backend" / "rsac-backend",
+        FRONTEND_DIR / "release" / "win-unpacked",
+        ROOT_DIR / "build_temp" / "backend_build",
+    ]:
+        if path_to_clean.exists():
+            shutil.rmtree(path_to_clean, ignore_errors=True)
+
     # 1. Compilar o backend em pacote autônomo
     backend_cmd = (
         f'"{sys.executable}" -m PyInstaller --noconfirm --onedir '
@@ -72,13 +81,21 @@ def main():
         f'--hidden-import=uvicorn.lifespans '
         f'--hidden-import=uvicorn.lifespans.on '
         f'--hidden-import=sqlalchemy.dialects.sqlite '
-        # O parser de HTML dos coletores SciELO/BDTD é escolhido por string
-        # ("lxml"), então a análise estática do PyInstaller não o enxerga.
-        # Sem estas linhas o executável sobe sem lxml e a raspagem zera.
         f'--hidden-import=lxml '
         f'--hidden-import=lxml.etree '
         f'--hidden-import=lxml._elementpath '
         f'--hidden-import=bs4 '
+        f'--exclude-module=torch '
+        f'--exclude-module=torchvision '
+        f'--exclude-module=torchaudio '
+        f'--exclude-module=scipy '
+        f'--exclude-module=matplotlib '
+        f'--exclude-module=PyQt6 '
+        f'--exclude-module=PyQt5 '
+        f'--exclude-module=numba '
+        f'--exclude-module=IPython '
+        f'--exclude-module=jupyter '
+        f'--exclude-module=notebook '
         f'"{BACKEND_DIR / "run.py"}"'
     )
     run_cmd(backend_cmd, desc="Compilando backend Python em binário autônomo")
@@ -88,14 +105,14 @@ def main():
     run_cmd(f'"{npm_bin}" run build', cwd=FRONTEND_DIR, desc="Compilando interface e processos Electron")
 
     # 3. Gerar arquivos desembalados do Electron
-    npx_bin = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
-    run_cmd(f'"{npx_bin}" electron-builder --dir', cwd=FRONTEND_DIR, desc="Preparando pacote da aplicação")
+    npx_bin = shutil.which("npx.cmd") or shutil.which("npm") or "npx"
+    run_cmd(f'"{npx_bin}" electron-builder --dir --win', cwd=FRONTEND_DIR, desc="Preparando pacote da aplicação")
 
     # 4. Compilar instalador oficial com Inno Setup
     iscc_path = find_iscc()
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     iss_file = SCRIPTS_DIR / "installer.iss"
-    run_cmd(f'"{iscc_path}" /O"{DIST_DIR}" /Qp "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
+    run_cmd(f'"{iscc_path}" /O"{DIST_DIR}" "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
 
     setup_file = DIST_DIR / "Revsist-Setup.exe"
     print("\n" + "═" * 65)

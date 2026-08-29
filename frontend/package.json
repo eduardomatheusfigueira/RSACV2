@@ -1,5 +1,6 @@
 {
   "name": "rsac-v2",
+  "productName": "Revsist",
   "version": "2.0.0",
   "description": "Revsist — Revisão Sistemática Assistida por Computador",
   "main": "out/main/index.js",
