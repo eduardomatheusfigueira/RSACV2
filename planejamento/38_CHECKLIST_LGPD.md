@@ -33,7 +33,7 @@
 
 ### Corte por momento
 
-> **Bloco imediato (app de mesa, hoje):** L-11, L-24, L-25, L-27, L-40, L-46.
+> **Bloco imediato (app de mesa, hoje):** ~~L-11~~ ✅, L-25, L-27, L-40 — ~~L-24~~ e ~~L-46~~ já fechados.
 > São correções de código pequenas e independentes de decisão jurídica.
 >
 > **Portão de publicação:** nenhum item ❌ ou 🔜 marcado como *Bloqueante*
@@ -63,7 +63,7 @@
 | **L-08** | Onde houver consentimento (marketing), ele é específico, destacado, finalístico e **registrado com prova** — o ônus é do controlador | 8º, §2º e §4º | Não há modelo de consentimento no código: `grep -rn "consent" backend/app frontend/src` retorna vazio | ❌ 🔜 **Bloqueante** |
 | **L-09** | Consentimento é revogável por procedimento gratuito e facilitado | 8º, §5º | Rota/tela de revogação | 🔜 |
 | **L-10** | Uso de legítimo interesse (antifraude, métricas) tem **teste de balanceamento documentado** e só trata o estritamente necessário | 10; 10, §1º | Artefato + revisão do que é coletado | 📄 🔜 |
-| **L-11** | Nenhum campo pessoal é enviado a terceiro sem necessidade funcional | 6º, III | `sed -n '125,160p' backend/app/infrastructure/ai/prompts.py` — hoje `AUTORES:` vai no prompt de triagem (linhas 129 e 156) sem função na decisão | ❌ **imediato** (F-05) |
+| **L-11** | Nenhum campo pessoal é enviado a terceiro sem necessidade funcional | 6º, III | `cd backend && pytest tests/test_lgpd/test_minimizacao_no_prompt.py` — 7 testes; `grep -c AUTORES app/infrastructure/ai/prompts.py` só encontra a explicação, no docstring | ✅ (F-05) |
 
 ---
 
@@ -243,7 +243,7 @@ mede o tamanho real do trabalho que a mudança de perímetro traz.
 **Exigíveis hoje, no app de mesa (correção de código, sem dependência
 jurídica):**
 
-- **L-11** — remover `AUTORES:` do prompt de triagem (`prompts.py:129,156`)
+- ~~**L-11** — remover `AUTORES:` do prompt de triagem~~ ✅ feito na Fase 3.10
 - **L-24** — chamar `PDFService.delete_pdf` na exclusão de projeto (`projects.py:110`)
 - **L-30** — expurgo de `LoginAttemptModel` (IP)
 - **L-32** — rotação e expurgo de `harvest.log` (`main.py:44-56`)
