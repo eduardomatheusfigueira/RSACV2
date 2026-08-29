@@ -49,6 +49,7 @@ from app.security.dependencies import (
 )
 from app.security import google_oauth, oauth_state
 from app.security.local_token import matches_local_token, read_local_token
+from app.security.provisioning import senha_inutilizavel
 from app.security.passwords import (
     PasswordPolicyError,
     generate_password,
@@ -161,16 +162,20 @@ def login(
 
     user = db.query(UserModel).filter(UserModel.username == username).first()
 
-    # Conta criada por Google não tem senha. `verify_password` já devolveria
-    # `False` para um hash ausente, mas a mensagem sairia como "usuário ou senha
-    # inválidos" — e a pessoa ficaria tentando lembrar de uma senha que nunca
-    # existiu. Aqui a resposta diz o que fazer.
-    if user and user.password_hash is None and user.is_active:
+    # Conta sem senha utilizável — criada pelo Google, ou a conta local que a
+    # instalação de mesa provisiona sozinha. `verify_password` já devolveria
+    # `False`, mas a mensagem sairia como "usuário ou senha inválidos", e a
+    # pessoa ficaria tentando lembrar de uma senha que nunca existiu. Aqui a
+    # resposta diz o que fazer.
+    if user and user.is_active and senha_inutilizavel(user.password_hash):
         register_login_attempt(db, username, client_host, successful=False)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Esta conta entra com Google. Use o botão “Entrar com Google”.",
+        detalhe = (
+            "Esta conta entra com Google. Use o botão “Entrar com Google”."
+            if user.google_sub
+            else "Esta conta não tem senha definida. Defina uma com "
+            "`python -m app.cli reset-password %s`." % user.username
         )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detalhe)
 
     senha_confere = bool(user) and verify_password(user.password_hash or "", data.password)
 

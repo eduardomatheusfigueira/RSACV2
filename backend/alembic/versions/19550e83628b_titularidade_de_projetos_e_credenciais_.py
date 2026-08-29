@@ -20,8 +20,12 @@ Bancos vazios (instalação nova) passam direto: não há nada a atribuir.
 """
 from typing import Sequence, Union
 
+import uuid
+
 from alembic import op
 import sqlalchemy as sa
+
+from app.config import settings
 
 
 revision: str = '19550e83628b'
@@ -32,6 +36,43 @@ depends_on: Union[str, Sequence[str], None] = None
 
 class AtribuicaoAmbigua(RuntimeError):
     """Há dados sem dono e mais de uma conta candidata."""
+
+
+# Marcador de senha inutilizável, na convenção que o Django popularizou: não é
+# um hash Argon2 válido, então `verify_password` recusa qualquer senha contra
+# ele. A conta existe para o token local se ligar a alguma coisa, não para ser
+# usada com senha.
+SENHA_INUTILIZAVEL = "!"
+
+
+def _criar_conta_local(conexao) -> str:
+    """
+    Provisiona a conta dona da instalação de mesa.
+
+    O nome é `local` — ou `local-2`, `local-3`, se já houver colisão — e a conta
+    nasce sem senha utilizável e com papel `owner`, porque é a dona do acervo
+    daquela máquina. Quem tem o token local já tinha acesso a tudo; a conta
+    apenas dá a esse acesso um titular, que é o que a Fase 1 passou a exigir.
+    """
+    base = "local"
+    nome = base
+    n = 1
+    while conexao.execute(
+        sa.text("SELECT 1 FROM users WHERE username = :nome"), {"nome": nome}
+    ).first():
+        n += 1
+        nome = f"{base}-{n}"
+
+    novo_id = str(uuid.uuid4())
+    conexao.execute(
+        sa.text(
+            "INSERT INTO users (id, username, password_hash, role, is_active,"
+            " created_at) VALUES (:id, :nome, :senha, 'owner', TRUE,"
+            " CURRENT_TIMESTAMP)"
+        ),
+        {"id": novo_id, "nome": nome, "senha": SENHA_INUTILIZAVEL},
+    )
+    return novo_id
 
 
 def _conta_para_adocao(conexao) -> str | None:
@@ -54,11 +95,23 @@ def _conta_para_adocao(conexao) -> str | None:
     ).scalars().all()
 
     if not contas:
-        raise AtribuicaoAmbigua(
-            "Há projetos ou credenciais no banco e nenhuma conta ativa para "
-            "recebê-los. Crie a conta antes de migrar:\n"
-            "    python -m app.cli create-user <usuario> --role owner"
-        )
+        # Sem nenhuma conta e com dados a adotar. A resposta certa depende de
+        # onde isto está rodando, e a diferença é grande:
+        #
+        #   * No **servidor**, não há como saber de quem é o acervo, e chutar
+        #     entregaria o trabalho de alguém a outra pessoa. Recusar é o certo.
+        #   * No **desktop**, a pergunta nem existe: o dono é quem está sentado
+        #     na máquina, o mesmo que já tem o token local e o sistema de
+        #     arquivos inteiro. Recusar ali não protege nada — só impede a
+        #     pessoa de abrir o próprio programa depois de atualizar, que foi
+        #     exatamente o que aconteceu.
+        if settings.is_server_profile:
+            raise AtribuicaoAmbigua(
+                "Há projetos ou credenciais no banco e nenhuma conta ativa para "
+                "recebê-los. Crie a conta antes de migrar:\n"
+                "    python -m app.cli create-user <usuario> --role owner"
+            )
+        return _criar_conta_local(conexao)
     if len(contas) > 1:
         raise AtribuicaoAmbigua(
             f"Há {len(contas)} contas ativas e dados sem dono. Esta migração não "
