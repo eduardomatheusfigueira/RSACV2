@@ -573,6 +573,22 @@ class APIClient {
     return this.request<import('@/types/api').AuthStatus>('/auth/status')
   }
 
+  // ── Ciência do aviso do BETA (doc 43 §43.10) ──────────────────────
+  //
+  // Estas duas rotas ficam fora da trava do aceite, de propósito: são o
+  // único lugar que alguém sem ciência registrada precisa alcançar.
+
+  async getAceite(): Promise<import('@/types/api').AceiteVigente> {
+    return this.request<import('@/types/api').AceiteVigente>('/aceite')
+  }
+
+  async registrarAceite(versao: string): Promise<import('@/types/api').AceiteVigente> {
+    return this.request<import('@/types/api').AceiteVigente>('/aceite', {
+      method: 'POST',
+      body: JSON.stringify({ versao }),
+    })
+  }
+
   async login(username: string, password: string): Promise<import('@/types/api').LoginResponse> {
     const res = await this.request<import('@/types/api').LoginResponse>('/auth/login', {
       method: 'POST',

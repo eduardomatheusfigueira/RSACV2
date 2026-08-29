@@ -259,3 +259,39 @@ def verificar_projeto_do_usuario(
         .first()
         is not None
     )
+
+
+def require_aceite(
+    request: HTTPConnection,
+    usuario: Optional[UserModel] = Depends(require_session),
+) -> Optional[UserModel]:
+    """
+    Barra quem ainda não deu ciência do aviso vigente (doc 43 §43.10).
+
+    Entra como dependência do **router**, e não rota a rota, pela mesma razão
+    que `require_session`: uma rota nova nasce protegida, e esquecer deixou de
+    ser possível.
+
+    O que fica de fora, de propósito: `/aceite`, que é onde a pessoa lê e
+    concorda, e `/auth`, que é como ela sai. Trancar essas duas prenderia
+    alguém do lado de fora do único lugar onde poderia entrar.
+
+    No escopo de WebSocket sai de lado, como as demais: lá não há resposta HTTP
+    para devolver, e a checagem é feita dentro da rota.
+    """
+    if request.scope.get("type") == "websocket":
+        return usuario
+
+    # Import tardio: `aceite` importa `dependencies` para as suas próprias
+    # rotas, e o ciclo em tempo de importação derrubaria a partida.
+    from app.api.v1.aceite import aceite_pendente
+
+    if aceite_pendente(usuario):
+        raise HTTPException(
+            status_code=status.HTTP_451_UNAVAILABLE_FOR_LEGAL_REASONS,
+            detail=(
+                "É preciso ler e dar ciência do aviso do BETA antes de usar o "
+                "Revsist. Abra /aceite."
+            ),
+        )
+    return usuario

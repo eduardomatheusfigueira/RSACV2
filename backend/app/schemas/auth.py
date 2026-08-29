@@ -61,6 +61,10 @@ class AuthStatusResponse(BaseModel):
     # Sem isto a tela teria de adivinhar se mostra o botão do Google — e
     # mostrá-lo numa instalação sem credencial levaria a um 503 no clique.
     google_login_enabled: bool = False
+    # Falta dar ciência do aviso do BETA? A interface precisa saber
+    # **antes** de tentar qualquer rota, ou a primeira tela útil vira
+    # um 451 sem explicação.
+    aceite_pendente: bool = False
     authenticated: bool = False
     user: Optional[UserResponse] = None
 

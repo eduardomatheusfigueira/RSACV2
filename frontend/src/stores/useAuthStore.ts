@@ -30,6 +30,7 @@ interface AuthState {
   login: (username: string, password: string) => Promise<boolean>
   loginWithLocalToken: (token: string) => Promise<boolean>
   logout: () => Promise<void>
+  refreshStatus: () => Promise<void>
   setError: (message: string | null) => void
   markAnonymous: () => void
 }
@@ -121,6 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await api.login(username, password)
       set({ phase: 'authenticated', user: res.user, error: null, submitting: false })
+      await get().refreshStatus()
       return true
     } catch (err: any) {
       set({ error: err?.message || 'Não foi possível entrar.', submitting: false })
@@ -132,11 +134,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await api.loginWithLocalToken(token)
       set({ phase: 'authenticated', user: res.user, error: null })
+      await get().refreshStatus()
       return true
     } catch {
       // Silencioso de propósito: no perfil servidor o token local não é aceito,
       // e a falha aqui apenas leva à tela de login normal.
       return false
+    }
+  },
+
+  /**
+   * Reconsulta o status **depois** de autenticar.
+   *
+   * O `status` guardado pelo `bootstrap` foi obtido sem sessão, e campos como
+   * `aceite_pendente` só têm valor quando há alguém autenticado. Sem esta
+   * releitura, quem entra logo depois de criar a conta não vê a tela de
+   * ciência do aviso e leva 451 na primeira tela útil — o defeito não está em
+   * nenhuma das duas pontas, está na falta desta chamada entre elas.
+   */
+  refreshStatus: async () => {
+    try {
+      set({ status: await api.getAuthStatus() })
+    } catch {
+      // Falhar aqui não pode desautenticar quem acabou de entrar; a próxima
+      // resposta do servidor corrige o estado.
     }
   },
 

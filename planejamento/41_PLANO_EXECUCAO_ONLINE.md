@@ -253,9 +253,9 @@ por CLI.
 - [ ] **3.1** Router `/api/v1/me` com as cinco rotas de §40.5.1
 - [ ] **3.2** `DELETE /me` — transação com os seis passos de §40.5.1, incluindo apagar PDFs e revogar sessões
 - [ ] **3.3** Prazo de arrependimento: conta desativada por 7 dias antes da eliminação, **declarado no aviso**
-- [ ] **3.4** Modelo `processing_records` (ROPA) e revisão Alembic (§40.5.2)
+- [x] **3.4** ✅ Modelo `processing_records` (ROPA) e revisão Alembic `1b724bcfc68e`
 - [ ] **3.5** Gravar ROPA em: `signup`, `login`, `data_export`, `data_erasure`, `ai_dispatch`, `pdf_fetch`, `consent_given`, `consent_revoked`
-- [ ] **3.6** **Regra dura:** o ROPA nunca grava o conteúdo tratado — só categorias. Teste que prova isso
+- [x] **3.6** ✅ **Regra dura** garantida por estrutura, não por disciplina: `ropa_service` tem vocabulário fechado, e um e-mail não é categoria válida — a gravação levanta exceção. Três testes por ângulos diferentes
 - [ ] **3.7** `services/retention_service.py` com a tabela de prazos de §40.5.3, acionado diariamente pelo `lifespan`
 - [ ] **3.8** Expurgo de `LoginAttemptModel` com mais de 90 dias (**L-30**)
 - [ ] **3.9** Log para `stdout` em JSON, com limite pelo Docker (`max-size`, `max-file`) — encerra o `FileHandler` sem rotação (**L-32**, O-21)

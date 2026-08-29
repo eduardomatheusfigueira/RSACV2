@@ -16,6 +16,7 @@ import { ExtractionPage } from '@/pages/ExtractionPage'
 import { InsightsPage } from '@/pages/InsightsPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { AceitePage } from '@/pages/AceitePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
@@ -219,7 +220,7 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
  * Portão de autenticação.
  */
 function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
-  const { phase, bootstrap, markAnonymous } = useAuthStore()
+  const { phase, bootstrap, markAnonymous, status } = useAuthStore()
 
   useEffect(() => {
     api.detectPort()
@@ -239,6 +240,13 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
 
   if (phase === 'anonymous') {
     return <LoginPage />
+  }
+
+  // Autenticado, mas sem ciência do aviso do BETA. Sem esta tela, a trava do
+  // backend devolveria 451 em toda rota útil e a pessoa veria a aplicação
+  // quebrada, sem saber por quê (doc 43 §43.10).
+  if (status?.aceite_pendente) {
+    return <AceitePage onAceito={() => void bootstrap()} />
   }
 
   return <>{children}</>

@@ -400,6 +400,15 @@ class UserModel(Base):
         DateTime(timezone=True), nullable=True
     )
     terms_version: Mapped[str] = mapped_column(String(20), default="")
+    # Resumo do texto exato que a pessoa leu (`app/legal/aceite.sha256()`).
+    #
+    # A versão sozinha depende de alguém ter lembrado de incrementá-la ao
+    # editar o texto; o resumo não depende de ninguém. Numa fiscalização, a
+    # pergunta não é "qual versão" — é "o que exatamente essa pessoa leu", e é
+    # este campo que responde.
+    terms_sha256: Mapped[str] = mapped_column(
+        String(64), default="", server_default="", nullable=False
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

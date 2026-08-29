@@ -401,6 +401,8 @@ export interface AuthStatus {
   local_token_accepted: boolean
   /** Há credencial de aplicativo Google configurada neste servidor. */
   google_login_enabled: boolean
+  /** Falta dar ciência do aviso do BETA (doc 43 §43.10). */
+  aceite_pendente: boolean
   authenticated: boolean
   user?: AuthUser | null
 }
@@ -725,4 +727,15 @@ declare global {
   interface Window {
     rsacAPI: RsacAPI
   }
+}
+
+/** Aviso do BETA vigente e o estado do aceite de quem está autenticado. */
+export interface AceiteVigente {
+  exigido: boolean
+  aceito: boolean
+  versao: string
+  titulo: string
+  rotulo_da_caixa: string
+  texto: string
+  versao_aceita: string
 }

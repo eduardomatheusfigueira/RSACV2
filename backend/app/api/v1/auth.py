@@ -26,6 +26,9 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+# Import tardio seria mais limpo, mas `aceite` importa `auth` só
+# indiretamente (via dependencies), então não há ciclo aqui.
+from app.api.v1.aceite import aceite_pendente
 from app.config import settings
 from app.infrastructure.persistence.models import UserModel
 from app.schemas.auth import (
@@ -137,6 +140,7 @@ def auth_status(
         has_accounts=total_contas > 0,
         local_token_accepted=(not settings.is_server_profile) and bool(read_local_token()),
         google_login_enabled=google_oauth.esta_configurado(),
+        aceite_pendente=aceite_pendente(usuario),
         authenticated=usuario is not None,
         user=_serializar(usuario) if usuario else None,
     )
@@ -356,8 +360,15 @@ def _resolver_conta(db: Session, identidade) -> Optional[UserModel]:
         google_sub=identidade.sub,
         display_name=identidade.nome,
         auth_provider="google",
-        terms_accepted_at=datetime.now(timezone.utc),
-        terms_version=settings.terms_version,
+        # Sem aceite. A conta nasce **pendente** de ciência do aviso, e a
+        # trava de `require_aceite` a mantém fora do resto da API até que a
+        # pessoa leia e concorde.
+        #
+        # Até aqui isto gravava `terms_accepted_at = agora` no instante do
+        # cadastro, sem que nada tivesse sido mostrado a ninguém. Registrar um
+        # aceite que não houve é pior do que não registrar: fabrica prova, e é
+        # o tipo de linha que desmorona quando alguém pergunta o que
+        # exatamente a pessoa leu.
     )
     db.add(novo)
     db.commit()

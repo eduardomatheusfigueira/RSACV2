@@ -318,13 +318,45 @@ O DNS não muda, o domínio não muda, os usuários não percebem.
 - [ ] Backup rodando **e restaurado uma vez**, com o tempo anotado
 - [ ] BitLocker ou equivalente ativo
 - [ ] Suspensão desligada; máquina volta sozinha depois de um reinício de teste
+- [ ] **Os três marcadores do aviso preenchidos** — `[NOME COMPLETO]`,
+      `[E-MAIL DE CONTATO]` e `[CIDADE/ESTADO]`, em
+      `backend/app/legal/aceite.py`. Enquanto sobrarem, o teste
+      `test_lacunas_de_identificacao_continuam_marcadas` falha de propósito
 - [ ] Fases 3.1 a 3.3 concluídas — **sem `DELETE /me` não há como atender um
       pedido de eliminação**, e o art. 18 dá prazo para responder
 - [ ] `/privacidade` e `/termos` no ar (tarefa 3.14), com o seu nome e contato
 
 ---
 
-## 43.11 O que este documento consertou ao ser escrito
+## 43.11 A ciência do aviso, exigida antes de tudo
+
+Quem entra pela primeira vez no perfil `server` vê o aviso do BETA e precisa
+marcar que o leu. O texto vive em `backend/app/legal/aceite.py`, versionado com
+o código — o que a pessoa aceitou em março continua recuperável em dezembro,
+pelo histórico do git.
+
+Três decisões que não são estéticas:
+
+- **A trava é do router**, como a de sessão: `api_router` exige
+  `require_aceite`, e uma rota nova nasce protegida. Ficam de fora só as duas
+  que alguém sem aceite precisa alcançar — ler o aviso e sair.
+- **O botão só habilita depois de o texto ser rolado até o fim.** Não é para
+  atrapalhar: é para que "li" tenha alguma chance de ser verdade.
+- **O aviso não recolhe consentimento para a IA.** Envio ao provedor é
+  transferência internacional e exige consentimento específico (art. 33, VIII);
+  o art. 8º §4º anula autorização genérica. Juntar as duas coisas invalidaria
+  justamente a que mais precisa valer. O consentimento da IA é pedido no
+  momento do uso, por projeto (Fase 3.12).
+
+Ao ligar isso apareceu um defeito anterior: `_resolver_conta` gravava
+`terms_accepted_at = agora` no instante em que uma conta nascia por Google, sem
+que nada tivesse sido mostrado a ninguém. Registrar aceite que não houve é pior
+do que não registrar — fabrica prova. A migração `5be6edabe4f8` anula esses
+registros, e as pessoas passam a ver a tela.
+
+---
+
+## 43.12 O que este documento consertou ao ser escrito
 
 Escrever o `Dockerfile` obrigou a executar o `pip install -e ./backend` num
 diretório limpo, e ele falhava:

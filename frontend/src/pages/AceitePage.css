@@ -1,0 +1,158 @@
+/**
+ * Revsist — Tela de ciência do aviso do BETA.
+ *
+ * Deliberadamente sóbria: é a tela onde a pessoa decide se confia no serviço.
+ * Cor de alerta só no selo; o resto é a mesma superfície de documento do
+ * restante do produto.
+ */
+
+.aceite-pagina {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  background: var(--color-bg);
+}
+
+.aceite-cartao {
+  width: 100%;
+  max-width: 780px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  padding: 28px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.aceite-cartao--vazio {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding: 48px 32px;
+}
+
+.aceite-topo {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.aceite-selo {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-warning-bg, #f7efe2);
+  color: var(--color-warning-fg, #7a4a12);
+}
+
+.aceite-topo h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.aceite-versao {
+  margin: 3px 0 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+/* O texto rola dentro da própria caixa: a página não rola, para o botão e a
+   caixa de marcação ficarem sempre visíveis e a pessoa saber que existem. */
+.aceite-texto {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 18px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-bg);
+  font-size: 14.5px;
+  line-height: 1.62;
+}
+
+.aceite-texto:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* O entrelinhamento vem do global e sai largo demais num texto denso que a
+   pessoa precisa efetivamente ler; aqui ele é fixado. */
+.aceite-texto p,
+.aceite-texto li {
+  line-height: 1.55;
+}
+
+.aceite-texto h2 {
+  font-size: 14px;
+  margin: 22px 0 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-subtle, var(--color-border));
+}
+
+.aceite-texto h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.aceite-texto p { margin: 0 0 10px; }
+.aceite-texto ul { margin: 0 0 12px; padding-left: 20px; }
+.aceite-texto li { margin-bottom: 5px; }
+
+.aceite-dica {
+  margin: -8px 0 0;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.aceite-caixa {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 15px 17px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 14.5px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.aceite-caixa input { margin-top: 3px; flex: none; }
+.aceite-caixa--travada { opacity: 0.5; cursor: not-allowed; }
+
+.aceite-erro {
+  padding: 11px 15px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-danger-bg, #fbeaea);
+  color: var(--color-danger-fg, #8a2020);
+  font-size: 14px;
+}
+
+.aceite-acoes {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.aceite-sair {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 6px 2px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.aceite-sair:hover { color: var(--color-text); text-decoration: underline; }
+.aceite-sair:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

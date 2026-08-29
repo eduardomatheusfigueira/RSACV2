@@ -276,7 +276,14 @@ async def test_fluxo_completo_cria_conta_e_abre_sessao(cliente, db_session, monk
     assert criado.email_verified is True
     assert criado.auth_provider == "google"
     assert criado.password_hash is None
-    assert criado.terms_accepted_at is not None
+    # A conta nasce **sem** aceite, e isto é a correção de um defeito, não
+    # uma regressão: antes, `_resolver_conta` gravava `terms_accepted_at =
+    # agora` no instante do cadastro, sem que nada tivesse sido mostrado a
+    # ninguém. Registrar aceite que não houve fabrica prova. A trava de
+    # `require_aceite` mantém a conta fora da API até a pessoa ler e concordar
+    # (ver tests/test_lgpd/test_aceite_do_beta.py).
+    assert criado.terms_accepted_at is None
+    assert criado.terms_version == ""
 
 
 @pytest.mark.anyio

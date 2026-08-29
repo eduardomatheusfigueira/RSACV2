@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.v1.router import api_router, public_router
+from app.api.v1.router import api_router, public_router, sessao_router
 from app.config import settings
 from app.database import SessionLocal, engine
 from app.infrastructure.persistence.models import (
@@ -301,6 +301,9 @@ def create_app() -> FastAPI:
     # Incluir routers — o público antes, para que as rotas de exceção sejam
     # resolvidas sem passar pela dependência de sessão do agregador.
     app.include_router(public_router, prefix="/api/v1")
+    # `sessao_router` antes do `api_router`: as rotas de aceite e de saída
+    # precisam ser resolvidas sem passar pela trava do aceite.
+    app.include_router(sessao_router, prefix="/api/v1")
     app.include_router(api_router, prefix="/api/v1")
 
     # Servir Frontend Web Estático (SPA) se construído
