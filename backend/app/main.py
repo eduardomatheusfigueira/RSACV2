@@ -28,6 +28,7 @@ from app.infrastructure.persistence.models import (
 )
 from app.security.crypto import MasterKeyError, obter_chave_mestra
 from app.security.local_token import descrever_para_log, ensure_local_token
+from app.security.provisioning import provisionar_conta_local
 from app.security.log_filter import instalar_filtro_de_segredos
 from app.security.middleware import (
     RateLimitMiddleware,
@@ -127,6 +128,25 @@ async def lifespan(app: FastAPI):
         )
         logger.critical("[Segurança] %s", mensagem)
         raise RuntimeError(mensagem)
+
+    if contas_ativas == 0:
+        # Fora do perfil `server`, a instalação ganha sua conta dona aqui.
+        #
+        # O aviso que existia neste ponto dizia que "no perfil desktop o app usa
+        # o token local" — e isso era só meia verdade. O token resolve para a
+        # conta ativa mais antiga; sem nenhuma conta, ele não resolve para nada,
+        # e **toda** requisição do aplicativo de mesa respondia 401. O resultado
+        # era uma instalação nova que abria direto na tela de login pedindo um
+        # comando de terminal, num programa que deveria simplesmente abrir.
+        #
+        # Provisionar aqui é o par do `ensure_local_token()` logo acima: um
+        # cuida do segredo, o outro do titular a que ele se liga. Não vale no
+        # perfil `server`, onde a ausência de conta é motivo para não subir —
+        # e o `if` anterior já garantiu isso.
+        contas_ativas = provisionar_conta_local(SessionLocal)
+        logger.info(
+            "[Segurança] Conta local provisionada para esta instalação de mesa."
+        )
 
     if contas_ativas == 0:
         logger.warning(
