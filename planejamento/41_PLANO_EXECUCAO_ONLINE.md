@@ -324,6 +324,14 @@ antes do go-live, não depois.
 
 ## Fase 5 — Landing page
 
+> ⚠️ **Precedida pelo doc 42 (Plano de Marca).** A landing deixou de ser o
+> primeiro artefato de comunicação: a posição, o público e a promessa são
+> decididos antes, no doc 42. O sistema visual e a lista de proibições desta
+> fase continuam valendo; o que muda é a dobra inicial, entra uma seção sobre
+> o rastro de decisão, e entra uma seção sobre o que o Revsist **não** faz.
+> Ver §42.12.
+
+
 > **Objetivo:** a porta de entrada — séria, minimalista, do tema.
 > **Esforço:** 3–5 dias · **Risco:** nenhum — código novo e isolado.
 > Fecha O-27. **Pode correr em paralelo desde já.**
