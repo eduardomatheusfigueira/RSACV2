@@ -12,7 +12,6 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from PIL import Image
 
 if sys.platform == "win32":
     os.system("")
@@ -26,23 +25,21 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = ROOT_DIR / "scripts"
 DIST_DIR = ROOT_DIR / "dist_bin"
 BUILD_DIR = ROOT_DIR / "build_temp"
-ICON_PNG = ROOT_DIR / "frontend" / "resources" / "icon-256.png"
-ICON_ICO = ROOT_DIR / "brand" / "icon.ico"
+# Único .ico do projeto, escrito por `brand/generate_brand_assets.py` a partir
+# da geometria da marca. Este script mantinha o seu próprio, derivado de um PNG
+# de 256 px e gravado em `brand/icon.ico` — uma segunda cópia, de pior origem,
+# que ninguém regerava. Foi ela que ficou para trás quando o produto mudou de
+# nome. Uma marca, um arquivo.
+ICON_ICO = ROOT_DIR / "frontend" / "build" / "icon.ico"
 
 
 def ensure_icon_ico():
-    """Gera o arquivo .ico a partir do PNG se não existir."""
-    if not ICON_ICO.exists() and ICON_PNG.exists():
-        print("[*] Convertendo ícone da marca para .ico...")
-        ICON_ICO.parent.mkdir(parents=True, exist_ok=True)
-        img = Image.open(ICON_PNG)
-        img.save(
-            ICON_ICO,
-            format="ICO",
-            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
-        )
-        print(f"[✓] Ícone gerado em: {ICON_ICO}")
-    return ICON_ICO if ICON_ICO.exists() else None
+    """Confere que o ícone da marca foi gerado; não o inventa."""
+    if ICON_ICO.exists():
+        return ICON_ICO
+    print(f"[!] Ícone não encontrado em {ICON_ICO}.")
+    print("    Rode: python brand/generate_brand_assets.py")
+    return None
 
 
 def create_batch_launcher():

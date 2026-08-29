@@ -177,14 +177,36 @@ Quando o produto sair de beta, remova o selo em três lugares: `RsacLockup`,
 | `frontend/build/icon.ico` | Ícone do `.exe`, atalhos, barra de tarefas, Explorer, instalador e desinstalador |
 | `frontend/build/icon.icns` | Bundle macOS |
 | `frontend/build/icon.png` | AppImage / Linux e ícone da janela |
-| `frontend/build/installerHeaderIcon.ico` | Ícone da janela do instalador (16/32/48) |
+| `frontend/build/innoWizardImage{,2x,3x}.bmp` | Painel lateral do instalador — boas-vindas e conclusão (164 × 314) |
+| `frontend/build/innoWizardSmall{,2x,3x}.bmp` | Ícone no cabeçalho das demais páginas do instalador (55 × 55) |
+| `frontend/build/installerHeaderIcon.ico` | Ícone da janela do instalador NSIS (16/32/48) |
 | `frontend/build/installerHeader.bmp` | Faixa superior do NSIS (150 × 57) |
-| `frontend/build/installerSidebar.bmp` | Painel de boas-vindas e de desinstalação (164 × 314) |
+| `frontend/build/installerSidebar.bmp` | Painel lateral do NSIS (164 × 314) |
 
-O instalador e o desinstalador **apontam para os mesmos arquivos** no
-`electron-builder.yml` (`installerIcon`/`uninstallerIcon` → `icon.ico`;
-`uninstallerSidebar` → `installerSidebar.bmp`). Arte idêntica duplicada em
-disco só engordaria o repositório.
+**Dois instaladores, e só um sai.** O que chega a quem instala o programa é o
+do **Inno Setup** (`scripts/installer.iss`): `build_installer.py` chama
+`electron-builder --dir`, que empacota a pasta e para antes de gerar
+instalador, e entrega essa pasta ao ISCC. As artes `installer*` são de medida
+NSIS e só entram em jogo se alguém rodar o electron-builder sem `--dir`.
+
+Foi essa distinção que custou caro. As artes NSIS estavam corretas e com a
+marca nova, mas o `installer.iss` não citava arte nenhuma — e o Inno, sem
+`WizardImageFile`, usa as imagens de fábrica dele. Quem instalava o Revsist
+não via a marca em momento algum. O arquivo estava lá, certo, e ninguém o
+pedia.
+
+O Inno aceita uma lista de arquivos por escala e escolhe conforme o DPI; daí
+as variações `2x` e `3x`. Sem elas a arte sai borrada a 150%, que é o padrão de
+fábrica da maioria dos notebooks.
+
+**Uma marca, um arquivo.** Houve um segundo `.ico` em `brand/icon.ico`, que o
+`build_executables.py` sintetizava de um PNG de 256 px quando não o encontrava.
+Como o gerador da marca nunca o escrevia, ele envelhecia sozinho — e era ele
+que o instalador usava. Foi removido; o único `.ico` do projeto é
+`frontend/build/icon.ico`.
+
+`brand/test_artes_ligadas.py` confronta o que se gera com o que se consome e
+recusa arte órfã, em qualquer das duas direções. Roda no CI.
 
 ---
 
@@ -218,7 +240,7 @@ proporção aparecem primeiro.
 
 ---
 
-## O nome: de Revsist para Revsist
+## O nome: de RSAC para Revsist
 
 O produto passou a se chamar **Revsist** quando o domínio `revsist.com` foi
 registrado. A identidade visual **não** foi refeita: o monograma continua sendo
@@ -242,7 +264,7 @@ técnicos, e isso é deliberado:
 | Identificador | Onde | Por que fica |
 |---|---|---|
 | `RSAC_` | prefixo das variáveis de ambiente | Trocar invalidaria todo `.env` existente e cada linha de documentação de implantação, em troca de nada visível |
-| `Revsist` | `app_name`, que alimenta `platformdirs.user_data_dir` | **É o caminho da pasta de dados.** Trocar faria quem já tem o app instalado abrir o programa e não encontrar o próprio acervo |
+| `RSAC` | `app_name`, que alimenta `platformdirs.user_data_dir` | **É o caminho da pasta de dados.** Trocar faria quem já tem o app instalado abrir o programa e não encontrar o próprio acervo |
 | `rsac_session` | nome do cookie | Trocar desloga todo mundo uma vez, sem nenhum ganho |
 | `rsac-*` | classes e variáveis CSS, nomes de componente, arquivos de `brand/svg/` | São identificadores internos; renomeá-los é churn com risco de quebrar referências que não se pode testar aqui (build do Windows) |
 

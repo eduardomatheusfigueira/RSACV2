@@ -147,6 +147,31 @@ jobs:
         continue-on-error: true
         run: npm audit --omit=dev
 
+  marca:
+    # As artes da marca são binários gerados, e binário gerado não se lê em
+    # revisão de código: ninguém percebe que um deles deixou de ser usado. Foi
+    # assim que o instalador saiu sem a marca — o `installer.iss` nunca citou as
+    # imagens do assistente, e por meses ninguém notou, porque os arquivos
+    # estavam lá, certos. Este passo confronta o que se gera com o que se
+    # consome e recusa arte órfã.
+    name: Marca — artes ligadas ao build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Só pytest: o teste lê caminhos e cabeçalhos de BMP, e não renderiza
+      # nada — de propósito, para não arrastar cairo e Pillow para dentro do CI
+      # por causa de uma conferência de ligação.
+      - name: Instalar pytest
+        run: pip install pytest
+
+      - name: Conferir
+        run: pytest brand/test_artes_ligadas.py -q
+
   segredos:
     name: Varredura de segredos
     runs-on: ubuntu-latest
