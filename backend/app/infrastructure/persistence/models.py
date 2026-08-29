@@ -573,3 +573,72 @@ class DeduplicationReportModel(Base):
     # Relationships
     project: Mapped["ProjectModel"] = relationship()
 
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Registro das Operações de Tratamento — ROPA (doc 40 §40.5.2, L-60)
+# ─────────────────────────────────────────────────────────────────────
+
+class ProcessingRecordModel(Base):
+    """
+    O que o Revsist fez com dado pessoal, quando, sob qual base legal.
+
+    É o registro que o art. 37 da LGPD exige do controlador, e o que se
+    apresenta à ANPD quando ela pergunta. Não se confunde com o
+    `AuditLogModel`, que guarda decisões metodológicas sobre estudos: aquele
+    responde "por que este artigo foi excluído", este responde "com que
+    fundamento vocês trataram o dado desta pessoa".
+
+    Regra dura: o que houve, nunca o que era
+    ========================================
+    O ROPA registra **que** houve tratamento e de que **categoria** era o dado
+    — nunca o dado. Um registro de auditoria que copia o dado pessoal é mais um
+    lugar de onde ele vaza, e o pior deles: fica de fora do `DELETE /me`, porque
+    precisa sobreviver a ele.
+
+    A garantia não é de boa vontade. `data_categories` só aceita nomes de uma
+    lista fechada (`app/services/ropa_service.py`), então não há por onde passar
+    um e-mail: ele não é uma categoria válida, e a gravação levanta exceção.
+
+    Por que `user_id` não é chave estrangeira
+    =========================================
+    De propósito, e não por esquecimento. O registro precisa sobreviver à
+    eliminação da conta — é justamente ele que prova que a eliminação
+    aconteceu, e em que data. Com `ON DELETE CASCADE` o `DELETE /me` apagaria a
+    prova de si mesmo; com `SET NULL`, restaria um registro que não se sabe de
+    quem foi, o que é o mesmo que não ter registro.
+
+    Depois que a conta some, o UUID que fica aqui não identifica ninguém: as
+    colunas que identificavam — e-mail, nome, `google_sub` — foram embora com a
+    linha de `users`. O que resta é uma referência pseudônima, que é
+    exatamente o que a prestação de contas do art. 6º X precisa.
+    """
+
+    __tablename__ = "processing_records"
+    __table_args__ = (
+        Index("ix_processing_records_user", "user_id"),
+        Index("ix_processing_records_occurred", "occurred_at"),
+        Index("ix_processing_records_operation", "operation"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+    # Titular ou operador envolvido. Sem FK — ver o docstring. Nulo quando a
+    # operação não tem titular identificado (ex.: tentativa de login que não
+    # chegou a resolver uma conta).
+    user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    operation: Mapped[str] = mapped_column(String(32), nullable=False)
+    legal_basis: Mapped[str] = mapped_column(String(32), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(300), nullable=False)
+
+    # Lista JSON de nomes de categoria. Nunca valores.
+    data_categories: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+
+    # Destinatário, quando houver (ex.: `google_gemini`). Nulo em operação
+    # que não sai do Revsist.
+    recipient: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    international: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
