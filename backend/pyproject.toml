@@ -1,8 +1,7 @@
 [project]
 name = "rsac-backend"
 version = "2.0.0"
-description = "RSAC V2 — Revisão Sistemática Assistida por Computador (Backend API)"
-readme = "README.md"
+description = "Revsist — Revisão Sistemática Assistida por Computador (Backend API)"
 license = { text = "MIT" }
 requires-python = ">=3.12"
 authors = [
@@ -77,3 +76,12 @@ asyncio_mode = "auto"
 markers = [
     "dns_real: exercita a resolução de nomes de verdade (guarda de saída)",
 ]
+
+
+# Só `app` é biblioteca. `alembic/` fica ao lado dela e contém `env.py` e as
+# revisões, que o Alembic lê do disco — não são pacote a instalar. Sem esta
+# seção o setuptools recente recusa o diretório inteiro com "Multiple top-level
+# packages discovered in a flat-layout", e o que quebra é a construção da
+# imagem, num ponto distante da causa.
+[tool.setuptools.packages.find]
+include = ["app*"]

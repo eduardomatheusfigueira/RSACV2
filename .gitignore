@@ -124,3 +124,8 @@ backend/.venv/
 # Dependências do frontend (instaladas por npm ci)
 frontend/node_modules/
 frontend/dist/
+
+# Segredos de implantação (doc 43) — nunca versionar
+.env
+*.dump
+pdfs.tar.gz
