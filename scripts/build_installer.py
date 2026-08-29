@@ -95,7 +95,7 @@ def main():
     iscc_path = find_iscc()
     DIST_DIR.mkdir(parents=True, exist_ok=True)
     iss_file = SCRIPTS_DIR / "installer.iss"
-    run_cmd(f'"{iscc_path}" /Qp "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
+    run_cmd(f'"{iscc_path}" /O"{DIST_DIR}" /Qp "{iss_file}"', desc="Compilando instalador executável (Inno Setup)")
 
     setup_file = DIST_DIR / "Revsist-Setup.exe"
     print("\n" + "═" * 65)
