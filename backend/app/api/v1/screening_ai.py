@@ -7,7 +7,6 @@ import logging
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     HTTPException,
     WebSocket,
@@ -27,6 +26,7 @@ from app.security.dependencies import (
 )
 from app.security.middleware import erro_interno
 from app.services.harvesting_service import ws_manager
+from app.services.job_manager import AsyncJobManager
 from app.services.screening_service import AuditActor, ScreeningService
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,12 @@ router = APIRouter(
     tags=["screening_ai"],
 )
 screening_service = ScreeningService()
+
+# A triagem em lote deixou de ser um `BackgroundTasks` do FastAPI: aquilo não
+# tem alça, e sem alça não há como parar. Guardada como `asyncio.Task` no
+# gerenciador, a execução pode ser interrompida — e duas triagens do mesmo
+# acervo deixam de correr sobrepostas, queimando cota do provedor em dobro.
+batch_job_manager = AsyncJobManager("uma triagem em lote")
 
 
 def _check_ai_enabled(db: Session):
@@ -88,7 +94,6 @@ async def screen_single_paper(
 async def start_batch_screening(
     project_id: str,
     data: BatchScreeningRequest,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     usuario: UserModel = Depends(require_session),
 ):
@@ -98,17 +103,78 @@ async def start_batch_screening(
     if not project:
         raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
 
-    background_tasks.add_task(
-        screening_service.run_batch_screening,
+    if batch_job_manager.is_job_running(project_id):
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Já existe uma triagem em lote em andamento neste projeto. "
+                "Aguarde o término ou pare a execução atual."
+            ),
+        )
+
+    batch_job_manager.start_job(
         project_id,
+        screening_service.run_batch_screening(
+            project_id,
+            limit=data.limit,
+            concurrency=data.concurrency,
+            actor=AuditActor(user_id=usuario.id, username=usuario.username),
+        ),
         limit=data.limit,
         concurrency=data.concurrency,
-        actor=AuditActor(user_id=usuario.id, username=usuario.username),
     )
 
     return {
         "status": "started",
         "message": f"Triagem em lote de até {data.limit} artigos pendentes iniciada.",
+    }
+
+
+@router.post("/batch/cancel")
+async def cancel_batch_screening(project_id: str):
+    """Interrompe a triagem em lote em andamento no projeto."""
+    # Os contadores são lidos antes do cancelamento: o `finally` da tarefa os
+    # descarta, e é justamente o parcial que interessa relatar a quem parou.
+    parcial = screening_service.get_batch_state(project_id) or {}
+
+    cancelado = await batch_job_manager.cancel_job(project_id)
+    if not cancelado:
+        return {
+            "status": "not_running",
+            "message": "Nenhuma triagem em lote ativa para interromper.",
+        }
+
+    await ws_manager.broadcast(
+        project_id,
+        {
+            "type": "batch_screening_cancelled",
+            "message": "Triagem em lote interrompida pelo pesquisador.",
+            "processed": parcial.get("processed", 0),
+            "total": parcial.get("total", 0),
+            "included": parcial.get("included", 0),
+            "excluded": parcial.get("excluded", 0),
+        },
+    )
+
+    return {"status": "cancelled", "message": "Triagem em lote interrompida."}
+
+
+@router.get("/batch/status")
+def get_batch_screening_status(project_id: str):
+    """
+    Situação da triagem em lote do projeto.
+
+    Existe para a tela se recompor: recarregar a página no meio de um lote
+    apagava a barra de progresso e o botão de parar, embora a triagem seguisse
+    correndo no servidor.
+    """
+    if not batch_job_manager.is_job_running(project_id):
+        return {"is_running": False, "progress": None}
+
+    return {
+        "is_running": True,
+        "progress": screening_service.get_batch_state(project_id),
+        "job": batch_job_manager.get_job_info(project_id),
     }
 
 

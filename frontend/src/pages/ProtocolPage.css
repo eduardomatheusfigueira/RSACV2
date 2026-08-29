@@ -1917,3 +1917,15 @@
   }
 }
 
+
+
+/* Elaboração da proposta de protocolo: a espera e a saída dela, empilhadas.
+   Sem o botão, fechar a janela era a única forma de desistir — e isso deixava
+   a requisição correndo em segundo plano. */
+.ai-suggestion-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}

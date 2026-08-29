@@ -19,6 +19,7 @@ import {
   Check,
   Minimize2,
   ArrowRight,
+  StopCircle,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui'
 import './BatchScreeningModal.css'
@@ -57,6 +58,7 @@ interface BatchScreeningModalProps {
   currentStudy: CurrentScreeningStudy | null
   activityFeed: BatchScreeningItem[]
   onStartBatch: (limit: number, concurrency: number) => Promise<void>
+  onCancelBatch: () => Promise<void>
 }
 
 export function BatchScreeningModal({
@@ -69,12 +71,19 @@ export function BatchScreeningModal({
   currentStudy,
   activityFeed,
   onStartBatch,
+  onCancelBatch,
 }: BatchScreeningModalProps): JSX.Element | null {
   const [limitOption, setLimitOption] = useState<number>(Math.min(50, Math.max(1, pendingCount)))
   const [concurrency, setConcurrency] = useState<number>(3)
   const [isStarting, setIsStarting] = useState(false)
+  const [isStopping, setIsStopping] = useState(false)
 
-  const isFinished = !isRunning && progress !== null && progress.processed > 0 && progress.processed >= progress.total
+  /* Nada mais correndo, mas houve um lote: terminou por completo ou parou no
+     meio. Os dois casos precisam da mesma saída na janela — sem esta distinção,
+     um lote interrompido ficava sem nenhum botão no rodapé. */
+  const isConcluded = !isRunning && progress !== null
+  const isFinished = isConcluded && progress.processed >= progress.total
+  const isStopped = isConcluded && progress.processed < progress.total
 
   const handleStart = async () => {
     try {
@@ -82,6 +91,15 @@ export function BatchScreeningModal({
       await onStartBatch(limitOption, concurrency)
     } finally {
       setIsStarting(false)
+    }
+  }
+
+  const handleStop = async () => {
+    try {
+      setIsStopping(true)
+      await onCancelBatch()
+    } finally {
+      setIsStopping(false)
     }
   }
 
@@ -111,7 +129,9 @@ export function BatchScreeningModal({
                   ? `Processando ${effectiveProcessed} de ${effectiveTotal} estudos pendentes...`
                   : isFinished
                     ? 'Triagem em lote finalizada com sucesso!'
-                    : `Analise estudos pendentes contra os critérios do protocolo ativo.`}
+                    : isStopped
+                      ? `Triagem interrompida em ${effectiveProcessed} de ${effectiveTotal} estudos.`
+                      : `Analise estudos pendentes contra os critérios do protocolo ativo.`}
               </p>
             </div>
           </div>
@@ -225,7 +245,7 @@ export function BatchScreeningModal({
           )}
 
           {/* STATE 2: LIVE RUNNING OU FINISHED */}
-          {(isRunning || (progress && progress.processed > 0)) && (
+          {(isRunning || progress !== null) && (
             <div className="batch-live-view">
               {/* Placar de Resultados em Tempo Real */}
               <div className="batch-live-stats-bar">
@@ -262,6 +282,10 @@ export function BatchScreeningModal({
                     {isRunning ? (
                       <>
                         <RefreshCw size={14} className="animate-spin text-accent" /> Triando lote em andamento...
+                      </>
+                    ) : isStopped ? (
+                      <>
+                        <StopCircle size={14} /> Interrompida
                       </>
                     ) : (
                       <>
@@ -344,6 +368,10 @@ export function BatchScreeningModal({
               <span className="batch-status-note text-success">
                 <Check size={14} /> Fila atualizada. Todos os estudos do lote foram processados.
               </span>
+            ) : isStopped ? (
+              <span className="batch-status-note">
+                As decisões tomadas até a parada foram gravadas. Os demais estudos seguem pendentes.
+              </span>
             ) : (
               <span className="batch-status-note">
                 Modo assistido: as decisões podem ser revistas ou alteradas a qualquer momento.
@@ -377,12 +405,34 @@ export function BatchScreeningModal({
             )}
 
             {isRunning && (
-              <button type="button" className="btn-secondary" onClick={onClose}>
-                Acompanhar em Segundo Plano <ChevronRight size={15} />
-              </button>
+              <>
+                {/* A triagem consome cota paga a cada estudo. Sem uma parada à
+                    mão, um lote disparado por engano só terminava fechando o
+                    programa — e mesmo isso deixava o servidor triando. */}
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={handleStop}
+                  disabled={isStopping}
+                  title="Interromper a triagem em lote agora"
+                >
+                  {isStopping ? (
+                    <>
+                      <RefreshCw size={15} className="animate-spin" /> Parando...
+                    </>
+                  ) : (
+                    <>
+                      <StopCircle size={15} /> Parar Triagem
+                    </>
+                  )}
+                </button>
+                <button type="button" className="btn-secondary" onClick={onClose}>
+                  Acompanhar em Segundo Plano <ChevronRight size={15} />
+                </button>
+              </>
             )}
 
-            {isFinished && (
+            {isConcluded && (
               <button type="button" className="btn-primary" onClick={onClose}>
                 Concluir e Ver Fila <ArrowRight size={15} />
               </button>

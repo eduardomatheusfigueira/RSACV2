@@ -15,7 +15,7 @@
  *    - Auditoria de Conformidade com o Checklist Oficial
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import {
@@ -56,8 +56,9 @@ import {
   Unlock,
   Building2,
   Info,
+  StopCircle,
 } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, foiCancelado } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
@@ -243,6 +244,10 @@ export function ProtocolPage(): JSX.Element {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
   const [aiSuggestions, setAiSuggestions] = useState<ProtocolSuggestions | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
+  /* A proposta de protocolo é uma única chamada longa ao provedor. O
+     controlador é o que permite desistir dela sem fechar o programa — e o que
+     faz "fechar a janela" significar de fato parar de esperar. */
+  const sugestaoAbortRef = useRef<AbortController | null>(null)
 
   // Language Tabs for Descriptors
   const [activeLangTab, setActiveLangTab] = useState<'pt' | 'en' | 'es'>('pt')
@@ -807,20 +812,37 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
       setIsAiModalOpen(true)
       setErrorMessage('')
 
-      const suggestions = await api.suggestProtocol({
-        title: manuscript.manuscript_title || activeProject.title,
-        methodology: activeProject.methodology,
-        description: activeProject.description || manuscript.rationale || objective,
-      })
+      sugestaoAbortRef.current?.abort()
+      const controlador = new AbortController()
+      sugestaoAbortRef.current = controlador
+
+      const suggestions = await api.suggestProtocol(
+        {
+          title: manuscript.manuscript_title || activeProject.title,
+          methodology: activeProject.methodology,
+          description: activeProject.description || manuscript.rationale || objective,
+        },
+        controlador.signal
+      )
 
       setAiSuggestions(suggestions)
     } catch (err: any) {
+      if (foiCancelado(err)) return
       console.error('Erro ao sugerir protocolo via assistência:', err)
       setErrorMessage(err.message || 'Falha na comunicação com o serviço de assistência.')
       setIsAiModalOpen(false)
     } finally {
+      sugestaoAbortRef.current = null
       setAiLoading(false)
     }
+  }
+
+  /** Desiste da proposta em elaboração e devolve a tela ao protocolo. */
+  const handleCancelSuggestion = () => {
+    sugestaoAbortRef.current?.abort()
+    sugestaoAbortRef.current = null
+    setAiLoading(false)
+    setIsAiModalOpen(false)
   }
 
   const handleApplyAISuggestions = () => {
@@ -2620,14 +2642,36 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
       </Tabs.Root>
 
       {/* Proposta de protocolo por assistência */}
-      <Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
+      <Dialog
+        open={isAiModalOpen}
+        onOpenChange={(aberto) => {
+          // Fechar a janela no meio da elaboração é um pedido de parar: manter
+          // a requisição viva deixaria a proposta chegar para uma tela que
+          // ninguém está mais olhando.
+          if (!aberto && aiLoading) {
+            handleCancelSuggestion()
+            return
+          }
+          setIsAiModalOpen(aberto)
+        }}
+      >
         <DialogContent variant="window" size="md" aria-describedby={undefined}>
           <DialogTitlebar>
             Proposta de Protocolo Gerada por Assistência ({activeProject?.methodology})
           </DialogTitlebar>
           <DialogBody>
               {aiLoading ? (
-                <LoadingState label="Elaborando proposta de PICO/PCC, descritores em pares e critérios em Ciências Sociais Aplicadas…" />
+                <div className="ai-suggestion-loading">
+                  <LoadingState label="Elaborando proposta de PICO/PCC, descritores em pares e critérios em Ciências Sociais Aplicadas…" />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleCancelSuggestion}
+                    title="Interromper a elaboração da proposta"
+                  >
+                    <StopCircle size={15} /> Parar Elaboração
+                  </button>
+                </div>
               ) : aiSuggestions ? (
                 <div className="ai-suggestions-preview">
                   <div className="form-group">

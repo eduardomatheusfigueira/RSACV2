@@ -31,6 +31,7 @@ export interface RibbonActionMap {
   decisionPending?: () => void
   screenAiSingle?: () => void
   screenAiBatch?: () => void
+  stopBatchScreening?: () => void
   isBatchScreening?: boolean
   batchScreeningProgressText?: string
   openDoiOrRepoLink?: () => void

@@ -96,6 +96,34 @@ export function HarvestPage(): JSX.Element {
     }
   }, [id])
 
+  /* Recompõe a coleta em andamento ao abrir a tela. A busca corre no servidor,
+     não na aba: sem isto, recarregar a página no meio dela deixava o painel
+     vazio e o botão "Cancelar Coleta" sumia — embora as bases seguissem sendo
+     consultadas, sem nada na interface capaz de interromper. */
+  useEffect(() => {
+    if (!id) return
+    let descartado = false
+
+    api
+      .getHarvestStatus(id)
+      .then((res) => {
+        if (descartado || res.is_complete) return
+        setIsHarvesting(true)
+        if (res.progress && Object.keys(res.progress).length > 0) {
+          setProgress(res.progress)
+        }
+        acompanharColeta(id)
+      })
+      .catch(() => {
+        // Backend fora do ar ou projeto sem coleta: a tela fica no estado
+        // inicial, que é o correto quando não há o que retomar.
+      })
+
+    return () => {
+      descartado = true
+    }
+  }, [id])
+
   /* O laço de status precisa morrer junto com a tela: sem isto ele seguia
      consultando o backend depois que a pessoa navegava para outra página. */
   useEffect(() => {
@@ -266,6 +294,74 @@ export function HarvestPage(): JSX.Element {
     )
   }
 
+  /**
+   * Acompanha, em laço, a coleta que já está correndo no servidor.
+   *
+   * Saiu de dentro de `handleStartHarvest` para poder ser retomado ao abrir a
+   * tela: a coleta vive no backend, não na aba, e quem recarregasse a página
+   * no meio dela perdia o painel de progresso — e, com ele, o botão de parar.
+   */
+  const acompanharColeta = (projectId: string) => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await api.getHarvestStatus(projectId)
+        /* Só sobrescrever o painel quando a resposta realmente traz progresso:
+           substituir por `{}` zerava as contagens a cada 1,5 s. */
+        if (statusRes.progress && Object.keys(statusRes.progress).length > 0) {
+          setProgress(statusRes.progress)
+        }
+        if (statusRes.total_found !== undefined) setTotalFound(statusRes.total_found)
+        if (statusRes.total_new !== undefined) setTotalNew(statusRes.total_new)
+        if (statusRes.total_duplicate !== undefined) setTotalDuplicate(statusRes.total_duplicate)
+
+        if (statusRes.is_complete) {
+          clearInterval(pollInterval)
+          pollRef.current = null
+          setIsHarvesting(false)
+          setTotalFound(statusRes.total_found || 0)
+          setTotalNew(statusRes.total_new || statusRes.total_found || 0)
+          setTotalDuplicate(statusRes.total_duplicate || 0)
+
+          // Reload runs and papers
+          const [runsRes, papersRes] = await Promise.all([
+            api.listHarvestRuns(projectId),
+            api.listPapers(projectId, { page_size: 60 }),
+          ])
+          setHarvestRuns(runsRes.items || [])
+          setCollectedPapers(papersRes.items || [])
+
+          const falhas: string[] = statusRes.failures || []
+          const avisos: string[] = statusRes.warnings || []
+
+          /* Uma coleta multibase leva minutos; a pessoa sai da tela. O aviso
+             é anunciado por leitor de tela e alcança quem já mudou de aba. */
+          if (falhas.length > 0) {
+            toast.error(`Coleta concluída com ${falhas.length} base(s) em falha`, {
+              description: falhas.join(' · '),
+            })
+          } else {
+            toast.success('Coleta multibase concluída', {
+              description: `${statusRes.total_new || statusRes.total_found || 0} trabalhos novos · ${statusRes.total_duplicate || 0} duplicatas unificadas.`,
+            })
+          }
+          avisos.forEach((aviso) =>
+            toast.warning('Coleta parcial', { description: aviso })
+          )
+        }
+      } catch (err) {
+        console.error('Erro no polling de status:', err)
+        clearInterval(pollInterval)
+        pollRef.current = null
+        setIsHarvesting(false)
+        toast.error('A coleta foi interrompida', {
+          description: 'Falha ao consultar o andamento. O que já foi recuperado está no acervo.',
+        })
+      }
+    }, 1500)
+    pollRef.current = pollInterval
+  }
+
   const handleStartHarvest = async () => {
     if (!id || selectedSources.length === 0) return
 
@@ -292,65 +388,7 @@ export function HarvestPage(): JSX.Element {
         open_access_only: filters.open_access_only,
       })
 
-      // Polling de status da coleta
-      if (pollRef.current) clearInterval(pollRef.current)
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusRes = await api.getHarvestStatus(id)
-          /* Só sobrescrever o painel quando a resposta realmente traz progresso:
-             substituir por `{}` zerava as contagens a cada 1,5 s. */
-          if (statusRes.progress && Object.keys(statusRes.progress).length > 0) {
-            setProgress(statusRes.progress)
-          }
-          if (statusRes.total_found !== undefined) setTotalFound(statusRes.total_found)
-          if (statusRes.total_new !== undefined) setTotalNew(statusRes.total_new)
-          if (statusRes.total_duplicate !== undefined) setTotalDuplicate(statusRes.total_duplicate)
-
-          if (statusRes.is_complete) {
-            clearInterval(pollInterval)
-            pollRef.current = null
-            setIsHarvesting(false)
-            setTotalFound(statusRes.total_found || 0)
-            setTotalNew(statusRes.total_new || statusRes.total_found || 0)
-            setTotalDuplicate(statusRes.total_duplicate || 0)
-
-            // Reload runs and papers
-            const [runsRes, papersRes] = await Promise.all([
-              api.listHarvestRuns(id),
-              api.listPapers(id, { page_size: 60 }),
-            ])
-            setHarvestRuns(runsRes.items || [])
-            setCollectedPapers(papersRes.items || [])
-
-            const falhas: string[] = statusRes.failures || []
-            const avisos: string[] = statusRes.warnings || []
-
-            /* Uma coleta multibase leva minutos; a pessoa sai da tela. O aviso
-               é anunciado por leitor de tela e alcança quem já mudou de aba. */
-            if (falhas.length > 0) {
-              toast.error(`Coleta concluída com ${falhas.length} base(s) em falha`, {
-                description: falhas.join(' · '),
-              })
-            } else {
-              toast.success('Coleta multibase concluída', {
-                description: `${statusRes.total_new || statusRes.total_found || 0} trabalhos novos · ${statusRes.total_duplicate || 0} duplicatas unificadas.`,
-              })
-            }
-            avisos.forEach((aviso) =>
-              toast.warning('Coleta parcial', { description: aviso })
-            )
-          }
-        } catch (err) {
-          console.error('Erro no polling de status:', err)
-          clearInterval(pollInterval)
-          pollRef.current = null
-          setIsHarvesting(false)
-          toast.error('A coleta foi interrompida', {
-            description: 'Falha ao consultar o andamento. O que já foi recuperado está no acervo.',
-          })
-        }
-      }, 1500)
-      pollRef.current = pollInterval
+      acompanharColeta(id)
     } catch (err: any) {
       console.error('Erro ao iniciar coleta:', err)
       setIsHarvesting(false)
@@ -363,10 +401,26 @@ export function HarvestPage(): JSX.Element {
   const handleCancelHarvest = async () => {
     if (!id) return
     try {
-      await api.cancelHarvest(id)
+      const res = await api.cancelHarvest(id)
+      // O laço de acompanhamento também precisa parar: deixá-lo vivo mantinha
+      // a tela consultando um trabalho que já não existe.
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
       setIsHarvesting(false)
-    } catch (err) {
+      if (res?.status === 'cancelled') {
+        toast.info('Coleta interrompida', {
+          description: 'O que já foi recuperado permanece no acervo.',
+        })
+      }
+      const runsRes = await api.listHarvestRuns(id)
+      setHarvestRuns(runsRes.items || [])
+    } catch (err: any) {
       console.error('Erro ao cancelar coleta:', err)
+      toast.error('Não foi possível interromper a coleta', {
+        description: err?.message || 'Falha na comunicação com o backend.',
+      })
     }
   }
 

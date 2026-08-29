@@ -670,6 +670,21 @@ export function TopRibbonBar(): JSX.Element {
                         )}
                         <span>{actions.isBatchScreening ? (actions.batchScreeningProgressText || 'Triando...') : 'Triar Lote'}</span>
                       </button>
+                      {/* Parar fica ao lado, e não no lugar de "Triar Lote":
+                          durante a triagem aquele botão abre o andamento, e
+                          trocar o destino dele sob o cursor faria a parada
+                          acontecer por engano. */}
+                      {actions.isBatchScreening && (
+                        <button
+                          type="button"
+                          className="tool-btn-vertical"
+                          onClick={() => actions.stopBatchScreening?.()}
+                          title="Interromper a triagem em lote agora"
+                        >
+                          <StopCircle size={15} className="icon-destructive" />
+                          <span>Parar Lote</span>
+                        </button>
+                      )}
                   </GrupoDoRibbon>
                   <div className="ribbon-divider" />
                   <GrupoDoRibbon titulo="Acesso ao Estudo">

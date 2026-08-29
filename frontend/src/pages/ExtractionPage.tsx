@@ -42,8 +42,9 @@ import {
   Check,
   Quote,
   CheckCheck,
+  StopCircle,
 } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, foiCancelado } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import {
@@ -96,6 +97,10 @@ export function ExtractionPage(): JSX.Element {
   const [saving, setSaving] = useState(false)
   const [extractingAI, setExtractingAI] = useState(false)
   const [extractingSingleId, setExtractingSingleId] = useState<string | null>(null)
+  /* A extração assistida percorre todas as perguntas do protocolo num único
+     pedido e pode levar minutos. Sem um controlador, a única saída de quem
+     desistisse era fechar a tela — e mesmo assim a espera continuava. */
+  const extracaoAbortRef = useRef<AbortController | null>(null)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -204,7 +209,10 @@ export function ExtractionPage(): JSX.Element {
     try {
       setExtractingAI(true)
       setErrorMessage('')
-      const res = await api.extractAnswersWithAI(id, selectedPaper.id)
+      extracaoAbortRef.current?.abort()
+      const controlador = new AbortController()
+      extracaoAbortRef.current = controlador
+      const res = await api.extractAnswersWithAI(id, selectedPaper.id, undefined, controlador.signal)
       const nextAns = { ...answers }
       const nextEv = { ...evidences }
 
@@ -223,11 +231,21 @@ export function ExtractionPage(): JSX.Element {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: any) {
+      if (foiCancelado(err)) return
       console.error('Erro ao extrair com assistência:', err)
       setErrorMessage(err.message || 'Falha ao processar extração assistida.')
     } finally {
+      extracaoAbortRef.current = null
       setExtractingAI(false)
     }
+  }
+
+  /** Solta a tela da extração em curso. O servidor conclui o que começou. */
+  const handleCancelExtraction = () => {
+    extracaoAbortRef.current?.abort()
+    extracaoAbortRef.current = null
+    setExtractingAI(false)
+    setExtractingSingleId(null)
   }
 
   // ── Extração com Assistência INDIVIDUAL (apenas uma pergunta) ────
@@ -236,7 +254,10 @@ export function ExtractionPage(): JSX.Element {
     try {
       setExtractingSingleId(questionId)
       setErrorMessage('')
-      const res = await api.extractAnswersWithAI(id, selectedPaper.id, questionId)
+      extracaoAbortRef.current?.abort()
+      const controlador = new AbortController()
+      extracaoAbortRef.current = controlador
+      const res = await api.extractAnswersWithAI(id, selectedPaper.id, questionId, controlador.signal)
       const nextAns = { ...answers }
       const nextEv = { ...evidences }
 
@@ -257,9 +278,11 @@ export function ExtractionPage(): JSX.Element {
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: any) {
+      if (foiCancelado(err)) return
       console.error(`Erro ao extrair pergunta ${questionId}:`, err)
       setErrorMessage(err.message || 'Falha ao processar extração da pergunta.')
     } finally {
+      extracaoAbortRef.current = null
       setExtractingSingleId(null)
     }
   }
@@ -546,6 +569,14 @@ export function ExtractionPage(): JSX.Element {
             {extractingAI && (
               <span className="save-indicator animate-fade-in" role="status" aria-live="polite">
                 <RefreshCw size={13} className="animate-spin" aria-hidden="true" /> Extraindo todas as respostas…
+                <button
+                  type="button"
+                  className="btn-inline-stop"
+                  onClick={handleCancelExtraction}
+                  title="Interromper a extração assistida"
+                >
+                  <StopCircle size={13} aria-hidden="true" /> Parar
+                </button>
               </span>
             )}
           </>
@@ -1133,13 +1164,21 @@ export function ExtractionPage(): JSX.Element {
                             <button
                               type="button"
                               className="btn-extract-single-q"
-                              onClick={() => handleExtractSingleQuestion(q.id!)}
-                              disabled={isExtractingThis || extractingAI}
-                              title="Extrair ou atualizar apenas esta pergunta com Assistência"
+                              onClick={() =>
+                                isExtractingThis
+                                  ? handleCancelExtraction()
+                                  : handleExtractSingleQuestion(q.id!)
+                              }
+                              disabled={extractingAI && !isExtractingThis}
+                              title={
+                                isExtractingThis
+                                  ? 'Interromper a extração desta pergunta'
+                                  : 'Extrair ou atualizar apenas esta pergunta com Assistência'
+                              }
                             >
                               {isExtractingThis ? (
                                 <>
-                                  <RefreshCw size={11} className="animate-spin" /> Extraindo...
+                                  <RefreshCw size={11} className="animate-spin" /> Cancelar
                                 </>
                               ) : (
                                 <>
@@ -1268,12 +1307,11 @@ export function ExtractionPage(): JSX.Element {
             variant="secondary"
             size="md"
             className="mobile-extract-btn"
-            onClick={handleExtractWithAI}
-            loading={extractingAI}
+            onClick={extractingAI ? handleCancelExtraction : handleExtractWithAI}
             disabled={questions.length === 0}
-            leftIcon={<Sparkles size={16} />}
+            leftIcon={extractingAI ? <StopCircle size={16} /> : <Sparkles size={16} />}
           >
-            {extractingAI ? 'Extraindo…' : 'Preencher com IA'}
+            {extractingAI ? 'Parar Extração' : 'Preencher com IA'}
           </Button>
           <Button
             variant="primary"

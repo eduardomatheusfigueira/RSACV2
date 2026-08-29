@@ -6,7 +6,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Sparkles, ChevronDown, Check, RotateCcw, Loader2, Wand2, SpellCheck, Maximize2, Minimize2, MessageSquare } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, foiCancelado } from '@/api/client'
 import { toast } from '@/components/ui'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useLogStore } from '@/stores/useLogStore'
@@ -53,6 +53,18 @@ export function AIAssistButton({
   const [justApplied, setJustApplied] = useState(false)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
+  /* A chamada de assistência pode levar dezenas de segundos, e o campo fica
+     travado enquanto ela corre. O controlador é o que devolve a tela a quem
+     desistiu — o servidor termina o trabalho dele, mas ninguém mais espera. */
+  const abortRef = useRef<AbortController | null>(null)
+
+  // Sair da tela também cancela: uma resposta que chega para um componente
+  // desmontado só serviria para tentar escrever num campo que não existe mais.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
@@ -92,6 +104,10 @@ export function AIAssistButton({
 
     logStore.info('Assistência', `Solicitando ${actionNames[action]} para: "${fieldLabel}"`, `Ação: ${action}`)
 
+    abortRef.current?.abort()
+    const controlador = new AbortController()
+    abortRef.current = controlador
+
     try {
       // Salva valor anterior para permitir desfazer
       setLastOriginalValue(currentValue)
@@ -106,7 +122,7 @@ export function AIAssistButton({
         project_context: projectContext,
         action,
         custom_instruction: customInstruction,
-      })
+      }, controlador.signal)
 
       if (response.suggested_text) {
         onApply(response.suggested_text)
@@ -126,6 +142,10 @@ export function AIAssistButton({
         setTimeout(() => setShowUndo(false), 15000)
       }
     } catch (err: any) {
+      if (foiCancelado(err)) {
+        logStore.info('Assistência', `Assistência de "${fieldLabel}" cancelada.`)
+        return
+      }
       console.error(`[AIAssistButton] Erro ao processar campo ${fieldId}:`, err)
       logStore.error('Assistência', `Falha ao processar "${fieldLabel}"`, err.message || 'Erro desconhecido')
       /* `alert()` trava a janela inteira e não é anunciado por leitor de tela
@@ -134,8 +154,17 @@ export function AIAssistButton({
         description: err.message || 'Erro de comunicação com o servidor.',
       })
     } finally {
+      if (abortRef.current === controlador) {
+        abortRef.current = null
+      }
       setLoading(false)
     }
+  }
+
+  const handleCancelarAssistencia = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setLoading(false)
   }
 
   const handleUndo = (e: React.MouseEvent) => {
@@ -155,10 +184,21 @@ export function AIAssistButton({
         <button
           type="button"
           className={`btn-ai-assist ${loading ? 'loading' : ''} ${justApplied ? 'applied' : ''}`}
-          onClick={() => handleExecuteAI(hasText ? 'improve' : 'generate')}
-          disabled={loading}
-          title={hasText ? `Aperfeiçoar "${fieldLabel}" com Assistência` : `Preencher "${fieldLabel}" com Assistência`}
+          onClick={() =>
+            loading
+              ? handleCancelarAssistencia()
+              : handleExecuteAI(hasText ? 'improve' : 'generate')
+          }
+          title={
+            loading
+              ? `Cancelar a assistência em "${fieldLabel}"`
+              : hasText
+                ? `Aperfeiçoar "${fieldLabel}" com Assistência`
+                : `Preencher "${fieldLabel}" com Assistência`
+          }
         >
+          {/* O ícone segue girando para dizer que há trabalho em curso; o
+              rótulo diz o que o clique faz agora, que é interromper. */}
           {loading ? (
             <Loader2 size={13} className="ai-spin-icon" />
           ) : justApplied ? (
@@ -168,7 +208,7 @@ export function AIAssistButton({
           )}
           {!compact && (
             <span className="ai-btn-text">
-              {loading ? 'Processando...' : justApplied ? 'Aplicado!' : hasText ? 'Aperfeiçoar com Assistência' : 'Preencher com Assistência'}
+              {loading ? 'Cancelar' : justApplied ? 'Aplicado!' : hasText ? 'Aperfeiçoar com Assistência' : 'Preencher com Assistência'}
             </span>
           )}
         </button>

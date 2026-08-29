@@ -50,6 +50,19 @@ export interface PrismaFlowData {
   }
 }
 
+/**
+ * O erro veio de um cancelamento pedido pela interface?
+ *
+ * `AbortController` é o único jeito de soltar a tela de uma requisição longa
+ * de assistência — o servidor termina o trabalho dele, mas quem esperava fica
+ * livre. Quem chama usa isto para não anunciar como falha o que foi escolha.
+ */
+export function foiCancelado(err: unknown): boolean {
+  return err instanceof DOMException
+    ? err.name === 'AbortError'
+    : (err as any)?.name === 'AbortError'
+}
+
 /** Onde o token de sessão é guardado entre recarregamentos da aba. */
 const SESSION_STORAGE_KEY = 'rsac_session_token'
 
@@ -366,6 +379,14 @@ class APIClient {
         throw err
       }
 
+      // Pedido interrompido pelo pesquisador. Não é falha: registrar como erro
+      // encheria o log de vermelho por uma ação deliberada — e o recuo para a
+      // porta 8000 logo abaixo tentaria "consertar" o que ninguém quebrou.
+      if (foiCancelado(err)) {
+        logStore.info(source, `${method} ${path} cancelado`)
+        throw err
+      }
+
       // Erro de rede: recuar para a porta padrão 8000 só faz sentido onde o
       // backend poderia estar na máquina de quem abriu a página. O comentário
       // aqui dizia "apenas em dev local", mas o código não impunha isso.
@@ -647,23 +668,36 @@ class APIClient {
     })
   }
 
-  async suggestProtocol(data: { title: string; methodology: string; description?: string }): Promise<ProtocolSuggestions> {
+  async suggestProtocol(
+    data: { title: string; methodology: string; description?: string },
+    signal?: AbortSignal
+  ): Promise<ProtocolSuggestions> {
     return this.request<ProtocolSuggestions>('/ai/suggest-protocol', {
       method: 'POST',
       body: JSON.stringify(data),
+      signal,
     })
   }
 
-  async assistField(data: import('@/types/api').FieldAssistRequest): Promise<import('@/types/api').FieldAssistResponse> {
+  async assistField(
+    data: import('@/types/api').FieldAssistRequest,
+    signal?: AbortSignal
+  ): Promise<import('@/types/api').FieldAssistResponse> {
     return this.request<import('@/types/api').FieldAssistResponse>('/ai/assist-field', {
       method: 'POST',
       body: JSON.stringify(data),
+      signal,
     })
   }
 
-  async screenSinglePaperAI(projectId: string, paperId: string): Promise<AIScreeningSingleResult> {
+  async screenSinglePaperAI(
+    projectId: string,
+    paperId: string,
+    signal?: AbortSignal
+  ): Promise<AIScreeningSingleResult> {
     return this.request<AIScreeningSingleResult>(`/projects/${projectId}/screening/ai/single/${paperId}`, {
       method: 'POST',
+      signal,
     })
   }
 
@@ -672,6 +706,35 @@ class APIClient {
       method: 'POST',
       body: JSON.stringify(data),
     })
+  }
+
+  /** Interrompe a triagem em lote em andamento no projeto. */
+  async cancelBatchScreeningAI(projectId: string): Promise<{ status: string; message: string }> {
+    return this.request(`/projects/${projectId}/screening/ai/batch/cancel`, {
+      method: 'POST',
+    })
+  }
+
+  /**
+   * Situação da triagem em lote no servidor.
+   *
+   * É o que permite à tela se recompor: o progresso do lote só chegava pelo
+   * WebSocket, então recarregar a página no meio da triagem apagava a barra e
+   * o botão de parar, embora o servidor seguisse triando.
+   */
+  async getBatchScreeningStatus(projectId: string): Promise<{
+    is_running: boolean
+    progress: {
+      processed: number
+      total: number
+      percentage: number
+      included: number
+      excluded: number
+      pending: number
+      current_paper_title?: string
+    } | null
+  }> {
+    return this.request(`/projects/${projectId}/screening/ai/batch/status`)
   }
 
   // ── Extraction (Triagem 2) ────────────────────────────────────────
@@ -687,10 +750,16 @@ class APIClient {
     })
   }
 
-  async extractAnswersWithAI(projectId: string, paperId: string, questionId?: string): Promise<any> {
+  async extractAnswersWithAI(
+    projectId: string,
+    paperId: string,
+    questionId?: string,
+    signal?: AbortSignal
+  ): Promise<any> {
     const query = questionId ? `?question_id=${encodeURIComponent(questionId)}` : ''
     return this.request<any>(`/projects/${projectId}/papers/${paperId}/extraction/ai${query}`, {
       method: 'POST',
+      signal,
     })
   }
 

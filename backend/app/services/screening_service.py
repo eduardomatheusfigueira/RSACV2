@@ -166,6 +166,15 @@ class ScreeningService:
 
     def __init__(self, ai_client: Optional[BaseAIClient] = None):
         self.ai_client = ai_client
+        # Contadores do lote em andamento, por projeto. Existem porque o
+        # progresso só viajava pelo WebSocket: quem recarregasse a tela no meio
+        # da triagem perdia a barra, o botão de parar e qualquer sinal de que
+        # havia algo correndo. Com o estado aqui, a tela se recompõe ao abrir.
+        self._batch_state: Dict[str, dict] = {}
+
+    def get_batch_state(self, project_id: str) -> Optional[dict]:
+        """Contadores do lote em andamento no projeto, ou `None` se não há lote."""
+        return self._batch_state.get(project_id)
 
     def _get_client(self, db: Session, user_id: Optional[str] = None) -> BaseAIClient:
         if self.ai_client:
@@ -327,6 +336,24 @@ class ScreeningService:
             excluded_count = 0
             pending_count = 0
 
+            estado = {
+                "processed": 0,
+                "total": total_papers,
+                "percentage": 0.0,
+                "included": 0,
+                "excluded": 0,
+                "pending": total_papers,
+                "current_paper_title": "",
+            }
+            self._batch_state[project_id] = estado
+
+            def _atualizar_estado():
+                estado["processed"] = processed_count
+                estado["percentage"] = round((processed_count / total_papers) * 100, 1)
+                estado["included"] = included_count
+                estado["excluded"] = excluded_count
+                estado["pending"] = total_papers - processed_count
+
             async def process_one(paper_info):
                 nonlocal processed_count, included_count, excluded_count, pending_count
                 pid, ptitle, pauthors, pyear = paper_info
@@ -343,6 +370,7 @@ class ScreeningService:
                             "total": total_papers,
                         },
                     )
+                    estado["current_paper_title"] = ptitle or "Sem título"
 
                     task_db = SessionLocal()
                     try:
@@ -355,6 +383,7 @@ class ScreeningService:
                         else:
                             pending_count += 1
 
+                        _atualizar_estado()
                         await ws_manager.broadcast(
                             project_id,
                             {
@@ -376,6 +405,7 @@ class ScreeningService:
                         logger.error(f"[BatchScreening] Erro no paper {pid}: {e}")
                         processed_count += 1
                         pending_count += 1
+                        _atualizar_estado()
                         await ws_manager.broadcast(
                             project_id,
                             {
@@ -412,5 +442,24 @@ class ScreeningService:
                 },
             )
 
+        except asyncio.CancelledError:
+            # Quem pediu para parar já foi respondido pela rota de cancelamento,
+            # que também avisa a tela. Aqui só se registra a interrupção e se
+            # deixa o cancelamento seguir — engoli-lo deixaria a tarefa viva.
+            logger.info(f"[BatchScreening] Lote do projeto {project_id} cancelado pelo usuário.")
+            raise
+        except Exception as e:
+            # Sem isto, uma falha antes do primeiro progresso morria em silêncio
+            # no segundo plano: o modal do lote ficava eternamente em 0/N,
+            # esperando um evento que nunca viria.
+            logger.exception(f"[BatchScreening] Lote interrompido no projeto {project_id}: {e}")
+            await ws_manager.broadcast(
+                project_id,
+                {
+                    "type": "batch_screening_failed",
+                    "message": f"A triagem em lote foi interrompida: {e}",
+                },
+            )
         finally:
+            self._batch_state.pop(project_id, None)
             db.close()

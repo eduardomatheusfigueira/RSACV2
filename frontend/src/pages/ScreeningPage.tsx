@@ -48,11 +48,12 @@ import {
   ShieldAlert,
   Globe,
   Maximize2,
+  StopCircle,
   Edit3,
   Save,
   X,
 } from 'lucide-react'
-import { api } from '@/api/client'
+import { api, foiCancelado } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
@@ -151,6 +152,10 @@ export function ScreeningPage(): React.JSX.Element {
 
   // AI Single Screening State
   const [isAiScreeningSingle, setIsAiScreeningSingle] = useState(false)
+  /* A triagem de um estudo é uma chamada só, mas pode demorar — e enquanto ela
+     não volta o botão fica travado. O controlador devolve a tela a quem
+     desistiu, em vez de exigir que se espere ou se feche o programa. */
+  const triagemUnicaAbortRef = useRef<AbortController | null>(null)
   const [aiLastResult, setAiLastResult] = useState<any>(null)
 
   // AI Batch Screening Modal & Live Progress State
@@ -167,6 +172,8 @@ export function ScreeningPage(): React.JSX.Element {
   const [currentScreeningStudy, setCurrentScreeningStudy] = useState<CurrentScreeningStudy | null>(null)
   const [batchActivityFeed, setBatchActivityFeed] = useState<BatchScreeningItem[]>([])
   const wsRef = useRef<WebSocket | null>(null)
+  const wsRetryRef = useRef<number | null>(null)
+  const wsEncerradoPelaTelaRef = useRef(false)
 
   // Quick add manual paper modal
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -185,9 +192,15 @@ export function ScreeningPage(): React.JSX.Element {
     if (id) {
       loadInitialData(id)
       initScreeningWebSocket(id)
+      restaurarEstadoDoLote(id)
     }
 
     return () => {
+      wsEncerradoPelaTelaRef.current = true
+      if (wsRetryRef.current !== null) {
+        window.clearTimeout(wsRetryRef.current)
+        wsRetryRef.current = null
+      }
       if (wsRef.current) {
         wsRef.current.close()
       }
@@ -202,6 +215,7 @@ export function ScreeningPage(): React.JSX.Element {
 
   const initScreeningWebSocket = (projectId: string) => {
     try {
+      wsEncerradoPelaTelaRef.current = false
       const wsUrl = api.getScreeningWebSocketUrl(projectId)
       const ws = new WebSocket(wsUrl)
       wsRef.current = ws
@@ -294,10 +308,48 @@ export function ScreeningPage(): React.JSX.Element {
             })
             loadStats(projectId)
             loadPapers(projectId)
+          } else if (msg.type === 'batch_screening_cancelled') {
+            setIsBatchRunning(false)
+            setCurrentScreeningStudy(null)
+            info(
+              'Triagem',
+              msg.message || 'Triagem em lote interrompida.',
+              `Processados até parar: ${msg.processed ?? 0} de ${msg.total ?? 0}`
+            )
+            toast.info('Triagem em lote interrompida', {
+              description: `${msg.processed ?? 0} de ${msg.total ?? 0} estudos foram triados antes da parada.`,
+            })
+            loadStats(projectId)
+            loadPapers(projectId)
+          } else if (
+            msg.type === 'batch_screening_empty' ||
+            msg.type === 'batch_screening_failed'
+          ) {
+            // O lote terminou sem processar nada. Sem tratar estes dois casos,
+            // o modal ficava parado em 0/N esperando um progresso que não vem.
+            setIsBatchRunning(false)
+            setCurrentScreeningStudy(null)
+            setBatchProgress(null)
+            const mensagem =
+              msg.message || 'A triagem em lote não pôde ser executada.'
+            error('Triagem', mensagem)
+            toast.error('Triagem em lote interrompida', { description: mensagem })
+            loadStats(projectId)
           }
         } catch (e) {
           // ignore non-json
         }
+      }
+
+      // O canal é a única fonte do progresso do lote. Se ele cai no meio da
+      // triagem — e a triagem segue no servidor —, a tela congela sem sinal
+      // nenhum; por isso a reconexão. O código 1008 é recusa de sessão ou de
+      // origem: aí insistir só repete a recusa.
+      ws.onclose = (evento) => {
+        if (wsEncerradoPelaTelaRef.current || evento.code === 1008) return
+        wsRetryRef.current = window.setTimeout(() => {
+          initScreeningWebSocket(projectId)
+        }, 3000)
       }
     } catch (err: any) {
       error('WebSocket', 'Falha ao conectar WebSocket de triagem', err.message)
@@ -543,7 +595,11 @@ export function ScreeningPage(): React.JSX.Element {
       setAiLastResult(null)
       info('Assistência', `Iniciando triagem assistida do estudo "${selectedPaper.title.slice(0, 50)}..."`)
 
-      const res = await api.screenSinglePaperAI(id, selectedPaper.id)
+      triagemUnicaAbortRef.current?.abort()
+      const controlador = new AbortController()
+      triagemUnicaAbortRef.current = controlador
+
+      const res = await api.screenSinglePaperAI(id, selectedPaper.id, controlador.signal)
       setAiLastResult(res)
 
       success('Assistência', `Parecer da Assistência: ${res.decision} (Confiança: ${(res.confidence * 100).toFixed(0)}%)`, `Justificativa: ${res.justification || (res as any).reasoning}\nCritérios atendidos: ${(res as any).criteria_met?.join(', ') || 'Nenhum'}`)
@@ -553,10 +609,22 @@ export function ScreeningPage(): React.JSX.Element {
       setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? { ...updatedPaper } : p)))
       loadStats(id)
     } catch (err: any) {
+      if (foiCancelado(err)) {
+        info('Assistência', 'Triagem assistida do estudo cancelada.')
+        return
+      }
       error('Assistência', `Falha na triagem com assistência: ${err.message}`)
     } finally {
+      triagemUnicaAbortRef.current = null
       setIsAiScreeningSingle(false)
     }
+  }
+
+  /** Solta a tela da triagem assistida em curso neste estudo. */
+  const handleCancelSingleAIScreening = () => {
+    triagemUnicaAbortRef.current?.abort()
+    triagemUnicaAbortRef.current = null
+    setIsAiScreeningSingle(false)
   }
 
   const handleStartBatchAI = async (limit: number, concurrency: number) => {
@@ -581,9 +649,60 @@ export function ScreeningPage(): React.JSX.Element {
     } catch (err: any) {
       error('Triagem', `Falha ao iniciar triagem em lote: ${err.message}`)
       setIsBatchRunning(false)
+      // O lote nem chegou a existir: descartar o progresso otimista devolve a
+      // janela ao formulário, em vez de deixá-la num "0 de 100 interrompido"
+      // que nunca aconteceu.
+      setBatchProgress(null)
       toast.error('Erro na triagem em lote', {
         description: err.message || 'Falha na comunicação com o backend.',
       })
+    }
+  }
+
+  const handleCancelBatchAI = async () => {
+    if (!id) return
+    try {
+      const res = await api.cancelBatchScreeningAI(id)
+      if (res.status === 'not_running') {
+        // O servidor já não tinha nada correndo: a tela é que estava
+        // desatualizada. Alinhar aqui evita um botão de parar que não para nada.
+        setIsBatchRunning(false)
+        setCurrentScreeningStudy(null)
+      }
+    } catch (err: any) {
+      error('Triagem', `Falha ao interromper a triagem em lote: ${err.message}`)
+      toast.error('Não foi possível interromper', {
+        description: err.message || 'Falha na comunicação com o backend.',
+      })
+    }
+  }
+
+  /**
+   * Recompõe o estado do lote a partir do servidor.
+   *
+   * O progresso só chegava pelo WebSocket, então recarregar a página no meio
+   * de uma triagem apagava a barra e o botão de parar — enquanto o servidor
+   * seguia triando e consumindo cota, sem nada na tela para interrompê-lo.
+   */
+  const restaurarEstadoDoLote = async (projectId: string) => {
+    try {
+      const res = await api.getBatchScreeningStatus(projectId)
+      if (res.is_running) {
+        setIsBatchRunning(true)
+        if (res.progress) {
+          setBatchProgress({
+            processed: res.progress.processed,
+            total: res.progress.total,
+            percentage: res.progress.percentage,
+            included: res.progress.included,
+            excluded: res.progress.excluded,
+            pending: res.progress.pending,
+          })
+        }
+      }
+    } catch {
+      // Sem situação para restaurar a tela segue no estado inicial: é melhor
+      // não mostrar lote nenhum do que inventar um que não existe.
     }
   }
 
@@ -631,6 +750,9 @@ export function ScreeningPage(): React.JSX.Element {
       },
       screenAiSingle: handleSingleAIScreening,
       screenAiBatch: () => setIsBatchModalOpen(true),
+      stopBatchScreening: () => {
+        void handleCancelBatchAI()
+      },
       isBatchScreening: isBatchRunning,
       batchScreeningProgressText: batchProgress
         ? `${batchProgress.processed}/${batchProgress.total}`
@@ -659,6 +781,7 @@ export function ScreeningPage(): React.JSX.Element {
         'decisionPending',
         'screenAiSingle',
         'screenAiBatch',
+        'stopBatchScreening',
         'isBatchScreening',
         'batchScreeningProgressText',
         'openDoiOrRepoLink',
@@ -1148,13 +1271,20 @@ export function ScreeningPage(): React.JSX.Element {
                 {aiEnabled && (
                   <button
                     className="btn-ai-triage"
-                    onClick={handleSingleAIScreening}
-                    disabled={isAiScreeningSingle}
-                    title="Avaliar este artigo com Assistência"
+                    onClick={
+                      isAiScreeningSingle
+                        ? handleCancelSingleAIScreening
+                        : handleSingleAIScreening
+                    }
+                    title={
+                      isAiScreeningSingle
+                        ? 'Interromper a análise deste artigo'
+                        : 'Avaliar este artigo com Assistência'
+                    }
                   >
                     {isAiScreeningSingle ? (
                       <>
-                        <RefreshCw size={14} className="animate-spin" /> Analisando...
+                        <RefreshCw size={14} className="animate-spin" /> Cancelar Análise
                       </>
                     ) : (
                       <>
@@ -1739,6 +1869,7 @@ export function ScreeningPage(): React.JSX.Element {
         currentStudy={currentScreeningStudy}
         activityFeed={batchActivityFeed}
         onStartBatch={handleStartBatchAI}
+        onCancelBatch={handleCancelBatchAI}
       />
 
       {/* Floating Mini-Dock quando a triagem está em execução e o modal foi minimizado */}
@@ -1761,6 +1892,20 @@ export function ScreeningPage(): React.JSX.Element {
                 : 'Iniciando...'}
             </span>
           </div>
+          <button
+            type="button"
+            className="btn-dock-stop"
+            title="Interromper a triagem em lote"
+            aria-label="Interromper a triagem em lote"
+            onClick={(e) => {
+              // O dock inteiro abre o painel; sem barrar a propagação, parar
+              // abriria o modal no mesmo clique.
+              e.stopPropagation()
+              handleCancelBatchAI()
+            }}
+          >
+            <StopCircle size={14} />
+          </button>
           <button type="button" className="btn-dock-expand" title="Expandir painel de progresso">
             <Maximize2 size={14} />
           </button>

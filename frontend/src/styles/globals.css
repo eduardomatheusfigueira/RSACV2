@@ -1617,6 +1617,72 @@ select {
   cursor: not-allowed;
 }
 
+/* Interromper o que já está correndo — coleta, triagem em lote, assistência.
+   Tem peso de ação primária, e não de botão discreto: quando um processo longo
+   está queimando cota do provedor, parar precisa ser a coisa mais fácil de
+   achar na tela. A tinta vem de `--color-error`, que já muda com o tema. */
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  height: 36px;
+  background: var(--color-error);
+  color: #ffffff;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--black-forest);
+  box-shadow: var(--shadow-neo-raised);
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active:not(:disabled) {
+  box-shadow: var(--shadow-neo-pressed);
+  transform: translateY(1px);
+}
+
+.btn-danger:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Parada discreta, para viver dentro de um indicador de "carregando" — os
+   casos em que o processo já é anunciado por um texto e só falta a saída. */
+.btn-inline-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  height: 22px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  color: var(--color-error-on-surface);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-inline-stop:hover {
+  background: var(--color-error-bg);
+  border-color: var(--color-error);
+}
+
 .btn-icon {
   display: inline-flex;
   align-items: center;

@@ -1553,3 +1553,22 @@
   background: var(--color-bg-hover);
   color: var(--color-text-primary);
 }
+
+/* Parar sem precisar reabrir o painel: o dock é o que fica na tela quando o
+   modal foi minimizado, e é dali que o lote costuma ser acompanhado. */
+.batch-floating-dock .btn-dock-stop {
+  background: transparent;
+  border: none;
+  color: var(--color-error-on-surface);
+  cursor: pointer;
+  padding: var(--space-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  transition: all var(--transition-fast);
+}
+
+.batch-floating-dock .btn-dock-stop:hover {
+  background: var(--color-error-bg);
+}
