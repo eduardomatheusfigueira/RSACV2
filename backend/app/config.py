@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import platformdirs
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode
 
 
@@ -47,6 +47,19 @@ class Settings(BaseSettings):
     # `brand/IDENTIDADE_VISUAL.md`.
     app_name: str = "RSAC"
     display_name: str = "Revsist"
+
+    # Pasta de dados escolhida à mão. Vazio = o padrão do sistema, calculado
+    # por `platformdirs` na propriedade `data_dir` mais abaixo.
+    #
+    # `scripts/launcher.py` lê `RSAC_DATA_DIR` desde sempre para achar o token
+    # local; o backend a ignorava, e portanto os dois lados podiam discordar
+    # sobre onde os dados estão — o launcher procurando numa pasta e o backend
+    # gravando noutra. O `validation_alias` fixa o nome literal da variável,
+    # sem o prefixo `RSAC_` da classe, que aqui duplicaria o `RSAC_`.
+    data_dir_configurado: str = Field(
+        "",
+        validation_alias=AliasChoices("RSAC_DATA_DIR", "data_dir_configurado"),
+    )
     app_version: str = "2.0.0"
     debug: bool = False
 
@@ -165,10 +178,28 @@ class Settings(BaseSettings):
         Regex de origem permitida — apenas loopback, e apenas fora do perfil
         `server`. A porta é variável (Vite escolhe a que estiver livre), por
         isso o regex; o que ele não faz é aceitar host arbitrário.
+
+        Sobre o `null`
+        ==============
+        O app empacotado carrega a interface de um arquivo em disco, e nenhum
+        navegador manda `Origin: file://` — todos mandam a origem opaca
+        `null`. O `file://` que estava aqui portanto nunca casou com nada, e a
+        consequência era severa: no app instalado **toda** chamada da API era
+        barrada pelo navegador antes de chegar ao Python. Verificado carregando
+        uma página `file://` no Chromium contra o backend real; a resposta ao
+        `Origin: null` era `400 Disallowed CORS origin`.
+
+        A concessão é limitada porque `null` também é a origem de iframes em
+        sandbox e de `data:` — ou seja, uma página hostil consegue apresentá-la.
+        O que ela não consegue é se autenticar: o cookie de sessão é
+        `SameSite=Strict` e não acompanha requisição de outro site, e o token
+        local viaja em cabeçalho próprio, lido de um arquivo `0600` fora do
+        alcance do navegador. Quem chegar por essa via leva 401. E nada disso
+        vale no perfil `server`, onde o `return None` acima corta antes.
         """
         if self.is_server_profile:
             return None
-        return r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|file://)$"
+        return r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|null)$"
 
     @property
     def effective_cors_origins(self) -> list[str]:
@@ -198,8 +229,19 @@ class Settings(BaseSettings):
 
     @property
     def data_dir(self) -> Path:
-        """Diretório de dados da aplicação (cross-platform)."""
-        path = Path(platformdirs.user_data_dir(self.app_name))
+        """
+        Diretório de dados da aplicação.
+
+        Atenção ao que `platformdirs` devolve no Windows: sem `appauthor`, ele
+        usa o próprio `appname` como autor e **duplica o nome** —
+        `%LOCALAPPDATA%\\RSAC\\RSAC`, não `%LOCALAPPDATA%\\RSAC`. Quem
+        reescreveu esse caminho à mão do lado do cliente errou por um nível, e
+        o app não achava o token que o backend acabara de gravar. Por isso o
+        caminho é anunciado em `local_token.descrever_para_log`, em vez de ser
+        deduzido de novo em cada linguagem.
+        """
+        bruto = self.data_dir_configurado.strip()
+        path = Path(bruto).expanduser() if bruto else Path(platformdirs.user_data_dir(self.app_name))
         path.mkdir(parents=True, exist_ok=True)
         return path
 

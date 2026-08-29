@@ -122,6 +122,31 @@ def matches_local_token(candidate: Optional[str]) -> bool:
     return secrets.compare_digest(candidate, atual)
 
 
+# Prefixo da linha que o app de mesa procura na saída do backend. Estável de
+# propósito: mudá-lo quebra o cliente sem quebrar nenhum teste do servidor.
+ANUNCIO_DO_CAMINHO = "RSAC_RUNTIME_TOKEN_PATH="
+
+
+def anunciar_caminho_do_token() -> None:
+    """
+    Imprime em stdout, numa linha estável, onde o arquivo do token ficou.
+
+    Até aqui cada lado deduzia o caminho por conta própria — `launcher.py` em
+    Python, o processo principal do Electron em TypeScript —, e os dois erraram
+    do mesmo jeito no Windows: `platformdirs`, sem `appauthor`, usa o `appname`
+    como autor e **duplica o nome** (`%LOCALAPPDATA%\\RSAC\\RSAC`). Procurando
+    um nível acima, ninguém achava o arquivo, e o app de mesa caía na tela de
+    login com o token intacto no disco.
+
+    Anunciar o caminho encerra a classe: quem grava o arquivo é quem diz onde
+    ele está, e não há segunda dedução para divergir. O caminho não é segredo —
+    o token é, não aparece aqui, e quem o protege é a permissão do arquivo.
+    """
+    if settings.is_server_profile:
+        return
+    print(f"{ANUNCIO_DO_CAMINHO}{token_path()}", flush=True)
+
+
 def descrever_para_log() -> str:
     """Linha amigável para o log de inicialização, sem revelar o token."""
     caminho = token_path()
