@@ -10,6 +10,8 @@ servidor público sem autenticação deixa de ser um estado alcançável do sist
 — o processo se recusa a subir em vez de subir aberto.
 """
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -245,3 +247,100 @@ async def test_autoria_distingue_dois_operadores(async_client, researcher_client
     }
     assert autoria.get(paper_dono["id"]) == "dono_teste"
     assert autoria.get(paper_pesq["id"]) == "pesquisador_teste"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Onde o token fica, e quem diz onde ele fica
+# ══════════════════════════════════════════════════════════════════════════
+#
+# O app de mesa precisa achar o arquivo do token, e até aqui cada lado deduzia
+# o caminho por conta própria — `scripts/launcher.py` em Python, o processo
+# principal do Electron em TypeScript. Os dois erraram do mesmo jeito no
+# Windows, onde `platformdirs`, sem `appauthor`, usa o `appname` como autor e
+# duplica o nome: `%LOCALAPPDATA%\RSAC\RSAC`, não `%LOCALAPPDATA%\RSAC`.
+# Procurando um nível acima, ninguém achava o arquivo, e o app abria na tela de
+# login com o token intacto no disco.
+#
+# Nem Linux nem macOS têm esse nível extra, então em desenvolvimento nada
+# aparecia. Estes testes fixam as duas metades da correção: o backend passa a
+# aceitar uma pasta escolhida à mão, e a anunciar onde gravou.
+
+
+def test_data_dir_respeita_a_variavel_de_ambiente(tmp_path, monkeypatch):
+    """
+    `RSAC_DATA_DIR` era lida pelo launcher e ignorada pelo backend.
+
+    Os dois lados podiam portanto discordar sobre onde os dados estão — um
+    procurando numa pasta, o outro gravando noutra.
+    """
+    from app.config import Settings
+
+    escolhida = tmp_path / "pasta escolhida"
+    settings_obj = Settings(data_dir_configurado=str(escolhida))
+    assert settings_obj.data_dir == escolhida
+    assert escolhida.is_dir(), "a pasta deve ser criada, não só devolvida"
+
+
+def test_data_dir_vazio_cai_no_padrao_do_sistema():
+    """Vazio não pode virar uma pasta chamada "" na raiz."""
+    from app.config import Settings
+
+    import platformdirs
+
+    settings_obj = Settings(data_dir_configurado="   ")
+    assert settings_obj.data_dir == Path(platformdirs.user_data_dir(settings_obj.app_name))
+
+
+def test_backend_anuncia_o_caminho_do_token(tmp_path, monkeypatch, capsys):
+    """
+    O anúncio é o que dispensa a dedução do lado do cliente.
+
+    O prefixo é contrato com `frontend/electron/python-manager.ts`: mudá-lo
+    quebra o app de mesa sem quebrar teste nenhum do servidor — daí fixá-lo
+    aqui, literal.
+    """
+    from app.config import Settings
+    from app.security import local_token as lt
+
+    settings_obj = Settings(
+        deployment_profile=DeploymentProfile.DESKTOP,
+        data_dir_configurado=str(tmp_path / "dados"),
+    )
+    monkeypatch.setattr(lt, "settings", settings_obj)
+
+    lt.anunciar_caminho_do_token()
+    saida = capsys.readouterr().out
+
+    assert saida.startswith("RSAC_RUNTIME_TOKEN_PATH=")
+    caminho = Path(saida.split("=", 1)[1].strip())
+    assert caminho == settings_obj.data_dir / "runtime_token"
+    assert caminho.is_absolute(), "caminho relativo não serve a quem roda noutro cwd"
+
+
+def test_anuncio_nunca_revela_o_token(tmp_path, monkeypatch, capsys):
+    """O caminho não é segredo; o token é. Um não pode carregar o outro."""
+    from app.config import Settings
+    from app.security import local_token as lt
+
+    settings_obj = Settings(
+        deployment_profile=DeploymentProfile.DESKTOP,
+        data_dir_configurado=str(tmp_path / "dados"),
+    )
+    monkeypatch.setattr(lt, "settings", settings_obj)
+
+    token = lt.ensure_local_token()
+    assert token, "sem token não há o que vazar, e o teste não valeria nada"
+
+    capsys.readouterr()
+    lt.anunciar_caminho_do_token()
+    assert token not in capsys.readouterr().out
+
+
+def test_perfil_server_nao_anuncia_nada(monkeypatch, capsys):
+    """Lá não há token local — anunciar um caminho seria apontar para o nada."""
+    from app.config import Settings
+    from app.security import local_token as lt
+
+    monkeypatch.setattr(lt, "settings", Settings(deployment_profile=DeploymentProfile.SERVER))
+    lt.anunciar_caminho_do_token()
+    assert capsys.readouterr().out == ""

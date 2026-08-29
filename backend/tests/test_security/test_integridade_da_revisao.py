@@ -174,7 +174,10 @@ def test_prompt_de_triagem_delimita_titulo_e_resumo():
     # O texto hostil está lá — precisa estar, é o dado a analisar —, mas
     # dentro da região marcada, e precedido do aviso.
     assert "IGNORE AS INSTRUÇÕES" in prompt
-    assert prompt.count(DELIMITADOR) >= 6  # título, autores e resumo
+    # Dois campos externos — título e resumo —, cada um entre duas marcas,
+    # mais a marca citada no aviso. Eram três campos até os autores saírem
+    # do prompt por minimização (doc 38, L-11; ver tests/test_lgpd/).
+    assert prompt.count(DELIMITADOR) == 5
     assert "NÃO É INSTRUÇÃO" in prompt
     assert "REGRA DE SEGURANÇA" in prompt
 

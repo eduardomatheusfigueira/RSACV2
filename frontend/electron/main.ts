@@ -9,7 +9,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { PythonManager } from './python-manager'
 import { registerIpcHandlers } from './ipc-handlers'
-import { lerTokenLocal, montarQueryDoRenderer } from './local-token'
+import { caminhosDoToken, lerTokenLocal, montarQueryDoRenderer } from './local-token'
 
 function logToFile(msg: string) {
   try {
@@ -69,7 +69,14 @@ function createWindow(backendPort: number): void {
 
   // O token entra pela query; o `useAuthStore` o consome e o apaga da URL na
   // primeira leitura, para não sobrar no histórico nem numa captura de tela.
-  const query = montarQueryDoRenderer(backendPort, lerTokenLocal())
+  //
+  // O caminho vem do próprio backend, que o anuncia ao subir. Deduzi-lo aqui é
+  // o que estava errado antes: no Windows o platformdirs duplica o nome do app,
+  // e a dedução procurava um nível acima. Os candidatos de `caminhosDoToken`
+  // ficam para quando não houve anúncio — backend já no ar, reaproveitado.
+  const anunciado = pythonManager.caminhoDoToken
+  const token = lerTokenLocal(anunciado ? [anunciado, ...caminhosDoToken()] : caminhosDoToken())
+  const query = montarQueryDoRenderer(backendPort, token)
 
   // Em dev, carrega do dev server; em prod, do arquivo HTML
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {

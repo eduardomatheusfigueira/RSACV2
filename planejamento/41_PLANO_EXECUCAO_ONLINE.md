@@ -259,7 +259,7 @@ por CLI.
 - [ ] **3.7** `services/retention_service.py` com a tabela de prazos de §40.5.3, acionado diariamente pelo `lifespan`
 - [ ] **3.8** Expurgo de `LoginAttemptModel` com mais de 90 dias (**L-30**)
 - [ ] **3.9** Log para `stdout` em JSON, com limite pelo Docker (`max-size`, `max-file`) — encerra o `FileHandler` sem rotação (**L-32**, O-21)
-- [ ] **3.10** **Remover `AUTORES:` do prompt de triagem** — `infrastructure/ai/prompts.py:129,156` (**L-11**). Manter na extração apenas se houver justificativa escrita
+- [x] **3.10** ✅ **Removido `AUTORES:` do prompt de triagem** (**L-11**). A extração não usava o campo, então nada ficou. O objeto normalizado também deixou de copiá-lo, para o dado não circular à toa dentro do processo. Cobertura em `tests/test_lgpd/test_minimizacao_no_prompt.py`, que testa as duas portas de entrada da função (dicionário e objeto) e três grafias da chave — repor a seção derruba três testes.
 - [ ] **3.11** Aviso destacado de destino e país na tela de configuração de IA (**L-16**)
 - [ ] **3.12** Confirmação explícita ao acionar IA pela primeira vez em cada projeto, registrada no ROPA
 - [ ] **3.13** Provedor local apresentado como alternativa de privacidade, não escondido
@@ -291,7 +291,7 @@ por CLI.
 - [ ] **4.3** `Caddyfile`: TLS automático, `/` → landing, `/app` → SPA, `/api` → API, *upgrade* de WebSocket, `request_body` de 60 MB
 - [ ] **4.4** `api` com `--workers 1` e comentário no arquivo apontando §40.6 (para ninguém "otimizar" isso sem ler)
 - [ ] **4.5** `db` **sem porta publicada**; volume `pgdata`
-- [ ] **4.6** Tornar o diretório de dados configurável: hoje `Settings.data_dir` é uma `@property` sobre `platformdirs` (`config.py`), **não** um campo — logo não é ajustável por variável de ambiente. Acrescentar o campo `data_dir_override` (lido de `RSAC_DATA_DIR_OVERRIDE`) e montar o volume nele; sem isso, o volume tem de ser montado no caminho que o `platformdirs` inventar dentro do contêiner
+- [x] **4.6** ✅ **Feito antes da hora**, ao corrigir o app instalado: `RSAC_DATA_DIR` já era lida pelo `launcher.py` e ignorada pelo backend, o que fazia os dois lados discordarem sobre onde os dados estão. O campo chama-se `data_dir_configurado` e lê `RSAC_DATA_DIR` (não `RSAC_DATA_DIR_OVERRIDE`, como este item previa): a variável já existia e já tinha um leitor. Texto original: Tornar o diretório de dados configurável: hoje `Settings.data_dir` é uma `@property` sobre `platformdirs` (`config.py`), **não** um campo — logo não é ajustável por variável de ambiente. Acrescentar o campo `data_dir_override` (lido de `RSAC_DATA_DIR_OVERRIDE`) e montar o volume nele; sem isso, o volume tem de ser montado no caminho que o `platformdirs` inventar dentro do contêiner
 - [ ] **4.7** Endurecer o hospedeiro: SSH só por chave, `ufw` (22/80/443), `fail2ban`, `unattended-upgrades`, fuso UTC
 - [ ] **4.8** **Cifra do volume de dados em repouso** — LUKS ou recurso do provedor (**L-49**)
 - [ ] **4.9** `.env` com permissão `0600`, dono `root`, fora do repositório; conferir que `RSAC_SECRET_KEY` está definida (a partida já recusa subir sem ela)

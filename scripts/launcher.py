@@ -216,6 +216,8 @@ def get_local_token() -> str | None:
     if sys.platform == "win32":
         local_app_data = os.getenv("LOCALAPPDATA")
         if local_app_data:
+            paths.append(Path(local_app_data) / "RSAC" / "RSAC" / "runtime_token")
+            # Instalações antigas, de antes de o caminho ser corrigido.
             paths.append(Path(local_app_data) / "RSAC" / "runtime_token")
     paths.append(Path.home() / ".rsac" / "runtime_token")
     paths.append(BACKEND_DIR / "data" / "runtime_token")

@@ -74,6 +74,57 @@ async def test_loopback_continua_liberado_no_desktop(db_session, monkeypatch, or
     assert res.headers.get(ALLOW_ORIGIN) == origem
 
 
+# ── A origem opaca do app empacotado ──────────────────────────────────
+#
+# O app de mesa carrega a interface de um arquivo em disco, e nenhum navegador
+# manda `Origin: file://` — todos mandam a origem opaca `null`. O regex previa
+# `file://`, que portanto nunca casava, e o efeito era total: no app instalado
+# **toda** chamada da API era barrada pelo navegador antes de chegar ao Python.
+# Reproduzido carregando uma página `file://` no Chromium contra o backend
+# real; o `Origin: null` levava `400 Disallowed CORS origin`.
+
+
+@pytest.mark.anyio
+async def test_origem_opaca_do_app_empacotado_e_aceita_no_desktop(db_session, monkeypatch):
+    settings_obj = Settings(deployment_profile=DeploymentProfile.DESKTOP)
+    async with await _client_for(settings_obj, db_session, monkeypatch) as client:
+        res = await client.get("/api/v1/health", headers={"Origin": "null"})
+
+    assert res.headers.get(ALLOW_ORIGIN) == "null", (
+        "sem isto o app instalado não fala com o próprio backend"
+    )
+
+
+@pytest.mark.anyio
+async def test_origem_opaca_nao_e_aceita_no_perfil_server(db_session, monkeypatch):
+    """
+    A concessão vale só onde o cliente é a máquina do próprio usuário.
+
+    `null` também é a origem de iframe em sandbox e de `data:`, ou seja, uma
+    página hostil consegue apresentá-la. Num servidor publicado isso é
+    superfície; num app local, não há de quem se defender que já não tenha o
+    sistema de arquivos.
+    """
+    settings_obj = Settings(
+        deployment_profile=DeploymentProfile.SERVER,
+        cors_origins=["https://revsist.com"],
+    )
+    async with await _client_for(settings_obj, db_session, monkeypatch) as client:
+        res = await client.get("/api/v1/health", headers={"Origin": "null"})
+
+    assert res.headers.get(ALLOW_ORIGIN) != "null"
+
+
+@pytest.mark.anyio
+async def test_aceitar_null_nao_abre_a_porta_para_origem_hostil(db_session, monkeypatch):
+    """A alternância do regex é `|null)$`, não `|null` solto no meio."""
+    settings_obj = Settings(deployment_profile=DeploymentProfile.DESKTOP)
+    async with await _client_for(settings_obj, db_session, monkeypatch) as client:
+        for origem in ("https://null.evil.com", "http://evil.com/null", "nullish"):
+            res = await client.get("/api/v1/health", headers={"Origin": origem})
+            assert ALLOW_ORIGIN not in {k.lower() for k in res.headers}, origem
+
+
 # ── Perfil server: apenas a lista declarada ───────────────────────────
 
 @pytest.mark.anyio

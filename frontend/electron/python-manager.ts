@@ -9,9 +9,16 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import net from 'net'
 
+/**
+ * Prefixo da linha com que o backend anuncia onde gravou o token local.
+ * Precisa casar com `ANUNCIO_DO_CAMINHO`, em `app/security/local_token.py`.
+ */
+const ANUNCIO_DO_TOKEN = 'RSAC_RUNTIME_TOKEN_PATH='
+
 export class PythonManager {
   private process: ChildProcess | null = null
   private port: number = 0
+  private tokenPath: string | null = null
 
   /**
    * Encontra uma porta TCP disponível no sistema.
@@ -93,7 +100,17 @@ export class PythonManager {
 
     // Log stdout/stderr do Python
     this.process.stdout?.on('data', (data) => {
-      console.log(`[Python] ${data.toString().trim()}`)
+      const texto = data.toString()
+      // O backend diz onde gravou o token. Deduzir esse caminho aqui foi o
+      // defeito: `platformdirs` duplica o nome do app no Windows, e a versão
+      // em TypeScript procurava um nível acima — o app abria sempre no login.
+      for (const linha of texto.split('\n')) {
+        const corte = linha.indexOf(ANUNCIO_DO_TOKEN)
+        if (corte !== -1) {
+          this.tokenPath = linha.slice(corte + ANUNCIO_DO_TOKEN.length).trim() || null
+        }
+      }
+      console.log(`[Python] ${texto.trim()}`)
     })
 
     this.process.stderr?.on('data', (data) => {
@@ -160,6 +177,16 @@ export class PythonManager {
 
   get apiPort(): number {
     return this.port
+  }
+
+  /**
+   * Caminho do token anunciado pelo backend, ou `null` quando não houve
+   * anúncio — o backend já estava no ar e foi reaproveitado, ou é perfil
+   * `server`, que não emite token. Nesse caso o cliente recorre aos caminhos
+   * conhecidos, em `local-token.ts`.
+   */
+  get caminhoDoToken(): string | null {
+    return this.tokenPath
   }
 
   get isRunning(): boolean {

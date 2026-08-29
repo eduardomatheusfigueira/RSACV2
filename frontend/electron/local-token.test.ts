@@ -46,9 +46,28 @@ describe('caminhos do token', () => {
     expect(caminhos[0]).toBe(join('/dados', 'runtime_token'))
   })
 
-  it('no Windows procura em LOCALAPPDATA/RSAC', () => {
+  /**
+   * O nível repetido é o defeito que custou mais caro nesta série.
+   * `platformdirs.user_data_dir("RSAC")`, sem `appauthor`, usa o `appname`
+   * como autor e escreve em `%LOCALAPPDATA%\\RSAC\\RSAC`. A primeira versão
+   * daqui procurava em `%LOCALAPPDATA%\\RSAC` — um nível acima — e portanto o
+   * app instalado no Windows nunca achava o token que o backend acabara de
+   * gravar, e abria na tela de login.
+   *
+   * Não apareceu em desenvolvimento porque Linux e macOS não têm esse nível
+   * extra: só quem instalava no Windows via o defeito.
+   */
+  it('no Windows procura no nível duplicado que o platformdirs escreve', () => {
     const caminhos = caminhosDoToken({ LOCALAPPDATA: 'C:\\AppData' } as NodeJS.ProcessEnv, 'win32', 'C:\\Users\\eu')
-    expect(caminhos).toContain(join('C:\\AppData', 'RSAC', 'runtime_token'))
+    expect(caminhos).toContain(join('C:\\AppData', 'RSAC', 'RSAC', 'runtime_token'))
+  })
+
+  it('o nível duplicado vem antes do antigo, que fica só como reserva', () => {
+    const caminhos = caminhosDoToken({ LOCALAPPDATA: 'C:\\AppData' } as NodeJS.ProcessEnv, 'win32', 'C:\\Users\\eu')
+    const certo = caminhos.indexOf(join('C:\\AppData', 'RSAC', 'RSAC', 'runtime_token'))
+    const antigo = caminhos.indexOf(join('C:\\AppData', 'RSAC', 'runtime_token'))
+    expect(certo).toBeGreaterThanOrEqual(0)
+    expect(antigo).toBeGreaterThan(certo)
   })
 
   it('no macOS procura em Application Support', () => {
@@ -133,7 +152,13 @@ describe('ligação no processo principal', () => {
   const fonte = readFileSync(join(__dirname, 'main.ts'), 'utf-8')
 
   it('lê o token local antes de carregar a interface', () => {
-    expect(fonte).toMatch(/montarQueryDoRenderer\(\s*backendPort\s*,\s*lerTokenLocal\(\)\s*\)/)
+    expect(fonte).toMatch(/const token = lerTokenLocal\(/)
+    expect(fonte).toMatch(/montarQueryDoRenderer\(\s*backendPort\s*,\s*token\s*\)/)
+  })
+
+  it('prefere o caminho que o backend anunciou à dedução local', () => {
+    expect(fonte).toMatch(/pythonManager\.caminhoDoToken/)
+    expect(fonte).toMatch(/lerTokenLocal\(\s*anunciado\s*\?/)
   })
 
   it('passa a query nos dois modos de carga, dev e produção', () => {

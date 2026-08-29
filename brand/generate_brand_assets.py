@@ -321,12 +321,18 @@ def write_icns(path: Path) -> None:
     path.write_bytes(b"icns" + struct.pack(">I", len(body) + 8) + body)
 
 
-def write_bmp(path: Path, svg: str, w: int, h: int) -> None:
-    """BMP 24 bits sem alfa — o único formato que o NSIS aceita nas telas."""
+def write_bmp(path: Path, svg: str, w: int, h: int, bg: str = FOREST_DEEP) -> None:
+    """BMP 24 bits sem alfa — o único formato que NSIS e Inno Setup aceitam.
+
+    `bg` é a cor sob a qual o alfa é achatado. As artes que já trazem fundo
+    próprio se achatam sobre o escuro; o ícone do cabeçalho do Inno se achata
+    sobre o branco, porque é lá que ele fica — e sobre o escuro suas bordas
+    arredondadas virariam um quadrado.
+    """
     data = cairosvg.svg2png(bytestring=svg.encode("utf-8"),
                             output_width=w, output_height=h)
     im = Image.open(BytesIO(data)).convert("RGBA")
-    flat = Image.new("RGB", im.size, FOREST_DEEP)
+    flat = Image.new("RGB", im.size, bg)
     flat.paste(im, mask=im.split()[3])
     flat.save(path, format="BMP")
 
@@ -394,6 +400,34 @@ def installer_header(w: int = 150, h: int = 57) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# ARTES DO INSTALADOR INNO SETUP
+# ══════════════════════════════════════════════════════════════════════════
+#
+# O instalador que sai para quem usa o programa é o do Inno Setup
+# (`scripts/installer.iss`), não o do NSIS: `scripts/build_installer.py` chama
+# `electron-builder --dir`, que empacota a pasta e para antes de gerar
+# instalador, e entrega essa pasta ao ISCC. As artes de medida NSIS acima,
+# portanto, não aparecem em instalação nenhuma — só apareceriam se alguém
+# rodasse o electron-builder sem `--dir`. Elas existiram por um bom tempo sem
+# que nada as consumisse, e foi assim que a marca nova não chegou ao
+# instalador: o arquivo estava lá, certo, e ninguém o pedia.
+#
+# O Inno tem medidas próprias — 164x314 no painel lateral, 55x55 no cabeçalho
+# — e aceita uma lista de arquivos por escala, escolhendo o que melhor couber
+# no DPI da tela. Sem as variações a arte sai borrada a 150%, que é o padrão de
+# fábrica da maioria dos notebooks vendidos hoje.
+
+INNO_LATERAL = (164, 314)   # WizardImageFile — boas-vindas e conclusão
+INNO_CABECALHO = (55, 55)   # WizardSmallImageFile — demais páginas
+INNO_ESCALAS = (1, 2, 3)
+
+
+def inno_nome(base: str, escala: int) -> str:
+    """`innoWizardImage.bmp`, `innoWizardImage2x.bmp`, ..."""
+    return f"{base}.bmp" if escala == 1 else f"{base}{escala}x.bmp"
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # EXECUÇÃO
 # ══════════════════════════════════════════════════════════════════════════
 
@@ -448,6 +482,20 @@ def main() -> None:
     write_bmp(DIR_BUILD / "installerHeader.bmp", installer_header(), 150, 57)
     note(DIR_BUILD / "installerHeader.bmp")
 
+    # Inno Setup — as que o instalador oficial realmente usa.
+    lw, lh = INNO_LATERAL
+    cw, ch = INNO_CABECALHO
+    for escala in INNO_ESCALAS:
+        lateral = DIR_BUILD / inno_nome("innoWizardImage", escala)
+        write_bmp(lateral, installer_sidebar(), lw * escala, lh * escala)
+        note(lateral)
+
+        # Sem o selo BETA: a 55 px ele não se lê, e vira sujeira.
+        cabecalho = DIR_BUILD / inno_nome("innoWizardSmall", escala)
+        write_bmp(cabecalho, app_icon(1024, beta=False),
+                  cw * escala, ch * escala, bg=CORNSILK)
+        note(cabecalho)
+
     # Ícone da janela do instalador — só tamanhos pequenos, portanto sempre
     # na variante compacta (ver BETA_MIN_PX).
     icon_png(48).save(DIR_BUILD / "installerHeaderIcon.ico", format="ICO",
@@ -455,9 +503,12 @@ def main() -> None:
     note(DIR_BUILD / "installerHeaderIcon.ico")
 
     # ── Ícones embarcados no app (janela, Linux, dev) ────────────────────
-    for size in (256, 512):
-        icon_png(size).save(DIR_RESOURCES / f"icon-{size}.png")
-        note(DIR_RESOURCES / f"icon-{size}.png")
+    # Só o `icon.png`. Havia um `icon-512.png` byte a byte idêntico a ele e um
+    # `icon-256.png` cujo único uso era o `build_executables.py` sintetizar o
+    # `brand/icon.ico` a partir dele — a segunda cópia do ícone, a que ficou
+    # para trás na troca de nome. Agora o .ico sai daqui, e os dois PNGs não
+    # têm mais para quem servir. `brand/test_artes_ligadas.py` recusa arte sem
+    # consumidor justamente para que isso não volte a se acumular.
     icon_png(512).save(DIR_RESOURCES / "icon.png")
     note(DIR_RESOURCES / "icon.png")
 

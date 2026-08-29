@@ -20,10 +20,21 @@ import { join } from 'path'
 /**
  * Caminhos onde o token pode estar, na ordem em que são tentados.
  *
- * Repetem os do lançador de propósito: é o mesmo arquivo, escrito por
- * `platformdirs.user_data_dir("RSAC")` no backend. O `RSAC` ali é a **chave do
- * armazenamento**, não o nome do produto — trocá-la faria o programa perder o
- * acervo de quem já o usa (ver `brand/IDENTIDADE_VISUAL.md`).
+ * **Isto é a via de reserva.** A via boa é o caminho que o backend anuncia em
+ * stdout (`PythonManager.caminhoDoToken`); estes candidatos só valem quando não
+ * houve anúncio, por o backend já estar no ar e ter sido reaproveitado.
+ *
+ * A diferença importa porque deduzir o caminho aqui já deu errado, e de um
+ * jeito que não aparecia em teste nenhum: `platformdirs.user_data_dir("RSAC")`,
+ * chamado sem `appauthor`, usa o próprio `appname` como autor e **duplica o
+ * nome** no Windows — `%LOCALAPPDATA%\RSAC\RSAC`, não `%LOCALAPPDATA%\RSAC`.
+ * A primeira versão daqui, copiada de `scripts/launcher.py`, herdou o erro do
+ * lançador e procurava um nível acima. No Linux e no macOS não há esse nível
+ * extra, então quem desenvolvia não via nada — só quem instalava no Windows.
+ *
+ * O `RSAC` do caminho é a **chave do armazenamento**, não o nome do produto:
+ * trocá-la faria o programa perder o acervo de quem já o usa
+ * (ver `brand/IDENTIDADE_VISUAL.md`).
  */
 export function caminhosDoToken(
   env: NodeJS.ProcessEnv = process.env,
@@ -35,6 +46,9 @@ export function caminhosDoToken(
   if (env.RSAC_DATA_DIR) candidatos.push(join(env.RSAC_DATA_DIR, 'runtime_token'))
 
   if (plataforma === 'win32' && env.LOCALAPPDATA) {
+    // O nível repetido não é engano: é o que o platformdirs escreve.
+    candidatos.push(join(env.LOCALAPPDATA, 'RSAC', 'RSAC', 'runtime_token'))
+    // Instalações antigas, de antes de o caminho ser corrigido.
     candidatos.push(join(env.LOCALAPPDATA, 'RSAC', 'runtime_token'))
   } else if (plataforma === 'darwin') {
     candidatos.push(join(casa, 'Library', 'Application Support', 'RSAC', 'runtime_token'))

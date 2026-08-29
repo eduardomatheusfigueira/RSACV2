@@ -27,7 +27,11 @@ from app.infrastructure.persistence.models import (
     UserModel,
 )
 from app.security.crypto import MasterKeyError, obter_chave_mestra
-from app.security.local_token import descrever_para_log, ensure_local_token
+from app.security.local_token import (
+    anunciar_caminho_do_token,
+    descrever_para_log,
+    ensure_local_token,
+)
 from app.security.provisioning import provisionar_conta_local
 from app.security.log_filter import instalar_filtro_de_segredos
 from app.security.middleware import (
@@ -93,6 +97,7 @@ async def lifespan(app: FastAPI):
     # processo recusa-se a subir — em vez de subir aberto, como acontecia.
     ensure_local_token()
     logger.info(f"Autenticação: {descrever_para_log()}")
+    anunciar_caminho_do_token()
 
     # ── Chave-mestra da cifra (doc 29 §29.4.1) ────────────────────────
     #
