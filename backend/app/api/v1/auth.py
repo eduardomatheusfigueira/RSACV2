@@ -34,6 +34,8 @@ from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
     PasswordChangeRequest,
+    UserAdminResetPasswordRequest,
+    UserAdminUpdateRequest,
     UserCreatedResponse,
     UserCreateRequest,
     UserListResponse,
@@ -83,6 +85,16 @@ def _serializar(user: UserModel) -> UserResponse:
         username=user.username,
         role=user.role,
         is_active=user.is_active,
+        email=user.email,
+        full_name=user.full_name or "",
+        phone=user.phone or "",
+        institution=user.institution or "",
+        academic_degree=user.academic_degree or "",
+        is_studying=bool(user.is_studying),
+        study_program=user.study_program or "",
+        profession=user.profession or "",
+        research_area=user.research_area or "",
+        auth_provider=user.auth_provider or "password",
         created_at=user.created_at,
         last_login_at=user.last_login_at,
     )
@@ -812,3 +824,113 @@ def desativar_usuario(
     db.commit()
     revoke_all_sessions(db, user.id)
     return {"status": "ok", "message": f"Conta '{user.username}' desativada."}
+
+
+@router.patch("/users/{user_id}", response_model=UserResponse)
+def atualizar_usuario_admin(
+    user_id: str,
+    data: UserAdminUpdateRequest,
+    db: Session = Depends(get_db),
+    solicitante: UserModel = Depends(require_owner),
+):
+    """
+    Atualiza papéis, nível de acesso (role), status ativo e dados cadastrais de um usuário.
+    Exclusivo de administradores (`owner`).
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    if data.role is not None:
+        if data.role not in (ROLE_RESEARCHER, ROLE_OWNER):
+            raise HTTPException(
+                status_code=422,
+                detail="Papel inválido. Deve ser 'researcher' ou 'owner'.",
+            )
+
+        # Evitar que o último dono ativo perca o papel
+        if user.role == ROLE_OWNER and data.role != ROLE_OWNER:
+            donos_ativos = (
+                db.query(UserModel)
+                .filter(UserModel.role == ROLE_OWNER, UserModel.is_active == True)  # noqa: E712
+                .count()
+            )
+            if donos_ativos <= 1:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Não é possível alterar o papel do único administrador ativo da instalação.",
+                )
+        user.role = data.role
+
+    if data.is_active is not None:
+        if user.id == solicitante.id and not data.is_active:
+            raise HTTPException(
+                status_code=400, detail="Não é possível desativar a própria conta."
+            )
+        user.is_active = data.is_active
+        if not data.is_active:
+            revoke_all_sessions(db, user.id)
+
+    if data.full_name is not None:
+        user.full_name = data.full_name.strip()
+    if data.email is not None:
+        user.email = data.email.strip().lower()
+    if data.phone is not None:
+        user.phone = data.phone.strip()
+    if data.institution is not None:
+        user.institution = data.institution.strip()
+    if data.academic_degree is not None:
+        user.academic_degree = data.academic_degree.strip()
+    if data.is_studying is not None:
+        user.is_studying = data.is_studying
+    if data.study_program is not None:
+        user.study_program = data.study_program.strip()
+    if data.profession is not None:
+        user.profession = data.profession.strip()
+    if data.research_area is not None:
+        user.research_area = data.research_area.strip()
+
+    db.commit()
+    db.refresh(user)
+    logger.info(
+        "[Auth] Usuário '%s' (%s) atualizado pelo administrador '%s'.",
+        user.username,
+        user.id,
+        solicitante.username,
+    )
+    return _serializar(user)
+
+
+@router.post("/users/{user_id}/reset-password", response_model=dict)
+def redefinir_senha_usuario_admin(
+    user_id: str,
+    data: UserAdminResetPasswordRequest,
+    db: Session = Depends(get_db),
+    solicitante: UserModel = Depends(require_owner),
+):
+    """
+    Redefine a senha de um usuário como administrador (`owner`).
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    senha = data.new_password if data.new_password else generate_password(12)
+    try:
+        user.password_hash = hash_password(senha)
+    except PasswordPolicyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    db.commit()
+    revoke_all_sessions(db, user.id)
+    logger.info(
+        "[Auth] Senha do usuário '%s' redefinida pelo administrador '%s'.",
+        user.username,
+        solicitante.username,
+    )
+    return {
+        "status": "ok",
+        "message": f"Senha do usuário '{user.username}' redefinida com sucesso.",
+        "temporary_password": senha,
+    }
+

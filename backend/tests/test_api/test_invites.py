@@ -246,3 +246,59 @@ async def test_crud_convites_admin(async_client: httpx.AsyncClient):
     resp_revoke = await async_client.delete(f"/api/v1/invites/{invite_id}")
     assert resp_revoke.status_code == 200
     assert resp_revoke.json()["is_revoked"] is True
+
+
+@pytest.mark.anyio
+async def test_gerenciamento_usuario_admin(
+    async_client: httpx.AsyncClient, db_session: Session
+):
+    # 1. Criar um usuário pesquisador via banco
+    from app.security.passwords import hash_password
+
+    u_name = f"pesq_{generate_uuid()[:8]}"
+    u = UserModel(
+        id=generate_uuid(),
+        username=u_name,
+        password_hash=hash_password("SenhaForte123!"),
+        role="researcher",
+        is_active=True,
+        full_name="Prof. Teste",
+        email=f"{u_name}@universidade.edu.br",
+    )
+    db_session.add(u)
+    db_session.commit()
+    db_session.refresh(u)
+
+    # 2. Listar usuários como owner
+    resp_list = await async_client.get("/api/v1/auth/users")
+    assert resp_list.status_code == 200
+    users = resp_list.json()["items"]
+    assert any(user["username"] == u_name for user in users)
+
+    # 3. Atualizar papel e dados acadêmicos do usuário
+    resp_patch = await async_client.patch(
+        f"/api/v1/auth/users/{u.id}",
+        json={
+            "role": "owner",
+            "institution": "UFRGS",
+            "academic_degree": "Doutor(a)",
+            "study_program": "PPG em Desenvolvimento Regional",
+            "profession": "Docente / Pesquisador",
+            "research_area": "Políticas Públicas e APLs",
+        },
+    )
+    assert resp_patch.status_code == 200
+    updated_user = resp_patch.json()
+    assert updated_user["role"] == "owner"
+    assert updated_user["institution"] == "UFRGS"
+    assert updated_user["academic_degree"] == "Doutor(a)"
+    assert updated_user["research_area"] == "Políticas Públicas e APLs"
+
+    # 4. Redefinir senha do usuário como admin
+    resp_reset = await async_client.post(
+        f"/api/v1/auth/users/{u.id}/reset-password",
+        json={"new_password": "NovaSenhaSegura123!"},
+    )
+    assert resp_reset.status_code == 200
+    assert "NovaSenhaSegura123!" in resp_reset.json()["temporary_password"]
+

@@ -381,8 +381,32 @@ export interface AuthUser {
   username: string
   role: 'owner' | 'researcher'
   is_active: boolean
+  email?: string | null
+  full_name?: string
+  phone?: string
+  institution?: string
+  academic_degree?: string
+  is_studying?: boolean
+  study_program?: string
+  profession?: string
+  research_area?: string
+  auth_provider?: string
   created_at: string
   last_login_at?: string | null
+}
+
+export interface UserAdminUpdatePayload {
+  role?: 'owner' | 'researcher'
+  is_active?: boolean
+  full_name?: string
+  email?: string
+  phone?: string
+  institution?: string
+  academic_degree?: string
+  is_studying?: boolean
+  study_program?: string
+  profession?: string
+  research_area?: string
 }
 
 export interface LoginResponse {

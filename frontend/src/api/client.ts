@@ -647,26 +647,7 @@ class APIClient {
     })
   }
 
-  async listUsers(): Promise<import('@/types/api').UserListResponse> {
-    return this.request<import('@/types/api').UserListResponse>('/auth/users')
-  }
 
-  async createUser(
-    username: string,
-    role: 'owner' | 'researcher',
-    password?: string
-  ): Promise<import('@/types/api').UserCreatedResponse> {
-    return this.request<import('@/types/api').UserCreatedResponse>('/auth/users', {
-      method: 'POST',
-      body: JSON.stringify({ username, role, password }),
-    })
-  }
-
-  async deactivateUser(userId: string): Promise<{ status: string; message: string }> {
-    return this.request<{ status: string; message: string }>(`/auth/users/${userId}`, {
-      method: 'DELETE',
-    })
-  }
 
   async getAISettings(): Promise<AISettings> {
     return this.request<AISettings>('/ai/settings')
@@ -975,6 +956,55 @@ class APIClient {
     return this.request<{ success: boolean; message: string }>(`/invites/${inviteId}`, {
       method: 'DELETE',
     })
+  }
+
+  // ── Gestão de Contas de Usuários (Owner / Gerente) ──────────────────
+
+  async listUsers(): Promise<import('@/types/api').UserListResponse> {
+    return this.request<import('@/types/api').UserListResponse>('/auth/users')
+  }
+
+  async createUser(data: {
+    username: string
+    role?: string
+    password?: string
+    full_name?: string
+    email?: string
+    institution?: string
+  }): Promise<import('@/types/api').UserCreatedResponse> {
+    return this.request<import('@/types/api').UserCreatedResponse>('/auth/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateUserAdmin(
+    userId: string,
+    data: import('@/types/api').UserAdminUpdatePayload
+  ): Promise<import('@/types/api').AuthUser> {
+    return this.request<import('@/types/api').AuthUser>(`/auth/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deactivateUser(userId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/auth/users/${userId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async resetUserPasswordAdmin(
+    userId: string,
+    newPassword?: string
+  ): Promise<{ status: string; message: string; temporary_password?: string }> {
+    return this.request<{ status: string; message: string; temporary_password?: string }>(
+      `/auth/users/${userId}/reset-password`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ new_password: newPassword || undefined }),
+      }
+    )
   }
 }
 

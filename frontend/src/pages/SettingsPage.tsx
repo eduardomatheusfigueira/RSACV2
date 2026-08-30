@@ -35,13 +35,34 @@ import {
   UserPlus,
   Copy,
   Ban,
+  Users,
+  User,
+  SlidersHorizontal,
+  GraduationCap,
+  Building2,
+  Mail,
+  Phone,
+  BookOpen,
+  Award,
+  Lock,
+  Save,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { RsacLockup } from '@/components/brand/RsacLockup'
-import { PageHeader, Button, Card } from '@/components/ui'
+import {
+  PageHeader,
+  Button,
+  Card,
+  Dialog,
+  DialogContent,
+  DialogTitlebar,
+  DialogBody,
+  DialogFooter,
+} from '@/components/ui'
+import type { AuthUser, UserAdminUpdatePayload } from '@/types/api'
 import './SettingsPage.css'
 
 export interface ColorThemeOption {
@@ -466,9 +487,12 @@ export function SettingsPage(): JSX.Element {
   const [importingProfile, setImportingProfile] = useState(false)
   const [profileImportResult, setProfileImportResult] = useState<{ success: boolean; message: string; details?: string } | null>(null)
 
-  // ── Gestão de Convites (Exclusivo Gerente / Owner) ────────────────
+  // ── Gestão de Convites & Controle de Usuários (Owner) ─────────────
   const { user } = useAuthStore()
   const isOwner = user?.role === 'owner'
+  const [adminTab, setAdminTab] = useState<'invites' | 'users'>('invites')
+  
+  // Convites
   const [invites, setInvites] = useState<any[]>([])
   const [loadingInvites, setLoadingInvites] = useState(false)
   const [creatingInvite, setCreatingInvite] = useState(false)
@@ -477,6 +501,17 @@ export function SettingsPage(): JSX.Element {
   const [customInviteCode, setCustomInviteCode] = useState('')
   const [inviteFeedback, setInviteFeedback] = useState<{ success: boolean; message: string } | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+
+  // Usuários
+  const [users, setUsers] = useState<AuthUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null)
+  const [editingUserData, setEditingUserData] = useState<UserAdminUpdatePayload>({})
+  const [savingUser, setSavingUser] = useState(false)
+  const [userModalFeedback, setUserModalFeedback] = useState<{ success: boolean; message: string } | null>(null)
+  const [resetPasswordInput, setResetPasswordInput] = useState('')
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [resetPasswordResult, setResetPasswordResult] = useState<string | null>(null)
 
   const keysFileInputRef = useRef<HTMLInputElement>(null)
   const profileFileInputRef = useRef<HTMLInputElement>(null)
@@ -491,6 +526,100 @@ export function SettingsPage(): JSX.Element {
       console.error('Erro ao carregar convites:', err)
     } finally {
       setLoadingInvites(false)
+    }
+  }
+
+  const loadUsers = async () => {
+    if (!isOwner) return
+    try {
+      setLoadingUsers(true)
+      const res = await api.listUsers()
+      setUsers(res.items || [])
+    } catch (err: any) {
+      console.error('Erro ao carregar usuários:', err)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  const handleOpenEditUser = (u: AuthUser) => {
+    setSelectedUser(u)
+    setEditingUserData({
+      role: u.role,
+      is_active: u.is_active,
+      full_name: u.full_name || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      institution: u.institution || '',
+      academic_degree: u.academic_degree || 'Professor(a) / Pesquisador(a)',
+      is_studying: u.is_studying || false,
+      study_program: u.study_program || '',
+      profession: u.profession || '',
+      research_area: u.research_area || '',
+    })
+    setUserModalFeedback(null)
+    setResetPasswordInput('')
+    setResetPasswordResult(null)
+  }
+
+  const handleOpenEditUserByUsername = (username: string) => {
+    const found = users.find((u) => u.username === username)
+    if (found) {
+      handleOpenEditUser(found)
+    } else {
+      api.listUsers().then((res) => {
+        setUsers(res.items || [])
+        const u = (res.items || []).find((item) => item.username === username)
+        if (u) handleOpenEditUser(u)
+      })
+    }
+  }
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedUser) return
+    try {
+      setSavingUser(true)
+      setUserModalFeedback(null)
+      const updated = await api.updateUserAdmin(selectedUser.id, editingUserData)
+      setSelectedUser(updated)
+      setUserModalFeedback({
+        success: true,
+        message: `Dados e nível de acesso de @${updated.username} atualizados com sucesso!`,
+      })
+      await loadUsers()
+    } catch (err: any) {
+      setUserModalFeedback({
+        success: false,
+        message: err.message || 'Falha ao atualizar dados do usuário.',
+      })
+    } finally {
+      setSavingUser(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!selectedUser) return
+    if (!confirm(`Deseja realmente redefinir a senha do usuário @${selectedUser.username}? As sessões ativas serão encerradas.`)) {
+      return
+    }
+    try {
+      setResettingPassword(true)
+      setUserModalFeedback(null)
+      const res = await api.resetUserPasswordAdmin(selectedUser.id, resetPasswordInput.trim() || undefined)
+      setResetPasswordResult(res.temporary_password || 'Senha redefinida com sucesso.')
+      setResetPasswordInput('')
+      setUserModalFeedback({
+        success: true,
+        message: `Senha redefinida com sucesso!`,
+      })
+    } catch (err: any) {
+      setUserModalFeedback({
+        success: false,
+        message: err.message || 'Falha ao redefinir senha.',
+      })
+    } finally {
+      setResettingPassword(false)
     }
   }
 
@@ -543,6 +672,7 @@ export function SettingsPage(): JSX.Element {
     loadSettings()
     if (isOwner) {
       loadInvites()
+      loadUsers()
     }
   }, [isOwner])
 
@@ -1623,188 +1753,588 @@ export function SettingsPage(): JSX.Element {
             </div>
           </Card>
 
-          {/* Card de Gestão de Convites (Apenas Owner / Administrador) */}
+          {/* Card de Gestão de Convites & Controle de Usuários (Apenas Owner / Administrador) */}
           {isOwner && (
             <Card className="settings-card invites-management-card" style={{ marginTop: '20px' }}>
               <div className="card-header">
                 <div className="card-icon" style={{ background: 'var(--color-primary-subtle, rgba(39, 76, 119, 0.1))', color: 'var(--color-primary)' }}>
-                  <Ticket size={22} />
+                  <ShieldCheck size={22} />
                 </div>
                 <div>
-                  <h2>Gestão de Convites & Controle de Acesso</h2>
+                  <h2>Gestão de Convites, Usuários & Controle de Acesso</h2>
                   <p className="card-subtitle">
-                    Como gerente da plataforma, emita códigos de uso único para permitir que novos pesquisadores se cadastrem.
+                    Gerencie os níveis de acesso (Pesquisador vs Gerente), contas ativas e emita convites de uso único para novos pesquisadores.
                   </p>
                 </div>
               </div>
 
-              {/* Formulário de Emissão de Convite */}
-              <form onSubmit={handleCreateInvite} className="invite-create-form" style={{ marginTop: '16px', padding: '16px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <UserPlus size={16} /> Emitir Novo Código de Convite
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px auto', gap: '12px', alignItems: 'flex-end' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '12px' }}>Destinatário / Nota Interna</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: Convite para Profa. Maria (PPGDR)"
-                      value={inviteNote}
-                      onChange={(e) => setInviteNote(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label style={{ fontSize: '12px' }}>Validade (Dias)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="365"
-                      value={inviteDays}
-                      onChange={(e) => setInviteDays(parseInt(e.target.value) || 30)}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn-primary"
-                    disabled={creatingInvite}
-                    style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <Plus size={16} /> {creatingInvite ? 'Gerando...' : 'Gerar Convite'}
-                  </button>
-                </div>
-
-                {inviteFeedback && (
-                  <div
-                    style={{
-                      marginTop: '12px',
-                      padding: '8px 12px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      background: inviteFeedback.success ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
-                      color: inviteFeedback.success ? '#28a745' : '#dc3545',
-                      border: `1px solid ${inviteFeedback.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}`,
-                    }}
-                  >
-                    {inviteFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                    {inviteFeedback.message}
-                  </div>
-                )}
-              </form>
-
-              {/* Tabela de Convites Existentes */}
-              <div style={{ marginTop: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                    Convites Emitidos ({invites.length})
-                  </h4>
-                  <button
-                    type="button"
-                    className="btn-text-action"
-                    onClick={loadInvites}
-                    disabled={loadingInvites}
-                    style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    <RefreshCw size={12} className={loadingInvites ? 'animate-spin' : ''} /> Atualizar Lista
-                  </button>
-                </div>
-
-                {invites.length === 0 ? (
-                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
-                    Nenhum convite emitido até o momento.
-                  </div>
-                ) : (
-                  <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
-                          <th style={{ padding: '10px 12px' }}>Código</th>
-                          <th style={{ padding: '10px 12px' }}>Nota / Destinatário</th>
-                          <th style={{ padding: '10px 12px' }}>Status</th>
-                          <th style={{ padding: '10px 12px' }}>Usuário Registrado</th>
-                          <th style={{ padding: '10px 12px' }}>Expiração</th>
-                          <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {invites.map((inv) => {
-                          const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date()
-                          return (
-                            <tr key={inv.id} style={{ borderBottom: '1px solid var(--color-border-subtle, rgba(0,0,0,0.05))' }}>
-                              <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-primary)' }}>
-                                {inv.code}
-                              </td>
-                              <td style={{ padding: '10px 12px', color: 'var(--color-text-primary)' }}>
-                                {inv.note || '—'}
-                              </td>
-                              <td style={{ padding: '10px 12px' }}>
-                                {inv.is_used ? (
-                                  <span className="status-badge completed" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                                    Utilizado
-                                  </span>
-                                ) : inv.is_revoked ? (
-                                  <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }}>
-                                    Revogado
-                                  </span>
-                                ) : isExpired ? (
-                                  <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(108, 117, 125, 0.1)', color: '#6c757d' }}>
-                                    Expirado
-                                  </span>
-                                ) : (
-                                  <span className="status-badge active" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(40, 167, 69, 0.1)', color: '#28a745' }}>
-                                    Disponível
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: '10px 12px', color: 'var(--color-text-secondary)' }}>
-                                {inv.used_by_username ? (
-                                  <strong>@{inv.used_by_username}</strong>
-                                ) : (
-                                  '—'
-                                )}
-                              </td>
-                              <td style={{ padding: '10px 12px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
-                                {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString('pt-BR') : 'Sem expiração'}
-                              </td>
-                              <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                                  {!inv.is_used && !inv.is_revoked && (
-                                    <button
-                                      type="button"
-                                      className="btn-secondary"
-                                      onClick={() => handleCopyInviteCode(inv.code)}
-                                      title="Copiar código do convite"
-                                      style={{ height: '28px', padding: '0 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                    >
-                                      {copiedCode === inv.code ? <Check size={13} color="#28a745" /> : <Copy size={13} />}
-                                      {copiedCode === inv.code ? 'Copiado!' : 'Copiar'}
-                                    </button>
-                                  )}
-                                  {!inv.is_used && !inv.is_revoked && (
-                                    <button
-                                      type="button"
-                                      className="btn-icon danger"
-                                      onClick={() => handleRevokeInvite(inv.id, inv.code)}
-                                      title="Revogar convite"
-                                      style={{ height: '28px', width: '28px' }}
-                                    >
-                                      <Ban size={13} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              {/* Abas do Painel Administrativo */}
+              <div className="admin-tabs-nav" style={{ marginTop: '16px' }}>
+                <button
+                  type="button"
+                  className={`admin-tab-btn ${adminTab === 'invites' ? 'active' : ''}`}
+                  onClick={() => setAdminTab('invites')}
+                >
+                  <Ticket size={15} /> Convites de Acesso ({invites.length})
+                </button>
+                <button
+                  type="button"
+                  className={`admin-tab-btn ${adminTab === 'users' ? 'active' : ''}`}
+                  onClick={() => setAdminTab('users')}
+                >
+                  <Users size={15} /> Usuários & Pesquisadores ({users.length})
+                </button>
               </div>
+
+              {/* ABA 1: GESTÃO DE CONVITES */}
+              {adminTab === 'invites' && (
+                <div>
+                  {/* Formulário de Emissão de Convite */}
+                  <form onSubmit={handleCreateInvite} className="invite-create-form" style={{ padding: '16px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <UserPlus size={16} /> Emitir Novo Código de Convite
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px auto', gap: '12px', alignItems: 'flex-end' }}>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ fontSize: '12px' }}>Destinatário / Nota Interna</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Convite para Profa. Maria (PPGDR)"
+                          value={inviteNote}
+                          onChange={(e) => setInviteNote(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}>
+                        <label style={{ fontSize: '12px' }}>Validade (Dias)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={inviteDays}
+                          onChange={(e) => setInviteDays(parseInt(e.target.value) || 30)}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="btn-primary"
+                        disabled={creatingInvite}
+                        style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Plus size={16} /> {creatingInvite ? 'Gerando...' : 'Gerar Convite'}
+                      </button>
+                    </div>
+
+                    {inviteFeedback && (
+                      <div
+                        style={{
+                          marginTop: '12px',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: inviteFeedback.success ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
+                          color: inviteFeedback.success ? '#28a745' : '#dc3545',
+                          border: `1px solid ${inviteFeedback.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}`,
+                        }}
+                      >
+                        {inviteFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                        {inviteFeedback.message}
+                      </div>
+                    )}
+                  </form>
+
+                  {/* Tabela de Convites */}
+                  <div style={{ marginTop: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                        Histórico de Convites ({invites.length})
+                      </h4>
+                      <button
+                        type="button"
+                        className="btn-text-action"
+                        onClick={loadInvites}
+                        disabled={loadingInvites}
+                        style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <RefreshCw size={12} className={loadingInvites ? 'animate-spin' : ''} /> Atualizar Lista
+                      </button>
+                    </div>
+
+                    {invites.length === 0 ? (
+                      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
+                        Nenhum convite emitido até o momento.
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                              <th style={{ padding: '10px 12px' }}>Código</th>
+                              <th style={{ padding: '10px 12px' }}>Destinatário / Nota</th>
+                              <th style={{ padding: '10px 12px' }}>Status</th>
+                              <th style={{ padding: '10px 12px' }}>Usuário Registrado</th>
+                              <th style={{ padding: '10px 12px' }}>Expiração</th>
+                              <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {invites.map((inv) => {
+                              const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date()
+                              return (
+                                <tr key={inv.id} style={{ borderBottom: '1px solid var(--color-border-subtle, rgba(0,0,0,0.05))' }}>
+                                  <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-primary)' }}>
+                                    {inv.code}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', color: 'var(--color-text-primary)' }}>
+                                    {inv.note || '—'}
+                                  </td>
+                                  <td style={{ padding: '10px 12px' }}>
+                                    {inv.is_used ? (
+                                      <span className="status-badge completed" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                        Utilizado
+                                      </span>
+                                    ) : inv.is_revoked ? (
+                                      <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }}>
+                                        Revogado
+                                      </span>
+                                    ) : isExpired ? (
+                                      <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(108, 117, 125, 0.1)', color: '#6c757d' }}>
+                                        Expirado
+                                      </span>
+                                    ) : (
+                                      <span className="status-badge active" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(40, 167, 69, 0.1)', color: '#28a745' }}>
+                                        Disponível
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '10px 12px' }}>
+                                    {inv.used_by_username ? (
+                                      <button
+                                        type="button"
+                                        className="btn-text-action"
+                                        onClick={() => handleOpenEditUserByUsername(inv.used_by_username)}
+                                        style={{ fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'underline', padding: 0 }}
+                                        title="Clique para gerenciar o perfil deste usuário"
+                                      >
+                                        @{inv.used_by_username}
+                                      </button>
+                                    ) : (
+                                      <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
+                                    {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString('pt-BR') : 'Sem expiração'}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                      {!inv.is_used && !inv.is_revoked && (
+                                        <button
+                                          type="button"
+                                          className="btn-secondary"
+                                          onClick={() => handleCopyInviteCode(inv.code)}
+                                          title="Copiar código do convite"
+                                          style={{ height: '28px', padding: '0 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                          {copiedCode === inv.code ? <Check size={13} color="#28a745" /> : <Copy size={13} />}
+                                          {copiedCode === inv.code ? 'Copiado!' : 'Copiar'}
+                                        </button>
+                                      )}
+                                      {!inv.is_used && !inv.is_revoked && (
+                                        <button
+                                          type="button"
+                                          className="btn-icon danger"
+                                          onClick={() => handleRevokeInvite(inv.id, inv.code)}
+                                          title="Revogar convite"
+                                          style={{ height: '28px', width: '28px' }}
+                                        >
+                                          <Ban size={13} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ABA 2: USUÁRIOS & PESQUISADORES CADASTRADOS */}
+              {adminTab === 'users' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-primary)' }}>
+                        Pesquisadores e Contas Registradas ({users.length})
+                      </h4>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        Clique em qualquer linha ou no botão <strong>Gerenciar</strong> para alterar níveis de acesso, dados acadêmicos ou redefinir senhas.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-text-action"
+                      onClick={loadUsers}
+                      disabled={loadingUsers}
+                      style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      <RefreshCw size={12} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar Lista
+                    </button>
+                  </div>
+
+                  {users.length === 0 ? (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
+                      Nenhum usuário cadastrado.
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                            <th style={{ padding: '10px 12px' }}>Usuário / Nome</th>
+                            <th style={{ padding: '10px 12px' }}>Nível de Acesso</th>
+                            <th style={{ padding: '10px 12px' }}>Status</th>
+                            <th style={{ padding: '10px 12px' }}>Instituição / Titulação</th>
+                            <th style={{ padding: '10px 12px' }}>E-mail / Contato</th>
+                            <th style={{ padding: '10px 12px' }}>Último Acesso</th>
+                            <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {users.map((u) => {
+                            const isCurrentUser = u.id === user?.id
+                            return (
+                              <tr
+                                key={u.id}
+                                className="user-row-clickable"
+                                onClick={() => handleOpenEditUser(u)}
+                                style={{ borderBottom: '1px solid var(--color-border-subtle, rgba(0,0,0,0.05))' }}
+                              >
+                                <td style={{ padding: '10px 12px' }}>
+                                  <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                                    @{u.username} {isCurrentUser && <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 500 }}>(você)</span>}
+                                  </div>
+                                  {u.full_name && (
+                                    <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+                                      {u.full_name}
+                                    </div>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 12px' }}>
+                                  <span className={`role-badge ${u.role}`}>
+                                    {u.role === 'owner' ? <ShieldCheck size={12} /> : <User size={12} />}
+                                    {u.role === 'owner' ? 'Administrador (Owner)' : 'Pesquisador'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '10px 12px' }}>
+                                  <span className={`status-badge ${u.is_active ? 'active' : 'revoked'}`} style={{ fontSize: '11px', padding: '2px 8px', background: u.is_active ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)', color: u.is_active ? '#28a745' : '#dc3545' }}>
+                                    {u.is_active ? 'Ativo' : 'Inativo'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '10px 12px', color: 'var(--color-text-secondary)' }}>
+                                  <div>{u.institution || '—'}</div>
+                                  {u.academic_degree && (
+                                    <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
+                                      {u.academic_degree}
+                                    </div>
+                                  )}
+                                </td>
+                                <td style={{ padding: '10px 12px', color: 'var(--color-text-secondary)', fontSize: '11px' }}>
+                                  <div>{u.email || '—'}</div>
+                                  {u.phone && <div style={{ color: 'var(--color-text-tertiary)' }}>{u.phone}</div>}
+                                </td>
+                                <td style={{ padding: '10px 12px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
+                                  {u.last_login_at ? new Date(u.last_login_at).toLocaleString('pt-BR') : 'Nunca'}
+                                </td>
+                                <td style={{ padding: '10px 12px', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={() => handleOpenEditUser(u)}
+                                    style={{ height: '28px', padding: '0 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  >
+                                    <SlidersHorizontal size={12} /> Gerenciar
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           )}
+
+          {/* Modal de Gestão & Edição de Usuário */}
+          <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+            <DialogContent size="lg" variant="window">
+              <DialogTitlebar closeLabel="Fechar gestão do usuário">
+                Gestão do Usuário — @{selectedUser?.username}
+              </DialogTitlebar>
+              <DialogBody>
+                {selectedUser && (
+                  <form onSubmit={handleSaveUser} className="user-edit-modal-grid">
+                    {/* Seção 1: Acesso & Papéis */}
+                    <div className="user-edit-section">
+                      <div className="user-edit-section-title">
+                        <ShieldCheck size={14} /> 1. Controle de Acesso & Status da Conta
+                      </div>
+                      <div className="user-form-grid-2">
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px', fontWeight: 600 }}>Nível de Acesso (Papel) *</label>
+                          <select
+                            value={editingUserData.role}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, role: e.target.value as any })}
+                            disabled={savingUser}
+                            className="rsac-custom-select"
+                            style={{ width: '100%', height: '36px' }}
+                          >
+                            <option value="researcher">Pesquisador (Acesso a Projetos e Extrações)</option>
+                            <option value="owner">Administrador / Gerente (Acesso Total & Gestão de Contas)</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px', fontWeight: 600 }}>Status da Conta *</label>
+                          <select
+                            value={editingUserData.is_active ? 'active' : 'inactive'}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, is_active: e.target.value === 'active' })}
+                            disabled={savingUser || selectedUser.id === user?.id}
+                            className="rsac-custom-select"
+                            style={{ width: '100%', height: '36px' }}
+                          >
+                            <option value="active">Ativo (Pode fazer login)</option>
+                            <option value="inactive">Inativo (Acesso bloqueado)</option>
+                          </select>
+                          {selectedUser.id === user?.id && (
+                            <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', marginTop: '2px', display: 'block' }}>
+                              Você não pode desativar a sua própria conta logada.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Seção 2: Dados Pessoais & Perfil Acadêmico */}
+                    <div className="user-edit-section">
+                      <div className="user-edit-section-title">
+                        <GraduationCap size={14} /> 2. Dados Pessoais & Perfil Acadêmico
+                      </div>
+                      <div className="user-form-grid-2" style={{ marginBottom: '10px' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Nome Completo</label>
+                          <input
+                            type="text"
+                            value={editingUserData.full_name || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, full_name: e.target.value })}
+                            placeholder="Prof. Dra. Maria Silva"
+                            disabled={savingUser}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Endereço de E-mail</label>
+                          <input
+                            type="email"
+                            value={editingUserData.email || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, email: e.target.value })}
+                            placeholder="pesquisador@universidade.edu.br"
+                            disabled={savingUser}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="user-form-grid-2" style={{ marginBottom: '10px' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Telefone / WhatsApp</label>
+                          <input
+                            type="text"
+                            value={editingUserData.phone || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, phone: e.target.value })}
+                            placeholder="(51) 99999-8888"
+                            disabled={savingUser}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Universidade / Instituição</label>
+                          <input
+                            type="text"
+                            value={editingUserData.institution || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, institution: e.target.value })}
+                            placeholder="ex: UFRGS, USP, IBICT..."
+                            disabled={savingUser}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="user-form-grid-2" style={{ marginBottom: '10px' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Titulação / Grau Acadêmico</label>
+                          <select
+                            value={editingUserData.academic_degree || 'Professor(a) / Pesquisador(a)'}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, academic_degree: e.target.value })}
+                            disabled={savingUser}
+                            className="rsac-custom-select"
+                            style={{ width: '100%', height: '36px' }}
+                          >
+                            <option value="Graduando(a)">Graduando(a)</option>
+                            <option value="Especialista">Especialista</option>
+                            <option value="Mestrando(a)">Mestrando(a)</option>
+                            <option value="Mestre">Mestre</option>
+                            <option value="Doutorando(a)">Doutorando(a)</option>
+                            <option value="Doutor(a)">Doutor(a)</option>
+                            <option value="Pós-Doutor(a)">Pós-Doutor(a)</option>
+                            <option value="Professor(a) / Pesquisador(a)">Professor(a) / Pesquisador(a)</option>
+                            <option value="Outro">Outro</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Profissão / Cargo Atual</label>
+                          <input
+                            type="text"
+                            value={editingUserData.profession || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, profession: e.target.value })}
+                            placeholder="ex: Docente, Analista, Pesquisador"
+                            disabled={savingUser}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={editingUserData.is_studying || false}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, is_studying: e.target.checked })}
+                            disabled={savingUser}
+                          />
+                          <span>Matriculado(a) em curso ou programa de pós-graduação</span>
+                        </label>
+                      </div>
+
+                      <div className="user-form-grid-2">
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Programa de Pós / Curso</label>
+                          <input
+                            type="text"
+                            value={editingUserData.study_program || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, study_program: e.target.value })}
+                            placeholder="ex: PPG em Desenvolvimento Regional"
+                            disabled={savingUser}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Área de Atuação / Linha de Pesquisa</label>
+                          <input
+                            type="text"
+                            value={editingUserData.research_area || ''}
+                            onChange={(e) => setEditingUserData({ ...editingUserData, research_area: e.target.value })}
+                            placeholder="ex: Políticas Públicas Territoriais, APLs"
+                            disabled={savingUser}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Seção 3: Segurança & Redefinição de Senha */}
+                    <div className="user-edit-section">
+                      <div className="user-edit-section-title">
+                        <Lock size={14} /> 3. Redefinição de Senha de Acesso
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'flex-end' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: '12px' }}>Nova Senha (deixe em branco para sortear automaticamente)</label>
+                          <input
+                            type="text"
+                            placeholder="Deixe em branco para gerar senha temporária segura"
+                            value={resetPasswordInput}
+                            onChange={(e) => setResetPasswordInput(e.target.value)}
+                            disabled={resettingPassword}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={handleResetPassword}
+                          disabled={resettingPassword}
+                          style={{ height: '36px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Key size={14} /> {resettingPassword ? 'Redefinindo...' : 'Redefinir Senha'}
+                        </button>
+                      </div>
+
+                      {resetPasswordResult && (
+                        <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(39, 76, 119, 0.08)', borderRadius: '4px', border: '1px solid var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Senha Provisória Gerada: </span>
+                            <strong style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--color-primary)', marginLeft: '6px' }}>{resetPasswordResult}</strong>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-text-action"
+                            onClick={() => {
+                              navigator.clipboard.writeText(resetPasswordResult)
+                              alert('Senha copiada para a área de transferência!')
+                            }}
+                            style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Copy size={12} /> Copiar Senha
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Feedback */}
+                    {userModalFeedback && (
+                      <div
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          background: userModalFeedback.success ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
+                          color: userModalFeedback.success ? '#28a745' : '#dc3545',
+                          border: `1px solid ${userModalFeedback.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}`,
+                        }}
+                      >
+                        {userModalFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                        {userModalFeedback.message}
+                      </div>
+                    )}
+
+                    <DialogFooter style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setSelectedUser(null)}
+                        disabled={savingUser}
+                      >
+                        Fechar
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn-primary"
+                        disabled={savingUser}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Save size={15} /> {savingUser ? 'Salvando...' : 'Salvar Alterações'}
+                      </button>
+                    </DialogFooter>
+                  </form>
+                )}
+              </DialogBody>
+            </DialogContent>
+          </Dialog>
+
         </div>
       </div>
     </div>

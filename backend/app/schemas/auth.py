@@ -25,8 +25,36 @@ class UserResponse(BaseModel):
     username: str
     role: str
     is_active: bool
+    email: Optional[str] = None
+    full_name: str = ""
+    phone: str = ""
+    institution: str = ""
+    academic_degree: str = ""
+    is_studying: bool = False
+    study_program: str = ""
+    profession: str = ""
+    research_area: str = ""
+    auth_provider: str = "password"
     created_at: datetime
     last_login_at: Optional[datetime] = None
+
+
+class UserAdminUpdateRequest(BaseModel):
+    role: Optional[str] = Field(None, description="'researcher' ou 'owner'")
+    is_active: Optional[bool] = None
+    full_name: Optional[str] = Field(None, max_length=200)
+    email: Optional[str] = Field(None, max_length=320)
+    phone: Optional[str] = Field(None, max_length=50)
+    institution: Optional[str] = Field(None, max_length=200)
+    academic_degree: Optional[str] = Field(None, max_length=100)
+    is_studying: Optional[bool] = None
+    study_program: Optional[str] = Field(None, max_length=200)
+    profession: Optional[str] = Field(None, max_length=100)
+    research_area: Optional[str] = Field(None, max_length=200)
+
+
+class UserAdminResetPasswordRequest(BaseModel):
+    new_password: Optional[str] = Field(None, min_length=8, max_length=128)
 
 
 class LoginResponse(BaseModel):
@@ -71,6 +99,10 @@ class UserCreateRequest(BaseModel):
         default=None, description="Se omitida, o servidor sorteia uma e a devolve uma única vez"
     )
     role: str = Field(default="researcher", pattern=r"^(owner|researcher)$")
+    full_name: Optional[str] = Field(default="", max_length=200)
+    email: Optional[str] = Field(default=None, max_length=320)
+    institution: Optional[str] = Field(default="", max_length=200)
+    academic_degree: Optional[str] = Field(default="", max_length=100)
 
 
 class UserCreatedResponse(BaseModel):
