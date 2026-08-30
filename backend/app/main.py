@@ -323,50 +323,108 @@ def create_app() -> FastAPI:
     app.include_router(public_router, prefix="/api/v1")
     app.include_router(api_router, prefix="/api/v1")
 
-    # Servir Landing Page Institucional se construída
+    # Servir Landing Page Institucional e Frontend Web (SPA)
     landing_dist = Path(__file__).resolve().parent.parent.parent / "landing" / "dist"
-    if landing_dist.exists() and (landing_dist / "index.html").exists():
-        landing_root = landing_dist.resolve()
-        landing_index = landing_root / "index.html"
-        landing_assets = landing_root / "assets"
-        if landing_assets.exists():
-            app.mount("/landing/assets", StaticFiles(directory=str(landing_assets)), name="landing-assets")
+    frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+    has_landing = landing_dist.exists() and (landing_dist / "index.html").exists()
+    has_spa = frontend_dist.exists() and (frontend_dist / "index.html").exists()
+
+    if has_landing or has_spa:
+        landing_root = landing_dist.resolve() if has_landing else None
+        spa_root = frontend_dist.resolve() if has_spa else None
+
+        # Montar /assets unificado atendendo tanto a SPA quanto a Landing
+        @app.get("/assets/{file_path:path}", include_in_schema=False)
+        async def serve_asset(file_path: str):
+            if landing_root:
+                candidate = _resolve_within(landing_root / "assets", file_path)
+                if candidate and candidate.is_file():
+                    return FileResponse(candidate)
+            if spa_root:
+                candidate = _resolve_within(spa_root / "assets", file_path)
+                if candidate and candidate.is_file():
+                    return FileResponse(candidate)
+            raise HTTPException(status_code=404, detail="Asset not found")
+
+        # Favicon e metadados de SEO
+        @app.get("/favicon.svg", include_in_schema=False)
+        async def serve_favicon():
+            if landing_root and (landing_root / "favicon.svg").is_file():
+                return FileResponse(landing_root / "favicon.svg")
+            if spa_root and (spa_root / "favicon.svg").is_file():
+                return FileResponse(spa_root / "favicon.svg")
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        @app.get("/robots.txt", include_in_schema=False)
+        async def serve_robots():
+            if landing_root and (landing_root / "robots.txt").is_file():
+                return FileResponse(landing_root / "robots.txt")
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        @app.get("/sitemap.xml", include_in_schema=False)
+        async def serve_sitemap():
+            if landing_root and (landing_root / "sitemap.xml").is_file():
+                return FileResponse(landing_root / "sitemap.xml")
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        @app.get("/og-image.svg", include_in_schema=False)
+        async def serve_og_image():
+            if landing_root and (landing_root / "og-image.svg").is_file():
+                return FileResponse(landing_root / "og-image.svg")
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        # Rota raiz "/" -> serve a Landing Page Institucional (Opção A)
+        @app.get("/", include_in_schema=False)
+        async def serve_root():
+            if landing_root and (landing_root / "index.html").is_file():
+                return FileResponse(landing_root / "index.html")
+            if spa_root and (spa_root / "index.html").is_file():
+                return FileResponse(spa_root / "index.html")
+            raise HTTPException(status_code=404, detail="Not Found")
 
         @app.get("/landing", include_in_schema=False)
         @app.get("/institucional", include_in_schema=False)
         async def serve_landing():
-            return FileResponse(landing_index)
+            if landing_root and (landing_root / "index.html").is_file():
+                return FileResponse(landing_root / "index.html")
+            raise HTTPException(status_code=404, detail="Landing not found")
 
-    # Servir Frontend Web Estático (SPA) se construído
-    frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
-    if frontend_dist.exists() and (frontend_dist / "index.html").exists():
-        spa_root = frontend_dist.resolve()
-        spa_index = spa_root / "index.html"
+        # Rota "/app" -> serve a SPA do React
+        @app.get("/app/{full_path:path}", include_in_schema=False)
+        @app.get("/app", include_in_schema=False)
+        async def serve_app(full_path: str = ""):
+            if spa_root and (spa_root / "index.html").is_file():
+                return FileResponse(spa_root / "index.html")
+            raise HTTPException(status_code=404, detail="App not found")
 
-        assets_dir = spa_root / "assets"
-        if assets_dir.exists():
-            app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-
-        @app.get("/favicon.svg", include_in_schema=False)
-        async def serve_favicon():
-            return FileResponse(spa_root / "favicon.svg")
-
+        # Catch-all para rotas e arquivos estáticos
         @app.get("/{full_path:path}", include_in_schema=False)
-        async def serve_spa(full_path: str):
+        async def serve_catchall(full_path: str):
             if full_path.startswith("api") or full_path in ("health", "docs", "redoc", "openapi.json"):
                 raise HTTPException(status_code=404, detail="Not Found")
 
-            if full_path in ("landing", "institucional") and landing_dist.exists():
-                return FileResponse(landing_dist / "index.html")
+            # Arquivos estáticos da landing
+            if landing_root:
+                cand = _resolve_within(landing_root, full_path)
+                if cand and cand.is_file():
+                    return FileResponse(cand)
 
-            candidate = _resolve_within(spa_root, full_path)
-            if candidate is not None and candidate.is_file():
-                return FileResponse(candidate)
+            # Arquivos estáticos da SPA
+            if spa_root:
+                cand = _resolve_within(spa_root, full_path)
+                if cand and cand.is_file():
+                    return FileResponse(cand)
 
-            # Qualquer outra coisa — rota do React Router, arquivo inexistente
-            # ou tentativa de travessia — cai no index. Devolver 403 no caso da
-            # travessia confirmaria a existência do alvo ao atacante.
-            return FileResponse(spa_index)
+            # Se for rota do app (/projects, /login, /settings) -> serve SPA
+            if spa_root and (spa_root / "index.html").is_file():
+                return FileResponse(spa_root / "index.html")
+
+            # Fallback para landing
+            if landing_root and (landing_root / "index.html").is_file():
+                return FileResponse(landing_root / "index.html")
+
+            raise HTTPException(status_code=404, detail="Not Found")
     else:
         @app.get("/", include_in_schema=False)
         async def fallback_root():
