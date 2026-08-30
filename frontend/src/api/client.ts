@@ -949,8 +949,8 @@ class APIClient {
 
   // ── Gestão de Convites (Owner / Gerente) ──────────────────────────
 
-  async listInvites(): Promise<{ items: any[]; total: number }> {
-    return this.request<{ items: any[]; total: number }>('/invites')
+  async listInvites(): Promise<{ invites: any[]; items?: any[]; total: number }> {
+    return this.request<{ invites: any[]; items?: any[]; total: number }>('/invites')
   }
 
   async createInvite(data?: { custom_code?: string; expires_in_days?: number | null; note?: string }): Promise<any> {

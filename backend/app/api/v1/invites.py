@@ -71,6 +71,12 @@ def _serializar_convite(inv: InviteCodeModel, db: Session) -> InviteResponse:
     status_code=status.HTTP_201_CREATED,
     summary="Criar novo convite de uso único (apenas owner)",
 )
+@router.post(
+    "/",
+    response_model=InviteResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
 def criar_convite(
     payload: InviteCreateRequest,
     db: Session = Depends(get_db),
@@ -123,6 +129,11 @@ def criar_convite(
     "",
     response_model=InviteListResponse,
     summary="Listar todos os convites emitidos (apenas owner)",
+)
+@router.get(
+    "/",
+    response_model=InviteListResponse,
+    include_in_schema=False,
 )
 def listar_convites(
     db: Session = Depends(get_db),

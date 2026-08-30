@@ -486,7 +486,7 @@ export function SettingsPage(): JSX.Element {
     try {
       setLoadingInvites(true)
       const res = await api.listInvites()
-      setInvites(res.items || [])
+      setInvites(res.invites || res.items || [])
     } catch (err: any) {
       console.error('Erro ao carregar convites:', err)
     } finally {
