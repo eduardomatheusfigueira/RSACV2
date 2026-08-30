@@ -266,9 +266,18 @@
   z-index: var(--z-sticky);
 }
 
-.ribbon-tab-btn.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.ribbon-tab-btn.disabled,
+.ribbon-tab-btn[disabled] {
+  opacity: 0.38;
+  cursor: not-allowed !important;
+  filter: grayscale(0.8);
+  pointer-events: auto !important;
+}
+
+.ribbon-tab-btn.disabled:hover,
+.ribbon-tab-btn[disabled]:hover {
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .ribbon-tab-btn.active .ribbon-tab-icon { color: var(--color-accent-on-surface); }

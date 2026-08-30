@@ -244,6 +244,54 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
   return <>{children}</>
 }
 
+function ProjectRouteGuard({ children }: { children: React.ReactNode }): JSX.Element {
+  const { id } = useParams<{ id: string }>()
+  const { setActiveProject } = useSettingsStore()
+  const [checking, setChecking] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
+
+  useEffect(() => {
+    let cancel = false
+    const checkAccess = async () => {
+      if (!id) {
+        setActiveProject(null)
+        setAuthorized(false)
+        setChecking(false)
+        return
+      }
+
+      try {
+        const proj = await api.getProject(id)
+        if (cancel) return
+        setActiveProject(proj)
+        setAuthorized(true)
+      } catch (err) {
+        if (cancel) return
+        console.warn(`[ProjectGuard] Projeto ${id} inacessível ou inexistente:`, err)
+        setActiveProject(null)
+        setAuthorized(false)
+      } finally {
+        if (!cancel) setChecking(false)
+      }
+    }
+
+    void checkAccess()
+    return () => {
+      cancel = true
+    }
+  }, [id])
+
+  if (checking) {
+    return <div className="animate-fade-in" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Carregando projeto…</div>
+  }
+
+  if (!authorized) {
+    return <Navigate to="/projects" replace />
+  }
+
+  return <>{children}</>
+}
+
 function AppContent(): JSX.Element {
   const { setBackendStatus, setBackendVersion, theme, setTheme } = useSettingsStore()
 
@@ -299,12 +347,54 @@ function AppContent(): JSX.Element {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/:id" element={<ProjectRedirect />} />
-          <Route path="/projects/:id/protocol" element={<ProtocolPage />} />
-          <Route path="/projects/:id/harvest" element={<HarvestPage />} />
-          <Route path="/projects/:id/screening" element={<ScreeningPage />} />
-          <Route path="/projects/:id/extraction" element={<ExtractionPage />} />
-          <Route path="/projects/:id/insights" element={<InsightsPage />} />
-          <Route path="/projects/:id/export" element={<ExportPage />} />
+          <Route
+            path="/projects/:id/protocol"
+            element={
+              <ProjectRouteGuard>
+                <ProtocolPage />
+              </ProjectRouteGuard>
+            }
+          />
+          <Route
+            path="/projects/:id/harvest"
+            element={
+              <ProjectRouteGuard>
+                <HarvestPage />
+              </ProjectRouteGuard>
+            }
+          />
+          <Route
+            path="/projects/:id/screening"
+            element={
+              <ProjectRouteGuard>
+                <ScreeningPage />
+              </ProjectRouteGuard>
+            }
+          />
+          <Route
+            path="/projects/:id/extraction"
+            element={
+              <ProjectRouteGuard>
+                <ExtractionPage />
+              </ProjectRouteGuard>
+            }
+          />
+          <Route
+            path="/projects/:id/insights"
+            element={
+              <ProjectRouteGuard>
+                <InsightsPage />
+              </ProjectRouteGuard>
+            }
+          />
+          <Route
+            path="/projects/:id/export"
+            element={
+              <ProjectRouteGuard>
+                <ExportPage />
+              </ProjectRouteGuard>
+            }
+          />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

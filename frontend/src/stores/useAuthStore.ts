@@ -10,7 +10,24 @@
 
 import { create } from 'zustand'
 import { api } from '@/api/client'
+import { useSettingsStore } from '@/stores/useSettingsStore'
 import type { AuthStatus, AuthUser } from '@/types/api'
+
+async function syncUserProjects(): Promise<void> {
+  try {
+    const res = await api.listProjects(false)
+    const items = res.items || []
+    const saved = useSettingsStore.getState().activeProject
+
+    if (items.length === 0) {
+      useSettingsStore.getState().setActiveProject(null)
+    } else if (!saved || !items.some((p) => p.id === saved.id)) {
+      useSettingsStore.getState().setActiveProject(items[0])
+    }
+  } catch {
+    useSettingsStore.getState().setActiveProject(null)
+  }
+}
 
 /**
  * `checking` é um estado real, não um detalhe: antes de saber se há sessão a
@@ -99,6 +116,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (status.authenticated && status.user) {
         set({ phase: 'authenticated', user: status.user, error: null })
+        void syncUserProjects()
         return
       }
 
@@ -109,11 +127,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       set({ phase: 'anonymous', user: null })
+      useSettingsStore.getState().setActiveProject(null)
     } catch {
       // Backend fora do ar é diferente de sessão ausente: mostrar a tela de
       // login aqui faria o usuário digitar a senha contra um servidor que não
       // responde, e concluir que a senha está errada.
       set({ phase: 'unavailable', user: null })
+      useSettingsStore.getState().setActiveProject(null)
     }
   },
 
@@ -122,6 +142,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await api.login(username, password)
       set({ phase: 'authenticated', user: res.user, error: null, submitting: false })
+      void syncUserProjects()
       return true
     } catch (err: any) {
       set({ error: err?.message || 'Não foi possível entrar.', submitting: false })
@@ -134,6 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await api.registerWithInvite(payload)
       set({ phase: 'authenticated', user: res.user, error: null, submitting: false })
+      useSettingsStore.getState().setActiveProject(null)
       return true
     } catch (err: any) {
       set({ error: err?.message || 'Não foi possível concluir o cadastro com convite.', submitting: false })
@@ -145,6 +167,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const res = await api.loginWithLocalToken(token)
       set({ phase: 'authenticated', user: res.user, error: null })
+      void syncUserProjects()
       return true
     } catch {
       // Silencioso de propósito: no perfil servidor o token local não é aceito,
@@ -157,11 +180,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.logout()
     } finally {
+      useSettingsStore.getState().setActiveProject(null)
       set({ phase: 'anonymous', user: null, error: null })
     }
   },
 
   setError: (message) => set({ error: message }),
 
-  markAnonymous: () => set({ phase: 'anonymous', user: null }),
+  markAnonymous: () => {
+    useSettingsStore.getState().setActiveProject(null)
+    set({ phase: 'anonymous', user: null })
+  },
 }))
+

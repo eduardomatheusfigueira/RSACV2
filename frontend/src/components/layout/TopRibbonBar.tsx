@@ -181,7 +181,7 @@ export function TopRibbonBar(): JSX.Element {
           ) : (
             <button type="button" className="btn-select-project-alert" onClick={() => navigate('/projects')}>
               <FolderOpen size={13} />
-              <span>Selecionar ou Criar Projeto</span>
+              <span>Nenhum Projeto Ativo — Criar ou Selecionar</span>
             </button>
           )}
         </div>
@@ -240,9 +240,15 @@ export function TopRibbonBar(): JSX.Element {
                     value={tab.id}
                     className={`ribbon-tab-btn ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
                     disabled={disabled}
+                    onClick={(e) => {
+                      if (disabled) {
+                        e.preventDefault()
+                        navigate('/projects')
+                      }
+                    }}
                     title={
                       disabled
-                        ? 'Selecione ou crie um projeto primeiro'
+                        ? 'Crie ou selecione um projeto no menu Arquivo para desbloquear esta etapa'
                         : tab.stepNumber
                         ? `Etapa ${tab.stepNumber}: ${tab.label}`
                         : tab.label
