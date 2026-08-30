@@ -487,9 +487,26 @@ export function SettingsPage(): JSX.Element {
   const [importingProfile, setImportingProfile] = useState(false)
   const [profileImportResult, setProfileImportResult] = useState<{ success: boolean; message: string; details?: string } | null>(null)
 
-  // ── Gestão de Convites & Controle de Usuários (Owner) ─────────────
+  // ── Gestão de Abas Principais & Controle de Usuários (Owner) ─────
   const { user } = useAuthStore()
   const isOwner = user?.role === 'owner'
+  const [mainTab, setMainTab] = useState<'ai' | 'sources' | 'appearance' | 'portability' | 'admin'>(() => {
+    try {
+      const saved = localStorage.getItem('rsac_settings_tab')
+      if (saved && ['ai', 'sources', 'appearance', 'portability', 'admin'].includes(saved)) {
+        return saved as any
+      }
+    } catch {}
+    return 'ai'
+  })
+
+  const handleSelectMainTab = (tab: 'ai' | 'sources' | 'appearance' | 'portability' | 'admin') => {
+    setMainTab(tab)
+    try {
+      localStorage.setItem('rsac_settings_tab', tab)
+    } catch {}
+  }
+
   const [adminTab, setAdminTab] = useState<'invites' | 'users'>('invites')
   
   // Convites
@@ -1106,7 +1123,51 @@ export function SettingsPage(): JSX.Element {
         }
       />
 
-      {/* Master AI Toggle Card */}
+      {/* ── Navegação por Abas Principais de Configurações ── */}
+      <nav className="settings-main-tabs" aria-label="Abas de configurações">
+        <button
+          type="button"
+          className={`settings-main-tab-btn ${mainTab === 'ai' ? 'active' : ''}`}
+          onClick={() => handleSelectMainTab('ai')}
+        >
+          <Sparkles size={16} /> Inteligência Artificial
+        </button>
+        <button
+          type="button"
+          className={`settings-main-tab-btn ${mainTab === 'sources' ? 'active' : ''}`}
+          onClick={() => handleSelectMainTab('sources')}
+        >
+          <Globe size={16} /> Bases Científicas
+        </button>
+        <button
+          type="button"
+          className={`settings-main-tab-btn ${mainTab === 'appearance' ? 'active' : ''}`}
+          onClick={() => handleSelectMainTab('appearance')}
+        >
+          <Palette size={16} /> Aparência & Tema
+        </button>
+        <button
+          type="button"
+          className={`settings-main-tab-btn ${mainTab === 'portability' ? 'active' : ''}`}
+          onClick={() => handleSelectMainTab('portability')}
+        >
+          <FolderArchive size={16} /> Backup & Portabilidade
+        </button>
+        {isOwner && (
+          <button
+            type="button"
+            className={`settings-main-tab-btn ${mainTab === 'admin' ? 'active' : ''}`}
+            onClick={() => handleSelectMainTab('admin')}
+          >
+            <ShieldCheck size={16} /> Administração & Usuários
+          </button>
+        )}
+      </nav>
+
+      {/* ── ABA 1: INTELIGÊNCIA ARTIFICIAL ── */}
+      {mainTab === 'ai' && (
+        <div className="settings-tab-content">
+          {/* Master AI Toggle Card */}
       <Card className={`master-ai-toggle-card ${isAiActive ? 'ai-active' : 'ai-disabled'}`}>
         <div className="master-toggle-info">
           <div className="master-toggle-icon">
@@ -1140,207 +1201,8 @@ export function SettingsPage(): JSX.Element {
         </div>
       </Card>
 
-      {/* ── SEÇÃO DE PORTABILIDADE: CHAVES & PERFIL COMPLETO ── */}
-      <Card className="settings-card portability-section">
-        <div className="card-section-title">
-          <FolderArchive size={20} className="icon-accent" />
-          <h2>Portabilidade & Transferência entre Computadores</h2>
-        </div>
-        <p className="section-help">
-          Utilize as ferramentas abaixo para migrar suas configurações e projetos para qualquer outro computador com o app instalado.
-        </p>
-
-        <div className="portability-cards-grid">
-          {/* Card 1: Chaves de API */}
-          <Card surface="primaria" className="portability-card">
-            <div className="portability-header">
-              <div className="portability-icon">
-                <KeyRound size={22} />
-              </div>
-              <div className="portability-info">
-                <h3>Arquivo de Chaves de API</h3>
-                <p>
-                  Salva e carrega um arquivo estruturado padronizado (<code>.json</code> ou <code>.env</code>) contendo suas chaves do Google Gemini, Alibaba Qwen, Scopus, PubMed e OpenAlex.
-                </p>
-              </div>
-            </div>
-
-            {keysImportResult && (
-              <div className={`portability-result-box ${keysImportResult.success ? 'success' : 'error'} animate-fade-in`}>
-                {keysImportResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                <div>
-                  <strong>{keysImportResult.message}</strong>
-                  {keysImportResult.details && <div className="portability-result-details">{keysImportResult.details}</div>}
-                </div>
-              </div>
-            )}
-
-            <div className="portability-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleExportKeys}
-                disabled={exportingKeys}
-                title="Baixar arquivo JSON com todas as chaves cadastradas"
-              >
-                {exportingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
-                Exportar Chaves (.json)
-              </button>
-
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => keysFileInputRef.current?.click()}
-                disabled={importingKeys}
-                title="Carregar arquivo de chaves salvo em outro computador"
-              >
-                {importingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
-                Importar Chaves (.json / .env)
-              </button>
-              <input
-                type="file"
-                ref={keysFileInputRef}
-                className="file-input-hidden"
-                accept=".json,.env,.txt"
-                onChange={handleImportKeysFile}
-              />
-            </div>
-          </Card>
-
-          {/* Card 2: Perfil Completo */}
-          <Card surface="primaria" className="portability-card">
-            <div className="portability-header">
-              <div className="portability-icon">
-                <FolderArchive size={22} />
-              </div>
-              <div className="portability-info">
-                <h3>Perfil Completo (Workspace & Sessão)</h3>
-                <p>
-                  Exporta e restaura o ecossistema integral: tema visual, modo de IA, chaves, credenciais de bases e todos os seus projetos com protocolos, critérios, artigos e extrações.
-                </p>
-              </div>
-            </div>
-
-            {profileImportResult && (
-              <div className={`portability-result-box ${profileImportResult.success ? 'success' : 'error'} animate-fade-in`}>
-                {profileImportResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                <div>
-                  <strong>{profileImportResult.message}</strong>
-                  {profileImportResult.details && <div className="portability-result-details">{profileImportResult.details}</div>}
-                </div>
-              </div>
-            )}
-
-            <div className="portability-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={handleExportProfile}
-                disabled={exportingProfile}
-                title="Exportar perfil completo contendo projetos, artigos e configurações"
-              >
-                {exportingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
-                Exportar Perfil Completo (.json)
-              </button>
-
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => profileFileInputRef.current?.click()}
-                disabled={importingProfile}
-                title="Restaurar perfil completo em um novo PC"
-              >
-                {importingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
-                Importar Perfil Completo (.json)
-              </button>
-              <input
-                type="file"
-                ref={profileFileInputRef}
-                className="file-input-hidden"
-                accept=".json"
-                onChange={handleImportProfileFile}
-              />
-            </div>
-          </Card>
-        </div>
-      </Card>
-
-      {/* ── Theme & Color Palette Selection Card ── */}
-      <Card className="settings-card theme-palette-card">
-        <div className="card-section-title">
-          <Palette size={20} className="icon-accent" />
-          <h2>Aparência & Paletas de Cores do Sistema</h2>
-        </div>
-        <p className="section-help">
-          Personalize a identidade visual do Revsist selecionando uma das paletas de cores harmônicas projetadas para alta produtividade, contraste e leitura acadêmica prolongada.
-        </p>
-
-        <div className="themes-grid">
-          {COLOR_THEMES.map((t) => {
-            const isSelected =
-              theme === t.id ||
-              (t.id === 'dark' && (theme === 'organic-dark' || theme === 'dark')) ||
-              (t.id === 'light' && (theme === 'organic-light' || theme === 'light'))
-            return (
-              <button
-                type="button"
-                key={t.id}
-                className={`theme-card-item ${isSelected ? 'selected' : ''}`}
-                onClick={() => setTheme(t.id)}
-                title={`Aplicar paleta ${t.name}`}
-                aria-pressed={isSelected}
-              >
-                <div className="theme-card-header">
-                  <span className="theme-card-name">{t.name}</span>
-                </div>
-                <p className="theme-card-subtitle">{t.subtitle}</p>
-                <div className="theme-color-swatches" aria-label="Amostras de cores do tema">
-                  <span className="swatch" style={{ backgroundColor: t.colors.c1 }} title={`Cor 1: ${t.colors.c1}`} />
-                  <span className="swatch" style={{ backgroundColor: t.colors.c2 }} title={`Cor 2: ${t.colors.c2}`} />
-                  <span className="swatch" style={{ backgroundColor: t.colors.c3 }} title={`Cor 3: ${t.colors.c3}`} />
-                  <span className="swatch" style={{ backgroundColor: t.colors.c4 }} title={`Cor 4: ${t.colors.c4}`} />
-                  <span className="swatch" style={{ backgroundColor: t.colors.c5 }} title={`Cor 5: ${t.colors.c5}`} />
-                </div>
-                {isSelected && (
-                  <div className="theme-selected-badge">
-                    <Check size={11} aria-hidden="true" /> Tema Ativo
-                  </div>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ── Identidade visual: a marca acompanha a paleta ativa ── */}
-        <div className="brand-identity-strip">
-          <RsacLockup size="lg" tone="auto" />
-          <div className="brand-identity-meta">
-            <p className="brand-identity-note">
-              O monograma <strong>R-Lupa</strong> — cujo laço é a lente e cuja perna diagonal
-              é o cabo — se re-pigmenta com a paleta selecionada acima: haste e lente seguem
-              a cor do texto, o cabo segue a cor de acento do tema.
-            </p>
-            <div className="brand-identity-facts">
-              <span className="brand-fact">
-                <span className="brand-fact-label">Backend</span>
-                <span className="brand-fact-value">{backendVersion || '—'}</span>
-              </span>
-              <span className="brand-fact">
-                <span className="brand-fact-label">Estágio</span>
-                <span className="brand-fact-value">Beta em desenvolvimento</span>
-              </span>
-              <span className="brand-fact">
-                <span className="brand-fact-label">Paletas</span>
-                <span className="brand-fact-value">{COLOR_THEMES.length} temas</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div className="settings-grid" style={{ opacity: isAiActive ? 1 : 0.6 }}>
-        {/* Left Column: AI Provider & Models Catalog */}
-        <div className="settings-col">
+          <div className="settings-grid" style={{ opacity: isAiActive ? 1 : 0.6, marginTop: 'var(--space-4)' }}>
+            <div className="settings-col">
           <Card className="settings-card">
             <div className="card-section-title">
               <Sparkles size={20} className="icon-accent" />
@@ -1611,9 +1473,8 @@ export function SettingsPage(): JSX.Element {
           </Card>
         </div>
 
-        {/* Right Column: Hyperparameters & Preferences */}
-        <div className="settings-col">
-          <Card className="settings-card">
+            <div className="settings-col">
+              <Card className="settings-card">
             <div className="card-section-title">
               <Sliders size={20} className="icon-accent" />
               <h2>Hiperparâmetros de Inferência</h2>
@@ -1657,9 +1518,16 @@ export function SettingsPage(): JSX.Element {
               </select>
             </div>
           </Card>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* ── ABA 2: BASES CIENTÍFICAS ── */}
+      {mainTab === 'sources' && (
+        <div className="settings-tab-content">
           {/* Scientific Sources Credentials Card */}
-          <Card className="settings-card" style={{ marginTop: 'var(--space-4)' }}>
+          <Card className="settings-card" >
             <div className="card-section-title">
               <Globe size={20} className="icon-accent" />
               <h2>Credenciais de Bases Científicas</h2>
@@ -1752,10 +1620,221 @@ export function SettingsPage(): JSX.Element {
               )}
             </div>
           </Card>
+        </div>
+      )}
 
-          {/* Card de Gestão de Convites & Controle de Usuários (Apenas Owner / Administrador) */}
-          {isOwner && (
-            <Card className="settings-card invites-management-card" style={{ marginTop: '20px' }}>
+      {/* ── ABA 3: APARÊNCIA & TEMAS ── */}
+      {mainTab === 'appearance' && (
+        <div className="settings-tab-content">
+          {/* ── Theme & Color Palette Selection Card ── */}
+      <Card className="settings-card theme-palette-card">
+        <div className="card-section-title">
+          <Palette size={20} className="icon-accent" />
+          <h2>Aparência & Paletas de Cores do Sistema</h2>
+        </div>
+        <p className="section-help">
+          Personalize a identidade visual do Revsist selecionando uma das paletas de cores harmônicas projetadas para alta produtividade, contraste e leitura acadêmica prolongada.
+        </p>
+
+        <div className="themes-grid">
+          {COLOR_THEMES.map((t) => {
+            const isSelected =
+              theme === t.id ||
+              (t.id === 'dark' && (theme === 'organic-dark' || theme === 'dark')) ||
+              (t.id === 'light' && (theme === 'organic-light' || theme === 'light'))
+            return (
+              <button
+                type="button"
+                key={t.id}
+                className={`theme-card-item ${isSelected ? 'selected' : ''}`}
+                onClick={() => setTheme(t.id)}
+                title={`Aplicar paleta ${t.name}`}
+                aria-pressed={isSelected}
+              >
+                <div className="theme-card-header">
+                  <span className="theme-card-name">{t.name}</span>
+                </div>
+                <p className="theme-card-subtitle">{t.subtitle}</p>
+                <div className="theme-color-swatches" aria-label="Amostras de cores do tema">
+                  <span className="swatch" style={{ backgroundColor: t.colors.c1 }} title={`Cor 1: ${t.colors.c1}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c2 }} title={`Cor 2: ${t.colors.c2}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c3 }} title={`Cor 3: ${t.colors.c3}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c4 }} title={`Cor 4: ${t.colors.c4}`} />
+                  <span className="swatch" style={{ backgroundColor: t.colors.c5 }} title={`Cor 5: ${t.colors.c5}`} />
+                </div>
+                {isSelected && (
+                  <div className="theme-selected-badge">
+                    <Check size={11} aria-hidden="true" /> Tema Ativo
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── Identidade visual: a marca acompanha a paleta ativa ── */}
+        <div className="brand-identity-strip">
+          <RsacLockup size="lg" tone="auto" />
+          <div className="brand-identity-meta">
+            <p className="brand-identity-note">
+              O monograma <strong>R-Lupa</strong> — cujo laço é a lente e cuja perna diagonal
+              é o cabo — se re-pigmenta com a paleta selecionada acima: haste e lente seguem
+              a cor do texto, o cabo segue a cor de acento do tema.
+            </p>
+            <div className="brand-identity-facts">
+              <span className="brand-fact">
+                <span className="brand-fact-label">Backend</span>
+                <span className="brand-fact-value">{backendVersion || '—'}</span>
+              </span>
+              <span className="brand-fact">
+                <span className="brand-fact-label">Estágio</span>
+                <span className="brand-fact-value">Beta em desenvolvimento</span>
+              </span>
+              <span className="brand-fact">
+                <span className="brand-fact-label">Paletas</span>
+                <span className="brand-fact-value">{COLOR_THEMES.length} temas</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </Card>
+        </div>
+      )}
+
+      {/* ── ABA 4: BACKUP & PORTABILIDADE ── */}
+      {mainTab === 'portability' && (
+        <div className="settings-tab-content">
+          {/* ── SEÇÃO DE PORTABILIDADE: CHAVES & PERFIL COMPLETO ── */}
+      <Card className="settings-card portability-section">
+        <div className="card-section-title">
+          <FolderArchive size={20} className="icon-accent" />
+          <h2>Portabilidade & Transferência entre Computadores</h2>
+        </div>
+        <p className="section-help">
+          Utilize as ferramentas abaixo para migrar suas configurações e projetos para qualquer outro computador com o app instalado.
+        </p>
+
+        <div className="portability-cards-grid">
+          {/* Card 1: Chaves de API */}
+          <Card surface="primaria" className="portability-card">
+            <div className="portability-header">
+              <div className="portability-icon">
+                <KeyRound size={22} />
+              </div>
+              <div className="portability-info">
+                <h3>Arquivo de Chaves de API</h3>
+                <p>
+                  Salva e carrega um arquivo estruturado padronizado (<code>.json</code> ou <code>.env</code>) contendo suas chaves do Google Gemini, Alibaba Qwen, Scopus, PubMed e OpenAlex.
+                </p>
+              </div>
+            </div>
+
+            {keysImportResult && (
+              <div className={`portability-result-box ${keysImportResult.success ? 'success' : 'error'} animate-fade-in`}>
+                {keysImportResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <div>
+                  <strong>{keysImportResult.message}</strong>
+                  {keysImportResult.details && <div className="portability-result-details">{keysImportResult.details}</div>}
+                </div>
+              </div>
+            )}
+
+            <div className="portability-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleExportKeys}
+                disabled={exportingKeys}
+                title="Baixar arquivo JSON com todas as chaves cadastradas"
+              >
+                {exportingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                Exportar Chaves (.json)
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => keysFileInputRef.current?.click()}
+                disabled={importingKeys}
+                title="Carregar arquivo de chaves salvo em outro computador"
+              >
+                {importingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+                Importar Chaves (.json / .env)
+              </button>
+              <input
+                type="file"
+                ref={keysFileInputRef}
+                className="file-input-hidden"
+                accept=".json,.env,.txt"
+                onChange={handleImportKeysFile}
+              />
+            </div>
+          </Card>
+
+          {/* Card 2: Perfil Completo */}
+          <Card surface="primaria" className="portability-card">
+            <div className="portability-header">
+              <div className="portability-icon">
+                <FolderArchive size={22} />
+              </div>
+              <div className="portability-info">
+                <h3>Perfil Completo (Workspace & Sessão)</h3>
+                <p>
+                  Exporta e restaura o ecossistema integral: tema visual, modo de IA, chaves, credenciais de bases e todos os seus projetos com protocolos, critérios, artigos e extrações.
+                </p>
+              </div>
+            </div>
+
+            {profileImportResult && (
+              <div className={`portability-result-box ${profileImportResult.success ? 'success' : 'error'} animate-fade-in`}>
+                {profileImportResult.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <div>
+                  <strong>{profileImportResult.message}</strong>
+                  {profileImportResult.details && <div className="portability-result-details">{profileImportResult.details}</div>}
+                </div>
+              </div>
+            )}
+
+            <div className="portability-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handleExportProfile}
+                disabled={exportingProfile}
+                title="Exportar perfil completo contendo projetos, artigos e configurações"
+              >
+                {exportingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                Exportar Perfil Completo (.json)
+              </button>
+
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => profileFileInputRef.current?.click()}
+                disabled={importingProfile}
+                title="Restaurar perfil completo em um novo PC"
+              >
+                {importingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
+                Importar Perfil Completo (.json)
+              </button>
+              <input
+                type="file"
+                ref={profileFileInputRef}
+                className="file-input-hidden"
+                accept=".json"
+                onChange={handleImportProfileFile}
+              />
+            </div>
+          </Card>
+        </div>
+      </Card>
+        </div>
+      )}
+
+      {/* ── ABA 5: ADMINISTRAÇÃO & USUÁRIOS (Owner) ── */}
+      {mainTab === 'admin' && isOwner && (
+        <div className="settings-tab-content">
+          <Card className="settings-card invites-management-card" >
               <div className="card-header">
                 <div className="card-icon" style={{ background: 'var(--color-primary-subtle, rgba(39, 76, 119, 0.1))', color: 'var(--color-primary)' }}>
                   <ShieldCheck size={22} />
@@ -1846,7 +1925,7 @@ export function SettingsPage(): JSX.Element {
                   </form>
 
                   {/* Tabela de Convites */}
-                  <div style={{ marginTop: '20px' }}>
+                  <div >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
                         Histórico de Convites ({invites.length})
@@ -2072,9 +2151,11 @@ export function SettingsPage(): JSX.Element {
                 </div>
               )}
             </Card>
-          )}
+        </div>
+      )}
 
-          {/* Modal de Gestão & Edição de Usuário */}
+
+      {/* Modal de Gestão & Edição de Usuário */}
           <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
             <DialogContent size="lg" variant="window">
               <DialogTitlebar closeLabel="Fechar gestão do usuário">
@@ -2334,9 +2415,6 @@ export function SettingsPage(): JSX.Element {
               </DialogBody>
             </DialogContent>
           </Dialog>
-
-        </div>
-      </div>
     </div>
   )
 }

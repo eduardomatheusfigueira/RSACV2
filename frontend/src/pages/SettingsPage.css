@@ -725,6 +725,66 @@
   }
 }
 
+/* ── Navegação por Abas Principais de Configurações ─────────────────── */
+
+.settings-main-tabs {
+  display: flex;
+  gap: var(--space-2);
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: var(--space-6);
+  overflow-x: auto;
+  padding-bottom: 0;
+}
+
+.settings-main-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.settings-main-tab-btn:hover {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+}
+
+.settings-main-tab-btn.active {
+  background: var(--color-bg-primary);
+  color: var(--color-primary);
+  border-color: var(--color-border);
+  border-top: 3px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-bg-primary);
+  margin-bottom: -2px;
+  font-weight: var(--weight-bold);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.settings-tab-content {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ── Gestão de Usuários & Convites (Owner / Gerente) ─────────────────── */
 
 .admin-tabs-nav {
