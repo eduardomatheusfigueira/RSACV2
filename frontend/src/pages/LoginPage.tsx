@@ -26,7 +26,6 @@ import { Button, FormGroup, Input } from '@/components/ui'
 import { RsacLockup } from '@/components/brand/RsacLockup'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { api } from '@/api/client'
-import { analisarUrlDeBackend, mensagemDeConfirmacao } from '@/api/backendUrl'
 import './LoginPage.css'
 
 export function LoginPage(): JSX.Element {
@@ -511,32 +510,6 @@ export function LoginPage(): JSX.Element {
             )}
           </>
         )}
-
-        <div className="login-server-info">
-          <span>Servidor: <strong>{api.getBackendHost()}</strong></span>
-          <button
-            type="button"
-            className="login-change-server-btn"
-            onClick={() => {
-              const current = api.getBaseUrl().replace(/\/api\/v1\/?$/, '')
-              const input = window.prompt(
-                'Configurar URL do Backend / Servidor (ex: https://revisao.suauniversidade.br ou http://127.0.0.1:8000):',
-                current
-              )
-              if (!input || !input.trim()) return
-              try {
-                const destino = analisarUrlDeBackend(input)
-                if (!window.confirm(mensagemDeConfirmacao(destino))) return
-                api.setBaseUrl(destino.url)
-                window.location.reload()
-              } catch (err: any) {
-                window.alert(err?.message ?? 'Endereço inválido.')
-              }
-            }}
-          >
-            Alterar Servidor
-          </button>
-        </div>
 
         {status?.deployment_profile === 'server' && (
           <p className="login-footnote">

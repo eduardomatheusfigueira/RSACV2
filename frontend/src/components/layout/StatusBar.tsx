@@ -10,7 +10,6 @@ import { Sparkles, Edit3, Terminal, AlertCircle, LogOut, UserRound } from 'lucid
 import { RsacMark } from '@/components/brand/RsacMark'
 import { BetaBadge } from '@/components/brand/BetaBadge'
 import { api } from '@/api/client'
-import { analisarUrlDeBackend, mensagemDeConfirmacao } from '@/api/backendUrl'
 import './StatusBar.css'
 
 export function StatusBar(): JSX.Element {
@@ -21,26 +20,8 @@ export function StatusBar(): JSX.Element {
   const errorCount = entries.filter((e) => e.level === 'error').length
 
   const statusText =
-    backendStatus === 'online' ? 'Backend Online' :
-    backendStatus === 'connecting' ? 'Conectando...' : 'Backend Offline'
-
-  const handleConfigureBackend = () => {
-    const current = api.getBaseUrl().replace(/\/api\/v1\/?$/, '')
-    const input = window.prompt(
-      'Configurar URL do Backend (ex: http://127.0.0.1:8000):',
-      current
-    )
-    if (!input || !input.trim()) return
-
-    try {
-      const destino = analisarUrlDeBackend(input)
-      if (!window.confirm(mensagemDeConfirmacao(destino))) return
-      api.setBaseUrl(destino.url)
-      window.location.reload()
-    } catch (err: any) {
-      window.alert(err?.message ?? 'Endereço de servidor inválido.')
-    }
-  }
+    backendStatus === 'online' ? 'Serviços Online' :
+    backendStatus === 'connecting' ? 'Conectando...' : 'Serviços Offline'
 
   const handleLogout = async () => {
     if (!window.confirm('Encerrar a sessão? Você precisará entrar novamente.')) return
@@ -58,15 +39,10 @@ export function StatusBar(): JSX.Element {
         <span className="status-divider">|</span>
         <span
           className="status-indicator"
-          onClick={handleConfigureBackend}
-          style={{ cursor: 'pointer' }}
-          title={`Backend: ${api.getBaseUrl()} (Clique para alterar URL)`}
+          title={`Status da Aplicação: ${statusText}`}
         >
           <span className={`status-dot ${backendStatus || 'offline'}`} />
           {statusText}
-          {/* O host fica permanentemente visível: é o que permite perceber
-              que a interface está falando com outro servidor (doc 29 §29.12). */}
-          <span className="status-backend-host">{api.getBackendHost()}</span>
         </span>
         <span className="status-divider">|</span>
         <span className={`status-ai-mode ${aiEnabled ? 'active' : 'manual'}`}>

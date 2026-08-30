@@ -71,140 +71,69 @@ function aplicarApiUrlDaLocalizacao(): void {
 }
 
 function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Element {
-  const [customUrl, setCustomUrl] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
-
   useEffect(() => {
-    const id = window.setInterval(onRetry, 5000)
+    const id = window.setInterval(onRetry, 4000)
     return () => window.clearInterval(id)
   }, [onRetry])
 
-  const handleConnect = (targetUrl: string) => {
-    setErrorMsg('')
-    const trimmed = targetUrl.trim()
-    if (!trimmed) {
-      setErrorMsg('Informe uma URL de servidor ou túnel.')
-      return
-    }
-    try {
-      const destino = analisarUrlDeBackend(trimmed)
-      if (!window.confirm(mensagemDeConfirmacao(destino))) return
-      api.setBaseUrl(destino.url)
-      onRetry()
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'URL inválida.')
-    }
-  }
-
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '1.25rem',
-      background: 'linear-gradient(160deg, #1a3350 0%, #0d1b2a 100%)',
-      color: '#f8fafc',
-      fontFamily: 'Inter, system-ui, sans-serif',
-      padding: '2rem',
-      textAlign: 'center',
-      zIndex: 10000
-    }}>
-      <div style={{
-        maxWidth: '540px',
-        width: '100%',
-        background: '#132438',
-        border: '1px solid #234164',
-        borderRadius: '12px',
-        padding: '2rem',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
         display: 'flex',
         flexDirection: 'column',
-        gap: '1.25rem'
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <h2 style={{ color: '#38bdf8', margin: 0, fontSize: '1.4rem' }}>Conectar ao Servidor Backend</h2>
-          <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.5, margin: 0 }}>
-            Não foi possível conectar ao endereço atual (<code>{api.getBackendHost()}</code>). Cole o endereço do seu servidor local ou túnel Cloudflare abaixo:
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1.25rem',
+        background: 'linear-gradient(160deg, #101c2c 0%, #080e18 100%)',
+        color: '#f8fafc',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        padding: '2rem',
+        textAlign: 'center',
+        zIndex: 10000,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '480px',
+          width: '100%',
+          background: '#132235',
+          border: '1px solid #233b58',
+          borderRadius: '12px',
+          padding: '2.5rem 2rem',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1.25rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+          <h2 style={{ color: '#38bdf8', margin: 0, fontSize: '1.35rem', fontWeight: 600 }}>
+            Conectando aos Serviços
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
+            Aguardando resposta do servidor Revsist. A conexão será restabelecida automaticamente assim que o servidor estiver disponível.
           </p>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', textAlign: 'left' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#cbd8e4' }}>
-            URL do Backend / Túnel Cloudflare:
-          </label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="text"
-              placeholder="Ex: https://seu-tunel.trycloudflare.com ou http://localhost:8000"
-              value={customUrl}
-              onChange={(e) => setCustomUrl(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleConnect(customUrl)}
-              style={{
-                flex: 1,
-                padding: '0.7rem 1rem',
-                background: '#0d1b2a',
-                border: '1px solid #335377',
-                borderRadius: '6px',
-                color: '#fff',
-                fontSize: '0.9rem',
-                outline: 'none'
-              }}
-            />
-            <button
-              onClick={() => handleConnect(customUrl)}
-              style={{
-                padding: '0.7rem 1.25rem',
-                background: '#2563eb',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Conectar
-            </button>
-          </div>
-          {errorMsg && (
-            <span style={{ color: '#f87171', fontSize: '0.8rem' }}>{errorMsg}</span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ flex: 1, height: '1px', background: '#234164' }} />
-          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>ou escolha um atalho</span>
-          <div style={{ flex: 1, height: '1px', background: '#234164' }} />
-        </div>
-
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => handleConnect('http://127.0.0.1:8000')}
-            style={{
-              padding: '0.6rem 1rem',
-              background: '#1e3a5f',
-              border: '1px solid #3b6294',
-              borderRadius: '6px',
-              color: '#e2e8f0',
-              fontSize: '0.85rem',
-              cursor: 'pointer'
-            }}
-          >
-            💻 Usar Localhost (127.0.0.1:8000)
-          </button>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.5rem' }}>
           <button
             onClick={() => onRetry()}
             style={{
-              padding: '0.6rem 1rem',
-              background: '#334155',
-              border: '1px solid #475569',
+              padding: '0.65rem 1.5rem',
+              background: '#2563eb',
+              border: 'none',
               borderRadius: '6px',
-              color: '#e2e8f0',
-              fontSize: '0.85rem',
-              cursor: 'pointer'
+              color: '#ffffff',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'background 0.2s ease',
             }}
           >
             🔄 Tentar Novamente
@@ -216,6 +145,7 @@ function BackendUnavailableView({ onRetry }: { onRetry: () => void }): JSX.Eleme
 }
 
 /**
+
  * Portão de autenticação.
  */
 function AuthGate({ children }: { children: React.ReactNode }): JSX.Element {
