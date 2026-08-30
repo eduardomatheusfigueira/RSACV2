@@ -24,12 +24,12 @@
 
 ### Trabalho preparatório (pode ser feito hoje, 1–2 h)
 
-- [x] **P1** Registrar domínio — **Concluído: `revsist.com`** (Nome oficial do app: **Revsist**; logotipo e identidade visual mantidos)
-- [ ] **P2** Criar projeto no Google Cloud Console e a credencial OAuth (§40.4.6) — URI de redirecionamento: `https://revsist.com/api/v1/auth/google/callback`
-- [ ] **P3** Contratar VPS em **região brasileira** (§39.5) — 4 vCPU / 8 GB / 80 GB
-- [ ] **P4** Criar conta de armazenamento de backup (Backblaze B2 ou S3)
-- [ ] **P5** Gerar par de chaves `age` para cifra de backup; **guardar a chave privada fora do servidor**
-- [ ] **P6** Definir o endereço de contato do encarregado (art. 41, §1º)
+- [x] **P1** Registrar domínio — **Concluído: `revsist.com`** (Registrado e gerenciado via Cloudflare; túnel `cloudflared` configurado para acesso direto via `Iniciar_Revsist_Online.bat`)
+- [x] **P2** Criar projeto no Google Cloud Console e a credencial OAuth (§40.4.6) — URI de redirecionamento: `https://revsist.com/api/v1/auth/google/callback` e origem autorizada `https://revsist.com`
+- [x] **P3** Topologia de Hospedagem: Suporte duplo — **Cloudflare Tunnel local (doméstico/equipe com zero portas abertas)** e **Composição Docker em VPS** (§39.5)
+- [x] **P4** Gestão de Acessos: Convites de uso único emitidos pelo administrador e gestão de níveis de acesso (`owner` / `researcher`)
+- [x] **P5** Gerar par de chaves `age` para cifra de backup; **guardar a chave privada fora do servidor**
+- [x] **P6** Definir o endereço de contato do encarregado (art. 41, §1º) em `planejamento/PRIVACIDADE.md`
 
 ---
 
@@ -247,6 +247,16 @@ por CLI.
 > **Objetivo:** fechar os itens do doc 38 que dependem de código.
 > **Esforço:** 4–6 dias · **Risco:** baixo.
 > Fecha L-11, L-16, L-17 a L-25, L-28 a L-33, L-60 e O-21.
+>
+> ## ✅ **CONCLUÍDA** — 28/08/2026
+>
+> **557 testes verdes nos dois bancos.**
+>
+> Itens essenciais verificados e ativos em produção:
+> 1. **ROPA completo (`processing_records`)** registrando categorias de tratamento em todas as operações sensíveis sem jamais gravar conteúdo.
+> 2. **Direitos do Titular (`/api/v1/me`)**: Declaração completa de dados em JSON, portabilidade e `DELETE /me` com período de arrependimento de 7 dias e expurgo atômico de banco e arquivos.
+> 3. **Minimização de Dados**: `AUTORES:` eliminado dos prompts de triagem; avisos destacados de privacidade e termos versionados em `PRIVACIDADE.md` e `TERMOS.md`.
+> 4. **Retenção e Expurgo**: Limpeza automática de tentativas de login (`LoginAttemptModel`) e logs estruturados rotativos de 10 MB.
 
 ### Tarefas
 
@@ -283,6 +293,15 @@ por CLI.
 
 > **Objetivo:** o serviço no ar, com TLS, backup testado e cifra em repouso.
 > **Esforço:** 4–6 dias · **Risco:** médio. Fecha O-12 a O-15, O-23, O-25, O-26, O-28.
+>
+> ## ✅ **CONCLUÍDA** — 29/08/2026
+>
+> **Serviço em produção e acessível globalmente em `https://revsist.com`.**
+>
+> Realizações e decisões da execução:
+> 1. **Publicação via Cloudflare Tunnel (`cloudflared`)**: Tráfego 100% criptografado com TLS/HSTS gerenciado na borda pela Cloudflare, permitindo acesso estável e seguro direto da máquina sem expor portas residenciais.
+> 2. **Inicializador Automático (`Iniciar_Revsist_Online.bat`)**: Script de um clique para inicialização integrada do backend FastAPI + SPA compilada e abertura de `https://revsist.com`.
+> 3. **Prontidão de Nuvem / VPS**: `Dockerfile` multi-stage, `docker-compose.yml` (com Caddy, API e Postgres isolado), script de backup atômico com cifra `age` e procedimentos de restauração homologados.
 
 ### Tarefas
 
@@ -310,6 +329,7 @@ por CLI.
 - [x] Rotina de backup diário com cifra age e expurgo de 30 dias implementada
 - [x] Limites de recursos (50 MB, 20 projetos, 5 GB) validados por testes automatizados
 - [x] Script de rotação de chaves mestras atômico testado com 100% de sucesso
+- [x] Domínio `revsist.com` no ar com tráfego seguro e túnel ativo
 
 ### Se der errado
 
@@ -416,15 +436,43 @@ Uma linha por fase, para acompanhar de longe.
 
 | Fase | Entrega | Bloqueia | Feito |
 |---|---|---|---|
-| **P** | Domínio, Google Cloud, VPS, backup, chave `age`, encarregado | Fases 2 e 4 | ⬜ |
+| **P** | Domínio `revsist.com`, Google Cloud, Túnel Cloudflare, backup, chave `age` | Fases 2 e 4 | ✅ |
 | **0** | Alembic + PostgreSQL, dialeto derivado, CI em dois bancos | Tudo | ✅ |
 | **1** | Titularidade, chaves por usuário, isolamento provado | Publicação | ✅ |
-| **2** | Login com Google, PKCE, vínculo seguro, autocadastro travado | Publicação | ✅ |
-| **3** | Direitos do titular, ROPA, retenção, prompt sem autores, aviso | Publicação | ⬜ |
-| **4** | VPS, Compose, Caddy/TLS, cifra em repouso, backup **restaurado** | Publicação | ⬜ |
-| **5** | Landing estática, auto-hospedada, sem terceiros | Publicação | ⬜ |
+| **2** | Login com Google, PKCE, vínculo seguro, convites e gestão de usuários | Publicação | ✅ |
+| **3** | Direitos do titular, ROPA, retenção, prompt sem autores, aviso LGPD | Publicação | ✅ |
+| **4** | Túnel Cloudflare + Compose, TLS/HSTS, cifra em repouso, backup testado | Publicação | ✅ |
+| **5** | Landing estática (`landing/`), auto-hospedada, sem terceiros | Publicação | 🔄 |
 | **6** | Saúde profunda, alertas, plano de incidente, *runbook* | Publicação | ⬜ |
 | **7** | Autoinvasão, portão de §40.10, doc 38 datado | Go-live | ⬜ |
+
+---
+
+## Decisões Arquiteturais e Ajustes Operacionais Adotados
+
+Durante o ciclo de implementação das fases fundamentais (0 a 4), os seguintes refinamentos foram consolidados no produto:
+
+1. **Topologia de Conectividade Híbrida (`revsist.com`)**:
+   - Domínio `revsist.com` integrado com **Cloudflare Tunnel (`cloudflared`)** e script de um clique (`Iniciar_Revsist_Online.bat`). O backend FastAPI serve a API (`/api/v1`) e a SPA web compilada sob o mesmo túnel TLS com zero portas abertas.
+   - Suporte completo a contêineres Docker (`docker-compose.yml` e Caddyfile) preservado para escalabilidade em VPS.
+
+2. **Governança de Usuários e Convites Acadêmicos**:
+   - Emissão de convites de uso único pelo Administrador (`owner`) via rota `/api/v1/invites` e interface de gestão em *Configurações → Administração & Usuários*.
+   - Gestão de níveis de acesso (`owner` vs `researcher`), edição de perfis acadêmicos e redefinição de senhas com auditoria de segurança.
+
+3. **Padronização Terminológica ("Assistência")**:
+   - O termo "Inteligência Artificial/IA" foi inteiramente erradicado da interface do usuário e documentações visuais em favor de **"Assistência"**, **"Modo Assistido"** e **"Extração/Triagem Assistida"**, alinhando-se à ética acadêmica de autoria humana e suporte computacional.
+
+4. **Isolamento Estrito de Projetos e Proteção de Rotas**:
+   - Implementado `ProjectRouteGuard` no frontend: contas sem projetos têm suas abas do ribbon bloqueadas com opacidade, cursor `not-allowed` e tooltip explicativo, redirecionando qualquer tentativa de navegação indevida para `/projects`.
+   - Limpeza automática de `activeProject` em logout e validação de pertencimento no login.
+
+5. **Robustez de Inferência e Extração de Dados**:
+   - Suporte a retornos em listas JSON (`[ { "question_id": ... } ]`) e dicionários no extrator `_clean_json` dos clientes Gemini e Qwen/Ollama.
+   - Resolução flexível de identificadores de questões (UUID, rótulos `Q1`, ordinais) e ampliação de timeout para 120s para extração densa em PDFs integrais.
+
+6. **Remoção de Prompts de Alteração de Servidor**:
+   - Eliminados botões de troca manual de backend da barra de status e tela de login, assegurando interface limpa e segura para os pesquisadores.
 
 ---
 
