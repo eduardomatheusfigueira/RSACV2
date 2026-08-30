@@ -28,6 +28,7 @@ interface AuthState {
 
   bootstrap: () => Promise<void>
   login: (username: string, password: string) => Promise<boolean>
+  registerWithInvite: (payload: import('@/types/api').RegisterWithInvitePayload) => Promise<boolean>
   loginWithLocalToken: (token: string) => Promise<boolean>
   logout: () => Promise<void>
   setError: (message: string | null) => void
@@ -124,6 +125,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return true
     } catch (err: any) {
       set({ error: err?.message || 'Não foi possível entrar.', submitting: false })
+      return false
+    }
+  },
+
+  registerWithInvite: async (payload) => {
+    set({ submitting: true, error: null })
+    try {
+      const res = await api.registerWithInvite(payload)
+      set({ phase: 'authenticated', user: res.user, error: null, submitting: false })
+      return true
+    } catch (err: any) {
+      set({ error: err?.message || 'Não foi possível concluir o cadastro com convite.', submitting: false })
       return false
     }
   },

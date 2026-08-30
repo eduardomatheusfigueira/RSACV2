@@ -1,13 +1,27 @@
 /**
- * Revsist — Tela de Acesso
+ * Revsist — Tela de Acesso e Registro com Convite
  *
- * A porta que o modo servidor não tinha. Aparece apenas quando o backend
- * reporta que não há sessão válida — no app de mesa o token local resolve
- * antes, e esta tela nunca chega a ser vista.
+ * Suporta entrada direta para usuários cadastrados e fluxo completo de
+ * registro acadêmico para portadores de convite de uso único.
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, ChevronDown, KeyRound, LogIn, ShieldCheck, User } from 'lucide-react'
+import {
+  AlertCircle,
+  Award,
+  BookOpen,
+  Building2,
+  CheckCircle2,
+  GraduationCap,
+  KeyRound,
+  LogIn,
+  Mail,
+  Phone,
+  ShieldCheck,
+  Ticket,
+  User,
+  UserPlus,
+} from 'lucide-react'
 import { Button, FormGroup, Input } from '@/components/ui'
 import { RsacLockup } from '@/components/brand/RsacLockup'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -15,65 +29,47 @@ import { api } from '@/api/client'
 import { analisarUrlDeBackend, mensagemDeConfirmacao } from '@/api/backendUrl'
 import './LoginPage.css'
 
-/**
- * O "G" do Google, em SVG inline.
- *
- * As diretrizes de marca do Google exigem o logotipo em quatro cores sobre
- * fundo branco ou o monocromático sobre escuro. Inline por decisão de
- * privacidade: buscá-lo de `google.com` entregaria o IP de quem abre a tela de
- * login ao Google antes mesmo de a pessoa decidir entrar com Google.
- */
-function GoogleG(): JSX.Element {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-    </svg>
-  )
-}
-
 export function LoginPage(): JSX.Element {
-  const { login, error, submitting, status, setError } = useAuthStore()
+  const { login, registerWithInvite, error, submitting, status, setError } = useAuthStore()
+
+  const [activeTab, setActiveTab] = useState<'login' | 'invite'>('login')
+
+  // Estado do formulário de Login
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const usuarioRef = useRef<HTMLInputElement>(null)
-  const comGoogle = status?.google_login_enabled === true
-  // Com o Google disponível, a senha fica recolhida: é a via de exceção
-  // (acesso de emergência do administrador), não a porta principal.
-  const [mostrarSenha, setMostrarSenha] = useState(!comGoogle)
+
+  // Estado do fluxo de Convite
+  const [inviteStep, setInviteStep] = useState<'validate' | 'form'>('validate')
+  const [inviteCodeInput, setInviteCodeInput] = useState('')
+  const [validatingInvite, setValidatingInvite] = useState(false)
+  const [inviteNote, setInviteNote] = useState('')
+  const inviteCodeRef = useRef<HTMLInputElement>(null)
+
+  // Campos de Cadastro com Convite
+  const [regFullName, setRegFullName] = useState('')
+  const [regEmail, setRegEmail] = useState('')
+  const [regPhone, setRegPhone] = useState('')
+  const [regInstitution, setRegInstitution] = useState('')
+  const [regAcademicDegree, setRegAcademicDegree] = useState('Doutorando(a)')
+  const [regIsStudying, setRegIsStudying] = useState(true)
+  const [regStudyProgram, setRegStudyProgram] = useState('')
+  const [regProfession, setRegProfession] = useState('')
+  const [regResearchArea, setRegResearchArea] = useState('')
+  const [regUsername, setRegUsername] = useState('')
+  const [regPassword, setRegPassword] = useState('')
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState('')
+  const [regTermsAccepted, setRegTermsAccepted] = useState(false)
 
   useEffect(() => {
-    if (mostrarSenha) usuarioRef.current?.focus()
-  }, [mostrarSenha])
-
-  useEffect(() => {
-    setMostrarSenha(!comGoogle)
-  }, [comGoogle])
-
-  // O callback do OAuth devolve o navegador com o motivo na query quando algo
-  // dá errado. Traduzir aqui — e não no backend — mantém a mensagem no idioma
-  // da interface e evita que o servidor devolva texto para a tela.
-  useEffect(() => {
-    const motivo = new URLSearchParams(window.location.search).get('erro')
-    if (!motivo) return
-    const mensagens: Record<string, string> = {
-      cancelado: 'Entrada cancelada no Google.',
-      estado_invalido: 'O pedido de entrada expirou. Tente novamente.',
-      recusado:
-        'O Google não confirmou este e-mail. Verifique o endereço na sua conta Google e tente de novo.',
-      indisponivel: 'A entrada com Google não está disponível neste servidor.',
-      nao_admitido: 'Esta conta Google não está autorizada neste servidor.',
-      conta_inativa: 'Esta conta está desativada. Procure quem administra o servidor.',
+    if (activeTab === 'login') {
+      usuarioRef.current?.focus()
+    } else if (inviteStep === 'validate') {
+      inviteCodeRef.current?.focus()
     }
-    setError(mensagens[motivo] ?? 'Não foi possível concluir a entrada.')
-    window.history.replaceState({}, '', window.location.pathname)
-  }, [setError])
+  }, [activeTab, inviteStep])
 
-  const semContas = status?.has_accounts === false
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username.trim() || !password) {
       setError('Informe usuário e senha.')
@@ -83,92 +79,138 @@ export function LoginPage(): JSX.Element {
     setPassword('')
   }
 
+  const handleValidateInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const codigo = inviteCodeInput.trim().toUpperCase()
+    if (!codigo) {
+      setError('Informe o código de convite recebido.')
+      return
+    }
+
+    setValidatingInvite(true)
+    setError(null)
+    try {
+      const res = await api.validateInvite(codigo)
+      if (res.valid) {
+        setInviteNote(res.note || 'Convite válido.')
+        setInviteStep('form')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Código de convite inválido, revogado ou já utilizado.')
+    } finally {
+      setValidatingInvite(false)
+    }
+  }
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (!regFullName.trim()) {
+      setError('Informe seu nome completo.')
+      return
+    }
+    if (!regEmail.trim()) {
+      setError('Informe seu endereço de e-mail.')
+      return
+    }
+    if (!regUsername.trim()) {
+      setError('Escolha um nome de usuário para login.')
+      return
+    }
+    if (!regPassword || regPassword.length < 8) {
+      setError('A senha deve conter no mínimo 8 caracteres.')
+      return
+    }
+    if (regPassword !== regPasswordConfirm) {
+      setError('As senhas digitadas não conferem.')
+      return
+    }
+    if (!regTermsAccepted) {
+      setError('É obrigatório concordar com os Termos de Uso e a Política de Privacidade.')
+      return
+    }
+
+    const payload = {
+      invite_code: inviteCodeInput.trim().toUpperCase(),
+      username: regUsername.trim().toLowerCase(),
+      password: regPassword,
+      full_name: regFullName.trim(),
+      email: regEmail.trim().toLowerCase(),
+      phone: regPhone.trim(),
+      institution: regInstitution.trim(),
+      academic_degree: regAcademicDegree,
+      is_studying: regIsStudying,
+      study_program: regStudyProgram.trim(),
+      profession: regProfession.trim(),
+      research_area: regResearchArea.trim(),
+      terms_accepted: regTermsAccepted,
+    }
+
+    await registerWithInvite(payload)
+  }
+
+  const semContas = status?.has_accounts === false
+
   return (
     <div className="login-page">
-      <div className="login-card">
+      <div className={`login-card ${activeTab === 'invite' && inviteStep === 'form' ? 'login-card--wide' : ''}`}>
         <div className="login-brand">
           <RsacLockup size="lg" />
         </div>
 
         <h1 className="login-title">Acesso ao ambiente de revisão</h1>
         <p className="login-subtitle">
-          Este servidor exige identificação. Suas credenciais protegem os projetos, os dados
-          coletados e as chaves de API configuradas.
+          Plataforma de apoio metodológico para revisões sistemáticas em Ciências Sociais Aplicadas e Desenvolvimento Regional.
         </p>
 
         {semContas ? (
-          /*
-           * Instalação sem conta nenhuma. Provisionar pela interface seria
-           * abrir um "criar o primeiro administrador" na internet — que é
-           * exatamente o buraco que esta fase fecha. O caminho é o terminal.
-           */
           <div className="login-alert login-alert--info" role="status">
             <ShieldCheck size={18} />
             <div>
               <strong>Nenhuma conta provisionada</strong>
               <p>
-                Crie a primeira conta no computador que hospeda o servidor:
+                Crie a primeira conta de administração no servidor:
                 <code>python -m app.cli create-user seu_usuario --role owner</code>
-                A senha é exibida uma única vez no terminal.
+                ou gere um convite para registro:
+                <code>python -m app.cli create-invite --note "Primeiro usuário"</code>
               </p>
             </div>
           </div>
         ) : (
           <>
-            {error && !mostrarSenha && (
-              <div className="login-alert login-alert--error" role="alert">
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
+            {/* Seletor de Modo: Login vs Convite */}
+            <div className="login-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'login'}
+                className={`login-tab ${activeTab === 'login' ? 'login-tab--active' : ''}`}
+                onClick={() => {
+                  setActiveTab('login')
+                  setError(null)
+                }}
+              >
+                <LogIn size={15} />
+                <span>Já sou cadastrado</span>
+              </button>
 
-            {comGoogle && (
-              <div className="login-oauth">
-                <a className="login-google" href={api.googleLoginUrl()}>
-                  <GoogleG />
-                  <span>Entrar com Google</span>
-                </a>
-                {!mostrarSenha && (
-                  <button
-                    type="button"
-                    className="login-outras-vias"
-                    onClick={() => setMostrarSenha(true)}
-                  >
-                    <ChevronDown size={14} />
-                    Outras formas de entrar
-                  </button>
-                )}
-              </div>
-            )}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'invite'}
+                className={`login-tab ${activeTab === 'invite' ? 'login-tab--active' : ''}`}
+                onClick={() => {
+                  setActiveTab('invite')
+                  setError(null)
+                }}
+              >
+                <Ticket size={15} />
+                <span>Tenho um convite</span>
+              </button>
+            </div>
 
-            {mostrarSenha && (
-          <form className="login-form" onSubmit={handleSubmit}>
-            <FormGroup label="Usuário" htmlFor="login-usuario">
-              <Input
-                id="login-usuario"
-                ref={usuarioRef}
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                placeholder="seu_usuario"
-                leftIcon={<User size={15} />}
-                disabled={submitting}
-              />
-            </FormGroup>
-
-            <FormGroup label="Senha" htmlFor="login-senha">
-              <Input
-                id="login-senha"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                placeholder="••••••••••••"
-                leftIcon={<KeyRound size={15} />}
-                disabled={submitting}
-              />
-            </FormGroup>
-
+            {/* Mensagem de Erro Geral */}
             {error && (
               <div className="login-alert login-alert--error" role="alert">
                 <AlertCircle size={16} />
@@ -176,37 +218,314 @@ export function LoginPage(): JSX.Element {
               </div>
             )}
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              loading={submitting}
-              leftIcon={<LogIn size={16} />}
-              className="login-submit"
-            >
-              {submitting ? 'Entrando…' : 'Entrar'}
-            </Button>
-          </form>
+            {/* ABA 1: LOGIN TRADICIONAL */}
+            {activeTab === 'login' && (
+              <form className="login-form" onSubmit={handleLoginSubmit}>
+                <FormGroup label="Usuário ou E-mail" htmlFor="login-usuario">
+                  <Input
+                    id="login-usuario"
+                    ref={usuarioRef}
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    autoComplete="username"
+                    placeholder="seu_usuario"
+                    leftIcon={<User size={15} />}
+                    disabled={submitting}
+                  />
+                </FormGroup>
+
+                <FormGroup label="Senha" htmlFor="login-senha">
+                  <Input
+                    id="login-senha"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    placeholder="••••••••••••"
+                    leftIcon={<KeyRound size={15} />}
+                    disabled={submitting}
+                  />
+                </FormGroup>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  loading={submitting}
+                  leftIcon={<LogIn size={16} />}
+                  className="login-submit"
+                >
+                  {submitting ? 'Entrando…' : 'Entrar'}
+                </Button>
+              </form>
+            )}
+
+            {/* ABA 2: REGISTRO COM CONVITE */}
+            {activeTab === 'invite' && (
+              <>
+                {inviteStep === 'validate' ? (
+                  <form className="login-form" onSubmit={handleValidateInvite}>
+                    <div className="invite-intro">
+                      <p>
+                        O registro no Revsist é realizado exclusivamente mediante convite de uso único.
+                        Insira o código fornecido pelo orientador ou administrador:
+                      </p>
+                    </div>
+
+                    <FormGroup label="Código do Convite" htmlFor="invite-code">
+                      <Input
+                        id="invite-code"
+                        ref={inviteCodeRef}
+                        value={inviteCodeInput}
+                        onChange={(e) => setInviteCodeInput(e.target.value.toUpperCase())}
+                        placeholder="RSAC-XXXX-YYYY"
+                        leftIcon={<Ticket size={15} />}
+                        disabled={validatingInvite}
+                        style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 'bold' }}
+                      />
+                    </FormGroup>
+
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="lg"
+                      loading={validatingInvite}
+                      leftIcon={<CheckCircle2 size={16} />}
+                      className="login-submit"
+                    >
+                      {validatingInvite ? 'Validando…' : 'Validar Convite e Continuar'}
+                    </Button>
+                  </form>
+                ) : (
+                  <form className="login-form registration-grid-form" onSubmit={handleRegisterSubmit}>
+                    <div className="invite-badge-success">
+                      <CheckCircle2 size={16} />
+                      <span>Convite Validado: <strong>{inviteCodeInput}</strong> {inviteNote && `(${inviteNote})`}</span>
+                    </div>
+
+                    <div className="reg-section-title">1. Dados Pessoais e Institucionais</div>
+
+                    <div className="reg-grid-2">
+                      <FormGroup label="Nome Completo *" htmlFor="reg-name">
+                        <Input
+                          id="reg-name"
+                          value={regFullName}
+                          onChange={(e) => setRegFullName(e.target.value)}
+                          placeholder="Prof. Dra. Maria Silva"
+                          leftIcon={<User size={14} />}
+                          disabled={submitting}
+                          required
+                        />
+                      </FormGroup>
+
+                      <FormGroup label="E-mail *" htmlFor="reg-email">
+                        <Input
+                          id="reg-email"
+                          type="email"
+                          value={regEmail}
+                          onChange={(e) => setRegEmail(e.target.value)}
+                          placeholder="pesquisador@universidade.edu.br"
+                          leftIcon={<Mail size={14} />}
+                          disabled={submitting}
+                          required
+                        />
+                      </FormGroup>
+                    </div>
+
+                    <div className="reg-grid-2">
+                      <FormGroup label="Telefone / WhatsApp" htmlFor="reg-phone">
+                        <Input
+                          id="reg-phone"
+                          value={regPhone}
+                          onChange={(e) => setRegPhone(e.target.value)}
+                          placeholder="(51) 99999-8888"
+                          leftIcon={<Phone size={14} />}
+                          disabled={submitting}
+                        />
+                      </FormGroup>
+
+                      <FormGroup label="Universidade / Instituição" htmlFor="reg-inst">
+                        <Input
+                          id="reg-inst"
+                          value={regInstitution}
+                          onChange={(e) => setRegInstitution(e.target.value)}
+                          placeholder="ex: UFRGS, USP, IBICT..."
+                          leftIcon={<Building2 size={14} />}
+                          disabled={submitting}
+                        />
+                      </FormGroup>
+                    </div>
+
+                    <div className="reg-grid-2">
+                      <FormGroup label="Titulação / Grau Acadêmico" htmlFor="reg-degree">
+                        <div className="select-wrapper">
+                          <GraduationCap size={14} className="select-left-icon" />
+                          <select
+                            id="reg-degree"
+                            className="rsac-custom-select"
+                            value={regAcademicDegree}
+                            onChange={(e) => setRegAcademicDegree(e.target.value)}
+                            disabled={submitting}
+                          >
+                            <option value="Graduando(a)">Graduando(a)</option>
+                            <option value="Especialista">Especialista</option>
+                            <option value="Mestrando(a)">Mestrando(a)</option>
+                            <option value="Mestre">Mestre</option>
+                            <option value="Doutorando(a)">Doutorando(a)</option>
+                            <option value="Doutor(a)">Doutor(a)</option>
+                            <option value="Pós-Doutor(a)">Pós-Doutor(a)</option>
+                            <option value="Professor(a) / Pesquisador(a)">Professor(a) / Pesquisador(a)</option>
+                            <option value="Outro">Outro</option>
+                          </select>
+                        </div>
+                      </FormGroup>
+
+                      <FormGroup label="Profissão / Cargo Atual" htmlFor="reg-prof">
+                        <Input
+                          id="reg-prof"
+                          value={regProfession}
+                          onChange={(e) => setRegProfession(e.target.value)}
+                          placeholder="ex: Docente, Analista, Pesquisador"
+                          leftIcon={<Award size={14} />}
+                          disabled={submitting}
+                        />
+                      </FormGroup>
+                    </div>
+
+                    <div className="reg-checkbox-group">
+                      <label className="reg-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={regIsStudying}
+                          onChange={(e) => setRegIsStudying(e.target.checked)}
+                          disabled={submitting}
+                        />
+                        <span>Estou matriculado(a) em curso de graduação ou pós-graduação atualmente</span>
+                      </label>
+                    </div>
+
+                    <div className="reg-grid-2">
+                      <FormGroup label="Programa de Pós / Curso" htmlFor="reg-program">
+                        <Input
+                          id="reg-program"
+                          value={regStudyProgram}
+                          onChange={(e) => setRegStudyProgram(e.target.value)}
+                          placeholder="ex: PPG em Desenvolvimento Regional"
+                          leftIcon={<BookOpen size={14} />}
+                          disabled={submitting}
+                        />
+                      </FormGroup>
+
+                      <FormGroup label="Área de Atuação / Linha de Pesquisa" htmlFor="reg-area">
+                        <Input
+                          id="reg-area"
+                          value={regResearchArea}
+                          onChange={(e) => setRegResearchArea(e.target.value)}
+                          placeholder="ex: Políticas Públicas Territoriais, APLs"
+                          disabled={submitting}
+                        />
+                      </FormGroup>
+                    </div>
+
+                    <div className="reg-section-title">2. Credenciais de Acesso</div>
+
+                    <div className="reg-grid-3">
+                      <FormGroup label="Nome de Usuário *" htmlFor="reg-user">
+                        <Input
+                          id="reg-user"
+                          value={regUsername}
+                          onChange={(e) => setRegUsername(e.target.value)}
+                          placeholder="seu.usuario"
+                          leftIcon={<User size={14} />}
+                          disabled={submitting}
+                          required
+                        />
+                      </FormGroup>
+
+                      <FormGroup label="Senha (mín. 8 dígitos) *" htmlFor="reg-pass">
+                        <Input
+                          id="reg-pass"
+                          type="password"
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          placeholder="••••••••••••"
+                          leftIcon={<KeyRound size={14} />}
+                          disabled={submitting}
+                          required
+                        />
+                      </FormGroup>
+
+                      <FormGroup label="Confirmar Senha *" htmlFor="reg-pass-confirm">
+                        <Input
+                          id="reg-pass-confirm"
+                          type="password"
+                          value={regPasswordConfirm}
+                          onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                          placeholder="••••••••••••"
+                          leftIcon={<KeyRound size={14} />}
+                          disabled={submitting}
+                          required
+                        />
+                      </FormGroup>
+                    </div>
+
+                    <div className="reg-checkbox-group reg-terms-consent">
+                      <label className="reg-checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={regTermsAccepted}
+                          onChange={(e) => setRegTermsAccepted(e.target.checked)}
+                          disabled={submitting}
+                          required
+                        />
+                        <span>
+                          Concordo com os <strong>Termos de Uso</strong> e com a <strong>Política de Privacidade (LGPD)</strong> do Revsist.
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="reg-actions">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setInviteStep('validate')}
+                        disabled={submitting}
+                      >
+                        Trocar Código
+                      </Button>
+
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        loading={submitting}
+                        leftIcon={<UserPlus size={16} />}
+                      >
+                        {submitting ? 'Cadastrando…' : 'Concluir Cadastro e Iniciar'}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </>
             )}
           </>
         )}
 
-        <div className="login-server-info" style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <span>Servidor: <strong style={{ color: '#cbd8e4' }}>{api.getBackendHost()}</strong></span>
+        <div className="login-server-info">
+          <span>Servidor: <strong>{api.getBackendHost()}</strong></span>
           <button
             type="button"
+            className="login-change-server-btn"
             onClick={() => {
               const current = api.getBaseUrl().replace(/\/api\/v1\/?$/, '')
               const input = window.prompt(
-                'Configurar URL do Backend / Túnel (ex: https://seu-tunnel.trycloudflare.com ou http://127.0.0.1:8000):',
+                'Configurar URL do Backend / Servidor (ex: https://revisao.suauniversidade.br ou http://127.0.0.1:8000):',
                 current
               )
               if (!input || !input.trim()) return
               try {
                 const destino = analisarUrlDeBackend(input)
-                // Confirmação nomeando o host (doc 29 §29.12). É desta tela
-                // que sai a senha do usuário: trocar o destino sem ver para
-                // onde ela vai é justamente o que a Fase 4 fechou.
                 if (!window.confirm(mensagemDeConfirmacao(destino))) return
                 api.setBaseUrl(destino.url)
                 window.location.reload()
@@ -214,23 +533,14 @@ export function LoginPage(): JSX.Element {
                 window.alert(err?.message ?? 'Endereço inválido.')
               }
             }}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#38bdf8',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              fontSize: '0.8rem',
-              padding: 0
-            }}
           >
-            Alterar URL do Servidor
+            Alterar Servidor
           </button>
         </div>
 
         {status?.deployment_profile === 'server' && (
           <p className="login-footnote">
-            Servidor publicado — não compartilhe o endereço nem suas credenciais.
+            Servidor publicado — convites de uso único garantem o acesso exclusivo a pesquisadores autorizados.
           </p>
         )}
       </div>

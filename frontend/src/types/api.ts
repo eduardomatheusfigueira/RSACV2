@@ -416,6 +416,28 @@ export interface UserCreatedResponse {
   generated_password?: string | null
 }
 
+export interface ValidateInviteResponse {
+  valid: boolean
+  note: string
+  expires_at?: string | null
+}
+
+export interface RegisterWithInvitePayload {
+  invite_code: string
+  username: string
+  password: string
+  full_name: string
+  email: string
+  phone?: string
+  institution?: string
+  academic_degree?: string
+  is_studying?: boolean
+  study_program?: string
+  profession?: string
+  research_area?: string
+  terms_accepted: boolean
+}
+
 // ── AI ────────────────────────────────────────────────────────────────
 
 /**

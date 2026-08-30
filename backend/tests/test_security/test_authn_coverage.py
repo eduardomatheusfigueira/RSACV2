@@ -36,6 +36,8 @@ ROTAS_PUBLICAS = {
     "/api/v1/auth/status",
     "/api/v1/auth/login",
     "/api/v1/auth/local",
+    "/api/v1/auth/invite/validate",
+    "/api/v1/auth/register-with-invite",
     "/api/v1/auth/google/start",
     "/api/v1/auth/google/callback",
 }
@@ -146,6 +148,22 @@ async def test_rotas_publicas_respondem_sem_sessao(anon_client, caminho):
         res = await anon_client.get(caminho, follow_redirects=False)
         assert res.status_code == 303
         assert "/app/login?erro=" in res.headers["location"]
+    elif caminho == "/api/v1/auth/invite/validate":
+        res = await anon_client.post(caminho, json={"invite_code": "RSAC-TEST-0000"})
+        assert res.status_code in (400, 404)
+    elif caminho == "/api/v1/auth/register-with-invite":
+        res = await anon_client.post(
+            caminho,
+            json={
+                "invite_code": "RSAC-TEST-0000",
+                "username": "teste",
+                "password": "SenhaForte123!",
+                "full_name": "Teste",
+                "email": "teste@email.com",
+                "terms_accepted": True,
+            },
+        )
+        assert res.status_code in (400, 404)
     else:
         res = await anon_client.get(caminho)
         assert res.status_code == 200

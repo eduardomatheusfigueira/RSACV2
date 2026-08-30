@@ -20,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -401,12 +402,52 @@ class UserModel(Base):
     )
     terms_version: Mapped[str] = mapped_column(String(20), default="")
 
+    # ── Perfil Acadêmico e Cadastral ──────────────────────────────────
+    full_name: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    phone: Mapped[str] = mapped_column(String(30), default="", server_default="")
+    institution: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    academic_degree: Mapped[str] = mapped_column(String(50), default="", server_default="")
+    is_studying: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("0"))
+    study_program: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    profession: Mapped[str] = mapped_column(String(100), default="", server_default="")
+    research_area: Mapped[str] = mapped_column(String(200), default="", server_default="")
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     sessions: Mapped[list["SessionModel"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+
+
+class InviteCodeModel(Base):
+    """
+    Convite de uso único para cadastro de pesquisador.
+
+    Garante que apenas convidados consigam se registrar. Ao concluir o cadastro,
+    o convite é marcado como utilizado (is_used=True) e associado ao usuário.
+    """
+
+    __tablename__ = "invites"
+    __table_args__ = (
+        Index("ix_invites_code", "code"),
+        Index("ix_invites_is_used", "is_used"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    used_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id"), unique=True, nullable=True
+    )
+    is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    note: Mapped[str] = mapped_column(String(255), default="")
 
 
 class SessionModel(Base):

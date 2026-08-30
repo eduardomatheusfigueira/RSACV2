@@ -114,6 +114,129 @@ def reset_password(args: argparse.Namespace) -> int:
         db.close()
 
 
+from datetime import datetime, timedelta, timezone
+import secrets
+
+from app.database import SessionLocal, engine
+from app.schema import aplicar_migracoes
+from app.infrastructure.persistence.models import (
+    InviteCodeModel,
+    UserModel,
+    as_utc,
+    generate_uuid,
+)
+from app.security.passwords import (
+    PasswordPolicyError,
+    generate_password,
+    hash_password,
+)
+from app.security.sessions import revoke_all_sessions
+
+
+def _gerar_codigo_convite() -> str:
+    p1 = secrets.token_hex(2).upper()
+    p2 = secrets.token_hex(2).upper()
+    return f"RSAC-{p1}-{p2}"
+
+
+def create_invite(args: argparse.Namespace) -> int:
+    aplicar_migracoes(engine)
+    db = SessionLocal()
+    try:
+        codigo = args.code.strip().upper() if args.code else _gerar_codigo_convite()
+        if db.query(InviteCodeModel).filter(InviteCodeModel.code == codigo).first():
+            print(f"[X] Já existe um convite com o código '{codigo}'.", file=sys.stderr)
+            return 1
+
+        agora = datetime.now(timezone.utc)
+        expira = agora + timedelta(days=args.expires_days) if args.expires_days else None
+
+        convite = InviteCodeModel(
+            id=generate_uuid(),
+            code=codigo,
+            created_at=agora,
+            expires_at=expira,
+            is_used=False,
+            is_revoked=False,
+            note=args.note.strip() if args.note else "",
+        )
+        db.add(convite)
+        db.commit()
+
+        print()
+        print("=" * 68)
+        print("  CONVITE DE USO ÚNICO GERADO COM SUCESSO")
+        print("=" * 68)
+        print(f"  Código:   {convite.code}")
+        if convite.note:
+            print(f"  Nota:     {convite.note}")
+        if convite.expires_at:
+            print(f"  Expira:   {convite.expires_at.strftime('%d/%m/%Y %H:%M UTC')}")
+        print("=" * 68)
+        print("  Envie este código ao pesquisador para que ele realize o cadastro.")
+        print()
+        return 0
+    finally:
+        db.close()
+
+
+def list_invites(args: argparse.Namespace) -> int:
+    aplicar_migracoes(engine)
+    db = SessionLocal()
+    try:
+        convites = db.query(InviteCodeModel).order_by(InviteCodeModel.created_at.desc()).all()
+        if not convites:
+            print("Nenhum convite emitido até o momento.")
+            return 0
+
+        agora = datetime.now(timezone.utc)
+        print(f"{'CÓDIGO':<18} {'STATUS':<16} {'EXPIRAÇÃO':<18} {'USUÁRIO REGISTRADO':<22} NOTA")
+        print("-" * 90)
+        for c in convites:
+            if c.is_revoked:
+                status_str = "REVOGADO"
+            elif c.is_used:
+                status_str = "UTILIZADO"
+            elif c.expires_at and as_utc(c.expires_at) < agora:
+                status_str = "EXPIRADO"
+            else:
+                status_str = "DISPONÍVEL"
+
+            exp_str = c.expires_at.strftime("%d/%m/%Y %H:%M") if c.expires_at else "Sem expiração"
+
+            usuario_str = "—"
+            if c.used_by_user_id:
+                u = db.query(UserModel).filter(UserModel.id == c.used_by_user_id).first()
+                if u:
+                    usuario_str = f"{u.username} ({u.email or ''})"
+
+            print(f"{c.code:<18} {status_str:<16} {exp_str:<18} {usuario_str:<22} {c.note}")
+        return 0
+    finally:
+        db.close()
+
+
+def revoke_invite(args: argparse.Namespace) -> int:
+    aplicar_migracoes(engine)
+    db = SessionLocal()
+    try:
+        codigo = args.code.strip().upper()
+        convite = db.query(InviteCodeModel).filter(InviteCodeModel.code == codigo).first()
+        if not convite:
+            print(f"[X] Convite com código '{codigo}' não encontrado.", file=sys.stderr)
+            return 1
+        if convite.is_used:
+            print(f"[X] Não é possível revogar o convite '{codigo}' pois ele já foi utilizado.", file=sys.stderr)
+            return 1
+
+        convite.is_revoked = True
+        db.commit()
+        print(f"[OK] Convite '{codigo}' revogado com sucesso.")
+        return 0
+    finally:
+        db.close()
+
+
 def generate_secret_key(args: argparse.Namespace) -> int:
     """
     Gera uma chave-mestra para o perfil `server`.
@@ -141,7 +264,7 @@ def generate_secret_key(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app.cli",
-        description="Gestão de contas de acesso do Revsist",
+        description="Gestão de contas de acesso e convites do Revsist",
     )
     sub = parser.add_subparsers(dest="comando", required=True)
 
@@ -162,6 +285,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_reset.add_argument("username", help="Nome de usuário")
     p_reset.add_argument("--password", default=None, help="Nova senha (omita para sortear)")
     p_reset.set_defaults(func=reset_password)
+
+    p_cinv = sub.add_parser("create-invite", help="Gera um convite de uso único para cadastro")
+    p_cinv.add_argument("--note", default="", help="Nota ou nome do destinatário do convite")
+    p_cinv.add_argument("--expires-days", type=int, default=None, help="Dias de validade do convite (opcional)")
+    p_cinv.add_argument("--code", default=None, help="Código personalizado (opcional)")
+    p_cinv.set_defaults(func=create_invite)
+
+    p_linv = sub.add_parser("list-invites", help="Lista todos os convites emitidos")
+    p_linv.set_defaults(func=list_invites)
+
+    p_rinv = sub.add_parser("revoke-invite", help="Revoga um convite não utilizado")
+    p_rinv.add_argument("code", help="Código do convite a revogar")
+    p_rinv.set_defaults(func=revoke_invite)
 
     p_key = sub.add_parser(
         "generate-secret-key", help="Gera a chave-mestra da cifra (perfil server)"

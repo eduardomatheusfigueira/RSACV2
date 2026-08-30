@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.config import settings
-from app.infrastructure.persistence.models import UserModel
+from app.infrastructure.persistence.models import InviteCodeModel, UserModel, as_utc
 from app.schemas.auth import (
     AuthStatusResponse,
     LocalTokenRequest,
@@ -38,6 +38,11 @@ from app.schemas.auth import (
     UserCreateRequest,
     UserListResponse,
     UserResponse,
+)
+from app.schemas.invites import (
+    RegisterWithInviteRequest,
+    ValidateInviteRequest,
+    ValidateInviteResponse,
 )
 from app.security.dependencies import (
     ROLE_OWNER,
@@ -320,6 +325,202 @@ async def concluir_login_com_google(
     )
     logger.info("[Auth] Entrada com Google: %s", usuario.username)
     return resposta
+
+
+@public_auth_router.post(
+    "/invite/validate",
+    response_model=ValidateInviteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Valida um código de convite para cadastro",
+)
+def validar_convite(
+    payload: ValidateInviteRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Valida se um código de convite é autêntico, está ativo e ainda não foi utilizado.
+    """
+    codigo = payload.invite_code.strip().upper()
+    convite = db.query(InviteCodeModel).filter(InviteCodeModel.code == codigo).first()
+
+    if not convite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Código de convite não encontrado. Verifique o código e tente novamente.",
+        )
+
+    if convite.is_revoked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este convite foi revogado pela administração.",
+        )
+
+    if convite.is_used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este convite já foi utilizado e não pode ser reutilizado.",
+        )
+
+    agora = datetime.now(timezone.utc)
+    if convite.expires_at:
+        expira = as_utc(convite.expires_at)
+        if expira and expira < agora:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite expirou.",
+            )
+
+    return ValidateInviteResponse(
+        valid=True,
+        note=convite.note or "Convite válido para cadastro",
+        expires_at=convite.expires_at,
+    )
+
+
+@public_auth_router.post(
+    "/register-with-invite",
+    response_model=LoginResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Cadastra um novo pesquisador com convite de uso único",
+)
+def registrar_com_convite(
+    payload: RegisterWithInviteRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """
+    Cadastra um novo pesquisador utilizando um convite de uso único.
+    Executa a criação da conta e a invalidação do convite de forma estritamente atômica.
+    """
+    codigo = payload.invite_code.strip().upper()
+
+    # 1. Obter e bloquear o convite
+    convite = (
+        db.query(InviteCodeModel)
+        .filter(InviteCodeModel.code == codigo)
+        .with_for_update()
+        .first()
+    )
+
+    if not convite:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Código de convite inválido.",
+        )
+
+    if convite.is_revoked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este convite foi revogado pela administração.",
+        )
+
+    if convite.is_used:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este convite já foi utilizado para registrar outro usuário.",
+        )
+
+    agora = datetime.now(timezone.utc)
+    if convite.expires_at:
+        expira = as_utc(convite.expires_at)
+        if expira and expira < agora:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite expirou.",
+            )
+
+    # 2. Verificar se o username já existe
+    username_limpo = payload.username.strip().lower()
+    existente_user = db.query(UserModel).filter(UserModel.username == username_limpo).first()
+    if existente_user:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este nome de usuário já está em uso. Por favor, escolha outro.",
+        )
+
+    # 3. Verificar se o e-mail já existe
+    email_limpo = str(payload.email).strip().lower()
+    existente_email = db.query(UserModel).filter(UserModel.email == email_limpo).first()
+    if existente_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Este e-mail já está cadastrado no sistema.",
+        )
+
+    # 4. Validar política de senha
+    try:
+        senha_hash = hash_password(payload.password)
+    except PasswordPolicyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+
+    # 5. Criar o novo usuário com todos os dados acadêmicos
+    novo_usuario = UserModel(
+        username=username_limpo,
+        password_hash=senha_hash,
+        role=ROLE_RESEARCHER,
+        is_active=True,
+        email=email_limpo,
+        email_verified=True,
+        display_name=payload.full_name.strip(),
+        full_name=payload.full_name.strip(),
+        phone=payload.phone.strip(),
+        institution=payload.institution.strip(),
+        academic_degree=payload.academic_degree.strip(),
+        is_studying=payload.is_studying,
+        study_program=payload.study_program.strip(),
+        profession=payload.profession.strip(),
+        research_area=payload.research_area.strip(),
+        auth_provider="password",
+        terms_accepted_at=agora,
+        terms_version="2026-08-29",
+    )
+    db.add(novo_usuario)
+    db.flush()
+
+    # 6. Marcar o convite como utilizado e associar ao usuário
+    convite.is_used = True
+    convite.used_at = agora
+    convite.used_by_user_id = novo_usuario.id
+
+    # 7. Criar sessão e cookie de acesso
+    token, _sessao = create_session(
+        db, novo_usuario, user_agent=request.headers.get("User-Agent", "")
+    )
+    _definir_cookie(response, token, request)
+
+    # 8. Registrar no ROPA (Art. 37 LGPD)
+    ropa_service.registrar(
+        db,
+        operation="signup",
+        legal_basis="art7_V_execucao_de_contrato",
+        purpose="Cadastro de novo pesquisador através de convite de uso único",
+        data_categories=[
+            "identificacao",
+            "contato",
+            "credencial",
+            "conexao",
+        ],
+        user_id=novo_usuario.id,
+        commit=True,
+    )
+
+    logger.info(
+        "[Cadastro] Novo usuário '%s' (%s) cadastrado com sucesso usando o convite '%s'.",
+        novo_usuario.username,
+        novo_usuario.email,
+        convite.code,
+    )
+
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in_hours=settings.session_ttl_hours,
+        user=_serializar(novo_usuario),
+    )
 
 
 def _voltar_ao_login(motivo: str) -> RedirectResponse:

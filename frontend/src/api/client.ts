@@ -597,6 +597,24 @@ class APIClient {
     return res
   }
 
+  async validateInvite(inviteCode: string): Promise<import('@/types/api').ValidateInviteResponse> {
+    return this.request<import('@/types/api').ValidateInviteResponse>('/auth/invite/validate', {
+      method: 'POST',
+      body: JSON.stringify({ invite_code: inviteCode }),
+    })
+  }
+
+  async registerWithInvite(
+    payload: import('@/types/api').RegisterWithInvitePayload
+  ): Promise<import('@/types/api').LoginResponse> {
+    const res = await this.request<import('@/types/api').LoginResponse>('/auth/register-with-invite', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    this.setSessionToken(res.access_token)
+    return res
+  }
+
   async logout(): Promise<void> {
     try {
       await this.request<{ status: string }>('/auth/logout', { method: 'POST' })
