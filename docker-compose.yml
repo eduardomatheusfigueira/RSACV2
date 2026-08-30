@@ -26,7 +26,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - ./frontend/out/renderer:/srv/frontend:ro
+      - ./frontend/dist:/srv/frontend:ro
     networks:
       - web
     depends_on:

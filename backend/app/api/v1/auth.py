@@ -576,8 +576,8 @@ def _resolver_conta(db: Session, identidade) -> Optional[UserModel]:
         google_sub=identidade.sub,
         display_name=identidade.nome,
         auth_provider="google",
-        terms_accepted_at=datetime.now(timezone.utc),
-        terms_version=settings.terms_version,
+        terms_accepted_at=None,
+        terms_version="",
     )
     db.add(novo)
     db.flush()
@@ -586,16 +586,7 @@ def _resolver_conta(db: Session, identidade) -> Optional[UserModel]:
         operation="signup",
         legal_basis="art7_V_execucao_de_contrato",
         purpose="Cadastro de nova conta de usuário via Google OAuth",
-        data_categories=["identificacao", "contato", "identificador_externo", "consentimento"],
-        user_id=novo.id,
-        commit=False,
-    )
-    ropa_service.registrar(
-        db,
-        operation="consent_given",
-        legal_basis="art7_I_consentimento",
-        purpose="Aceite dos Termos de Uso e do Aviso de Privacidade",
-        data_categories=["consentimento"],
+        data_categories=["identificacao", "contato", "identificador_externo"],
         user_id=novo.id,
         commit=False,
     )
@@ -682,6 +673,33 @@ def logout(
 @router.get("/me", response_model=UserResponse)
 def me(usuario: UserModel = Depends(require_session)):
     """Identidade da sessão corrente."""
+    return _serializar(usuario)
+
+
+@router.post("/terms/accept", response_model=UserResponse)
+def aceitar_termos(
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """
+    Registra o consentimento e aceite expresso dos Termos de Uso e do Aviso de Privacidade.
+    """
+    agora = datetime.now(timezone.utc)
+    usuario.terms_accepted_at = agora
+    usuario.terms_version = settings.terms_version
+
+    ropa_service.registrar(
+        db,
+        operation="consent_given",
+        legal_basis="art7_I_consentimento",
+        purpose=f"Aceite expresso dos Termos de Uso e Aviso de Privacidade (versão {settings.terms_version})",
+        data_categories=["identificacao", "contato"],
+        user_id=usuario.id,
+        commit=False,
+    )
+    db.commit()
+    db.refresh(usuario)
+    logger.info("[Auth] Aceite dos termos registrado para o usuário: %s", usuario.username)
     return _serializar(usuario)
 
 

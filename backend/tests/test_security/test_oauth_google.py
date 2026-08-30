@@ -276,7 +276,8 @@ async def test_fluxo_completo_cria_conta_e_abre_sessao(cliente, db_session, monk
     assert criado.email_verified is True
     assert criado.auth_provider == "google"
     assert criado.password_hash is None
-    assert criado.terms_accepted_at is not None
+    # Não fabrica aceite sem a manifestação expressa do usuário
+    assert criado.terms_accepted_at is None
 
 
 @pytest.mark.anyio
