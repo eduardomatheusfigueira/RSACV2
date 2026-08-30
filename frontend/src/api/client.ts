@@ -946,6 +946,25 @@ class APIClient {
       body: JSON.stringify(profileData),
     })
   }
+
+  // ── Gestão de Convites (Owner / Gerente) ──────────────────────────
+
+  async listInvites(): Promise<{ items: any[]; total: number }> {
+    return this.request<{ items: any[]; total: number }>('/invites')
+  }
+
+  async createInvite(data?: { custom_code?: string; expires_in_days?: number | null; note?: string }): Promise<any> {
+    return this.request<any>('/invites', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    })
+  }
+
+  async revokeInvite(inviteId: string): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>(`/invites/${inviteId}`, {
+      method: 'DELETE',
+    })
+  }
 }
 
 export const api = new APIClient()

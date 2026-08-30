@@ -31,9 +31,14 @@ import {
   FileCode,
   ShieldCheck,
   AlertCircle,
+  Ticket,
+  UserPlus,
+  Copy,
+  Ban,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { RsacLockup } from '@/components/brand/RsacLockup'
 import { PageHeader, Button, Card } from '@/components/ui'
@@ -461,12 +466,85 @@ export function SettingsPage(): JSX.Element {
   const [importingProfile, setImportingProfile] = useState(false)
   const [profileImportResult, setProfileImportResult] = useState<{ success: boolean; message: string; details?: string } | null>(null)
 
+  // ── Gestão de Convites (Exclusivo Gerente / Owner) ────────────────
+  const { user } = useAuthStore()
+  const isOwner = user?.role === 'owner'
+  const [invites, setInvites] = useState<any[]>([])
+  const [loadingInvites, setLoadingInvites] = useState(false)
+  const [creatingInvite, setCreatingInvite] = useState(false)
+  const [inviteNote, setInviteNote] = useState('')
+  const [inviteDays, setInviteDays] = useState<number>(30)
+  const [customInviteCode, setCustomInviteCode] = useState('')
+  const [inviteFeedback, setInviteFeedback] = useState<{ success: boolean; message: string } | null>(null)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+
   const keysFileInputRef = useRef<HTMLInputElement>(null)
   const profileFileInputRef = useRef<HTMLInputElement>(null)
 
+  const loadInvites = async () => {
+    if (!isOwner) return
+    try {
+      setLoadingInvites(true)
+      const res = await api.listInvites()
+      setInvites(res.items || [])
+    } catch (err: any) {
+      console.error('Erro ao carregar convites:', err)
+    } finally {
+      setLoadingInvites(false)
+    }
+  }
+
+  const handleCreateInvite = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      setCreatingInvite(true)
+      setInviteFeedback(null)
+      const novo = await api.createInvite({
+        note: inviteNote.trim(),
+        expires_in_days: inviteDays > 0 ? inviteDays : null,
+        custom_code: customInviteCode.trim() ? customInviteCode.trim().toUpperCase() : undefined,
+      })
+      setInviteNote('')
+      setCustomInviteCode('')
+      setInviteFeedback({
+        success: true,
+        message: `Convite ${novo.code} gerado com sucesso!`,
+      })
+      await loadInvites()
+    } catch (err: any) {
+      setInviteFeedback({
+        success: false,
+        message: err.message || 'Falha ao gerar convite.',
+      })
+    } finally {
+      setCreatingInvite(false)
+    }
+  }
+
+  const handleRevokeInvite = async (inviteId: string, code: string) => {
+    if (!confirm(`Deseja realmente revogar o convite ${code}? Ele não poderá mais ser utilizado.`)) {
+      return
+    }
+    try {
+      await api.revokeInvite(inviteId)
+      await loadInvites()
+    } catch (err: any) {
+      alert(err.message || 'Falha ao revogar convite.')
+    }
+  }
+
+  const handleCopyInviteCode = (code: string) => {
+    navigator.clipboard.writeText(code)
+    setCopiedCode(code)
+    setTimeout(() => setCopiedCode(null), 3000)
+  }
+
   useEffect(() => {
     loadSettings()
-  }, [])
+    if (isOwner) {
+      loadInvites()
+    }
+  }, [isOwner])
 
   const loadSettings = async () => {
     try {
@@ -1544,6 +1622,189 @@ export function SettingsPage(): JSX.Element {
               )}
             </div>
           </Card>
+
+          {/* Card de Gestão de Convites (Apenas Owner / Administrador) */}
+          {isOwner && (
+            <Card className="settings-card invites-management-card" style={{ marginTop: '20px' }}>
+              <div className="card-header">
+                <div className="card-icon" style={{ background: 'var(--color-primary-subtle, rgba(39, 76, 119, 0.1))', color: 'var(--color-primary)' }}>
+                  <Ticket size={22} />
+                </div>
+                <div>
+                  <h2>Gestão de Convites & Controle de Acesso</h2>
+                  <p className="card-subtitle">
+                    Como gerente da plataforma, emita códigos de uso único para permitir que novos pesquisadores se cadastrem.
+                  </p>
+                </div>
+              </div>
+
+              {/* Formulário de Emissão de Convite */}
+              <form onSubmit={handleCreateInvite} className="invite-create-form" style={{ marginTop: '16px', padding: '16px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <UserPlus size={16} /> Emitir Novo Código de Convite
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px auto', gap: '12px', alignItems: 'flex-end' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '12px' }}>Destinatário / Nota Interna</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Convite para Profa. Maria (PPGDR)"
+                      value={inviteNote}
+                      onChange={(e) => setInviteNote(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '12px' }}>Validade (Dias)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={inviteDays}
+                      onChange={(e) => setInviteDays(parseInt(e.target.value) || 30)}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={creatingInvite}
+                    style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Plus size={16} /> {creatingInvite ? 'Gerando...' : 'Gerar Convite'}
+                  </button>
+                </div>
+
+                {inviteFeedback && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '8px 12px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: inviteFeedback.success ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
+                      color: inviteFeedback.success ? '#28a745' : '#dc3545',
+                      border: `1px solid ${inviteFeedback.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}`,
+                    }}
+                  >
+                    {inviteFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                    {inviteFeedback.message}
+                  </div>
+                )}
+              </form>
+
+              {/* Tabela de Convites Existentes */}
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                    Convites Emitidos ({invites.length})
+                  </h4>
+                  <button
+                    type="button"
+                    className="btn-text-action"
+                    onClick={loadInvites}
+                    disabled={loadingInvites}
+                    style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <RefreshCw size={12} className={loadingInvites ? 'animate-spin' : ''} /> Atualizar Lista
+                  </button>
+                </div>
+
+                {invites.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
+                    Nenhum convite emitido até o momento.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                          <th style={{ padding: '10px 12px' }}>Código</th>
+                          <th style={{ padding: '10px 12px' }}>Nota / Destinatário</th>
+                          <th style={{ padding: '10px 12px' }}>Status</th>
+                          <th style={{ padding: '10px 12px' }}>Usuário Registrado</th>
+                          <th style={{ padding: '10px 12px' }}>Expiração</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invites.map((inv) => {
+                          const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date()
+                          return (
+                            <tr key={inv.id} style={{ borderBottom: '1px solid var(--color-border-subtle, rgba(0,0,0,0.05))' }}>
+                              <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-primary)' }}>
+                                {inv.code}
+                              </td>
+                              <td style={{ padding: '10px 12px', color: 'var(--color-text-primary)' }}>
+                                {inv.note || '—'}
+                              </td>
+                              <td style={{ padding: '10px 12px' }}>
+                                {inv.is_used ? (
+                                  <span className="status-badge completed" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                                    Utilizado
+                                  </span>
+                                ) : inv.is_revoked ? (
+                                  <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }}>
+                                    Revogado
+                                  </span>
+                                ) : isExpired ? (
+                                  <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(108, 117, 125, 0.1)', color: '#6c757d' }}>
+                                    Expirado
+                                  </span>
+                                ) : (
+                                  <span className="status-badge active" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(40, 167, 69, 0.1)', color: '#28a745' }}>
+                                    Disponível
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 12px', color: 'var(--color-text-secondary)' }}>
+                                {inv.used_by_username ? (
+                                  <strong>@{inv.used_by_username}</strong>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td style={{ padding: '10px 12px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
+                                {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString('pt-BR') : 'Sem expiração'}
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                  {!inv.is_used && !inv.is_revoked && (
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      onClick={() => handleCopyInviteCode(inv.code)}
+                                      title="Copiar código do convite"
+                                      style={{ height: '28px', padding: '0 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                    >
+                                      {copiedCode === inv.code ? <Check size={13} color="#28a745" /> : <Copy size={13} />}
+                                      {copiedCode === inv.code ? 'Copiado!' : 'Copiar'}
+                                    </button>
+                                  )}
+                                  {!inv.is_used && !inv.is_revoked && (
+                                    <button
+                                      type="button"
+                                      className="btn-icon danger"
+                                      onClick={() => handleRevokeInvite(inv.id, inv.code)}
+                                      title="Revogar convite"
+                                      style={{ height: '28px', width: '28px' }}
+                                    >
+                                      <Ban size={13} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>
