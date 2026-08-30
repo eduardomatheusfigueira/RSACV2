@@ -1,6 +1,6 @@
 /**
  * Revsist — StatusBar Component
- * Barra de status inferior com indicadores de backend, modo de IA e versão.
+ * Barra de status inferior com indicadores de backend, modo de Assistência e versão.
  */
 
 import { useSettingsStore } from '@/stores/useSettingsStore'

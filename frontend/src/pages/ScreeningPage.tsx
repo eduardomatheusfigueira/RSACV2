@@ -4,7 +4,7 @@
  * Novo Layout Metodológico Otimizado para Leitura e Avaliação:
  * 1. Fila Horizontal de Estudos (no topo): com filtros de status, busca rápida e paginação.
  * 2. Área de Trabalho Lado a Lado (Two-Column Workspace):
- *    - Coluna da Esquerda: Metadados, Ações de Decisão, Análise por IA e Resumo Completo (Abstract).
+ *    - Coluna da Esquerda: Metadados, Ações de Decisão, Análise por Assistência e Resumo Completo (Abstract).
  *    - Coluna da Direita: Avaliação de Critérios de Inclusão/Exclusão (Checklists interativos) e Observações do Revisor.
  */
 
@@ -1172,7 +1172,7 @@ export function ScreeningPage(): React.JSX.Element {
                         {paper.decision}
                       </span>
                       {isBeingScreened ? (
-                        <span className="badge-screening-active" title="Análise da IA em andamento">
+                        <span className="badge-screening-active" title="Análise da Assistência em andamento">
                           <RefreshCw size={10} className="animate-spin text-accent" /> Triando...
                         </span>
                       ) : (
@@ -1858,7 +1858,7 @@ export function ScreeningPage(): React.JSX.Element {
         </div>
       )}
 
-      {/* Modal de Triagem em Lote com Assistência IA & Progresso ao Vivo */}
+      {/* Modal de Triagem em Lote com Assistência & Progresso ao Vivo */}
       <BatchScreeningModal
         isOpen={isBatchModalOpen}
         onClose={() => setIsBatchModalOpen(false)}

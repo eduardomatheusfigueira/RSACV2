@@ -1,6 +1,6 @@
 /**
  * Revsist — AIAssistButton
- * Botão contemporâneo e inteligente de assistência de IA por campo de texto.
+ * Botão contemporâneo e inteligente de assistência de Assistência por campo de texto.
  * Permite preencher, corrigir, revisar estilo acadêmico e adequar às diretrizes metodológicas.
  */
 
@@ -82,7 +82,7 @@ export function AIAssistButton({
     }
   }, [dropdownOpen])
 
-  // Se a IA estiver desligada nas configurações, o botão não é renderizado (após todos os hooks)
+  // Se a Assistência estiver desligada nas configurações, o botão não é renderizado (após todos os hooks)
   if (!aiEnabled) {
     return null
   }

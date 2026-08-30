@@ -545,7 +545,7 @@ export function InsightsPage(): JSX.Element {
           )}
         </Bloco>
 
-        {/* ── Processo e proveniência de IA ─────────────────────────── */}
+        {/* ── Processo e proveniência de Assistência ─────────────────────────── */}
         <Bloco
           titulo="Throughput de triagem por pessoa"
           descricao="Decisões manuais e assistidas registradas — sempre sobre o projeto inteiro."
@@ -555,7 +555,7 @@ export function InsightsPage(): JSX.Element {
 
         <Bloco
           titulo="Proveniência da decisão"
-          descricao="Quanto veio de IA, e com que confiabilidade — sempre sobre o projeto inteiro."
+          descricao="Quanto veio de Assistência, e com que confiabilidade — sempre sobre o projeto inteiro."
         >
           {Object.keys(dados.ai_provenance.decisions_by_origin).length === 0 ? (
             <EmptyState size="inline" title="Nenhuma decisão auditada ainda." />
@@ -570,7 +570,7 @@ export function InsightsPage(): JSX.Element {
               />
               <dl className="insights-metricas-secundarias">
                 <div>
-                  <dt>Resposta de IA fora do vocabulário</dt>
+                  <dt>Resposta de Assistência fora do vocabulário</dt>
                   <dd>{formatarPercentual(dados.ai_provenance.ai_invalid_response_rate)}</dd>
                 </div>
               </dl>

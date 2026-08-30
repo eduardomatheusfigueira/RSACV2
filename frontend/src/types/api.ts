@@ -465,7 +465,7 @@ export interface RegisterWithInvitePayload {
 // ── AI ────────────────────────────────────────────────────────────────
 
 /**
- * Estado das configurações de IA vindo do backend.
+ * Estado das configurações de Assistência vindo do backend.
  *
  * As chaves NÃO trafegam mais em texto claro: o que chega são máscaras
  * (`••••••••abcd`) e contagens. Para trocar uma chave envia-se a nova por
@@ -705,7 +705,7 @@ export interface InsightsFiltersApplied {
   year_to: number | null
 }
 
-/** Processo e proveniência de IA (doc 32 §6.5, doc 33 Fase 3). */
+/** Processo e proveniência de Assistência (doc 32 §6.5, doc 33 Fase 3). */
 export interface AiProvenance {
   throughput_by_user: NameCount[]
   decisions_by_origin: Record<string, number>

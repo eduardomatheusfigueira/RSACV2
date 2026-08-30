@@ -1,6 +1,6 @@
 /**
- * Revsist — Settings Page (Configurações de Inteligência Artificial, Portabilidade & Modo Manual)
- * Gerenciamento do interruptor mestre de IA (Ativar IA vs Modo 100% Manual),
+ * Revsist — Settings Page (Configurações de Assistência, Portabilidade & Modo Manual)
+ * Gerenciamento do interruptor de assistência (Modo Assistido vs Modo 100% Manual),
  * separação estrita de chaves (Gemini vs Qwen vs Local), exportação/importação de chaves (.json / .env)
  * e backup/restauração de perfil completo de sessão e workspace.
  */
@@ -264,7 +264,7 @@ const QWEN_REGIONS = [
 ]
 
 const LOCAL_MODELS = [
-  { id: 'Qwen-3.5-27B', name: 'Alibaba Qwen-3.5-27B', desc: 'Máxima inteligência & raciocínio (~16.7 GB Q4_K_M)', badge: '27B Top' },
+  { id: 'Qwen-3.5-27B', name: 'Alibaba Qwen-3.5-27B', desc: 'Máxima capacidade & raciocínio analítico (~16.7 GB Q4_K_M)', badge: '27B Top' },
   { id: 'Qwen-3.5-9B', name: 'Alibaba Qwen-3.5-9B', desc: 'Raciocínio avançado & multilíngue (~5.7 GB Q4_K_M)', badge: '9B' },
   { id: 'Qwen-3.5-4B', name: 'Alibaba Qwen-3.5-4B', desc: 'Equilíbrio e alta velocidade (~2.7 GB Q4_K_M)', badge: '4B' },
   { id: 'Llama-3.2-3B', name: 'Meta Llama-3.2-3B-Instruct', desc: 'Recomendado — Leve e 100% compatível (~2.0 GB)', badge: 'Recomendado' },
@@ -490,17 +490,17 @@ export function SettingsPage(): JSX.Element {
   // ── Gestão de Abas Principais & Controle de Usuários (Owner) ─────
   const { user } = useAuthStore()
   const isOwner = user?.role === 'owner'
-  const [mainTab, setMainTab] = useState<'ai' | 'sources' | 'appearance' | 'portability' | 'admin'>(() => {
+  const [mainTab, setMainTab] = useState<'assistance' | 'sources' | 'appearance' | 'portability' | 'admin'>(() => {
     try {
       const saved = localStorage.getItem('rsac_settings_tab')
-      if (saved && ['ai', 'sources', 'appearance', 'portability', 'admin'].includes(saved)) {
+      if (saved && ['assistance', 'sources', 'appearance', 'portability', 'admin'].includes(saved)) {
         return saved as any
       }
     } catch {}
-    return 'ai'
+    return 'assistance'
   })
 
-  const handleSelectMainTab = (tab: 'ai' | 'sources' | 'appearance' | 'portability' | 'admin') => {
+  const handleSelectMainTab = (tab: 'assistance' | 'sources' | 'appearance' | 'portability' | 'admin') => {
     setMainTab(tab)
     try {
       localStorage.setItem('rsac_settings_tab', tab)
@@ -1127,31 +1127,31 @@ export function SettingsPage(): JSX.Element {
       <nav className="settings-main-tabs" aria-label="Abas de configurações">
         <button
           type="button"
-          className={`settings-main-tab-btn ${mainTab === 'ai' ? 'active' : ''}`}
-          onClick={() => handleSelectMainTab('ai')}
+          className={`settings-main-tab-btn ${mainTab === 'assistance' ? 'active' : ''}`}
+          onClick={() => handleSelectMainTab('assistance')}
         >
-          <Sparkles size={16} /> Inteligência Artificial
+          <Sparkles size={14} className="tab-icon" /> <span className="tab-label">1. Assistência & Modelos</span>
         </button>
         <button
           type="button"
           className={`settings-main-tab-btn ${mainTab === 'sources' ? 'active' : ''}`}
           onClick={() => handleSelectMainTab('sources')}
         >
-          <Globe size={16} /> Bases Científicas
+          <Globe size={14} className="tab-icon" /> <span className="tab-label">2. Bases Científicas</span>
         </button>
         <button
           type="button"
           className={`settings-main-tab-btn ${mainTab === 'appearance' ? 'active' : ''}`}
           onClick={() => handleSelectMainTab('appearance')}
         >
-          <Palette size={16} /> Aparência & Tema
+          <Palette size={14} className="tab-icon" /> <span className="tab-label">3. Aparência & Tema</span>
         </button>
         <button
           type="button"
           className={`settings-main-tab-btn ${mainTab === 'portability' ? 'active' : ''}`}
           onClick={() => handleSelectMainTab('portability')}
         >
-          <FolderArchive size={16} /> Backup & Portabilidade
+          <FolderArchive size={14} className="tab-icon" /> <span className="tab-label">4. Backup & Portabilidade</span>
         </button>
         {isOwner && (
           <button
@@ -1159,13 +1159,13 @@ export function SettingsPage(): JSX.Element {
             className={`settings-main-tab-btn ${mainTab === 'admin' ? 'active' : ''}`}
             onClick={() => handleSelectMainTab('admin')}
           >
-            <ShieldCheck size={16} /> Administração & Usuários
+            <ShieldCheck size={14} className="tab-icon" /> <span className="tab-label">5. Administração & Usuários</span>
           </button>
         )}
       </nav>
 
       {/* ── ABA 1: INTELIGÊNCIA ARTIFICIAL ── */}
-      {mainTab === 'ai' && (
+      {mainTab === 'assistance' && (
         <div className="settings-tab-content">
           {/* Master AI Toggle Card */}
       <Card className={`master-ai-toggle-card ${isAiActive ? 'ai-active' : 'ai-disabled'}`}>
@@ -1250,7 +1250,7 @@ export function SettingsPage(): JSX.Element {
               <div className="provider-privacy-notice">
                 <Globe size={16} />
                 <span>
-                  <strong>Transferência Internacional (LGPD Art. 33):</strong> Destino Google AI Studio (Estados Unidos). Ao acionar a IA com sua chave de API própria, apenas o título e o resumo de artigos são enviados para análise de critérios.
+                  <strong>Transferência Internacional (LGPD Art. 33):</strong> Destino Google AI Studio (Estados Unidos). Ao acionar a assistência com sua chave de API própria, apenas o título e o resumo de artigos são enviados para análise de critérios.
                 </span>
               </div>
             )}
@@ -1780,7 +1780,7 @@ export function SettingsPage(): JSX.Element {
               <div className="portability-info">
                 <h3>Perfil Completo (Workspace & Sessão)</h3>
                 <p>
-                  Exporta e restaura o ecossistema integral: tema visual, modo de IA, chaves, credenciais de bases e todos os seus projetos com protocolos, critérios, artigos e extrações.
+                  Exporta e restaura o ecossistema integral: tema visual, modo de assistência, chaves, credenciais de bases e todos os seus projetos com protocolos, critérios, artigos e extrações.
                 </p>
               </div>
             </div>

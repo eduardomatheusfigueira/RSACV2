@@ -920,7 +920,7 @@ export function TopRibbonBar(): JSX.Element {
             </Tabs.Content>
 
             {/* ──────────────────────────────────────────────────────────
-                TAB: FERRAMENTAS (Configurações & IA)
+                TAB: FERRAMENTAS (Configurações & Assistência)
                 Purpose: Configure AI providers, test connections, set preferences.
             ──────────────────────────────────────────────────────────── */}
             <Tabs.Content value="settings" className="ribbon-tab-panel">

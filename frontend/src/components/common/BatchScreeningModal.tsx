@@ -1,7 +1,7 @@
 /**
  * Revsist — Batch Screening Modal & Live Progress
  * Modal interativo para configuração e acompanhamento em tempo real
- * da triagem em lote com Inteligência Artificial.
+ * da triagem em lote com Assistência.
  */
 
 import { useState } from 'react'
@@ -122,7 +122,7 @@ export function BatchScreeningModal({
             </div>
             <div>
               <DialogTitle asChild>
-                <h2>Triagem em Lote com Assistência IA</h2>
+                <h2>Triagem em Lote com Assistência</h2>
               </DialogTitle>
               <p className="batch-modal-subtitle" id="batch-screening-subtitle">
                 {isRunning
@@ -142,7 +142,7 @@ export function BatchScreeningModal({
                 type="button"
                 className="btn-header-minimize"
                 onClick={onClose}
-                title="Minimizar e continuar navegando enquanto a IA tria em segundo plano"
+                title="Minimizar e continuar navegando enquanto a Assistência tria em segundo plano"
               >
                 <Minimize2 size={16} />
                 <span>Minimizar</span>
@@ -167,7 +167,7 @@ export function BatchScreeningModal({
                 <div className="batch-info-desc">
                   <ShieldCheck size={16} className="icon-accent" />
                   <span>
-                    A inteligência artificial avaliará cada estudo individualmente aplicando os critérios de
+                    A assistência avaliará cada estudo individualmente aplicando os critérios de
                     inclusão e exclusão do protocolo, preenchendo as observações acadêmicas e atribuindo a decisão.
                   </span>
                 </div>

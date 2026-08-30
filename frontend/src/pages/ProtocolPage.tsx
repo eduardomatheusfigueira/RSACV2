@@ -803,7 +803,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
     setTimeout(() => setCopiedNotification(false), 3000)
   }
 
-  // ── Sugestão com IA ────────────────────────────────────────────────
+  // ── Sugestão com Assistência ────────────────────────────────────────────────
 
   const handleSuggestWithAI = async () => {
     if (!activeProject) return

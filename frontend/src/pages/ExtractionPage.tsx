@@ -1311,7 +1311,7 @@ export function ExtractionPage(): JSX.Element {
             disabled={questions.length === 0}
             leftIcon={extractingAI ? <StopCircle size={16} /> : <Sparkles size={16} />}
           >
-            {extractingAI ? 'Parar Extração' : 'Preencher com IA'}
+            {extractingAI ? 'Parar Extração' : 'Preencher com Assistência'}
           </Button>
           <Button
             variant="primary"
