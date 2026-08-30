@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+# Mapeamento e roteamento completo da API v1 e SPA
 from app.api.v1.router import api_router, public_router
 from app.config import settings
 from app.database import SessionLocal, engine

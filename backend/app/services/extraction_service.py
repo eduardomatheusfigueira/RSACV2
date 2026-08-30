@@ -80,18 +80,94 @@ class ExtractionService:
         else:
             data = {"respostas": []}
 
-        answers_data = data.get("respostas", []) if isinstance(data, dict) else []
+        # Extrair a lista de respostas suportando formatos variados:
+        # 1. data = {"respostas": [...]}
+        # 2. data = {"answers": [...]}
+        # 3. data = [...] (quando o modelo devolve array direto)
+        # 4. data = {"data": [...]} ou {"results": [...]}
+        if isinstance(data, list):
+            answers_data = data
+        elif isinstance(data, dict):
+            answers_data = (
+                data.get("respostas")
+                or data.get("answers")
+                or data.get("perguntas")
+                or data.get("questions")
+                or data.get("results")
+                or data.get("data")
+                or []
+            )
+            # Se data for um dict mapeando IDs diretamente para respostas
+            if not answers_data and data:
+                temp = []
+                for k, v in data.items():
+                    if isinstance(v, dict):
+                        temp.append({"question_id": v.get("question_id") or k, **v})
+                    elif isinstance(v, str):
+                        temp.append({"question_id": k, "answer": v})
+                if temp:
+                    answers_data = temp
+        else:
+            answers_data = []
+
+        # Mapas de busca para associar a resposta ao question_id correto
+        question_by_id = {q.id: q for q in questions}
+        question_by_label = {}
+        for idx, q in enumerate(questions):
+            order_num = getattr(q, 'order', idx) + 1
+            question_by_label[f"q{order_num}".lower()] = q
+            question_by_label[f"q_{order_num}".lower()] = q
+            question_by_label[str(order_num)] = q
+            question_by_label[f"pergunta_{order_num}".lower()] = q
+            question_by_label[f"questao_{order_num}".lower()] = q
+            question_by_label[f"questão_{order_num}".lower()] = q
+
         saved_answers = []
 
-        for ans in answers_data:
+        for idx, ans in enumerate(answers_data):
             if not isinstance(ans, dict):
                 continue
-            q_id = ans.get("question_id")
-            ans_text = (ans.get("answer") or "").strip()
-            if not q_id or not ans_text:
+            raw_qid = str(
+                ans.get("question_id")
+                or ans.get("id")
+                or ans.get("pergunta_id")
+                or ans.get("question")
+                or ""
+            ).strip()
+
+            ans_text = str(
+                ans.get("answer")
+                or ans.get("resposta")
+                or ans.get("text")
+                or ans.get("conteudo")
+                or ""
+            ).strip()
+
+            if not ans_text:
                 continue
 
-            evidence = (ans.get("evidencia") or ans.get("evidence") or "").strip()
+            target_q = None
+            if raw_qid in question_by_id:
+                target_q = question_by_id[raw_qid]
+            elif raw_qid.lower() in question_by_label:
+                target_q = question_by_label[raw_qid.lower()]
+            elif len(questions) == 1:
+                target_q = questions[0]
+            elif idx < len(questions) and not raw_qid:
+                target_q = questions[idx]
+
+            if not target_q:
+                # Tenta casar por inclusão de substring de ID
+                for q_item in questions:
+                    if q_item.id in raw_qid or (raw_qid and raw_qid in q_item.id):
+                        target_q = q_item
+                        break
+
+            if not target_q:
+                continue
+
+            q_id = target_q.id
+            evidence = str(ans.get("evidencia") or ans.get("evidence") or "").strip()
             page_ref = str(ans.get("pagina") or ans.get("page") or "").strip()[:20]
 
             existing = (

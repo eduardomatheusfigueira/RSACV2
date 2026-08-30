@@ -14,6 +14,7 @@
  * guiding the researcher through the entire review pipeline naturally.
  */
 
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import * as Tabs from '@radix-ui/react-tabs'
 import {
@@ -58,6 +59,9 @@ import {
   Cpu,
   Server,
   FolderArchive,
+  Menu,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
@@ -107,6 +111,33 @@ export function TopRibbonBar(): JSX.Element {
   const ribbonCollapsed = useSettingsStore((s) => s.ribbonCollapsed)
   const setRibbonCollapsed = useSettingsStore((s) => s.setRibbonCollapsed)
 
+  /* ── Estado exclusivo da tela pequena ──────────────────────────────
+     Em 375px a faixa de abas horizontal mostrava duas etapas e meia das
+     nove: navegar virava adivinhação por arrasto lateral. No celular a
+     mesma lista vira gaveta vertical, com rótulo inteiro e o cadeado
+     visível nas etapas que ainda dependem de um projeto ativo.
+
+     Ficam em `useState` de propósito, ao contrário de `ribbonCollapsed`:
+     são estados de sessão de uma superfície que só existe no celular, e
+     persisti-los faria a gaveta reabrir sozinha na volta ao desktop. */
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false)
+
+  /* Navegou, fecha. Sem isto a gaveta cobre a tela recém-aberta. */
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [location.pathname])
+
+  /* Esc fecha a gaveta — teclado físico em tablet também existe. */
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileNavOpen(false)
+    }
+    window.addEventListener('keydown', aoTeclar)
+    return () => window.removeEventListener('keydown', aoTeclar)
+  }, [mobileNavOpen])
+
   const resolvePath = (tab: RibbonTab): string => {
     if (tab.requiresProject && activeProject) {
       return tab.path.replace(':id', activeProject.id)
@@ -153,6 +184,19 @@ export function TopRibbonBar(): JSX.Element {
           Brand + Active Project Context + Quick Global Controls
       ═══════════════════════════════════════════════════════════════════ */}
       <div className="ribbon-titlebar">
+        {/* Chave da gaveta de etapas. Só existe abaixo de 768px — no
+            desktop a faixa de abas já mostra as nove de uma vez. */}
+        <button
+          type="button"
+          className="ribbon-mobile-menu-btn"
+          onClick={() => setMobileNavOpen((aberta) => !aberta)}
+          aria-expanded={mobileNavOpen}
+          aria-controls="ribbon-etapas"
+          aria-label={mobileNavOpen ? 'Fechar menu de etapas' : 'Abrir menu de etapas'}
+        >
+          {mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+
         <button
           type="button"
           className="ribbon-brand rsac-on-brand"
@@ -181,7 +225,10 @@ export function TopRibbonBar(): JSX.Element {
           ) : (
             <button type="button" className="btn-select-project-alert" onClick={() => navigate('/projects')}>
               <FolderOpen size={13} />
-              <span>Nenhum Projeto Ativo — Criar ou Selecionar</span>
+              {/* O aviso inteiro não cabe em 375px — e cortado no meio ele
+                  deixa de avisar. No celular vale a forma curta. */}
+              <span className="alert-text-full">Nenhum Projeto Ativo — Criar ou Selecionar</span>
+              <span className="alert-text-short">Selecionar projeto</span>
             </button>
           )}
         </div>
@@ -227,7 +274,28 @@ export function TopRibbonBar(): JSX.Element {
             LAYER 2: WORKFLOW NAVIGATION TABS
             The pipeline ribbon tabs (Project → Protocol → Harvest → Screen → Extract → Export)
         ═══════════════════════════════════════════════════════════════ */}
-        <div className="ribbon-tabs-bar">
+        {/* Véu da gaveta. Existe só no celular: no desktop a faixa de abas
+            nunca cobre nada, então não há o que velar. */}
+        <div
+          className={`ribbon-nav-scrim ${mobileNavOpen ? 'is-open' : ''}`}
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+
+        <div id="ribbon-etapas" className={`ribbon-tabs-bar ${mobileNavOpen ? 'is-open' : ''}`}>
+          {/* Cabeçalho da gaveta — some no desktop. */}
+          <div className="ribbon-drawer-head">
+            <span className="ribbon-drawer-title">Etapas da revisão</span>
+            <button
+              type="button"
+              className="ribbon-drawer-close"
+              onClick={() => setMobileNavOpen(false)}
+              aria-label="Fechar menu de etapas"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
           <Tabs.List asChild>
             <nav className="ribbon-tabs-nav" aria-label="Navegação da Revisão Sistemática">
               {RIBBON_TABS.map((tab) => {
@@ -257,6 +325,15 @@ export function TopRibbonBar(): JSX.Element {
                     {tab.stepNumber && <span className="tab-step-num">{tab.stepNumber}</span>}
                     <span className="ribbon-tab-icon">{tab.icon}</span>
                     <span className="ribbon-tab-label">{tab.label}</span>
+                    {/* Na gaveta há largura para dizer POR QUE a etapa não
+                        abre; na faixa de mesa o cadeado fica oculto e o
+                        motivo continua no `title`. */}
+                    {disabled && (
+                      <span className="tab-lock-hint">
+                        <Lock size={11} aria-hidden="true" />
+                        <span>requer projeto</span>
+                      </span>
+                    )}
                   </Tabs.Trigger>
                 )
               })}
@@ -269,8 +346,35 @@ export function TopRibbonBar(): JSX.Element {
             100% dynamic — renders ONLY the tools for the active tab.
             Every group, every button, every metric is purposeful.
         ═══════════════════════════════════════════════════════════════ */}
-        {!ribbonCollapsed && (
-          <div className="ribbon-toolstrip animate-fade-in">
+        {/* Chamada da faixa de ferramentas no celular. No desktop quem
+            comanda isto é o botão de recolher da barra de título; aqui ele
+            não serve, porque no celular a faixa nasce fechada de qualquer
+            jeito — 80px de ferramentas em 812px de tela é imposto alto para
+            cobrar antes de o pesquisador pedir. O rótulo diz de qual etapa
+            são as ferramentas, que era a informação que a rolagem lateral
+            escondia. */}
+        <button
+          type="button"
+          className={`ribbon-mobile-tools-toggle ${mobileToolsOpen ? 'is-open' : ''}`}
+          onClick={() => setMobileToolsOpen((aberta) => !aberta)}
+          aria-expanded={mobileToolsOpen}
+          aria-controls="ribbon-ferramentas"
+        >
+          <SlidersHorizontal size={14} aria-hidden="true" />
+          <span className="tools-toggle-label">Ferramentas · {currentTab.label}</span>
+          <ChevronDown size={15} aria-hidden="true" className="tools-toggle-chevron" />
+        </button>
+
+        {/* A faixa fica sempre montada e é a folha de estilo que decide se
+            aparece. Antes o `!ribbonCollapsed` a desmontava — e, no celular,
+            quem tivesse recolhido a faixa no desktop ficava sem NENHUM
+            acesso às ferramentas da etapa, sem pista de que existiam. */}
+        <div
+          id="ribbon-ferramentas"
+          className={`ribbon-toolstrip animate-fade-in ${ribbonCollapsed ? 'is-collapsed' : ''} ${
+            mobileToolsOpen ? 'is-mobile-open' : ''
+          }`}
+        >
 
             {/* ──────────────────────────────────────────────────────────
                 TAB: ARQUIVO (Projetos)
@@ -1003,8 +1107,7 @@ export function TopRibbonBar(): JSX.Element {
               </GrupoDoRibbon>
             </Tabs.Content>
 
-          </div>
-        )}
+        </div>
       </Tabs.Root>
     </header>
   )

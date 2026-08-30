@@ -1,0 +1,563 @@
+/**
+ * Revsist — Camada de Adaptação Móvel
+ * ====================================================================
+ *
+ * O Revsist é, por projeto, uma estação de trabalho: densidade alta, ribbon
+ * de escritório, painéis lado a lado. Essa gramática funciona em 1440px e
+ * desmorona em 375px — não por falta de responsividade pontual, mas porque a
+ * MEDIDA é outra. Aqui a medida é redeclarada de uma vez, em vez de remendada
+ * tela a tela:
+ *
+ *   1. escala tipográfica sobe um degrau (9px não é leitura, é ruído);
+ *   2. nada de texto longo sem quebra — DOI, URL e título de artigo são as
+ *      cadeias que estouravam os contêineres;
+ *   3. alvo de toque mínimo de 40px, campo de formulário em 16px (abaixo
+ *      disso o iOS dá zoom sozinho e desloca a página inteira);
+ *   4. toda grade de duas ou mais colunas colapsa para uma;
+ *   5. o que era "some na rolagem horizontal" passa a ser "empilha e
+ *      aparece" — nenhuma ferramenta fica inalcançável.
+ *
+ * ORDEM DE CARGA: este arquivo é importado por ÚLTIMO em `main.tsx`, depois
+ * do grafo de componentes, para vencer os `@media` locais sem `!important`
+ * espalhado. `!important` aparece só onde a regra original também usa.
+ */
+
+/* ════════════════════════════════════════════════════════════════════
+   1. MEDIDA — tokens redeclarados para a tela pequena
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    /* Um degrau acima em toda a faixa densa. O topo da escala (lg em
+       diante) fica onde estava: ali o problema nunca foi legibilidade. */
+    --font-size-3xs: 0.625rem;    /* 9px  → 10px */
+    --font-size-2xs: 0.6875rem;   /* 10px → 11px */
+    --font-size-xs: 0.75rem;      /* 11px → 12px */
+    --font-size-sm: 0.8125rem;    /* 12px → 13px */
+    --font-size-md: 0.875rem;     /* 13px → 14px */
+    --font-size-base: 0.9375rem;  /* 14px → 15px */
+
+    --statusbar-height: 36px;
+
+    /* Alvo de toque e recuos do aparelho, usados pelas docas fixas. */
+    --rsac-touch: 40px;
+    --rsac-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --rsac-safe-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   2. CONTENÇÃO DE TEXTO
+   A queixa "texto saindo do contêiner" tem quase sempre a mesma causa: uma
+   cadeia sem espaço (DOI, URL, identificador) dentro de um flex/grid cujo
+   item nasce com `min-width: auto`. As regras abaixo resolvem a classe
+   inteira do problema; a elipse continua onde já existia.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app-content,
+  .app-content * {
+    min-width: 0;
+  }
+
+  .app-content p,
+  .app-content span,
+  .app-content strong,
+  .app-content em,
+  .app-content li,
+  .app-content dd,
+  .app-content dt,
+  .app-content label,
+  .app-content h1,
+  .app-content h2,
+  .app-content h3,
+  .app-content h4,
+  .app-content h5,
+  .app-content td,
+  .app-content th,
+  .app-content a,
+  .rsac-dialog-content,
+  .rsac-dialog-content * {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Blocos monoespaçados (consultas, respostas de API, trechos de log) não
+     têm espaço onde quebrar: quebram em qualquer ponto, senão empurram a
+     página inteira para o lado. */
+  .app-content pre,
+  .app-content code,
+  .log-message {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+  }
+
+  /* Nada dentro da área de trabalho pode produzir rolagem horizontal do
+     documento — é o sintoma que faz a página "escorregar" sob o polegar. */
+  .app-content {
+    overflow-x: hidden;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   3. FORMULÁRIOS — 16px é regra do sistema, não preferência estética
+   Safari/iOS aplica zoom automático em qualquer campo com fonte menor que
+   16px, e o zoom desloca o layout inteiro sem volta.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea,
+  .rsac-input,
+  .rsac-select,
+  .rsac-textarea {
+    font-size: var(--font-size-lg) !important; /* 16px */
+  }
+
+  .rsac-input--sm,
+  .rsac-input--md,
+  .rsac-input--lg,
+  .rsac-select--sm,
+  .rsac-select--md,
+  .rsac-select--lg {
+    height: var(--rsac-touch);
+  }
+
+  .rsac-textarea {
+    min-height: 96px;
+    padding: var(--space-2-5) var(--space-3);
+  }
+
+  .rsac-form-group {
+    margin-bottom: var(--space-4);
+  }
+
+  .rsac-form-label {
+    font-size: var(--font-size-sm);
+  }
+
+  .rsac-form-helper,
+  .rsac-form-error {
+    font-size: var(--font-size-2xs);
+  }
+
+  /* Caixas de marcação e rádios ganham área de toque real. */
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   4. ALVOS DE TOQUE
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app-content .rsac-btn--xs,
+  .app-content .rsac-btn--sm,
+  .app-content .rsac-btn--md,
+  .app-content .rsac-btn--lg,
+  .app-content .btn-primary,
+  .app-content .btn-secondary,
+  .app-content .btn-danger {
+    min-height: var(--rsac-touch);
+    height: auto;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+
+  .app-content .btn-icon,
+  .app-content .rsac-btn--icon {
+    min-width: var(--rsac-touch);
+    min-height: var(--rsac-touch);
+  }
+
+  /* Botão com rótulo longo deixa de forçar uma linha só. */
+  .app-content .rsac-btn,
+  .app-content .btn-primary,
+  .app-content .btn-secondary,
+  .app-content .btn-danger {
+    white-space: normal;
+    text-align: center;
+    line-height: var(--leading-tight);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   5. GRADES — tudo em coluna única
+   Cada seletor aqui é uma grade multicoluna que não tinha ponto de quebra
+   próprio abaixo de 768px.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .settings-grid,
+  .studio-tabs-bar,
+  .search-filters-form-grid,
+  .prisma-compact-row,
+  .dashboard-stats,
+  .insights-grid,
+  .harvest-workbench-grid,
+  .export-workbench-grid,
+  .screening-workbench-grid,
+  .extraction-workbench-grid,
+  .studio-workspace-grid,
+  .portability-cards-grid,
+  .user-form-grid-2,
+  .user-form-grid-3,
+  .filter-chips-grid.doc-types-grid,
+  .target-dbs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* `minmax(340px, …)` obriga a coluna a ter 340px mesmo quando a tela só
+     oferece 300 — overflow garantido no iPhone SE. Aqui a contagem de
+     colunas é declarada, em vez de calculada a partir de um mínimo em
+     pixels que a tela não tem. */
+  .project-grid,
+  .projects-grid,
+  .themes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* As cinco abas de Configurações em pilha comeriam meia tela antes do
+     primeiro campo; em duas colunas cabem em duas linhas e meia. */
+  .settings-main-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-main-tab-btn {
+    min-height: 46px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .settings-main-tab-btn .tab-label {
+    white-space: normal;
+    line-height: var(--leading-tight);
+  }
+
+  /* Grades de 3+ colunas que ainda cabem em duas (contadores, fichas
+     curtas): duas, nunca três. */
+  .filter-chips-grid,
+  .traceability-stats-grid,
+  .batch-stats-counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   6. TABELAS
+   Tabela não colapsa bem em 375px, e fingir que colapsa (display:block nas
+   células) destrói a leitura de matriz — que é justamente o valor da
+   matriz de filtros e das listas de auditoria. A tabela continua tabela e
+   ganha rolagem própria, contida: o documento não rola junto.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app-content table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .app-content table th,
+  .app-content table td {
+    font-size: var(--font-size-2xs);
+    padding: var(--space-2);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   7. DIÁLOGOS — folha de baixo para cima, não janelinha centralizada
+   Um modal de 90vw centralizado em 812px de altura deixa faixa morta em
+   cima e embaixo e ainda corta o rodapé de ações.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .rsac-dialog-content,
+  .rsac-dialog-content--sm,
+  .rsac-dialog-content--md,
+  .rsac-dialog-content--lg,
+  .rsac-dialog-content--xl,
+  .rsac-dialog-content--full {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100vw;
+    max-width: 100vw;
+    height: auto;
+    max-height: 92dvh;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    animation: rsac-sheet-up var(--motion-base) var(--ease-out);
+  }
+
+  .rsac-dialog-content {
+    padding-bottom: calc(var(--space-5) + var(--rsac-safe-bottom));
+  }
+
+  .rsac-dialog-content--window {
+    padding-bottom: 0;
+  }
+
+  .rsac-dialog-body {
+    padding: var(--space-4);
+    padding-bottom: calc(var(--space-4) + var(--rsac-safe-bottom));
+  }
+
+  /* Rodapé de ações: empilhado, largura cheia, primária embaixo — onde o
+     polegar alcança. */
+  .rsac-dialog-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .rsac-dialog-footer > * {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--rsac-touch);
+  }
+
+  .rsac-dialog-header {
+    padding-right: var(--space-10);
+  }
+
+  .rsac-dialog-close-btn {
+    width: var(--rsac-touch);
+    height: var(--rsac-touch);
+  }
+}
+
+@keyframes rsac-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsac-dialog-content {
+    animation: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   8. AVISOS TRANSITÓRIOS
+   O toast no canto inferior direito cobria exatamente a doca de decisão da
+   Triagem. Em tela pequena ele sobe para o topo, em largura cheia.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  [data-sonner-toaster] {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: calc(var(--rsac-safe-top) + var(--space-2)) !important;
+    bottom: auto !important;
+    padding: 0 var(--space-2) !important;
+  }
+
+  .rsac-toast {
+    padding: var(--space-2-5) var(--space-3);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   9. DOCAS FLUTUANTES
+   Barras fixas nasceram medindo a barra de status em 32px cravados. Passam
+   a medir o token — e a somar o recuo do aparelho.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .screening-mobile-sticky-dock,
+  .extraction-mobile-sticky-dock {
+    bottom: calc(var(--statusbar-height) + var(--rsac-safe-bottom));
+    padding-bottom: var(--space-2);
+  }
+
+  /* Os rótulos das barras segmentadas ("Fila", "Documento", "Perguntas")
+     eram cortados numa faixa de 38px de altura fixa: passam a quebrar em
+     duas linhas em vez de vazar. */
+  .screening-mobile-segmented-nav .mobile-seg-btn,
+  .extraction-mobile-segmented-nav .mobile-seg-btn,
+  .harvest-mobile-segmented-nav .mobile-seg-btn {
+    height: auto;
+    min-height: 42px;
+    padding: var(--space-1) var(--space-1-5);
+    font-size: var(--font-size-2xs);
+    line-height: var(--leading-tight);
+    white-space: normal;
+  }
+
+  /* O dock do lote em progresso disputava o mesmo canto que a doca de
+     decisão: sobe para cima dela e vira faixa. */
+  .batch-floating-dock {
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: calc(var(--statusbar-height) + var(--rsac-safe-bottom) + 68px);
+    justify-content: space-between;
+  }
+
+  /* Quem tem doca fixa precisa de fôlego no fim da rolagem, senão o último
+     cartão nasce debaixo dela. */
+  .screening-page,
+  .extraction-page {
+    padding-bottom: calc(var(--space-16) + var(--rsac-safe-bottom));
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   10. FILEIRAS DE COMANDO E FILTRO
+   Toda barra horizontal de controles vira pilha ou grade de dois.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .study-actions-toolbar,
+  .toolbar-secondary-actions,
+  .queue-controls-bar,
+  .export-top-controls-bar,
+  .projects-filter-bar,
+  .insights-filtros,
+  .harvest-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    width: 100%;
+  }
+
+  .insights-filtros .rsac-form-group {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Grupos de botão que ficam melhor em duas colunas que em pilha. */
+  .queue-filter-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-1-5);
+  }
+
+  .queue-filter-buttons > * {
+    min-height: var(--rsac-touch);
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   11. CARTÕES E PAINÉIS
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app-content .rsac-card,
+  .app-content .neo-card,
+  .settings-card,
+  .settings-section-card,
+  .project-card {
+    padding: var(--space-3);
+  }
+
+  /* Painéis de leitura (artigo, critérios, fila) tinham altura amarrada ao
+     viewport de mesa: empilhados, precisam crescer com o conteúdo em vez de
+     disputar 100% de uma altura que não existe mais. */
+  .study-reading-pane,
+  .criteria-evaluation-pane,
+  .paper-reading-pane,
+  .extraction-form-pane,
+  .harvest-config-pane,
+  .harvest-feed-pane,
+  .export-preview-pane {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   12. MENUS SUSPENSOS E CAMPOS DE LARGURA FIXA
+   Um menu de 280px ancorado em `right: 0` dentro de uma área de trabalho
+   com `overflow-x: hidden` não vaza: some cortado, que é pior. Vira faixa
+   presa às duas margens da tela.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .ai-assist-dropdown-menu {
+    position: fixed;
+    top: auto;
+    right: var(--space-2);
+    left: var(--space-2);
+    width: auto;
+    max-height: 60dvh;
+    overflow-y: auto;
+  }
+
+  /* Campos que crescem no foco (140px → 180px) não fazem sentido numa
+     coluna: ocupam a linha inteira desde o começo. */
+  .reader-search-input-box,
+  .reader-search-input-box input,
+  .reader-search-input-box input:focus,
+  .queue-search-input-wrapper,
+  .queue-search-input-wrapper input {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   13. ESTÚDIO DE PROTOCOLO — as seis seções
+   No desktop as seis abas dividem uma fileira e o rótulo trunca com
+   elipse; em 375px isso vira seis reticências indistinguíveis dentro de
+   uma régua de rolagem lateral. Viram grade de duas colunas com o nome
+   inteiro: a seção que o pesquisador procura precisa estar legível.
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .tabs-group-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-1-5);
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .tabs-group-buttons .studio-tab,
+  .studio-tabs-bar .studio-tab {
+    min-height: 46px;
+    padding: var(--space-2) var(--space-1-5);
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .studio-tab .tab-label {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: var(--leading-tight);
+  }
+
+  /* O banner de fase é uma frase longa ao lado de uma etiqueta curta:
+     empilhados, ele para de espremer os dois. */
+  .phase-indicator-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   14. TELAS MUITO ESTREITAS (≤ 380px — iPhone SE, Galaxy A0x)
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 380px) {
+  .filter-chips-grid,
+  .traceability-stats-grid,
+  .batch-stats-counters,
+  .queue-filter-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .app-content {
+    padding-left: var(--space-1-5);
+    padding-right: var(--space-1-5);
+  }
+}

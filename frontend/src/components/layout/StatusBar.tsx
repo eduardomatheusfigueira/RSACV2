@@ -37,24 +37,25 @@ export function StatusBar(): JSX.Element {
           <BetaBadge tone="auto" size="xs" />
         </span>
         <span className="status-divider">|</span>
+        {/* Os rótulos vão em `<span>` nomeado, e não soltos como nó de
+            texto, porque é ele que a folha de estilo precisa poder recolher
+            na tela pequena. Enquanto eram texto solto, a regra que tentava
+            escondê-los no celular não pegava em nada — e a barra estourava
+            para fora da largura. */}
         <span
           className="status-indicator"
           title={`Status da Aplicação: ${statusText}`}
         >
           <span className={`status-dot ${backendStatus || 'offline'}`} />
-          {statusText}
+          <span className="status-label">{statusText}</span>
         </span>
         <span className="status-divider">|</span>
-        <span className={`status-ai-mode ${aiEnabled ? 'active' : 'manual'}`}>
-          {aiEnabled ? (
-            <>
-              <Sparkles size={12} /> Modo Assistido
-            </>
-          ) : (
-            <>
-              <Edit3 size={12} /> Modo Manual
-            </>
-          )}
+        <span
+          className={`status-ai-mode ${aiEnabled ? 'active' : 'manual'}`}
+          title={aiEnabled ? 'Modo Assistido' : 'Modo Manual'}
+        >
+          {aiEnabled ? <Sparkles size={12} /> : <Edit3 size={12} />}
+          <span className="status-label">{aiEnabled ? 'Modo Assistido' : 'Modo Manual'}</span>
         </span>
       </div>
       <div className="status-bar-right">
@@ -72,7 +73,7 @@ export function StatusBar(): JSX.Element {
               title="Encerrar sessão"
             >
               <LogOut size={12} />
-              <span>Sair</span>
+              <span className="status-label">Sair</span>
             </button>
             <span className="status-divider">|</span>
           </>
@@ -87,7 +88,7 @@ export function StatusBar(): JSX.Element {
           title={panelOpen ? 'Fechar painel de logs' : 'Abrir painel de logs de processos'}
         >
           <Terminal size={12} />
-          <span>Logs</span>
+          <span className="status-label">Logs</span>
           {errorCount > 0 ? (
             <span className="log-badge error">
               <AlertCircle size={9} /> {errorCount}

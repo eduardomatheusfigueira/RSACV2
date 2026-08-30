@@ -191,10 +191,41 @@
   gap: var(--space-3);
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .reg-grid-2,
   .reg-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  /* `dvh` porque a barra de endereço do navegador móvel muda de altura
+     durante a rolagem: com `vh` o cartão nascia cortado embaixo. */
+  .login-page {
+    min-height: 100dvh;
+    align-items: flex-start;
+    padding: calc(var(--space-4) + var(--rsac-safe-top, 0)) var(--space-3)
+      calc(var(--space-6) + var(--rsac-safe-bottom, 0));
+  }
+
+  .login-card {
+    max-width: 100%;
+    padding: var(--space-5) var(--space-4);
+  }
+
+  /* As duas abas não cabem lado a lado com o rótulo inteiro em 375px —
+     empilhadas, cada uma vira um alvo de toque cheio. */
+  .login-tabs {
+    flex-direction: column;
+  }
+
+  .login-tab {
+    justify-content: flex-start;
+    min-height: 44px;
+    font-size: var(--text-sm);
+  }
+
+  .rsac-custom-select,
+  .login-submit {
+    height: 44px;
   }
 }
 

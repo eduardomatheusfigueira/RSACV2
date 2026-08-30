@@ -42,13 +42,19 @@
 }
 
 @media (max-width: 768px) {
+  /* `dvh` e não `vh`: a barra de endereço do navegador móvel entra e sai da
+     tela, e com `vh` o rodapé do aplicativo ficava debaixo dela. */
   .app-shell {
     height: 100dvh;
     max-height: 100dvh;
   }
 
   .app-content {
-    padding: var(--space-2) var(--space-2) var(--space-16) var(--space-2);
+    padding: var(--space-3) var(--space-2) var(--space-12);
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    /* Impede que a rolagem da área de trabalho, ao chegar ao fim, arraste a
+       página inteira (efeito elástico) ou dispare recarregar-ao-puxar. */
+    overscroll-behavior-y: contain;
   }
 }

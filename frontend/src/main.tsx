@@ -6,6 +6,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import './styles/globals.css'
+/* A camada móvel entra DEPOIS do grafo de componentes (avaliado ao importar
+   `App`), para que suas regras vençam os `@media` locais de cada folha sem
+   precisar de `!important` espalhado. Não reordenar. */
+import './styles/mobile.css'
 
 const rootElement = document.getElementById('root')!
 

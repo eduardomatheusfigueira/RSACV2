@@ -757,86 +757,490 @@
 .icon-sparkle { color: var(--sunlit-clay); }
 
 /* ═══════════════════════════════════════════════════════════════════
-   MOBILE ADAPTATION (< 768px & < 480px)
+   RECOLHIMENTO DA FAIXA (mesa)
+   A faixa deixou de ser desmontada pelo componente — quem decide se ela
+   aparece é a folha de estilo, porque no celular a mesma condição tem
+   outra resposta (ver adiante).
+═══════════════════════════════════════════════════════════════════ */
+.ribbon-toolstrip.is-collapsed {
+  display: none;
+}
+
+/* Superfícies que só existem no celular ficam fora do caminho na mesa. */
+.ribbon-mobile-menu-btn,
+.ribbon-mobile-tools-toggle,
+.ribbon-drawer-head,
+.ribbon-nav-scrim,
+.tab-lock-hint,
+.btn-select-project-alert .alert-text-short {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CELULAR E TABLET RETRATO (≤ 768px)
+
+   A faixa de escritório pressupõe 1440px de largura: nove abas numa
+   fileira, oito grupos de ferramenta noutra. Em 375px isso vira duas
+   réguas de rolagem lateral — e rolagem lateral sem borda visível é o
+   mesmo que esconder. A resposta aqui não é encolher: é trocar a
+   gramática.
+
+     · as nove etapas viram GAVETA vertical, cada uma com rótulo inteiro,
+       número da etapa e o motivo de estar trancada;
+     · as ferramentas da etapa viram PAINEL sob demanda, que embrulha em
+       várias linhas em vez de correr para fora da tela;
+     · a barra de título guarda só o que é permanente: menu, marca,
+       projeto ativo e o modo de assistência.
 ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
+  /* ── Barra de título ─────────────────────────────────────────── */
   .ribbon-titlebar {
+    height: auto;
+    min-height: 48px;
+    padding: calc(var(--rsac-safe-top, 0)) var(--space-1-5) 0 var(--space-1);
+    gap: var(--space-1);
+  }
+
+  .ribbon-mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
     height: 40px;
-    padding: 0 var(--space-2);
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-xs);
+    color: var(--color-chrome-text);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  .ribbon-mobile-menu-btn:active {
+    background: var(--color-chrome-hover);
+  }
+
+  /* A marca cede o nome para o projeto ativo: o monograma já identifica o
+     aplicativo, e saber em QUAL projeto se está vale mais na tela pequena. */
+  .ribbon-brand {
+    padding: var(--space-1);
+    margin-left: 0;
+    flex-shrink: 0;
+  }
+
+  .ribbon-brand .brand-name,
+  .ribbon-brand .rsac-beta {
+    display: none;
   }
 
   .ribbon-active-project-bar {
-    max-width: 180px;
-    margin: 0 var(--space-1);
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+    justify-content: flex-start;
+  }
+
+  .active-project-pill {
+    width: 100%;
+    min-height: 32px;
+    padding: var(--space-1) var(--space-2);
   }
 
   .project-label {
     display: none;
   }
 
-  .ribbon-action-pill span:not(.icon-sparkle) {
+  .project-title {
+    font-size: var(--font-size-sm);
+  }
+
+  /* O aviso longo não cabe — a forma curta assume, e o alvo cresce. */
+  .btn-select-project-alert {
+    min-height: 32px;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .btn-select-project-alert .alert-text-full {
     display: none;
   }
 
+  .btn-select-project-alert .alert-text-short {
+    display: inline;
+  }
+
+  /* O modo de assistência fica só como pastilha de ícone: é estado, e o
+     rótulo dele já aparece por extenso na barra de status. */
   .ribbon-action-pill {
+    min-width: 40px;
+    min-height: 40px;
     padding: var(--space-1);
-    min-width: 32px;
     justify-content: center;
+    border-radius: var(--radius-xs);
+  }
+
+  .ribbon-action-pill > span {
+    display: none;
+  }
+
+  /* Recolher a faixa é comando de mesa. No celular quem manda nisso é o
+     alternador de ferramentas logo abaixo. */
+  .ribbon-icon-btn.collapse-btn {
+    display: none;
+  }
+
+  /* ── Gaveta de etapas ────────────────────────────────────────── */
+  .ribbon-nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--color-overlay);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-base), visibility var(--transition-base);
+    z-index: var(--z-drawer);
+  }
+
+  .ribbon-nav-scrim.is-open {
+    opacity: 1;
+    visibility: visible;
   }
 
   .ribbon-tabs-bar {
-    overflow-x: auto;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 330px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--rsac-safe-top, 0) 0 calc(var(--space-4) + var(--rsac-safe-bottom, 0));
+    background: var(--color-bg-secondary);
+    border-bottom: none;
+    border-right: 1px solid var(--color-border);
+    box-shadow: 4px 0 24px color-mix(in srgb, var(--bevel-dark) 32%, transparent);
+    overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding: 0 var(--space-1);
+    transform: translateX(-100%);
+    /* `visibility` além do `transform`: fechada, a gaveta sai também da
+       ordem de tabulação e da árvore de acessibilidade — senão o leitor de
+       tela anuncia nove destinos invisíveis. */
+    visibility: hidden;
+    transition: transform var(--transition-base), visibility var(--transition-base);
+    z-index: var(--z-drawer);
   }
 
-  .ribbon-tabs-bar::-webkit-scrollbar {
-    display: none;
+  .ribbon-tabs-bar.is-open {
+    transform: translateX(0);
+    visibility: visible;
   }
 
-  .ribbon-tab-btn {
-    padding: var(--space-2) var(--space-2-5);
+  .ribbon-drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: 48px;
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+
+  .ribbon-drawer-title {
     font-size: var(--font-size-2xs);
+    font-family: var(--font-mono);
+    font-weight: var(--weight-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-tertiary);
+  }
+
+  .ribbon-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-xs);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+  }
+
+  .ribbon-tabs-nav {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-px);
+    padding: var(--space-2);
+  }
+
+  /* Cada etapa é uma linha de lista, não uma aba: número, ícone, rótulo
+     inteiro e — quando trancada — o motivo, escrito. */
+  .ribbon-tab-btn {
+    display: grid;
+    grid-template-columns: 22px 20px 1fr;
+    align-items: center;
+    gap: var(--space-2-5);
+    width: 100%;
+    min-height: 48px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xs);
+    border: 1px solid transparent;
+    font-size: var(--font-size-base);
+    text-align: left;
+    white-space: normal;
+  }
+
+  .ribbon-tab-btn.active {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+    border-top: 1px solid var(--color-accent);
+    border-bottom: 1px solid var(--color-accent);
+    margin-bottom: 0;
+    color: var(--color-accent-text);
+  }
+
+  .ribbon-tab-btn .tab-step-num {
+    min-width: 22px;
+    height: 22px;
+    font-size: var(--font-size-2xs);
+  }
+
+  /* As duas abas sem número (Arquivo, Ferramentas) mantêm o alinhamento da
+     coluna do ícone com as numeradas. */
+  .ribbon-tab-btn:not(:has(.tab-step-num)) {
+    grid-template-columns: 22px 20px 1fr;
+  }
+
+  .ribbon-tab-btn:not(:has(.tab-step-num)) .ribbon-tab-icon {
+    grid-column: 2;
+  }
+
+  .ribbon-tab-label {
+    grid-column: 3;
+  }
+
+  .tab-lock-hint {
+    display: inline-flex;
+    align-items: center;
     gap: var(--space-1);
+    grid-column: 3;
+    font-size: var(--font-size-2xs);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-tertiary);
+    text-transform: none;
+    letter-spacing: 0;
   }
 
-  .ribbon-toolstrip {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: var(--space-1) var(--space-2);
-    height: auto;
-    min-height: 52px;
+  /* Trancada não é apagada: o texto continua legível, senão o motivo que
+     acabamos de escrever fica ilegível junto. */
+  .ribbon-tab-btn.disabled,
+  .ribbon-tab-btn[disabled] {
+    opacity: 1;
+    filter: none;
+    color: var(--color-text-tertiary);
+    background: var(--color-bg-primary);
   }
 
-  .ribbon-group-title {
+  /* ── Alternador do painel de ferramentas ─────────────────────── */
+  .ribbon-mobile-tools-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: 40px;
+    padding: 0 var(--space-3);
+    background: var(--color-bg-primary);
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-family: inherit;
+    font-size: var(--font-size-xs);
+    font-weight: var(--weight-bold);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .ribbon-mobile-tools-toggle .tools-toggle-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ribbon-mobile-tools-toggle .tools-toggle-chevron {
+    flex-shrink: 0;
+    transition: transform var(--transition-fast);
+  }
+
+  .ribbon-mobile-tools-toggle.is-open {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+  }
+
+  .ribbon-mobile-tools-toggle.is-open .tools-toggle-chevron {
+    transform: rotate(180deg);
+  }
+
+  /* ── Painel de ferramentas ───────────────────────────────────── */
+  /* Fechado por padrão E independente do recolhimento salvo na mesa: quem
+     recolheu a faixa no desktop não pode ficar sem acesso às ferramentas
+     no celular. */
+  .ribbon-toolstrip,
+  .ribbon-toolstrip.is-collapsed {
     display: none;
   }
 
-  .ribbon-group {
-    padding: 0 var(--space-1);
+  .ribbon-toolstrip.is-mobile-open,
+  .ribbon-toolstrip.is-collapsed.is-mobile-open {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    align-content: flex-start;
+    gap: var(--space-2);
+    height: auto;
+    min-height: 0;
+    /* Teto de 44dvh: o painel é consulta, não destino. Acima disso ele
+       come a tela que a etapa precisa. */
+    max-height: 44dvh;
+    padding: var(--space-2) var(--space-2) var(--space-3);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .ribbon-btn-large {
-    min-width: 48px;
-    padding: var(--space-1);
+  /* Cada grupo ocupa a linha inteira e volta a exibir o próprio título —
+     era ele que dizia PARA QUE serve o punhado de botões, e estava
+     escondido justamente onde o contexto é mais escasso. */
+  .ribbon-toolstrip.is-mobile-open .ribbon-group {
+    width: 100%;
+    height: auto;
+    padding: var(--space-2);
+    gap: var(--space-2);
   }
 
-  .ribbon-btn-large .ribbon-btn-label {
-    font-size: var(--font-size-3xs);
+  .ribbon-toolstrip.is-mobile-open .ribbon-group-title {
+    display: block;
+    order: -1;
+    border-top: none;
+    border-bottom: 1px solid var(--color-border);
+    margin: 0 0 var(--space-1-5);
+    padding: 0 0 var(--space-1);
+    text-align: left;
+    font-size: var(--font-size-2xs);
+  }
+
+  .ribbon-toolstrip.is-mobile-open .ribbon-group-tools,
+  .ribbon-toolstrip.is-mobile-open .ribbon-group-tools-wrap,
+  .ribbon-toolstrip.is-mobile-open .ribbon-db-grid,
+  .ribbon-toolstrip.is-mobile-open .ribbon-provider-stack {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: var(--space-1-5);
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    grid-template-rows: none;
+  }
+
+  /* Os divisores verticais não fazem sentido numa pilha. */
+  .ribbon-toolstrip.is-mobile-open .ribbon-divider {
+    display: none;
+  }
+
+  /* Botões: rótulo inteiro, duas linhas se precisar, alvo de 48px. Antes
+     eram 58px de largura fixa com o texto vazando pelas bordas. */
+  .ribbon-toolstrip.is-mobile-open .tool-btn-large,
+  .ribbon-toolstrip.is-mobile-open .tool-btn-vertical,
+  .ribbon-toolstrip.is-mobile-open .tool-btn-decision {
+    flex: 1 1 88px;
+    width: auto;
+    min-width: 88px;
+    max-width: none;
+    height: auto;
+    min-height: 56px;
+    padding: var(--space-2) var(--space-1-5);
+    font-size: var(--font-size-2xs);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .ribbon-toolstrip.is-mobile-open .tool-btn-compact {
+    height: auto;
+    min-height: 34px;
+    padding: var(--space-1-5) var(--space-2-5);
+    font-size: var(--font-size-2xs);
+  }
+
+  .ribbon-toolstrip.is-mobile-open .ribbon-info-box {
+    flex: 1 1 100%;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    height: auto;
+    min-height: 32px;
+    padding: 0;
+  }
+
+  .ribbon-toolstrip.is-mobile-open .info-value {
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .ribbon-toolstrip.is-mobile-open .db-badge {
+    height: auto;
+    min-height: 28px;
+    padding: var(--space-1) var(--space-2);
+  }
+
+  /* O "próximo passo" é a única linha do painel que orienta em vez de
+     comandar: linha cheia, botão de largura total embaixo. */
+  .ribbon-toolstrip.is-mobile-open .ribbon-next-step {
+    flex: 1 1 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    height: auto;
+    padding: var(--space-1) 0 0;
+  }
+
+  .ribbon-toolstrip.is-mobile-open .ribbon-next-step .next-step-text strong,
+  .ribbon-toolstrip.is-mobile-open .ribbon-next-step .next-step-text span {
+    font-size: var(--font-size-2xs);
+  }
+
+  .ribbon-toolstrip.is-mobile-open .tool-btn-next {
+    width: 100%;
+    height: auto;
+    min-height: 40px;
+    justify-content: center;
+    font-size: var(--font-size-xs);
   }
 }
 
-@media (max-width: 480px) {
-  .ribbon-brand .brand-ver {
-    display: none;
-  }
-
-  .ribbon-active-project-bar {
-    max-width: 120px;
-  }
-
+/* ═══════════════════════════════════════════════════════════════════
+   TELAS MUITO ESTREITAS (≤ 380px)
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 380px) {
   .project-methodology-tag {
     display: none;
+  }
+
+  .ribbon-toolstrip.is-mobile-open .tool-btn-large,
+  .ribbon-toolstrip.is-mobile-open .tool-btn-vertical,
+  .ribbon-toolstrip.is-mobile-open .tool-btn-decision {
+    flex-basis: 72px;
+    min-width: 72px;
   }
 }

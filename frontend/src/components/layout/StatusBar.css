@@ -188,31 +188,74 @@
   color: var(--color-text-on-error);
 }
 
-@media (max-width: 600px) {
+/* ═══════════════════════════════════════════════════════════════════
+   CELULAR (≤ 768px)
+
+   A barra é a última linha da tela e disputa espaço com o polegar. Ela
+   guarda o que é ESTADO — conexão, modo de assistência, sessão, erros —
+   e larga o que é rótulo: cada indicador vira pastilha de ícone com
+   `title` e `aria-label` preservados, sem perder nada para quem lê por
+   leitor de tela ou passa o dedo.
+═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
   .status-bar {
-    padding: 0 var(--space-1-5);
-    height: 32px;
+    height: auto;
+    min-height: var(--statusbar-height);
+    padding: var(--space-1) var(--space-1-5)
+      calc(var(--space-1) + var(--rsac-safe-bottom, 0));
+    gap: var(--space-1-5);
   }
 
-  .status-brand {
+  .status-bar-left,
+  .status-bar-right {
+    gap: var(--space-1-5);
+    min-width: 0;
+  }
+
+  .status-brand,
+  .status-version,
+  .status-backend-host,
+  .status-user-role {
     display: none;
   }
 
-  .status-indicator {
-    padding: var(--space-0-5) var(--space-1-5);
-    font-size: var(--font-size-2xs);
+  /* O rótulo sai; o ícone, a cor e o `title` continuam dizendo o mesmo. */
+  .status-indicator .status-label,
+  .status-ai-mode .status-label,
+  .status-logout-btn .status-label,
+  .status-log-btn .status-label {
+    display: none;
   }
 
+  .status-indicator,
   .status-ai-mode {
-    padding: var(--space-0-5) var(--space-1-5);
-    font-size: var(--font-size-2xs);
+    min-height: 30px;
+    padding: var(--space-1) var(--space-2);
   }
 
-  .status-ai-mode span {
-    display: none;
+  /* Alvo de toque real nos dois únicos comandos da barra. */
+  .status-log-btn,
+  .status-logout-btn {
+    min-height: 34px;
+    min-width: 34px;
+    padding: var(--space-1) var(--space-2);
+    justify-content: center;
   }
 
-  .status-version {
+  /* A identidade da sessão é o único texto que fica: num servidor
+     compartilhado, operar na conta errada é erro caro e silencioso. */
+  .status-user {
+    min-width: 0;
+  }
+
+  .status-user-name {
+    max-width: 12ch;
+  }
+}
+
+@media (max-width: 380px) {
+  /* Espaço para o essencial: quem está logado e se há erro. */
+  .status-user-name {
     display: none;
   }
 }

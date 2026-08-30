@@ -96,17 +96,49 @@
   transform: translateX(-1px);
 }
 
-@media (max-width: 600px) {
+/* No celular a grade de duas colunas espremia o título contra a ação
+   primária — os dois ficavam ilegíveis em vez de um deles ceder. Vira
+   pilha: título, contexto, ação. */
+@media (max-width: 768px) {
   .rsac-page-header {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-1-5);
+    gap: var(--space-2);
     min-height: auto;
   }
 
+  .rsac-page-header__title {
+    font-size: var(--font-size-xl);
+    overflow-wrap: break-word;
+  }
+
+  .rsac-page-header__main {
+    gap: var(--space-1-5);
+  }
+
+  .rsac-page-header__back {
+    height: 32px;
+    padding: 0 var(--space-2-5);
+    font-size: var(--font-size-xs);
+  }
+
+  .rsac-page-header__subtitle {
+    font-size: var(--font-size-xs);
+  }
+
+  /* A ação primária ganha a linha inteira: é o alvo mais provável da tela
+     e estava nascendo com 22px de altura, colada na borda direita. */
   .rsac-page-header__actions {
     width: 100%;
+    flex-wrap: wrap;
     justify-content: flex-start;
+    gap: var(--space-2);
+  }
+
+  .rsac-page-header__actions > * {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 40px;
   }
 }

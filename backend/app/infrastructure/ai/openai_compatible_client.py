@@ -74,22 +74,29 @@ class OpenAICompatibleAIClient(BaseAIClient):
             logger.info(f"[{self.provider_name}] Chave rotacionada para índice {self.current_key_idx}")
 
     def _clean_json(self, raw_text: str) -> str:
-        """Extrai o bloco JSON limpo de textos gerados pela IA."""
+        """Extrai o bloco JSON limpo de textos gerados pela IA (objeto ou array)."""
         text = raw_text.strip()
         if "```json" in text:
             match = re.search(r"```json\s*(.*?)\s*```", text, re.DOTALL)
             if match:
-                return match.group(1).strip()
+                text = match.group(1).strip()
         elif "```" in text:
             match = re.search(r"```\s*(.*?)\s*```", text, re.DOTALL)
             if match:
-                return match.group(1).strip()
+                text = match.group(1).strip()
 
-        # Tentar extrair do primeiro '{' ao último '}'
-        start_idx = text.find("{")
-        end_idx = text.rfind("}")
-        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-            return text[start_idx : end_idx + 1].strip()
+        # Localizar início de objeto '{' ou de array '['
+        first_brace = text.find("{")
+        first_bracket = text.find("[")
+
+        if first_bracket != -1 and (first_brace == -1 or first_bracket < first_brace):
+            last_bracket = text.rfind("]")
+            if last_bracket != -1 and last_bracket > first_bracket:
+                return text[first_bracket : last_bracket + 1].strip()
+        elif first_brace != -1:
+            last_brace = text.rfind("}")
+            if last_brace != -1 and last_brace > first_brace:
+                return text[first_brace : last_brace + 1].strip()
 
         return text
 
@@ -117,7 +124,7 @@ class OpenAICompatibleAIClient(BaseAIClient):
             "response_format": {"type": "json_object"},
         }
 
-        async with httpx.AsyncClient(timeout=90.0) as client:
+        async with httpx.AsyncClient(timeout=120.0) as client:
             try:
                 res = await client.post(url, json=payload_with_format, headers=headers)
                 if res.status_code == 200:

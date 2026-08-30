@@ -313,5 +313,30 @@
     z-index: var(--z-dialog);
     border-left: none;
     box-shadow: var(--shadow-lg);
+    padding-top: var(--rsac-safe-top, 0);
+    padding-bottom: var(--rsac-safe-bottom, 0);
+  }
+
+  /* O cabeçalho é onde fica o fechar — precisa de alvo de toque, e de não
+     sair de cena quando a lista rola. */
+  .log-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    min-height: 48px;
+    padding: var(--space-2);
+  }
+
+  .log-panel-header button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* A linha de log é a cadeia longa por excelência (URL, traço de pilha):
+     quebra em qualquer ponto em vez de empurrar o painel para o lado. */
+  .log-message {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-all;
   }
 }
