@@ -146,17 +146,19 @@ def delete_project(
 
         # a) Respostas de extração, critérios de papers, fontes e logs de auditoria
         db.execute(
-            text(
-                "DELETE FROM extraction_answers WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid) "
-                "OR question_id IN (SELECT eq.id FROM extraction_questions eq JOIN protocols p ON eq.protocol_id = p.id WHERE p.project_id = :pid)"
-            ),
+            text("DELETE FROM paper_criteria WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid)"),
             {"pid": project_id},
         )
         db.execute(
-            text(
-                "DELETE FROM paper_criteria WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid) "
-                "OR criterion_id IN (SELECT c.id FROM criteria c JOIN protocols p ON c.protocol_id = p.id WHERE p.project_id = :pid)"
-            ),
+            text("DELETE FROM paper_criteria WHERE criterion_id IN (SELECT c.id FROM criteria c JOIN protocols p ON c.protocol_id = p.id WHERE p.project_id = :pid)"),
+            {"pid": project_id},
+        )
+        db.execute(
+            text("DELETE FROM extraction_answers WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid)"),
+            {"pid": project_id},
+        )
+        db.execute(
+            text("DELETE FROM extraction_answers WHERE question_id IN (SELECT eq.id FROM extraction_questions eq JOIN protocols p ON eq.protocol_id = p.id WHERE p.project_id = :pid)"),
             {"pid": project_id},
         )
         db.execute(
@@ -182,10 +184,11 @@ def delete_project(
             {"pid": project_id},
         )
 
-        # c) Papers, Protocolos e Harvest Runs
+        # c) Papers, Protocolos, Harvest Runs e Relatórios de Deduplicação
         db.execute(text("DELETE FROM papers WHERE project_id = :pid"), {"pid": project_id})
         db.execute(text("DELETE FROM protocols WHERE project_id = :pid"), {"pid": project_id})
         db.execute(text("DELETE FROM harvest_runs WHERE project_id = :pid"), {"pid": project_id})
+        db.execute(text("DELETE FROM deduplication_reports WHERE project_id = :pid"), {"pid": project_id})
 
         # d) Projeto raiz
         db.execute(text("DELETE FROM projects WHERE id = :pid"), {"pid": project_id})

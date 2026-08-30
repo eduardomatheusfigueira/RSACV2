@@ -105,6 +105,9 @@ class ProjectModel(Base):
     harvest_runs: Mapped[list["HarvestRunModel"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    deduplication_reports: Mapped[list["DeduplicationReportModel"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -612,7 +615,7 @@ class DeduplicationReportModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     # Relationships
-    project: Mapped["ProjectModel"] = relationship()
+    project: Mapped["ProjectModel"] = relationship(back_populates="deduplication_reports")
 
 
 
