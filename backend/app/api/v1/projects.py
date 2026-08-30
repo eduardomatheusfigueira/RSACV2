@@ -128,65 +128,69 @@ def delete_project(
     db: Session = Depends(get_db),
     project: ProjectModel = Depends(projeto_do_usuario),
 ):
-    """Exclui um projeto e todos os dados associados com cascata rigorosa."""
+    """
+    Exclui um projeto e todos os dados associados com cascata rigorosa e segura
+    mesmo para acervos massivos (sem estourar limites de parâmetros SQL).
+    """
     try:
-        # 1. Coleta IDs de Papers vinculados ao projeto
-        paper_ids = [r[0] for r in db.query(PaperModel.id).filter(PaperModel.project_id == project_id).all()]
+        # 1. Remove os PDFs do disco de forma atômica
+        try:
+            removidos = pdf_service.delete_project_pdfs(project_id)
+            if removidos:
+                logger.info("[Projects] %d PDF(s) do projeto %s removidos do disco.", removidos, project_id)
+        except Exception as exc:
+            logger.warning("[Projects] Falha ao remover PDFs em disco do projeto %s: %s", project_id, exc)
 
-        # 1b. Apaga os PDFs do disco **antes** de perder os identificadores.
-        #
-        # A cascata era rigorosa no banco e ignorava o sistema de arquivos: o
-        # PDF — a peça com maior densidade de dado pessoal do acervo, porque
-        # traz nomes, vínculos e às vezes dados de saúde de terceiros —
-        # sobrevivia à exclusão do projeto que o trouxe. É o achado F-02 do
-        # doc 37 e o item L-24 do checklist: o art. 16 da LGPD exige que a
-        # eliminação alcance todos os repositórios, não só o principal.
-        #
-        # A remoção do arquivo não pode derrubar a exclusão: um PDF que não
-        # sai deixa lixo em disco, mas um erro aqui deixaria o usuário sem
-        # conseguir apagar o próprio projeto.
-        removidos = 0
-        for paper_id in paper_ids:
-            try:
-                if pdf_service.delete_pdf(project_id, paper_id):
-                    removidos += 1
-            except OSError as exc:
-                logger.warning(
-                    "[Projects] PDF de %s não pôde ser removido: %s", paper_id, exc
-                )
-        if removidos:
-            logger.info("[Projects] %d PDF(s) removidos do disco.", removidos)
+        # 2. Deleta entidades filhas usando subconsultas SQL por project_id
+        from sqlalchemy import text
 
-        # 2. Deleta entidades filhas dos papers
-        if paper_ids:
-            db.query(PaperSourceModel).filter(PaperSourceModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
-            db.query(PaperCriterionModel).filter(PaperCriterionModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
-            db.query(ExtractionAnswerModel).filter(ExtractionAnswerModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
-            db.query(AuditLogModel).filter(AuditLogModel.paper_id.in_(paper_ids)).delete(synchronize_session=False)
-            db.query(PaperModel).filter(PaperModel.project_id == project_id).delete(synchronize_session=False)
+        # a) Respostas de extração, critérios de papers, fontes e logs de auditoria
+        db.execute(
+            text(
+                "DELETE FROM extraction_answers WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid) "
+                "OR question_id IN (SELECT eq.id FROM extraction_questions eq JOIN protocols p ON eq.protocol_id = p.id WHERE p.project_id = :pid)"
+            ),
+            {"pid": project_id},
+        )
+        db.execute(
+            text(
+                "DELETE FROM paper_criteria WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid) "
+                "OR criterion_id IN (SELECT c.id FROM criteria c JOIN protocols p ON c.protocol_id = p.id WHERE p.project_id = :pid)"
+            ),
+            {"pid": project_id},
+        )
+        db.execute(
+            text("DELETE FROM paper_sources WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid)"),
+            {"pid": project_id},
+        )
+        db.execute(
+            text("DELETE FROM audit_logs WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid)"),
+            {"pid": project_id},
+        )
 
-        # 3. Coleta protocolos do projeto e deleta critérios e perguntas de extração
-        protocol_ids = [r[0] for r in db.query(ProtocolModel.id).filter(ProtocolModel.project_id == project_id).all()]
-        if protocol_ids:
-            criterion_ids = [r[0] for r in db.query(CriterionModel.id).filter(CriterionModel.protocol_id.in_(protocol_ids)).all()]
-            if criterion_ids:
-                db.query(PaperCriterionModel).filter(PaperCriterionModel.criterion_id.in_(criterion_ids)).delete(synchronize_session=False)
-                db.query(CriterionModel).filter(CriterionModel.protocol_id.in_(protocol_ids)).delete(synchronize_session=False)
+        # b) Perguntas de extração e critérios do protocolo
+        db.execute(
+            text(
+                "DELETE FROM extraction_questions WHERE protocol_id IN (SELECT id FROM protocols WHERE project_id = :pid)"
+            ),
+            {"pid": project_id},
+        )
+        db.execute(
+            text(
+                "DELETE FROM criteria WHERE protocol_id IN (SELECT id FROM protocols WHERE project_id = :pid)"
+            ),
+            {"pid": project_id},
+        )
 
-            question_ids = [r[0] for r in db.query(ExtractionQuestionModel.id).filter(ExtractionQuestionModel.protocol_id.in_(protocol_ids)).all()]
-            if question_ids:
-                db.query(ExtractionAnswerModel).filter(ExtractionAnswerModel.question_id.in_(question_ids)).delete(synchronize_session=False)
-                db.query(ExtractionQuestionModel).filter(ExtractionQuestionModel.protocol_id.in_(protocol_ids)).delete(synchronize_session=False)
+        # c) Papers, Protocolos e Harvest Runs
+        db.execute(text("DELETE FROM papers WHERE project_id = :pid"), {"pid": project_id})
+        db.execute(text("DELETE FROM protocols WHERE project_id = :pid"), {"pid": project_id})
+        db.execute(text("DELETE FROM harvest_runs WHERE project_id = :pid"), {"pid": project_id})
 
-            db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).delete(synchronize_session=False)
+        # d) Projeto raiz
+        db.execute(text("DELETE FROM projects WHERE id = :pid"), {"pid": project_id})
 
-        # 4. Deleta execuções de coleta (harvest runs)
-        db.query(HarvestRunModel).filter(HarvestRunModel.project_id == project_id).delete(synchronize_session=False)
-
-        # 5. Deleta o projeto raiz
-        db.query(ProjectModel).filter(ProjectModel.id == project_id).delete(synchronize_session=False)
         db.commit()
-
         logger.info(f"Projeto excluído com sucesso: ID {project_id}")
     except Exception as e:
         db.rollback()

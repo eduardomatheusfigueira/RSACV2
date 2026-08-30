@@ -260,6 +260,20 @@ class PDFService:
         self._invalidate_text_cache(str(path))
         return removed
 
+    def delete_project_pdfs(self, project_id: str) -> int:
+        """Remove todo o diretório de PDFs do projeto e seus caches em disco de forma atômica."""
+        import shutil
+
+        project_dir = self.storage_dir / project_id
+        removidos = 0
+        if project_dir.exists() and project_dir.is_dir():
+            try:
+                removidos = len(list(project_dir.glob("*.pdf")))
+                shutil.rmtree(project_dir, ignore_errors=True)
+            except OSError as exc:
+                logger.warning("[PDFService] Falha ao remover pasta de PDFs %s: %s", project_dir, exc)
+        return removidos
+
     @staticmethod
     def sha256_of(content: bytes) -> str:
         return hashlib.sha256(content).hexdigest()

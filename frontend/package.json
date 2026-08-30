@@ -8,6 +8,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:web": "vite --config vite.config.web.ts",
     "build": "electron-vite build",
     "build:web": "vite build --config vite.config.web.ts",
     "preview": "electron-vite preview",
