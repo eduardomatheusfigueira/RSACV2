@@ -353,7 +353,18 @@ class APIClient {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: response.statusText }))
-        const errorMsg = error.detail || `HTTP ${response.status}`
+        let errorMsg = error.detail || `HTTP ${response.status}`
+        if (Array.isArray(errorMsg)) {
+          errorMsg = errorMsg
+            .map((e: any) => {
+              const campo = e.loc ? e.loc.slice(1).join('.') : ''
+              const msg = e.msg || JSON.stringify(e)
+              return campo ? `${campo}: ${msg}` : msg
+            })
+            .join(' | ')
+        } else if (typeof errorMsg === 'object' && errorMsg !== null) {
+          errorMsg = errorMsg.msg || errorMsg.message || JSON.stringify(errorMsg)
+        }
         logStore.error(source, `${method} ${path} falhou (${response.status})`, `Erro: ${errorMsg}\nTempo: ${duration}ms`)
 
         // Sessão expirada ou revogada: descarta o token e devolve o usuário ao
@@ -362,7 +373,7 @@ class APIClient {
           this.setSessionToken(null)
           this.onUnauthorized?.()
         }
-        throw new ApiError(response.status, errorMsg)
+        throw new ApiError(response.status, String(errorMsg))
       }
 
       // 204 No Content

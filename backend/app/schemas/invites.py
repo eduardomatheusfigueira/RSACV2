@@ -36,14 +36,29 @@ class RegisterWithInviteRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=200)
     email: str = Field(..., min_length=5, max_length=320)
-    phone: str = Field("", max_length=30)
-    institution: str = Field("", max_length=200)
-    academic_degree: str = Field("", max_length=50)
+    phone: Optional[str] = Field("", max_length=50)
+    institution: Optional[str] = Field("", max_length=200)
+    academic_degree: Optional[str] = Field("", max_length=100)
     is_studying: bool = False
-    study_program: str = Field("", max_length=200)
-    profession: str = Field("", max_length=100)
-    research_area: str = Field("", max_length=200)
+    study_program: Optional[str] = Field("", max_length=200)
+    profession: Optional[str] = Field("", max_length=100)
+    research_area: Optional[str] = Field("", max_length=200)
     terms_accepted: bool = Field(...)
+
+    @field_validator(
+        "phone",
+        "institution",
+        "academic_degree",
+        "study_program",
+        "profession",
+        "research_area",
+        mode="before",
+    )
+    @classmethod
+    def clean_optional_strings(cls, v: any) -> str:
+        if v is None:
+            return ""
+        return str(v).strip()
 
     @field_validator("invite_code")
     @classmethod
@@ -53,9 +68,21 @@ class RegisterWithInviteRequest(BaseModel):
     @field_validator("username")
     @classmethod
     def validate_username(cls, v: str) -> str:
+        import unicodedata
+
         v = v.strip().lower()
+        # Normalizar acentos
+        v = "".join(
+            c for c in unicodedata.normalize("NFD", v) if unicodedata.category(c) != "Mn"
+        )
+        # Substituir espaços por pontos
+        v = re.sub(r"\s+", ".", v)
         if not re.match(r"^[a-z0-9_.-]+$", v):
-            raise ValueError("Nome de usuário pode conter apenas letras, números, ponto, hífen e sublinhado.")
+            raise ValueError(
+                "Nome de usuário pode conter apenas letras, números, ponto, hífen e sublinhado."
+            )
+        if len(v) < 3:
+            raise ValueError("Nome de usuário deve ter no mínimo 3 caracteres.")
         return v
 
     @field_validator("email")
@@ -70,7 +97,9 @@ class RegisterWithInviteRequest(BaseModel):
     @classmethod
     def require_terms(cls, v: bool) -> bool:
         if not v:
-            raise ValueError("É obrigatório concordar com os Termos de Uso e a Política de Privacidade.")
+            raise ValueError(
+                "É obrigatório concordar com os Termos de Uso e a Política de Privacidade."
+            )
         return v
 
 
