@@ -1,0 +1,7 @@
+# Revsist — Robots.txt
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/
+
+Sitemap: https://revsist.com/sitemap.xml

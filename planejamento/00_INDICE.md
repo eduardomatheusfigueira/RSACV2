@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online) · `42–44` Vigente (Pesquisa em equipe)
 
 ---
 
@@ -42,6 +42,14 @@ diagnóstico medido dos coletores SciELO e BDTD, o plano de robustez e
 velocidade que dele decorre, e a correção do zero silencioso. Mesma gramática
 — diagnóstico → execução.
 
+Os documentos **42 a 44** são o **planejamento vigente da pesquisa em
+equipe**: o que impede duas pessoas de trabalharem na mesma revisão hoje, o
+desenho das duas modalidades pedidas — triagem simples e revisão cega por pares
+— e as oito fases de execução. Mesma gramática — diagnóstico → especificação →
+execução. Depende das Fases **0** e **1** do doc 41 — Alembic e titularidade —,
+ambas concluídas em 27/08/2026: sem migração versionada e sem dono de projeto,
+não há sobre o que construir participação.
+
 Os documentos **39 a 41** são o **planejamento vigente da passagem para
 serviço online**: o que quebra quando o mesmo código atende vários
 pesquisadores pela internet, o desenho alvo (PostgreSQL, titularidade, login
@@ -64,6 +72,7 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 34–36   vigente            confiabilidade e velocidade da coleta
 37–38   vigente            LGPD — diagnóstico e checklist verificável
 39–41   vigente            serviço online — diagnóstico, especificação e execução
+42–44   vigente            pesquisa em equipe — diagnóstico, especificação e execução
 ```
 
 ---
@@ -138,10 +147,27 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 | **39** | [Diagnóstico da Passagem para Serviço Online](./39_DIAGNOSTICO_ONLINE.md) | 30 achados medidos no código: titularidade ausente, chaves de IA globais, esquema sem migração versionada, jobs em memória de processo, identidade e operação |
 | **40** | [Especificação do RSAC Online](./40_ESPECIFICACAO_ONLINE.md) | Documento normativo: PostgreSQL e Alembic, isolamento por dependência de router, login com Google (PKCE), infraestrutura em VPS, landing page e portão de publicação |
 | **41** | [Plano de Execução — RSAC Online](./41_PLANO_EXECUCAO_ONLINE.md) | Oito fases com tarefas marcáveis, critério de aceite e plano de reparo; 26 a 39 dias de trabalho |
+| **42** | [Plano de Marca: A Revisão que se Pode Defender](./42_PLANO_DE_MARCA.md) | Posição, público, concorrência, assinatura de marca ("Revisão sistemática com rastro") e diretrizes para a landing page institucional |
 
 > **Escopo decidido:** VPS único com Docker Compose em região brasileira,
 > contas individuais, chaves de IA do próprio assinante (BYOK) e cobrança
 > adiada. O doc 39 §39.2 registra o porquê de cada escolha e o que ela alivia.
+
+---
+
+## 📌 Planejamento vigente — pesquisa em equipe
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **42** | [Diagnóstico de Pesquisa em Equipe](./42_DIAGNOSTICO_PESQUISA_EM_EQUIPE.md) | 13 achados medidos: propriedade 1:1 sem pertencimento, decisão de triagem sem autor, credencial resolvida pelo dono, eliminação de conta que apaga o trabalho alheio — e 5 decisões em aberto com recomendação |
+| **43** | [Especificação de Pesquisa em Equipe](./43_ESPECIFICACAO_PESQUISA_EM_EQUIPE.md) | Documento normativo: participação e papéis, as duas modalidades como política derivada, julgamento por revisor, cegueira imposta pelo servidor, consolidação e conflito, concordância entre revisores |
+| **44** | [Plano de Execução — Pesquisa em Equipe](./44_PLANO_EXECUCAO_PESQUISA_EM_EQUIPE.md) | Oito fases com tarefas marcáveis, critério de aceite e plano de reparo; 24 a 36 dias de trabalho |
+
+> **Duas modalidades, um caminho de código.** *Triagem simples* (todos no mesmo
+> acervo, quem triou triou, outro pode reeditar) e *revisão cega por pares*
+> (protocolo conjunto, julgamento independente, conflito resolvido e κ
+> relatado) são o mesmo mecanismo com `revisores_por_estudo` 1 ou 2 — doc 43
+> §43.2, princípio P2. A cegueira é do servidor, não da interface (P3).
 
 ---
 

@@ -1,0 +1,15 @@
+{
+  "name": "revsist-landing",
+  "version": "2.0.0",
+  "description": "Revsist — Landing Page Institucional e Acadêmica Estática",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

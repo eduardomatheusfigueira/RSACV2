@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Revsist — Revisão sistemática com rastro</title>
+  <meta name="description" content="Cada decisão de triagem registrada: quem decidiu, com qual modelo, sobre qual texto. Plataforma acadêmica livre com suporte a 11 diretrizes (PRISMA 2020, JBI, Cochrane) e bases BDTD e SciELO." />
+  <meta name="keywords" content="revisão sistemática, PRISMA 2020, PRISMA-ScR, JBI, Cochrane, BDTD, SciELO, síntese de evidências, scoping review, pós-graduação" />
+  <meta name="author" content="Eduardo Matheus Figueira" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph / Redes Sociais -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://revsist.com/" />
+  <meta property="og:title" content="Revsist — Revisão sistemática com rastro" />
+  <meta property="og:description" content="Cada decisão registrada: quem decidiu, com qual modelo, sobre qual texto. Rigor metodológico para teses, dissertações e artigos." />
+  <meta property="og:image" content="https://revsist.com/og-image.svg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Revsist — Revisão sistemática com rastro" />
+  <meta name="twitter:description" content="Plataforma acadêmica livre para revisões sistemáticas defensáveis com rastreabilidade total." />
+  <meta name="twitter:image" content="https://revsist.com/og-image.svg" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Dados Estruturados JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Revsist",
+    "applicationCategory": "AcademicApplication",
+    "operatingSystem": "Web, Windows, Linux, macOS",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "BRL"
+    },
+    "description": "Sistema de gestão e automação de revisões sistemáticas de literatura acadêmica com rastreabilidade de decisões e suporte a PRISMA, JBI, Cochrane, BDTD e SciELO.",
+    "softwareVersion": "2.0.0-beta",
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Person",
+      "name": "Eduardo Matheus Figueira"
+    }
+  }
+  </script>
+
+  <!-- Folha de estilo principal da landing -->
+  <link rel="stylesheet" href="./src/styles/landing.css" />
+</head>
+<body>
+
+  <!-- ── Topo / Cabeçalho de Navegação ──────────────────────────────────────── -->
+  <header class="site-header" role="banner">
+    <div class="container header-inner">
+      <a href="/" class="brand-link" aria-label="Revsist Página Inicial">
+        <!-- Monograma R-Lupa SVG -->
+        <svg class="brand-mark" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M 7 7 V 93" />
+          <circle cx="32" cy="32" r="25" />
+          <path d="M 45.946 52.749 L 73 93" stroke="currentColor" />
+        </svg>
+        <span class="brand-name">Revsist</span>
+        <span class="badge-beta">v2.0 BETA</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Navegação Principal">
+        <a href="#problema" class="nav-link">O Problema</a>
+        <a href="#fluxo" class="nav-link">O Fluxo</a>
+        <a href="#rastro" class="nav-link">O Rastro</a>
+        <a href="#diretrizes" class="nav-link">Diretrizes</a>
+        <a href="#bases" class="nav-link">Bases</a>
+        <a href="#limites" class="nav-link">O Que Não Faz</a>
+        <a href="#dados" class="nav-link">Privacidade</a>
+      </nav>
+
+      <div class="header-actions">
+        <button id="theme-toggle-btn" class="btn-theme-toggle" aria-label="Alternar tema claro e escuro" title="Alternar tema claro / escuro">
+          <!-- Ícone Sol/Lua SVG -->
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+
+        <a href="/#/login" class="btn btn-secondary btn-sm">Acessar App</a>
+        <a href="/api/v1/auth/google/start" class="btn btn-primary btn-sm">Entrar com Google</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Seção 1: Hero ──────────────────────────────────────────────────────── -->
+  <main>
+    <section class="section hero-section" id="hero">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="hero-eyebrow">
+            <span>●</span>
+            <span>BETA ABERTO · SOFTWARE LIVRE ACADÊMICO</span>
+          </div>
+
+          <h1 class="hero-title">
+            Revisão sistemática <span class="hero-title-highlight">com rastro.</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Cada decisão de triagem registrada: quem decidiu, com qual modelo, sobre qual texto. Você revisa mais rápido porque não precisa refazer o caminho depois.
+          </p>
+
+          <div class="hero-cta-group">
+            <a href="/api/v1/auth/google/start" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
+              </svg>
+              Entrar com Google
+            </a>
+
+            <a href="#fluxo" class="btn btn-secondary">Ver como funciona</a>
+          </div>
+
+          <div class="hero-meta-strip">
+            <div class="meta-item">
+              <span class="meta-label">Diretrizes</span>
+              <span class="meta-value">11 Suportadas (PRISMA, JBI)</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Bases Acadêmicas</span>
+              <span class="meta-value">BDTD, SciELO + 4 Internacionais</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Privacidade</span>
+              <span class="meta-value">100% LGPD / Dados no Brasil</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Licença</span>
+              <span class="meta-value">MIT (Código Aberto)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 2: O Problema (Dados Mensurados) ────────────────────────────── -->
+    <section class="section" id="problema">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">01 · O Desafio Científico</span>
+          <h2 class="section-title">O custo real de uma revisão conduzida manualmente</h2>
+          <p class="section-subtitle">A literatura sobre síntese de evidências quantifica o desgaste, a lentidão e a vulnerabilidade a viés de processos fragmentados em planilhas.</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card reveal-on-scroll">
+            <div class="stat-number">1.144 h</div>
+            <div class="stat-headline">Tempo Médio de Execução</div>
+            <p class="stat-desc">Tempo médio estimado para conduzir uma revisão sistemática completa de ponta a ponta com rigor metodológico.</p>
+            <div class="stat-citation">Fonte: Borah et al. (2017), BMJ Open</div>
+          </div>
+
+          <div class="stat-card reveal-on-scroll">
+            <div class="stat-number">43%</div>
+            <div class="stat-headline">Atraso na Publicação</div>
+            <p class="stat-desc">Das revisões sistemáticas levam mais de dois anos para serem concluídas ou tornam-se desatualizadas antes da submissão final.</p>
+            <div class="stat-citation">Fonte: Shojania et al. (2007), Ann. Intern. Med.</div>
+          </div>
+
+          <div class="stat-card reveal-on-scroll">
+            <div class="stat-number">$141k</div>
+            <div class="stat-headline">Custo Operacional</div>
+            <p class="stat-desc">Custo médio estimado em horas de dedicação de pesquisadores e revisores por síntese sistemática publicada.</p>
+            <div class="stat-citation">Fonte: Allen &amp; Olkin (2018), Systematic Reviews</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 3: O Fluxo Metodológico ────────────────────────────────────── -->
+    <section class="section" id="fluxo">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">02 · Arquitetura do Processo</span>
+          <h2 class="section-title">O fluxo científico completo em seis etapas integradas</h2>
+          <p class="section-subtitle">Cada etapa alimenta a seguinte com integridade referencial, preservando o histórico de inclusão, exclusão e extração de dados.</p>
+        </div>
+
+        <div class="flow-diagram-wrapper reveal-on-scroll">
+          <!-- Diagrama SVG Inline das 6 Etapas -->
+          <svg class="flow-diagram-svg" viewBox="0 0 960 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Diagrama do Fluxo de Revisão: Protocolo, Coleta, Deduplicação, Triagem, Extração e Síntese">
+            <g stroke="#c4d3de" stroke-width="1.5">
+              <!-- Linha conectora de fundo -->
+              <line x1="80" y1="50" x2="880" y2="50" stroke-dasharray="4 4" />
+            </g>
+
+            <!-- 1. Protocolo -->
+            <g transform="translate(40, 20)">
+              <rect width="120" height="60" rx="6" fill="#ffffff" stroke="#274c77" stroke-width="2"/>
+              <text x="60" y="32" font-family="monospace" font-size="11" font-weight="bold" fill="#274c77" text-anchor="middle">01. PROTOCOLO</text>
+              <text x="60" y="48" font-family="sans-serif" font-size="10" fill="#3d5a78" text-anchor="middle">PICO / Critérios</text>
+            </g>
+
+            <!-- Seta 1->2 -->
+            <path d="M 165 50 L 195 50 M 190 46 L 195 50 L 190 54" stroke="#274c77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 2. Coleta -->
+            <g transform="translate(200, 20)">
+              <rect width="120" height="60" rx="6" fill="#ffffff" stroke="#274c77" stroke-width="2"/>
+              <text x="60" y="32" font-family="monospace" font-size="11" font-weight="bold" fill="#274c77" text-anchor="middle">02. COLETA</text>
+              <text x="60" y="48" font-family="sans-serif" font-size="10" fill="#3d5a78" text-anchor="middle">BDTD, SciELO, API</text>
+            </g>
+
+            <!-- Seta 2->3 -->
+            <path d="M 325 50 L 355 50 M 350 46 L 355 50 L 350 54" stroke="#274c77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 3. Deduplicação -->
+            <g transform="translate(360, 20)">
+              <rect width="120" height="60" rx="6" fill="#ffffff" stroke="#274c77" stroke-width="2"/>
+              <text x="60" y="32" font-family="monospace" font-size="11" font-weight="bold" fill="#274c77" text-anchor="middle">03. DEDUP</text>
+              <text x="60" y="48" font-family="sans-serif" font-size="10" fill="#3d5a78" text-anchor="middle">DOI &amp; Levenshtein</text>
+            </g>
+
+            <!-- Seta 3->4 -->
+            <path d="M 485 50 L 515 50 M 510 46 L 515 50 L 510 54" stroke="#274c77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 4. Triagem -->
+            <g transform="translate(520, 20)">
+              <rect width="120" height="60" rx="6" fill="#ffffff" stroke="#274c77" stroke-width="2"/>
+              <text x="60" y="32" font-family="monospace" font-size="11" font-weight="bold" fill="#274c77" text-anchor="middle">04. TRIAGEM</text>
+              <text x="60" y="48" font-family="sans-serif" font-size="10" fill="#3d5a78" text-anchor="middle">Título &amp; Resumo</text>
+            </g>
+
+            <!-- Seta 4->5 -->
+            <path d="M 645 50 L 675 50 M 670 46 L 675 50 L 670 54" stroke="#274c77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 5. Extração -->
+            <g transform="translate(680, 20)">
+              <rect width="120" height="60" rx="6" fill="#ffffff" stroke="#274c77" stroke-width="2"/>
+              <text x="60" y="32" font-family="monospace" font-size="11" font-weight="bold" fill="#274c77" text-anchor="middle">05. EXTRAÇÃO</text>
+              <text x="60" y="48" font-family="sans-serif" font-size="10" fill="#3d5a78" text-anchor="middle">Texto Integral &amp; PDF</text>
+            </g>
+
+            <!-- Seta 5->6 -->
+            <path d="M 805 50 L 835 50 M 830 46 L 835 50 L 830 54" stroke="#274c77" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+            <!-- 6. Síntese -->
+            <g transform="translate(840, 20)">
+              <rect width="100" height="60" rx="6" fill="#274c77" stroke="#274c77" stroke-width="2"/>
+              <text x="50" y="32" font-family="monospace" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">06. SÍNTESE</text>
+              <text x="50" y="48" font-family="sans-serif" font-size="10" fill="#cbd8e4" text-anchor="middle">PRISMA 2020</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="flow-step-grid">
+          <div class="step-card">
+            <div class="step-number">Etapa 01</div>
+            <h3 class="step-title">Protocolo Estruturado</h3>
+            <p class="step-desc">Definição formal de pergunta de pesquisa (PICO/PCC/SPIDER), critérios objetivos de inclusão/exclusão e matriz de extração parametrizada.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">Etapa 02</div>
+            <h3 class="step-title">Coleta Multibase</h3>
+            <p class="step-desc">Busca paralela com harvesters dedicados em bases nacionais e internacionais, além de importação em lote de arquivos BibTeX, RIS, CSV e XLSX.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">Etapa 03</div>
+            <h3 class="step-title">Deduplicação Auditável</h3>
+            <p class="step-desc">Algoritmo em camadas: casamento exato por DOI/URL, normalização avançada de títulos e distância de Levenshtein com relatório de mesclagem.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">Etapa 04</div>
+            <h3 class="step-title">Triagem Ágil &amp; Dupla</h3>
+            <p class="step-desc">Avaliação de elegibilidade por Título e Resumo com atalhos rápidos, suporte a segundo revisor cego e pareceres sugeridos para validação.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">Etapa 05</div>
+            <h3 class="step-title">Extração em PDF (Fase 2)</h3>
+            <p class="step-desc">Leitura do artigo integral com preenchimento da matriz de dados ancorado em trechos literais e marcação exata do número da página.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">Etapa 06</div>
+            <h3 class="step-title">Síntese &amp; Fluxograma PRISMA</h3>
+            <p class="step-desc">Geração automática do fluxograma PRISMA 2020 em SVG vetorial de alta resolução, matriz de síntese em Excel/CSV e estatísticas do acervo.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 4: O Rastro de Decisão (A Prova Metodológica) ────────────────── -->
+    <section class="section" id="rastro">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">03 · A Prova Metodológica</span>
+          <h2 class="section-title">Como o rastro se desenha: transparência total para sua banca</h2>
+          <p class="section-subtitle">O PRISMA 2026 exige comprovação clara do uso de assistência computacional. No Revsist, cada decisão é uma evidência auditável.</p>
+        </div>
+
+        <div class="trace-demo-card reveal-on-scroll">
+          <div class="trace-header">
+            <div class="trace-badge-included">
+              <span>●</span> DECISÃO: INCLUÍDO NA TRIAGEM
+            </div>
+            <div class="trace-meta-mono">
+              REGISTRO DE AUDITORIA #REC-7842-TRIAGEM
+            </div>
+          </div>
+
+          <div class="trace-body">
+            <div class="trace-paper-info">
+              <span class="trace-label">ESTUDO ANALISADO</span>
+              <h4 class="trace-paper-title">Dinâmicas Territoriais e Governança em Arranjos Produtivos Locais (2024)</h4>
+              <p class="trace-paper-abstract">"O artigo investiga o papel das políticas territoriais de inovação no fortalecimento de APLs do semiárido brasileiro..."</p>
+            </div>
+
+            <div class="trace-inspection-grid">
+              <div class="trace-box">
+                <span class="trace-label">PARECER SUGERIDO PELA ASSISTÊNCIA</span>
+                <p class="trace-box-content">"Atende aos critérios de inclusão (PICO: Arranjos Produtivos Locais em Desenvolvimento Regional). O resumo explicita abordagem empírica territorial e políticas de inovação."</p>
+                <div class="trace-submeta">
+                  <span>Provedor: Google Gemini 2.5 Flash</span> · <span>Context Hash SHA-256: <code>7f8a9e1b...</code></span>
+                </div>
+              </div>
+
+              <div class="trace-box">
+                <span class="trace-label">CONFERÊNCIA E DECISÃO HUMANA</span>
+                <p class="trace-box-content"><strong>Validado e aceito pelo revisor principal</strong></p>
+                <div class="trace-human-meta">
+                  <div><strong>Revisor:</strong> Prof. Dr. Roberto Santos (Pesquisador Titular)</div>
+                  <div><strong>Critério aplicado:</strong> Critério de Inclusão #1 (Recorte Territorial)</div>
+                  <div><strong>Data e Hora:</strong> 29 de Agosto de 2026 às 14:22:01 UTC</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="trace-footer">
+            <span class="trace-footer-note">✓ Este rastro exporta automaticamente no caderno de evidências para anexação à tese ou submissão em periódicos.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 5: As 11 Diretrizes Metodológicas ────────────────────────────── -->
+    <section class="section" id="diretrizes">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">04 · Validação Internacional</span>
+          <h2 class="section-title">Compatibilidade rigorosa com 11 diretrizes científicas</h2>
+          <p class="section-subtitle">O Revsist foi projetado para atender aos padrões metodológicos de relato e condução de sínteses de evidências nas mais diversas áreas do conhecimento.</p>
+        </div>
+
+        <div class="guidelines-grid">
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">REVISÃO SISTEMÁTICA</span>
+            <h3 class="guideline-name">PRISMA 2020</h3>
+            <p class="guideline-desc">Preferred Reporting Items for Systematic Reviews and Meta-Analyses (Page et al., 2021).</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">REVISÃO DE ESCOPO</span>
+            <h3 class="guideline-name">PRISMA-ScR (2018)</h3>
+            <p class="guideline-desc">Extensão oficial para Scoping Reviews e mapeamento de literatura (Tricco et al., 2018).</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">PROTOCOLOS</span>
+            <h3 class="guideline-name">PRISMA-P (2015)</h3>
+            <p class="guideline-desc">Diretrizes de elaboração e registro de protocolos de revisão sistemática (Shamseer et al., 2015).</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">SÍNTESE QUALI &amp; MIXED</span>
+            <h3 class="guideline-name">JBI (Joanna Briggs)</h3>
+            <p class="guideline-desc">Metodologia do Joanna Briggs Institute para sínteses de evidências qualitativas e de escopo.</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">ENSAIOS &amp; INTERVENÇÕES</span>
+            <h3 class="guideline-name">Cochrane / MECIR</h3>
+            <p class="guideline-desc">Methodological Expectations of Cochrane Intervention Reviews para sínteses em saúde.</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">POLÍTICAS &amp; SOCIAIS</span>
+            <h3 class="guideline-name">Campbell Collaboration</h3>
+            <p class="guideline-desc">MECCIR: Padrões de evidências para ciências sociais, educação, criminologia e políticas públicas.</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">AMBIENTAL &amp; ECOLÓGICO</span>
+            <h3 class="guideline-name">CEE / ROSES (2018)</h3>
+            <p class="guideline-desc">Collaboration for Environmental Evidence: Padrões de síntese para conservação e ecologia.</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">COMPUTAÇÃO &amp; ENG.</span>
+            <h3 class="guideline-name">EBSE (Kitchenham)</h3>
+            <p class="guideline-desc">Evidence-Based Software Engineering: Diretrizes de Kitchenham &amp; Charters (2007).</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">OVERVIEWS</span>
+            <h3 class="guideline-name">PRIOR (2022)</h3>
+            <p class="guideline-desc">Preferred Reporting Items for Overviews of Systematic Reviews (Gates et al., 2022).</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">CIENCIOMETRIA</span>
+            <h3 class="guideline-name">Methodi Ordinatio</h3>
+            <p class="guideline-desc">Classificação e ranqueamento de artigos pelo índice InOrdinatio (Pagani et al., 2015).</p>
+          </div>
+
+          <div class="guideline-card reveal-on-scroll">
+            <span class="guideline-tag">INTERDISCIPLINAR</span>
+            <h3 class="guideline-name">Personalizada / Híbrida</h3>
+            <p class="guideline-desc">Flexibilidade para protocolos sob medida em Ciências Sociais Aplicadas e Desenvolvimento Regional.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 6: Bases Integradas ────────────────────────────────────────── -->
+    <section class="section" id="bases">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">05 · Cobertura Regional &amp; Global</span>
+          <h2 class="section-title">Integração nativa com bases nacionais e internacionais</h2>
+          <p class="section-subtitle">Recuperação automatizada de literatura acadêmica sem necessidade de exportações manuais intermediárias.</p>
+        </div>
+
+        <div class="sources-grid">
+          <div class="source-item reveal-on-scroll">
+            <span class="source-badge">BRASIL · CAPES/IBICT</span>
+            <div class="source-name">BDTD</div>
+            <p class="source-desc">Biblioteca Digital Brasileira de Teses e Dissertações.</p>
+          </div>
+
+          <div class="source-item reveal-on-scroll">
+            <span class="source-badge">AMÉRICA LATINA</span>
+            <div class="source-name">SciELO Brasil</div>
+            <p class="source-desc">Coleção de periódicos científicos de acesso aberto.</p>
+          </div>
+
+          <div class="source-item reveal-on-scroll">
+            <span class="source-badge">ELSEVIER</span>
+            <div class="source-name">Scopus</div>
+            <p class="source-desc">Maior base internacional de resumos e citações por API.</p>
+          </div>
+
+          <div class="source-item reveal-on-scroll">
+            <span class="source-badge">BIOMÉDICA &amp; SAÚDE</span>
+            <div class="source-name">PubMed / PMC</div>
+            <p class="source-desc">Base do NCBI com acesso a resumos e textos integrais.</p>
+          </div>
+
+          <div class="source-item reveal-on-scroll">
+            <span class="source-badge">MULTIDISCIPLINAR</span>
+            <div class="source-name">OpenAlex</div>
+            <p class="source-desc">Catálogo aberto global de mais de 250 milhões de artigos.</p>
+          </div>
+
+          <div class="source-item reveal-on-scroll">
+            <span class="source-badge">PREPRINTS</span>
+            <div class="source-name">arXiv</div>
+            <p class="source-desc">Repositório de acesso aberto para artigos em pré-publicação.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 7: O Que o Revsist Não Faz (Honestidade Metodológica) ────────── -->
+    <section class="section" id="limites">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">06 · Honestidade Metodológica</span>
+          <h2 class="section-title">O que o Revsist faz — e o que ele deliberadamente não faz</h2>
+          <p class="section-subtitle">Dizer com clareza os limites do software compra mais confiança acadêmica do que prometer milagres sem fundamento.</p>
+        </div>
+
+        <div class="boundaries-grid reveal-on-scroll">
+          <div class="boundary-card boundary-card-positive">
+            <h3 class="boundary-title">O que o Revsist faz com excelência</h3>
+            <ul class="boundary-list">
+              <li><strong>Protocolo estruturado</strong> com 11 diretrizes metodológicas reais.</li>
+              <li><strong>Coleta automatizada</strong> em BDTD, SciELO, Scopus, PubMed, OpenAlex e arXiv.</li>
+              <li><strong>Deduplicação auditável</strong> em camadas (DOI, normalização e Levenshtein).</li>
+              <li><strong>Triagem rápida</strong> com pareceres sugeridos e conferência humana soberana.</li>
+              <li><strong>Extração em PDF integral</strong> ancorada em trechos literais e número de página.</li>
+              <li><strong>Rastro de decisão imutável</strong> para comprovação perante bancas e pareceristas.</li>
+              <li><strong>Exportação de fluxograma PRISMA 2020</strong> em SVG vetorial de alta precisão.</li>
+            </ul>
+          </div>
+
+          <div class="boundary-card boundary-card-negative">
+            <h3 class="boundary-title">O que o Revsist deliberadamente NÃO faz</h3>
+            <ul class="boundary-list">
+              <li><strong>Não toma decisões sozinho:</strong> A máquina nunca inclui ou exclui artigos sem validação do pesquisador.</li>
+              <li><strong>Não faz meta-análise estatística:</strong> Não calcula modelos de efeitos fixos/aleatórios ou <em>forest plots</em> (use R ou Stata para síntese quantitativa).</li>
+              <li><strong>Não faz avaliação clínica de risco de viés (RoB 2):</strong> Focado no rigor metodológico de Ciências Sociais, Humanas e interdisciplinares.</li>
+              <li><strong>Não faz síntese GRADE:</strong> Não gradua certeza de evidências clínicas biomédicas.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Seção 8: Seus Dados & LGPD ───────────────────────────────────────── -->
+    <section class="section" id="dados">
+      <div class="container">
+        <div class="lgpd-banner reveal-on-scroll">
+          <div class="lgpd-text">
+            <span class="section-tag">07 · Privacidade &amp; Soberania</span>
+            <h3>Seus dados de pesquisa pertencem exclusivamente a você</h3>
+            <p>O Revsist foi construído sob o princípio de <em>Privacy by Design</em> e conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).</p>
+            <ul class="lgpd-checklist">
+              <li>Criptografia de dados em repouso e em trânsito com TLS/HSTS</li>
+              <li>Isolamento absoluto de acervos entre usuários e projetos</li>
+              <li>Direito à portabilidade e eliminação completa em 1 clique</li>
+              <li>Registro de Operações de Tratamento (ROPA - Art. 37 LGPD)</li>
+              <li>Suporte a modelos de inferência 100% locais (Ollama) sem envio de dados para fora da sua máquina</li>
+            </ul>
+          </div>
+          <div style="text-align: center;">
+            <a href="/api/v1/auth/google/start" class="btn btn-primary" style="width: 100%; margin-bottom: 0.75rem;">Criar Conta Gratuita</a>
+            <a href="/privacidade" class="btn btn-secondary btn-sm" style="width: 100%;">Ler Política de Privacidade</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Rodapé Institucional ────────────────────────────────────────────────── -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a href="/" class="brand-link">
+            <svg class="brand-mark" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M 7 7 V 93" />
+              <circle cx="32" cy="32" r="25" />
+              <path d="M 45.946 52.749 L 73 93" stroke="currentColor" />
+            </svg>
+            <span class="brand-name">Revsist</span>
+          </a>
+          <p>Revisão Sistemática com Rastro — Plataforma acadêmica de alta precisão para pós-graduação e grupos de pesquisa.</p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Plataforma</h5>
+          <ul class="footer-links">
+            <li><a href="#fluxo">O Fluxo</a></li>
+            <li><a href="#rastro">O Rastro</a></li>
+            <li><a href="#diretrizes">Diretrizes PRISMA</a></li>
+            <li><a href="#bases">Bases Integradas</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Governança</h5>
+          <ul class="footer-links">
+            <li><a href="/termos">Termos de Uso</a></li>
+            <li><a href="/privacidade">Privacidade &amp; LGPD</a></li>
+            <li><a href="mailto:privacidade@revsist.com">Encarregado (DPO)</a></li>
+            <li><a href="https://github.com/eduardomatheusfigueira/RSACV2" target="_blank" rel="noopener noreferrer">Código Fonte (GitHub)</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Acesso</h5>
+          <ul class="footer-links">
+            <li><a href="/api/v1/auth/google/start">Entrar com Google</a></li>
+            <li><a href="/#/login">Entrar com Senha</a></li>
+            <li><a href="/#/register">Usar Código de Convite</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          © 2026 Revsist. Distribuído sob <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: underline;">Licença MIT</a>.
+        </div>
+        <div class="footer-meta">
+          Versão 2.0.0 (BETA) · Servidor Seguro
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script leve (< 3 KB) para tema e rolagem suave -->
+  <script src="./src/scripts/landing.js" type="module"></script>
+</body>
+</html>

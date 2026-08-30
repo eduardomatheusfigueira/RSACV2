@@ -323,6 +323,20 @@ def create_app() -> FastAPI:
     app.include_router(public_router, prefix="/api/v1")
     app.include_router(api_router, prefix="/api/v1")
 
+    # Servir Landing Page Institucional se construída
+    landing_dist = Path(__file__).resolve().parent.parent.parent / "landing" / "dist"
+    if landing_dist.exists() and (landing_dist / "index.html").exists():
+        landing_root = landing_dist.resolve()
+        landing_index = landing_root / "index.html"
+        landing_assets = landing_root / "assets"
+        if landing_assets.exists():
+            app.mount("/landing/assets", StaticFiles(directory=str(landing_assets)), name="landing-assets")
+
+        @app.get("/landing", include_in_schema=False)
+        @app.get("/institucional", include_in_schema=False)
+        async def serve_landing():
+            return FileResponse(landing_index)
+
     # Servir Frontend Web Estático (SPA) se construído
     frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
     if frontend_dist.exists() and (frontend_dist / "index.html").exists():
@@ -341,6 +355,9 @@ def create_app() -> FastAPI:
         async def serve_spa(full_path: str):
             if full_path.startswith("api") or full_path in ("health", "docs", "redoc", "openapi.json"):
                 raise HTTPException(status_code=404, detail="Not Found")
+
+            if full_path in ("landing", "institucional") and landing_dist.exists():
+                return FileResponse(landing_dist / "index.html")
 
             candidate = _resolve_within(spa_root, full_path)
             if candidate is not None and candidate.is_file():
