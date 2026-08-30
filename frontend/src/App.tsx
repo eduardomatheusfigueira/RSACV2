@@ -16,6 +16,7 @@ import { ExtractionPage } from '@/pages/ExtractionPage'
 import { InsightsPage } from '@/pages/InsightsPage'
 import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import TeamPage from '@/pages/TeamPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { Toaster } from '@/components/ui'
 import { api } from '@/api/client'
@@ -322,6 +323,14 @@ function AppContent(): JSX.Element {
             element={
               <ProjectRouteGuard>
                 <ExportPage />
+              </ProjectRouteGuard>
+            }
+          />
+          <Route
+            path="/projects/:id/team"
+            element={
+              <ProjectRouteGuard>
+                <TeamPage />
               </ProjectRouteGuard>
             }
           />

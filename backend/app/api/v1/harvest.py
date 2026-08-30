@@ -14,8 +14,10 @@ from app.api.deps import get_db
 from app.harvesters.factory import HarvesterFactory
 from app.infrastructure.persistence.models import (
     HarvestRunModel,
+    ProjectMemberModel,
     ProjectModel,
     SourceCredentialModel,
+    UserModel,
 )
 from app.schemas.harvest import (
     HarvestRunListResponse,
@@ -23,8 +25,10 @@ from app.schemas.harvest import (
     HarvestStartRequest,
 )
 from app.security.dependencies import (
-    projeto_do_usuario,
+    exige_revisor_ou_coordenador,
     origem_do_websocket_e_permitida,
+    projeto_do_usuario,
+    require_session,
     require_websocket_session,
     verificar_projeto_do_usuario,
 )
@@ -68,6 +72,8 @@ def _serialize_run(run: HarvestRunModel) -> HarvestRunResponse:
         records_duplicate=run.records_duplicate,
         status=run.status,
         error_message=run.error_message,
+        run_by_user_id=run.run_by_user_id,
+        run_by_username=run.runner.username if run.runner else None,
     )
 
 
@@ -76,8 +82,10 @@ async def start_harvest(
     project_id: str,
     data: HarvestStartRequest,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
-    """Inicia a coleta assíncrona gerenciada nas fontes solicitadas."""
+    """Inicia a coleta assíncrona gerenciada nas fontes solicitadas usando a credencial do ator (D-03)."""
     project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
@@ -88,7 +96,7 @@ async def start_harvest(
             detail=f"Já existe uma coleta em andamento para o projeto '{project_id}'. Aguarde ou cancele a execução anterior.",
         )
 
-    # Iniciar job assíncrono gerenciado
+    # Iniciar job assíncrono gerenciado com user_id de quem acionou a ação
     harvest_job_manager.start_job(
         project_id=project_id,
         coro=harvesting_service.run_harvest(
@@ -103,6 +111,7 @@ async def start_harvest(
             institutions=data.institutions,
             open_access_only=data.open_access_only,
             fetch_details=data.fetch_details,
+            user_id=usuario.id,
         ),
         sources=data.sources,
     )
@@ -119,6 +128,8 @@ async def start_harvest(
 async def cancel_harvest(
     project_id: str,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
     """Cancela graciosamente a execução de coleta ativa para o projeto."""
     project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
@@ -263,9 +274,9 @@ def list_harvest_runs(
 @router.get("/sources")
 def list_available_sources(
     db: Session = Depends(get_db),
-    projeto: ProjectModel = Depends(projeto_do_usuario),
+    usuario: UserModel = Depends(require_session),
 ):
-    """Retorna fontes suportadas para coleta com capacidades e status de credenciais."""
+    """Retorna fontes suportadas para coleta com capacidades e status de credenciais do usuário."""
     sources_info = [
         {
             "id": "BDTD",
@@ -298,7 +309,7 @@ def list_available_sources(
     saved_creds = {
         r.source_name.upper(): bool(r.api_key)
         for r in db.query(SourceCredentialModel)
-        .filter(SourceCredentialModel.user_id == projeto.owner_id)
+        .filter(SourceCredentialModel.user_id == usuario.id)
         .all()
     }
 

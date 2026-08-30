@@ -180,11 +180,12 @@ def test_lista_de_categorias_vazia_e_recusada(db_session):
         )
 
 
-def test_as_oito_operacoes_do_plano_estao_previstas():
-    """§40.5.2 lista oito; faltar uma é tratamento que não vai ser registrado."""
+def test_as_operacoes_do_plano_estao_previstas():
+    """§40.5.2 e §43.14 listam operações previstas no ROPA."""
     assert OPERACOES == {
         "signup", "login", "data_export", "data_erasure",
         "ai_dispatch", "pdf_fetch", "consent_given", "consent_revoked",
+        "team_invitation_issued", "team_membership_created", "team_membership_revoked",
     }
 
 

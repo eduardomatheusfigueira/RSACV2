@@ -1848,7 +1848,7 @@
   padding: var(--space-3);
   margin-top: var(--space-3);
   background: var(--color-info-bg, #eff6ff);
-  border: 1px solid var(--color-info-border, #bfdbfe);
+  border: 1px solid color-mix(in srgb, var(--color-info) 40%, transparent);
   border-radius: var(--radius-sm);
 }
 
@@ -1928,4 +1928,82 @@
   align-items: center;
   gap: var(--space-4);
   padding: var(--space-4) 0;
+}
+
+/* Colaboração & Presença em Tempo Real (Fase 3) */
+.protocol-remote-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-info-bg);
+  border: 1px solid color-mix(in srgb, var(--color-info) 40%, transparent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-info-on-surface);
+}
+
+.protocol-remote-notice .btn-link-sm {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--color-accent-on-surface);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.protocol-conflict-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.conflict-notice-box {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-warning-bg);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, transparent);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--color-warning-on-surface);
+  font-size: var(--font-size-sm);
+}
+
+.conflict-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.conflict-option-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.conflict-option-card.danger {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.conflict-option-card h4 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-bold);
+}
+
+.conflict-option-card p {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }

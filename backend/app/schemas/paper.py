@@ -1,12 +1,28 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Revsist — Schemas de Artigos Científicos (Papers)."""
+"""Revsist — Schemas de Artigos Científicos (Papers) e Julgamentos de Triagem."""
 
 from datetime import datetime
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 from app.domain.enums import Decision
+
+
+class PaperScreeningResponse(BaseModel):
+    id: str
+    paper_id: str
+    reviewer_id: str
+    reviewer_username: Optional[str] = None
+    decision: str = "Pendente"
+    observations: str = ""
+    criteria_evaluations: Dict[str, bool] = Field(default_factory=dict)
+    ai_confidence: Optional[float] = None
+    ai_assisted: bool = False
+    decided_at: Optional[datetime] = None
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class PaperBase(BaseModel):
@@ -45,6 +61,14 @@ class PaperResponse(PaperBase):
     id: str
     project_id: str
     title_normalized: str
+    screening_status: str = "aguardando"
+    reviewers_completed_count: int = 0
+    reviewers_required_count: int = 1
+    my_screening: Optional[PaperScreeningResponse] = None
+    screenings: Optional[List[PaperScreeningResponse]] = None
+    conflict_resolved_by_user_id: Optional[str] = None
+    conflict_resolved_by_username: Optional[str] = None
+    conflict_resolved_at: Optional[datetime] = None
     pdf_path: Optional[str] = None
     pdf_text_extracted: bool = False
     pdf_status: str = "ausente"
@@ -65,3 +89,9 @@ class PaperListResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class ConflictResolutionRequest(BaseModel):
+    decision: Decision
+    observations: Optional[str] = None
+    criteria_evaluations: Optional[Dict[str, bool]] = None

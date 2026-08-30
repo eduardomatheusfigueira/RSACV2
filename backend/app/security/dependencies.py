@@ -25,7 +25,7 @@ from starlette.requests import HTTPConnection
 
 from app.api.deps import get_db
 from app.config import settings
-from app.infrastructure.persistence.models import ProjectModel, UserModel
+from app.infrastructure.persistence.models import ProjectMemberModel, ProjectModel, UserModel
 from app.security.local_token import matches_local_token
 from app.security.sessions import SESSION_COOKIE, resolve_session
 
@@ -223,21 +223,31 @@ def projeto_do_usuario(
     if request.scope.get("type") == "websocket":
         return None
 
-    projeto = (
-        db.query(ProjectModel)
-        .filter(
-            ProjectModel.id == project_id,
-            ProjectModel.owner_id == (usuario.id if usuario else None),
-        )
-        .first()
-    )
-    if projeto is None:
+    if usuario is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Projeto não encontrado.",
         )
 
+    res = (
+        db.query(ProjectModel, ProjectMemberModel)
+        .join(ProjectMemberModel, ProjectMemberModel.project_id == ProjectModel.id)
+        .filter(
+            ProjectModel.id == project_id,
+            ProjectMemberModel.user_id == usuario.id,
+            ProjectMemberModel.is_active.is_(True),
+        )
+        .first()
+    )
+    if res is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Projeto não encontrado.",
+        )
+
+    projeto, membro = res
     request.state.projeto = projeto
+    request.state.membro = membro
     return projeto
 
 
@@ -254,8 +264,101 @@ def verificar_projeto_do_usuario(
     if usuario is None:
         return False
     return (
-        db.query(ProjectModel.id)
-        .filter(ProjectModel.id == project_id, ProjectModel.owner_id == usuario.id)
+        db.query(ProjectMemberModel.id)
+        .filter(
+            ProjectMemberModel.project_id == project_id,
+            ProjectMemberModel.user_id == usuario.id,
+            ProjectMemberModel.is_active.is_(True),
+        )
         .first()
         is not None
     )
+
+
+# ── Matriz de Papéis e Permissões (doc 43 §43.5, Fase 2) ───────────────
+
+from app.domain.collaboration import politica_de
+
+
+def exige_papel(*papeis_permitidos: str):
+    """
+    Fábrica de dependência que valida se o papel do usuário no projeto autoriza a ação.
+    Retorna 403 Forbidden se o papel ativo não constar em papeis_permitidos.
+    """
+    def _verificar_papel(request: HTTPConnection) -> ProjectMemberModel:
+        membro: Optional[ProjectMemberModel] = getattr(request.state, "membro", None)
+        if not membro or not membro.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Acesso não autorizado para o seu papel neste projeto.",
+            )
+        if membro.project_role not in papeis_permitidos:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Operação restrita aos papéis: {', '.join(papeis_permitidos)}. "
+                    f"Seu papel atual é '{membro.project_role}'."
+                ),
+            )
+        return membro
+
+    return _verificar_papel
+
+
+def exige_coordenador(request: HTTPConnection) -> ProjectMemberModel:
+    """Exige papel de coordenador no projeto."""
+    return exige_papel("coordenador")(request)
+
+
+def exige_revisor_ou_coordenador(request: HTTPConnection) -> ProjectMemberModel:
+    """Exige papel ativo de revisor ou coordenador (bloqueia observador em escrita)."""
+    return exige_papel("coordenador", "revisor")(request)
+
+
+def exige_escrita_protocolo(request: HTTPConnection) -> ProjectMemberModel:
+    """
+    Valida permissão de escrita no protocolo.
+    Coordenador sempre pode; Revisor pode se a política de colaboração definir `protocolo_coeditavel=True`.
+    """
+    membro: Optional[ProjectMemberModel] = getattr(request.state, "membro", None)
+    projeto: Optional[ProjectModel] = getattr(request.state, "projeto", None)
+
+    if not membro or not membro.is_active or not projeto:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso não autorizado para o seu papel neste projeto.",
+        )
+
+    if membro.project_role == "coordenador":
+        return membro
+
+    if membro.project_role == "revisor":
+        politica = politica_de(projeto)
+        if politica.protocolo_coeditavel:
+            return membro
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="A edição do protocolo está restrita à coordenação nesta modalidade de revisão.",
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Observadores possuem acesso somente de leitura ao protocolo.",
+    )
+
+
+def exige_dono_do_projeto(request: HTTPConnection) -> ProjectModel:
+    """
+    Exige titularidade perante a LGPD (projects.owner_id == usuario.id).
+    Utilizado exclusivamente para exclusão de projeto e transferência de titularidade.
+    """
+    projeto: Optional[ProjectModel] = getattr(request.state, "projeto", None)
+    usuario: Optional[UserModel] = getattr(request.state, "usuario", None)
+
+    if not projeto or not usuario or projeto.owner_id != usuario.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Esta operação é exclusiva do titular do projeto perante a LGPD.",
+        )
+    return projeto
+

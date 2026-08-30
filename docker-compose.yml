@@ -26,7 +26,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # Dois diretórios servidos, e não um: a landing responde na raiz e a SPA
+      # em /app. Montar só o frontend deixava a landing inalcançável em
+      # produção, embora ela já estivesse compilada em landing/dist.
       - ./frontend/dist:/srv/frontend:ro
+      - ./landing/dist:/srv/landing:ro
     networks:
       - web
     depends_on:

@@ -76,3 +76,31 @@ def get_prisma_flow_metrics(
         raise HTTPException(status_code=404, detail="Projeto não encontrado.")
 
     return export_service.get_prisma_flow_data(db, project_id)
+
+
+@router.get("/search-log")
+def export_search_log(
+    project_id: str,
+    format: str = Query("json", description="Formato de exportação: json, csv, docx, pdf"),
+    db: Session = Depends(get_db),
+):
+    """Gera e exporta o Registro de Busca e Confronto Metodológico (PRISMA-S / Doc 45 D-B)."""
+    project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Projeto não encontrado.")
+
+    content, media_type, ext = export_service.generate_search_log(db, project_id, format_type=format)
+
+    if isinstance(content, bytes):
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers=cabecalho_de_download(f"Registro_Busca_{project.title[:30]}", ext),
+        )
+    else:
+        return Response(
+            content=content.encode("utf-8") if isinstance(content, str) else content,
+            media_type=media_type,
+            headers=cabecalho_de_download(f"Registro_Busca_{project.title[:30]}", ext),
+        )
+

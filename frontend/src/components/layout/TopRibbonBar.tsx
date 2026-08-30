@@ -21,6 +21,7 @@ import {
   LayoutDashboard,
   FolderOpen,
   Settings,
+  Users,
   FileText,
   Search,
   CheckSquare,
@@ -62,9 +63,11 @@ import {
   Menu,
   SlidersHorizontal,
   Lock,
+  Compass,
 } from 'lucide-react'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
+import { useTrilhoStore } from '@/stores/useTrilhoStore'
 import { PROTOCOL_CATALOG } from '@/data/protocolCatalog'
 import type { Methodology } from '@/types/api'
 import { RsacMark } from '@/components/brand/RsacMark'
@@ -104,6 +107,8 @@ export function TopRibbonBar(): JSX.Element {
     backendVersion,
   } = useSettingsStore()
   const { actions } = useRibbonStore()
+  const isTrilhoActive = useTrilhoStore((s) => s.isActive)
+  const toggleTrilho = useTrilhoStore((s) => s.toggleTrilho)
 
   /* Recolhimento vem do store persistido, não de `useState`: local, ele se
      perdia a cada troca de rota — recolher a faixa no Protocolo e voltar da
@@ -234,6 +239,21 @@ export function TopRibbonBar(): JSX.Element {
         </div>
 
         <div className="ribbon-quick-actions">
+          {/* Botão Modo Trilho (Tutor Metodológico) */}
+          <button
+            type="button"
+            className={`ribbon-action-pill ${isTrilhoActive ? 'trilho-active' : 'trilho-inactive'}`}
+            onClick={toggleTrilho}
+            title={
+              isTrilhoActive
+                ? 'Modo Trilho Ativo — clique para pausar o tutor metodológico'
+                : 'Modo Trilho (Tutor Metodológico Guiado) — clique para ativar o passo a passo'
+            }
+          >
+            <Compass size={12} />
+            <span>{isTrilhoActive ? 'Trilho Ativo' : 'Modo Trilho'}</span>
+          </button>
+
           {/* Master AI Mode Pill */}
           <button
             type="button"
@@ -406,6 +426,28 @@ export function TopRibbonBar(): JSX.Element {
               <button type="button" className="tool-btn-vertical" onClick={() => window.location.reload()}>
                 <RefreshCw size={15} />
                 <span>Atualizar</span>
+              </button>
+              </GrupoDoRibbon>
+
+              <div className="ribbon-divider" />
+
+              {/* Group: Equipe de Revisão (doc 43 §43.16.2) */}
+              <GrupoDoRibbon titulo="Equipe">
+              <button
+                type="button"
+                className={`tool-btn-vertical ${!activeProject ? 'disabled' : ''}`}
+                onClick={() => {
+                  if (activeProject) {
+                    navigate(`/projects/${activeProject.id}/team`)
+                  } else {
+                    navigate('/projects')
+                  }
+                }}
+                disabled={!activeProject}
+                title="Gerenciar membros, convites e papéis de revisão"
+              >
+                <Users size={16} />
+                <span>Equipe</span>
               </button>
               </GrupoDoRibbon>
 

@@ -347,41 +347,90 @@ antes do go-live, não depois.
 > **Esforço:** 3–5 dias · **Risco:** nenhum — código novo e isolado.
 > Fecha O-27.
 >
-> ## ✅ **CONCLUÍDA** — 30/08/2026
+> ## ✅ **CONCLUÍDA** — 30/08/2026 · **revisada em 30/08/2026**
 >
-> **Landing Page estática entregue em `landing/` e compilada em `dist` (33 kB HTML / 14 kB CSS / 1.6 kB JS).**
+> **Landing Page estática em `landing/`, compilada para `dist` (42 kB HTML / 23 kB CSS / 5 kB JS; 11 kB + 5 kB + 2 kB comprimidos).**
 >
 > Destaques da entrega (integrando as diretrizes do **Doc 42 — Plano de Marca**):
 > 1. **Assinatura de Marca**: *"Revisão sistemática com rastro. Cada decisão de triagem registrada: quem decidiu, com qual modelo, sobre qual texto."*
 > 2. **Rastro de Decisão**: Bloco de inspeção com SHA-256, parecer sugerido e conferência humana.
-> 3. **Honestidade Metodológica**: Seção dedicada explicando o que o software faz e o que deliberadamente *não faz* (sem meta-análise clínica ou GRADE).
-> 4. **Autonomia e Privacidade**: Zero requisições a CDNs ou terceiros; JavaScript com menos de 2 KB (0.79 kB gzipped); 100% funcional sem JS.
-> 5. **SEO & Metadados**: JSON-LD `SoftwareApplication`, Open Graph vetorial, `sitemap.xml`, `robots.txt` e rotas `/landing` e `/institucional` servidas no backend.
+> 3. **Assistência com procedência**: seção própria (§40.8.3 nº 5), que faltava na primeira entrega.
+> 4. **Honestidade Metodológica**: o que o software faz e o que deliberadamente *não faz*.
+> 5. **Autonomia e Privacidade**: zero requisições a terceiros; a página funciona inteira sem JS.
+> 6. **SEO & Metadados**: JSON-LD `SoftwareApplication`, Open Graph em **PNG**, `sitemap.xml`, `robots.txt`, `canonical` e rotas `/landing` e `/institucional` no backend.
+> 7. **Documentos de governança publicados**: `/termos` e `/privacidade` como páginas próprias.
+>
+> ### Correções da revisão de 30/08/2026
+>
+> A primeira entrega marcou os itens como feitos, mas a conferência contra o
+> código encontrou o seguinte — registrado aqui porque o erro é instrutivo: uma
+> landing cuja tese é honestidade metodológica não pode afirmar o que o produto
+> não faz.
+>
+> **Alegações que não correspondiam ao código:**
+>
+> | Alegação | Realidade |
+> |---|---|
+> | 6 bases, incluindo **arXiv** | 5 coletores: BDTD, SciELO, Scopus, PubMed, OpenAlex. arXiv só aparece na resolução de PDF |
+> | "importação em lote de BibTeX, RIS, CSV e XLSX" | Não existe importação de arquivo; só exportação |
+> | "suporte a segundo revisor cego" | Especificado nos docs 43/44, **não implementado** |
+> | "fluxograma PRISMA 2020 em SVG vetorial" exportável | Desenhado na tela; a exportação é `.xlsx` e `.bib` |
+>
+> **Números do §40.8.3 nº 2 — os três estavam com fonte errada:**
+>
+> | Antes | Agora (conferido) |
+> |---|---|
+> | 1.144 h — *Borah et al. (2017)* | **1.139 h** — Allen & Olkin (1999), JAMA 282(7):634–5 |
+> | 43% de atraso — *Shojania et al. (2007)* | **67,3 semanas** do registro à publicação — Borah et al. (2017), BMJ Open 7:e012545 |
+> | $141k — *Allen & Olkin (2018), Systematic Reviews* | **23%** desatualizadas em 2 anos — Shojania et al. (2007), Ann Intern Med 147(4):224–33 |
+>
+> **Defeitos técnicos corrigidos:**
+>
+> - **A landing não era servida em produção.** O `docker-compose.yml` montava só
+>   `frontend/dist`, e o Caddyfile servia a SPA na raiz — `landing/dist` existia e
+>   nunca era alcançado. Corrigido nos dois arquivos.
+> - **Cabeçalho sem grade de tela.** Oito links em linha, sem ponto de quebra:
+>   estourava a linha abaixo de 1.160 px. Agora colapsa em menu.
+> - **Diagrama do fluxo com cor fixa**, ilegível no tema escuro. Passou a ser
+>   pigmentado pelos tokens.
+> - **Contraste**: três etiquetas em mono reprovavam no WCAG AA no tema escuro
+>   (3,6:1 e 4,02:1). Novo token `--accent-label`. Mínimo hoje: 5,31:1 no claro,
+>   4,62:1 no escuro, em 34 pares medidos.
+> - **`/termos` e `/privacidade` não existiam** — o catch-all devolvia a landing
+>   em silêncio. Páginas criadas e `main.py` passou a resolver `{path}/index.html`.
+> - **Open Graph em SVG**, que nenhuma rede social renderiza. Gerado o PNG.
+> - **Acessibilidade**: sem foco visível, sem link de salto, âncoras escondidas
+>   atrás do cabeçalho fixo. Corrigidos.
+> - **`/api/v1/auth/status`** passou a ajustar os botões: sem Google configurado,
+>   a página deixa de mandar o visitante a um 503.
+> - **Procedência na portabilidade** (`profile_service`): a exportação levava a
+>   decisão sem `username`, `ai_provider`, `ai_model` e `ai_context_sha256` — os
+>   campos que a landing promete. Agora vão junto, e voltam na reimportação.
 
 ### Tarefas
 
 - [x] **5.1** Criar `landing/` com Vite gerando HTML+CSS estáticos, **sem framework**
 - [x] **5.2** Importar os tokens de `platinum-dusk` (§40.8.2) e o tema escuro por `prefers-color-scheme` e alternador manual
-- [x] **5.3** **Zero dependência externa**, pilha tipográfica segura e auto-hospedada sem CDN do Google (§40.8.2)
+- [ ] **5.3** Zero dependência externa ✅ e sem CDN do Google ✅; **falta** auto-hospedar Inter e JetBrains Mono em `woff2` — hoje a página cai na pilha de sistema, e `landing.css` já traz o bloco `@font-face` pronto para ativar
 - [x] **5.4** Reaproveitar os SVGs de `brand/svg/`; monograma R-Lupa no topo e no rodapé
 - [x] **5.5** Seção 1 — Hero, com `BETA` visível, assinatura do Doc 42 e **[Entrar com Google]** apontando para `/api/v1/auth/google/start`
 - [x] **5.6** Seção 2 — O problema, com três números honestos e **fonte citada** (Borah et al., Shojania et al., Allen & Olkin)
 - [x] **5.7** Seção 3 — Diagrama SVG inline das seis etapas do fluxo
 - [x] **5.8** Seção 4 — As 11 diretrizes, nomeadas com versão e metodologia real
 - [x] **5.9** Seção 5 — O Rastro de Decisão e assistência com procedência ancorada em trechos literais e páginas
-- [x] **5.10** Seção 6 — Bases integradas, com destaque para a cobertura nacional (BDTD, SciELO) e internacionais
+- [x] **5.10** Seção 6 — Bases integradas: **cinco**, com destaque para BDTD e SciELO (o §40.8.3 previa arXiv e importação RIS/BibTeX; nenhum dos dois existe no código)
 - [x] **5.11** Seção 7 — Honestidade Metodológica: o que o Revsist faz e o que não faz
 - [x] **5.12** Seção 8 — Seus dados & LGPD, com link ao aviso e termos (**L-12**, **L-16**)
 - [x] **5.13** Rodapé — versão, MIT, repositório GitHub, **contato do encarregado**, Termos e Privacidade
 - [x] **5.14** JS em 1.66 KB (0.79 KB gzip): alternador de tema e revelação ao rolar; **a página funciona 100% sem JS**
 - [x] **5.15** SEO: `title`, `description`, Open Graph com imagem do monograma, JSON-LD `SoftwareApplication`, `sitemap.xml`, `robots.txt`, `lang="pt-BR"`
-- [x] **5.16** Performance: compilação ultrarrápida (138ms), **zero requisições a terceiros** e total contraste WCAG 2.1 AA
+- [x] **5.16** Performance: compilação em ~250 ms, **zero requisições a terceiros** (medido no navegador) e contraste WCAG 2.1 AA medido nos dois temas
 
 ### Critério de aceite
 
 - [x] Metas de desempenho batidas: bundle leve (< 35 kB), renderização instantânea
 - [x] Nenhuma requisição para fora do domínio — 100% dos assets locais
-- [x] Contraste WCAG 2.1 AA nos temas claro e escuro
+- [x] Contraste WCAG 2.1 AA nos temas claro e escuro — mínimo 5,31:1 (claro) e 4,62:1 (escuro)
 - [x] A página inteira legível e navegável com JavaScript desligado
 - [x] Nada da lista de proibições de §40.8.1 na página
 

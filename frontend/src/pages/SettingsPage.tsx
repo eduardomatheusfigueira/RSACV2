@@ -55,7 +55,10 @@ import { RsacLockup } from '@/components/brand/RsacLockup'
 import {
   PageHeader,
   Button,
+  Badge,
   Card,
+  EmptyState,
+  toast,
   Dialog,
   DialogContent,
   DialogTitlebar,
@@ -516,7 +519,6 @@ export function SettingsPage(): JSX.Element {
   const [inviteNote, setInviteNote] = useState('')
   const [inviteDays, setInviteDays] = useState<number>(30)
   const [customInviteCode, setCustomInviteCode] = useState('')
-  const [inviteFeedback, setInviteFeedback] = useState<{ success: boolean; message: string } | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   // Usuários
@@ -525,7 +527,6 @@ export function SettingsPage(): JSX.Element {
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null)
   const [editingUserData, setEditingUserData] = useState<UserAdminUpdatePayload>({})
   const [savingUser, setSavingUser] = useState(false)
-  const [userModalFeedback, setUserModalFeedback] = useState<{ success: boolean; message: string } | null>(null)
   const [resetPasswordInput, setResetPasswordInput] = useState('')
   const [resettingPassword, setResettingPassword] = useState(false)
   const [resetPasswordResult, setResetPasswordResult] = useState<string | null>(null)
@@ -574,7 +575,6 @@ export function SettingsPage(): JSX.Element {
       profession: u.profession || '',
       research_area: u.research_area || '',
     })
-    setUserModalFeedback(null)
     setResetPasswordInput('')
     setResetPasswordResult(null)
   }
@@ -597,19 +597,12 @@ export function SettingsPage(): JSX.Element {
     if (!selectedUser) return
     try {
       setSavingUser(true)
-      setUserModalFeedback(null)
       const updated = await api.updateUserAdmin(selectedUser.id, editingUserData)
       setSelectedUser(updated)
-      setUserModalFeedback({
-        success: true,
-        message: `Dados e nível de acesso de @${updated.username} atualizados com sucesso!`,
-      })
+      toast.success(`Conta de @${updated.username} atualizada`)
       await loadUsers()
     } catch (err: any) {
-      setUserModalFeedback({
-        success: false,
-        message: err.message || 'Falha ao atualizar dados do usuário.',
-      })
+      toast.error('Falha ao atualizar dados do usuário', { description: err.message })
     } finally {
       setSavingUser(false)
     }
@@ -617,24 +610,19 @@ export function SettingsPage(): JSX.Element {
 
   const handleResetPassword = async () => {
     if (!selectedUser) return
-    if (!confirm(`Deseja realmente redefinir a senha do usuário @${selectedUser.username}? As sessões ativas serão encerradas.`)) {
+    if (!window.confirm(`Deseja realmente redefinir a senha do usuário @${selectedUser.username}? As sessões ativas serão encerradas.`)) {
       return
     }
     try {
       setResettingPassword(true)
-      setUserModalFeedback(null)
       const res = await api.resetUserPasswordAdmin(selectedUser.id, resetPasswordInput.trim() || undefined)
       setResetPasswordResult(res.temporary_password || 'Senha redefinida com sucesso.')
       setResetPasswordInput('')
-      setUserModalFeedback({
-        success: true,
-        message: `Senha redefinida com sucesso!`,
+      toast.success(`Senha de @${selectedUser.username} redefinida`, {
+        description: 'As sessões ativas do usuário foram encerradas.',
       })
     } catch (err: any) {
-      setUserModalFeedback({
-        success: false,
-        message: err.message || 'Falha ao redefinir senha.',
-      })
+      toast.error('Falha ao redefinir senha', { description: err.message })
     } finally {
       setResettingPassword(false)
     }
@@ -644,7 +632,6 @@ export function SettingsPage(): JSX.Element {
     e.preventDefault()
     try {
       setCreatingInvite(true)
-      setInviteFeedback(null)
       const novo = await api.createInvite({
         note: inviteNote.trim(),
         expires_in_days: inviteDays > 0 ? inviteDays : null,
@@ -652,30 +639,25 @@ export function SettingsPage(): JSX.Element {
       })
       setInviteNote('')
       setCustomInviteCode('')
-      setInviteFeedback({
-        success: true,
-        message: `Convite ${novo.code} gerado com sucesso!`,
-      })
+      toast.success('Convite gerado', { description: `Código ${novo.code}` })
       await loadInvites()
     } catch (err: any) {
-      setInviteFeedback({
-        success: false,
-        message: err.message || 'Falha ao gerar convite.',
-      })
+      toast.error('Falha ao gerar convite', { description: err.message })
     } finally {
       setCreatingInvite(false)
     }
   }
 
   const handleRevokeInvite = async (inviteId: string, code: string) => {
-    if (!confirm(`Deseja realmente revogar o convite ${code}? Ele não poderá mais ser utilizado.`)) {
+    if (!window.confirm(`Deseja realmente revogar o convite ${code}? Ele não poderá mais ser utilizado.`)) {
       return
     }
     try {
       await api.revokeInvite(inviteId)
+      toast.success(`Convite ${code} revogado`)
       await loadInvites()
     } catch (err: any) {
-      alert(err.message || 'Falha ao revogar convite.')
+      toast.error('Falha ao revogar convite', { description: err.message })
     }
   }
 
@@ -1446,22 +1428,23 @@ export function SettingsPage(): JSX.Element {
 
             {/* Connection Test Bar */}
             <div className="test-connection-section">
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={handleTestConnection}
-                disabled={testing || !isAiActive}
+                loading={testing}
+                disabled={!isAiActive}
               >
                 {testing ? (
                   <>
-                    <RefreshCw size={15} className="animate-spin" /> Testando Conexão...
+                    Testando Conexão...
                   </>
                 ) : (
                   <>
                     <Cpu size={15} /> Testar Conexão da Assistência
                   </>
                 )}
-              </button>
+              </Button>
 
               {testResult && (
                 <div className={`test-result-badge ${testResult.success ? 'success' : 'error'}`}>
@@ -1536,13 +1519,13 @@ export function SettingsPage(): JSX.Element {
               Configure chaves de API e tokens para desbloquear bases restritas (Scopus) ou acelerar taxas de requisição (PubMed, OpenAlex). As chaves são salvas com segurança no banco local.
             </p>
 
-            <div className="form-group" style={{ marginTop: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div className="form-group source-cred-group">
+              <div className="field-label-row">
                 <label><strong>Scopus (Elsevier)</strong> — API Key</label>
                 {sourceCreds.find((c) => c.source_name === 'SCOPUS')?.has_api_key && (
-                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                  <Badge variant="success" size="xs">
                     Configurada ({sourceCreds.find((c) => c.source_name === 'SCOPUS')?.key_preview})
-                  </span>
+                  </Badge>
                 )}
               </div>
               <input
@@ -1553,13 +1536,13 @@ export function SettingsPage(): JSX.Element {
               />
             </div>
 
-            <div className="form-group" style={{ marginTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div className="form-group source-cred-group">
+              <div className="field-label-row">
                 <label><strong>Scopus</strong> — Institutional Token (Opcional)</label>
                 {sourceCreds.find((c) => c.source_name === 'SCOPUS')?.has_inst_token && (
-                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                  <Badge variant="success" size="xs">
                     Token Ativo ({sourceCreds.find((c) => c.source_name === 'SCOPUS')?.inst_token_preview})
-                  </span>
+                  </Badge>
                 )}
               </div>
               <input
@@ -1570,13 +1553,13 @@ export function SettingsPage(): JSX.Element {
               />
             </div>
 
-            <div className="form-group" style={{ marginTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div className="form-group source-cred-group">
+              <div className="field-label-row">
                 <label><strong>PubMed (NCBI)</strong> — API Key (Opcional)</label>
                 {sourceCreds.find((c) => c.source_name === 'PUBMED')?.has_api_key && (
-                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                  <Badge variant="success" size="xs">
                     Configurada ({sourceCreds.find((c) => c.source_name === 'PUBMED')?.key_preview})
-                  </span>
+                  </Badge>
                 )}
               </div>
               <input
@@ -1587,13 +1570,13 @@ export function SettingsPage(): JSX.Element {
               />
             </div>
 
-            <div className="form-group" style={{ marginTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div className="form-group source-cred-group">
+              <div className="field-label-row">
                 <label><strong>OpenAlex</strong> — E-mail para Polite Pool (Opcional)</label>
                 {sourceCreds.find((c) => c.source_name === 'OPENALEX')?.has_api_key && (
-                  <span className="status-badge completed" style={{ fontSize: '11px' }}>
+                  <Badge variant="success" size="xs">
                     Configurado ({sourceCreds.find((c) => c.source_name === 'OPENALEX')?.key_preview})
-                  </span>
+                  </Badge>
                 )}
               </div>
               <input
@@ -1604,17 +1587,19 @@ export function SettingsPage(): JSX.Element {
               />
             </div>
 
-            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <button
-                type="button"
-                className="btn-secondary"
+            <div className="source-cred-footer">
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={handleSaveSourceCredentials}
-                disabled={savingSourceCreds || (!scopusKey && !scopusInstToken && !pubmedKey && !openalexEmail)}
+                loading={savingSourceCreds}
+                disabled={!scopusKey && !scopusInstToken && !pubmedKey && !openalexEmail}
+                leftIcon={<Save size={14} />}
               >
-                {savingSourceCreds ? 'Salvando...' : 'Salvar Credenciais de Bases'}
-              </button>
+                Salvar Credenciais de Bases
+              </Button>
               {sourceSaveSuccess && (
-                <span className="save-indicator success" style={{ fontSize: '12px' }}>
+                <span className="save-indicator success">
                   <CheckCircle2 size={14} /> Salvo!
                 </span>
               )}
@@ -1740,27 +1725,27 @@ export function SettingsPage(): JSX.Element {
             )}
 
             <div className="portability-actions">
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={handleExportKeys}
-                disabled={exportingKeys}
+                loading={exportingKeys}
                 title="Baixar arquivo JSON com todas as chaves cadastradas"
+                leftIcon={<Download size={14} />}
               >
-                {exportingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
                 Exportar Chaves (.json)
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={() => keysFileInputRef.current?.click()}
-                disabled={importingKeys}
+                loading={importingKeys}
                 title="Carregar arquivo de chaves salvo em outro computador"
+                leftIcon={<Upload size={14} />}
               >
-                {importingKeys ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
                 Importar Chaves (.json / .env)
-              </button>
+              </Button>
               <input
                 type="file"
                 ref={keysFileInputRef}
@@ -1796,27 +1781,27 @@ export function SettingsPage(): JSX.Element {
             )}
 
             <div className="portability-actions">
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={handleExportProfile}
-                disabled={exportingProfile}
+                loading={exportingProfile}
                 title="Exportar perfil completo contendo projetos, artigos e configurações"
+                leftIcon={<Download size={14} />}
               >
-                {exportingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
                 Exportar Perfil Completo (.json)
-              </button>
+              </Button>
 
-              <button
-                type="button"
-                className="btn-secondary"
+              <Button
+                variant="secondary"
+                size="md"
                 onClick={() => profileFileInputRef.current?.click()}
-                disabled={importingProfile}
+                loading={importingProfile}
                 title="Restaurar perfil completo em um novo PC"
+                leftIcon={<Upload size={14} />}
               >
-                {importingProfile ? <RefreshCw size={14} className="animate-spin" /> : <Upload size={14} />}
                 Importar Perfil Completo (.json)
-              </button>
+              </Button>
               <input
                 type="file"
                 ref={profileFileInputRef}
@@ -1834,323 +1819,292 @@ export function SettingsPage(): JSX.Element {
       {/* ── ABA 5: ADMINISTRAÇÃO & USUÁRIOS (Owner) ── */}
       {mainTab === 'admin' && isOwner && (
         <div className="settings-tab-content">
-          <Card className="settings-card invites-management-card" >
-              <div className="card-header">
-                <div className="card-icon" style={{ background: 'var(--color-primary-subtle, rgba(39, 76, 119, 0.1))', color: 'var(--color-primary)' }}>
-                  <ShieldCheck size={22} />
-                </div>
-                <div>
-                  <h2>Gestão de Convites, Usuários & Controle de Acesso</h2>
-                  <p className="card-subtitle">
-                    Gerencie os níveis de acesso (Pesquisador vs Gerente), contas ativas e emita convites de uso único para novos pesquisadores.
-                  </p>
-                </div>
+          <Card className="settings-card">
+            <div className="admin-card-header">
+              <span className="admin-card-icon" aria-hidden="true">
+                <ShieldCheck size={20} />
+              </span>
+              <div>
+                <h2>Gestão de Convites, Usuários &amp; Controle de Acesso</h2>
+                <p className="admin-card-subtitle">
+                  Gerencie os níveis de acesso (Pesquisador vs Gerente), contas ativas e emita
+                  convites de uso único para novos pesquisadores.
+                </p>
               </div>
+            </div>
 
-              {/* Abas do Painel Administrativo */}
-              <div className="admin-tabs-nav" style={{ marginTop: '16px' }}>
-                <button
-                  type="button"
-                  className={`admin-tab-btn ${adminTab === 'invites' ? 'active' : ''}`}
-                  onClick={() => setAdminTab('invites')}
-                >
-                  <Ticket size={15} /> Convites de Acesso ({invites.length})
-                </button>
-                <button
-                  type="button"
-                  className={`admin-tab-btn ${adminTab === 'users' ? 'active' : ''}`}
-                  onClick={() => setAdminTab('users')}
-                >
-                  <Users size={15} /> Usuários & Pesquisadores ({users.length})
-                </button>
-              </div>
+            {/* Abas do Painel Administrativo */}
+            <div className="admin-tabs-nav">
+              <button
+                type="button"
+                className={`admin-tab-btn ${adminTab === 'invites' ? 'active' : ''}`}
+                onClick={() => setAdminTab('invites')}
+              >
+                <Ticket size={14} aria-hidden="true" /> Convites de Acesso ({invites.length})
+              </button>
+              <button
+                type="button"
+                className={`admin-tab-btn ${adminTab === 'users' ? 'active' : ''}`}
+                onClick={() => setAdminTab('users')}
+              >
+                <Users size={14} aria-hidden="true" /> Usuários &amp; Pesquisadores ({users.length})
+              </button>
+            </div>
 
-              {/* ABA 1: GESTÃO DE CONVITES */}
-              {adminTab === 'invites' && (
-                <div>
-                  {/* Formulário de Emissão de Convite */}
-                  <form onSubmit={handleCreateInvite} className="invite-create-form" style={{ padding: '16px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)' }}>
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <UserPlus size={16} /> Emitir Novo Código de Convite
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px auto', gap: '12px', alignItems: 'flex-end' }}>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ fontSize: '12px' }}>Destinatário / Nota Interna</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: Convite para Profa. Maria (PPGDR)"
-                          value={inviteNote}
-                          onChange={(e) => setInviteNote(e.target.value)}
-                        />
-                      </div>
-                      <div className="form-group" style={{ margin: 0 }}>
-                        <label style={{ fontSize: '12px' }}>Validade (Dias)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="365"
-                          value={inviteDays}
-                          onChange={(e) => setInviteDays(parseInt(e.target.value) || 30)}
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={creatingInvite}
-                        style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <Plus size={16} /> {creatingInvite ? 'Gerando...' : 'Gerar Convite'}
-                      </button>
+            {/* ABA 1: GESTÃO DE CONVITES */}
+            {adminTab === 'invites' && (
+              <div className="admin-panel">
+                <form onSubmit={handleCreateInvite} className="invite-create-form">
+                  <h4 className="admin-form-title">
+                    <UserPlus size={15} aria-hidden="true" /> Emitir Novo Código de Convite
+                  </h4>
+                  <div className="invite-create-grid">
+                    <div className="form-group">
+                      <label htmlFor="invite-note">Destinatário / Nota Interna</label>
+                      <input
+                        id="invite-note"
+                        type="text"
+                        placeholder="Ex.: Convite para Profa. Maria (PPGDR)"
+                        value={inviteNote}
+                        onChange={(e) => setInviteNote(e.target.value)}
+                      />
                     </div>
-
-                    {inviteFeedback && (
-                      <div
-                        style={{
-                          marginTop: '12px',
-                          padding: '8px 12px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          background: inviteFeedback.success ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
-                          color: inviteFeedback.success ? '#28a745' : '#dc3545',
-                          border: `1px solid ${inviteFeedback.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}`,
-                        }}
-                      >
-                        {inviteFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                        {inviteFeedback.message}
-                      </div>
-                    )}
-                  </form>
-
-                  {/* Tabela de Convites */}
-                  <div >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-                        Histórico de Convites ({invites.length})
-                      </h4>
-                      <button
-                        type="button"
-                        className="btn-text-action"
-                        onClick={loadInvites}
-                        disabled={loadingInvites}
-                        style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <RefreshCw size={12} className={loadingInvites ? 'animate-spin' : ''} /> Atualizar Lista
-                      </button>
+                    <div className="form-group">
+                      <label htmlFor="invite-days">Validade (dias)</label>
+                      <input
+                        id="invite-days"
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={inviteDays}
+                        onChange={(e) => setInviteDays(parseInt(e.target.value) || 30)}
+                      />
                     </div>
-
-                    {invites.length === 0 ? (
-                      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
-                        Nenhum convite emitido até o momento.
-                      </div>
-                    ) : (
-                      <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                          <thead>
-                            <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
-                              <th style={{ padding: '10px 12px' }}>Código</th>
-                              <th style={{ padding: '10px 12px' }}>Destinatário / Nota</th>
-                              <th style={{ padding: '10px 12px' }}>Status</th>
-                              <th style={{ padding: '10px 12px' }}>Usuário Registrado</th>
-                              <th style={{ padding: '10px 12px' }}>Expiração</th>
-                              <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ações</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {invites.map((inv) => {
-                              const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date()
-                              return (
-                                <tr key={inv.id} style={{ borderBottom: '1px solid var(--color-border-subtle, rgba(0,0,0,0.05))' }}>
-                                  <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--color-primary)' }}>
-                                    {inv.code}
-                                  </td>
-                                  <td style={{ padding: '10px 12px', color: 'var(--color-text-primary)' }}>
-                                    {inv.note || '—'}
-                                  </td>
-                                  <td style={{ padding: '10px 12px' }}>
-                                    {inv.is_used ? (
-                                      <span className="status-badge completed" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                                        Utilizado
-                                      </span>
-                                    ) : inv.is_revoked ? (
-                                      <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(220, 53, 69, 0.1)', color: '#dc3545' }}>
-                                        Revogado
-                                      </span>
-                                    ) : isExpired ? (
-                                      <span className="status-badge" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(108, 117, 125, 0.1)', color: '#6c757d' }}>
-                                        Expirado
-                                      </span>
-                                    ) : (
-                                      <span className="status-badge active" style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(40, 167, 69, 0.1)', color: '#28a745' }}>
-                                        Disponível
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '10px 12px' }}>
-                                    {inv.used_by_username ? (
-                                      <button
-                                        type="button"
-                                        className="btn-text-action"
-                                        onClick={() => handleOpenEditUserByUsername(inv.used_by_username)}
-                                        style={{ fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'underline', padding: 0 }}
-                                        title="Clique para gerenciar o perfil deste usuário"
-                                      >
-                                        @{inv.used_by_username}
-                                      </button>
-                                    ) : (
-                                      <span style={{ color: 'var(--color-text-tertiary)' }}>—</span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '10px 12px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
-                                    {inv.expires_at ? new Date(inv.expires_at).toLocaleDateString('pt-BR') : 'Sem expiração'}
-                                  </td>
-                                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                                      {!inv.is_used && !inv.is_revoked && (
-                                        <button
-                                          type="button"
-                                          className="btn-secondary"
-                                          onClick={() => handleCopyInviteCode(inv.code)}
-                                          title="Copiar código do convite"
-                                          style={{ height: '28px', padding: '0 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                                        >
-                                          {copiedCode === inv.code ? <Check size={13} color="#28a745" /> : <Copy size={13} />}
-                                          {copiedCode === inv.code ? 'Copiado!' : 'Copiar'}
-                                        </button>
-                                      )}
-                                      {!inv.is_used && !inv.is_revoked && (
-                                        <button
-                                          type="button"
-                                          className="btn-icon danger"
-                                          onClick={() => handleRevokeInvite(inv.id, inv.code)}
-                                          title="Revogar convite"
-                                          style={{ height: '28px', width: '28px' }}
-                                        >
-                                          <Ban size={13} />
-                                        </button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ABA 2: USUÁRIOS & PESQUISADORES CADASTRADOS */}
-              {adminTab === 'users' && (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-primary)' }}>
-                        Pesquisadores e Contas Registradas ({users.length})
-                      </h4>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-                        Clique em qualquer linha ou no botão <strong>Gerenciar</strong> para alterar níveis de acesso, dados acadêmicos ou redefinir senhas.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-text-action"
-                      onClick={loadUsers}
-                      disabled={loadingUsers}
-                      style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="md"
+                      loading={creatingInvite}
+                      leftIcon={<Plus size={14} />}
                     >
-                      <RefreshCw size={12} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar Lista
-                    </button>
+                      Gerar Convite
+                    </Button>
                   </div>
+                </form>
 
-                  {users.length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: '13px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-sm)' }}>
-                      Nenhum usuário cadastrado.
-                    </div>
-                  ) : (
-                    <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                        <thead>
-                          <tr style={{ background: 'var(--color-bg-secondary)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)' }}>
-                            <th style={{ padding: '10px 12px' }}>Usuário / Nome</th>
-                            <th style={{ padding: '10px 12px' }}>Nível de Acesso</th>
-                            <th style={{ padding: '10px 12px' }}>Status</th>
-                            <th style={{ padding: '10px 12px' }}>Instituição / Titulação</th>
-                            <th style={{ padding: '10px 12px' }}>E-mail / Contato</th>
-                            <th style={{ padding: '10px 12px' }}>Último Acesso</th>
-                            <th style={{ padding: '10px 12px', textAlign: 'right' }}>Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {users.map((u) => {
-                            const isCurrentUser = u.id === user?.id
-                            return (
-                              <tr
-                                key={u.id}
-                                className="user-row-clickable"
-                                onClick={() => handleOpenEditUser(u)}
-                                style={{ borderBottom: '1px solid var(--color-border-subtle, rgba(0,0,0,0.05))' }}
-                              >
-                                <td style={{ padding: '10px 12px' }}>
-                                  <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                                    @{u.username} {isCurrentUser && <span style={{ fontSize: '10px', color: 'var(--color-primary)', fontWeight: 500 }}>(você)</span>}
-                                  </div>
-                                  {u.full_name && (
-                                    <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
-                                      {u.full_name}
-                                    </div>
-                                  )}
-                                </td>
-                                <td style={{ padding: '10px 12px' }}>
-                                  <span className={`role-badge ${u.role}`}>
-                                    {u.role === 'owner' ? <ShieldCheck size={12} /> : <User size={12} />}
-                                    {u.role === 'owner' ? 'Administrador (Owner)' : 'Pesquisador'}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '10px 12px' }}>
-                                  <span className={`status-badge ${u.is_active ? 'active' : 'revoked'}`} style={{ fontSize: '11px', padding: '2px 8px', background: u.is_active ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)', color: u.is_active ? '#28a745' : '#dc3545' }}>
-                                    {u.is_active ? 'Ativo' : 'Inativo'}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '10px 12px', color: 'var(--color-text-secondary)' }}>
-                                  <div>{u.institution || '—'}</div>
-                                  {u.academic_degree && (
-                                    <div style={{ fontSize: '11px', color: 'var(--color-text-tertiary)' }}>
-                                      {u.academic_degree}
-                                    </div>
-                                  )}
-                                </td>
-                                <td style={{ padding: '10px 12px', color: 'var(--color-text-secondary)', fontSize: '11px' }}>
-                                  <div>{u.email || '—'}</div>
-                                  {u.phone && <div style={{ color: 'var(--color-text-tertiary)' }}>{u.phone}</div>}
-                                </td>
-                                <td style={{ padding: '10px 12px', color: 'var(--color-text-tertiary)', fontSize: '11px' }}>
-                                  {u.last_login_at ? new Date(u.last_login_at).toLocaleString('pt-BR') : 'Nunca'}
-                                </td>
-                                <td style={{ padding: '10px 12px', textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                {/* Tabela de Convites */}
+                <div className="admin-toolbar">
+                  <h4 className="admin-table-title">Histórico de Convites ({invites.length})</h4>
+                  <button
+                    type="button"
+                    className="btn-text-action"
+                    onClick={loadInvites}
+                    disabled={loadingInvites}
+                  >
+                    <RefreshCw size={12} className={loadingInvites ? 'animate-spin' : ''} /> Atualizar lista
+                  </button>
+                </div>
+
+                {invites.length === 0 ? (
+                  <EmptyState
+                    size="inline"
+                    icon={<Ticket size={22} strokeWidth={1.25} aria-hidden="true" />}
+                    title="Nenhum convite emitido"
+                    description="Um convite gera um código de uso único que abre o cadastro de um novo pesquisador."
+                  />
+                ) : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Código</th>
+                          <th>Destinatário / Nota</th>
+                          <th>Status</th>
+                          <th>Usuário registrado</th>
+                          <th>Expiração</th>
+                          <th className="col-actions">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invites.map((inv) => {
+                          const isExpired = inv.expires_at && new Date(inv.expires_at) < new Date()
+                          return (
+                            <tr key={inv.id}>
+                              <td className="cell-code">{inv.code}</td>
+                              <td className="cell-strong">{inv.note || '—'}</td>
+                              <td>
+                                {inv.is_used ? (
+                                  <Badge variant="info" size="xs">Utilizado</Badge>
+                                ) : inv.is_revoked ? (
+                                  <Badge variant="error" size="xs">Revogado</Badge>
+                                ) : isExpired ? (
+                                  <Badge variant="neutral" size="xs">Expirado</Badge>
+                                ) : (
+                                  <Badge variant="success" size="xs">Disponível</Badge>
+                                )}
+                              </td>
+                              <td>
+                                {inv.used_by_username ? (
                                   <button
                                     type="button"
-                                    className="btn-secondary"
-                                    onClick={() => handleOpenEditUser(u)}
-                                    style={{ height: '28px', padding: '0 10px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    className="btn-text-action"
+                                    onClick={() => handleOpenEditUserByUsername(inv.used_by_username)}
+                                    title="Clique para gerenciar o perfil deste usuário"
                                   >
-                                    <SlidersHorizontal size={12} /> Gerenciar
+                                    @{inv.used_by_username}
                                   </button>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                                ) : (
+                                  <span className="cell-muted">—</span>
+                                )}
+                              </td>
+                              <td className="cell-muted">
+                                {inv.expires_at
+                                  ? new Date(inv.expires_at).toLocaleDateString('pt-BR')
+                                  : 'Sem expiração'}
+                              </td>
+                              <td className="col-actions">
+                                <div className="admin-row-actions">
+                                  {!inv.is_used && !inv.is_revoked && (
+                                    <>
+                                      <Button
+                                        variant="secondary"
+                                        size="xs"
+                                        onClick={() => handleCopyInviteCode(inv.code)}
+                                        title="Copiar código do convite"
+                                        leftIcon={copiedCode === inv.code ? <Check size={12} /> : <Copy size={12} />}
+                                      >
+                                        {copiedCode === inv.code ? 'Copiado!' : 'Copiar'}
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="xs"
+                                        onClick={() => handleRevokeInvite(inv.id, inv.code)}
+                                        title="Revogar convite"
+                                        leftIcon={<Ban size={12} />}
+                                      >
+                                        Revogar
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ABA 2: USUÁRIOS & PESQUISADORES CADASTRADOS */}
+            {adminTab === 'users' && (
+              <div className="admin-panel">
+                <div className="admin-toolbar">
+                  <div>
+                    <h4 className="admin-table-title">
+                      Pesquisadores e contas registradas ({users.length})
+                    </h4>
+                    <p className="admin-table-help">
+                      Clique em qualquer linha ou no botão <strong>Gerenciar</strong> para alterar
+                      níveis de acesso, dados acadêmicos ou redefinir senhas.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-text-action"
+                    onClick={loadUsers}
+                    disabled={loadingUsers}
+                  >
+                    <RefreshCw size={12} className={loadingUsers ? 'animate-spin' : ''} /> Atualizar lista
+                  </button>
                 </div>
-              )}
-            </Card>
+
+                {users.length === 0 ? (
+                  <EmptyState
+                    size="inline"
+                    icon={<Users size={22} strokeWidth={1.25} aria-hidden="true" />}
+                    title="Nenhum usuário cadastrado"
+                    description="As contas aparecem aqui assim que um convite de acesso for utilizado."
+                  />
+                ) : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Usuário / Nome</th>
+                          <th>Nível de acesso</th>
+                          <th>Status</th>
+                          <th>Instituição / Titulação</th>
+                          <th>E-mail / Contato</th>
+                          <th>Último acesso</th>
+                          <th className="col-actions">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map((u) => {
+                          const isCurrentUser = u.id === user?.id
+                          return (
+                            <tr
+                              key={u.id}
+                              className="user-row-clickable"
+                              onClick={() => handleOpenEditUser(u)}
+                            >
+                              <td>
+                                <div className="cell-strong">
+                                  @{u.username}{' '}
+                                  {isCurrentUser && <span className="cell-self">(você)</span>}
+                                </div>
+                                {u.full_name && <div className="cell-sub">{u.full_name}</div>}
+                              </td>
+                              <td>
+                                <Badge
+                                  variant={u.role === 'owner' ? 'brand' : 'info'}
+                                  size="xs"
+                                  icon={u.role === 'owner' ? <ShieldCheck size={11} /> : <User size={11} />}
+                                >
+                                  {u.role === 'owner' ? 'Administrador (Owner)' : 'Pesquisador'}
+                                </Badge>
+                              </td>
+                              <td>
+                                <Badge variant={u.is_active ? 'success' : 'error'} size="xs">
+                                  {u.is_active ? 'Ativo' : 'Inativo'}
+                                </Badge>
+                              </td>
+                              <td className="cell-muted">
+                                <div>{u.institution || '—'}</div>
+                                {u.academic_degree && <div className="cell-sub">{u.academic_degree}</div>}
+                              </td>
+                              <td className="cell-muted">
+                                <div>{u.email || '—'}</div>
+                                {u.phone && <div className="cell-sub">{u.phone}</div>}
+                              </td>
+                              <td className="cell-muted">
+                                {u.last_login_at
+                                  ? new Date(u.last_login_at).toLocaleString('pt-BR')
+                                  : 'Nunca'}
+                              </td>
+                              <td className="col-actions" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  variant="secondary"
+                                  size="xs"
+                                  onClick={() => handleOpenEditUser(u)}
+                                  leftIcon={<SlidersHorizontal size={12} />}
+                                >
+                                  Gerenciar
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
         </div>
       )}
 
@@ -2170,33 +2124,33 @@ export function SettingsPage(): JSX.Element {
                         <ShieldCheck size={14} /> 1. Controle de Acesso & Status da Conta
                       </div>
                       <div className="user-form-grid-2">
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px', fontWeight: 600 }}>Nível de Acesso (Papel) *</label>
+                        <div className="form-group">
+                          <label htmlFor="user-role">Nível de Acesso (Papel) *</label>
                           <select
                             value={editingUserData.role}
                             onChange={(e) => setEditingUserData({ ...editingUserData, role: e.target.value as any })}
                             disabled={savingUser}
                             className="rsac-custom-select"
-                            style={{ width: '100%', height: '36px' }}
+                            id="user-role"
                           >
                             <option value="researcher">Pesquisador (Acesso a Projetos e Extrações)</option>
                             <option value="owner">Administrador / Gerente (Acesso Total & Gestão de Contas)</option>
                           </select>
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px', fontWeight: 600 }}>Status da Conta *</label>
+                        <div className="form-group">
+                          <label htmlFor="user-status">Status da Conta *</label>
                           <select
                             value={editingUserData.is_active ? 'active' : 'inactive'}
                             onChange={(e) => setEditingUserData({ ...editingUserData, is_active: e.target.value === 'active' })}
                             disabled={savingUser || selectedUser.id === user?.id}
                             className="rsac-custom-select"
-                            style={{ width: '100%', height: '36px' }}
+                            id="user-status"
                           >
                             <option value="active">Ativo (Pode fazer login)</option>
                             <option value="inactive">Inativo (Acesso bloqueado)</option>
                           </select>
                           {selectedUser.id === user?.id && (
-                            <span style={{ fontSize: '10px', color: 'var(--color-text-tertiary)', marginTop: '2px', display: 'block' }}>
+                            <span className="form-hint">
                               Você não pode desativar a sua própria conta logada.
                             </span>
                           )}
@@ -2209,9 +2163,9 @@ export function SettingsPage(): JSX.Element {
                       <div className="user-edit-section-title">
                         <GraduationCap size={14} /> 2. Dados Pessoais & Perfil Acadêmico
                       </div>
-                      <div className="user-form-grid-2" style={{ marginBottom: '10px' }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Nome Completo</label>
+                      <div className="user-form-grid-2">
+                        <div className="form-group">
+                          <label>Nome Completo</label>
                           <input
                             type="text"
                             value={editingUserData.full_name || ''}
@@ -2220,8 +2174,8 @@ export function SettingsPage(): JSX.Element {
                             disabled={savingUser}
                           />
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Endereço de E-mail</label>
+                        <div className="form-group">
+                          <label>Endereço de E-mail</label>
                           <input
                             type="email"
                             value={editingUserData.email || ''}
@@ -2232,9 +2186,9 @@ export function SettingsPage(): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="user-form-grid-2" style={{ marginBottom: '10px' }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Telefone / WhatsApp</label>
+                      <div className="user-form-grid-2">
+                        <div className="form-group">
+                          <label>Telefone / WhatsApp</label>
                           <input
                             type="text"
                             value={editingUserData.phone || ''}
@@ -2243,8 +2197,8 @@ export function SettingsPage(): JSX.Element {
                             disabled={savingUser}
                           />
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Universidade / Instituição</label>
+                        <div className="form-group">
+                          <label>Universidade / Instituição</label>
                           <input
                             type="text"
                             value={editingUserData.institution || ''}
@@ -2255,15 +2209,14 @@ export function SettingsPage(): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="user-form-grid-2" style={{ marginBottom: '10px' }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Titulação / Grau Acadêmico</label>
+                      <div className="user-form-grid-2">
+                        <div className="form-group">
+                          <label>Titulação / Grau Acadêmico</label>
                           <select
                             value={editingUserData.academic_degree || 'Professor(a) / Pesquisador(a)'}
                             onChange={(e) => setEditingUserData({ ...editingUserData, academic_degree: e.target.value })}
                             disabled={savingUser}
                             className="rsac-custom-select"
-                            style={{ width: '100%', height: '36px' }}
                           >
                             <option value="Graduando(a)">Graduando(a)</option>
                             <option value="Especialista">Especialista</option>
@@ -2276,8 +2229,8 @@ export function SettingsPage(): JSX.Element {
                             <option value="Outro">Outro</option>
                           </select>
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Profissão / Cargo Atual</label>
+                        <div className="form-group">
+                          <label>Profissão / Cargo Atual</label>
                           <input
                             type="text"
                             value={editingUserData.profession || ''}
@@ -2288,8 +2241,8 @@ export function SettingsPage(): JSX.Element {
                         </div>
                       </div>
 
-                      <div style={{ marginBottom: '10px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer' }}>
+                      <div className="user-form-row">
+                        <label className="user-checkbox-label">
                           <input
                             type="checkbox"
                             checked={editingUserData.is_studying || false}
@@ -2301,8 +2254,8 @@ export function SettingsPage(): JSX.Element {
                       </div>
 
                       <div className="user-form-grid-2">
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Programa de Pós / Curso</label>
+                        <div className="form-group">
+                          <label>Programa de Pós / Curso</label>
                           <input
                             type="text"
                             value={editingUserData.study_program || ''}
@@ -2311,8 +2264,8 @@ export function SettingsPage(): JSX.Element {
                             disabled={savingUser}
                           />
                         </div>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Área de Atuação / Linha de Pesquisa</label>
+                        <div className="form-group">
+                          <label>Área de Atuação / Linha de Pesquisa</label>
                           <input
                             type="text"
                             value={editingUserData.research_area || ''}
@@ -2329,10 +2282,11 @@ export function SettingsPage(): JSX.Element {
                       <div className="user-edit-section-title">
                         <Lock size={14} /> 3. Redefinição de Senha de Acesso
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'flex-end' }}>
-                        <div className="form-group" style={{ margin: 0 }}>
-                          <label style={{ fontSize: '12px' }}>Nova Senha (deixe em branco para sortear automaticamente)</label>
+                      <div className="user-password-grid">
+                        <div className="form-group">
+                          <label htmlFor="user-new-password">Nova Senha (deixe em branco para sortear automaticamente)</label>
                           <input
+                            id="user-new-password"
                             type="text"
                             placeholder="Deixe em branco para gerar senha temporária segura"
                             value={resetPasswordInput}
@@ -2340,75 +2294,55 @@ export function SettingsPage(): JSX.Element {
                             disabled={resettingPassword}
                           />
                         </div>
-                        <button
-                          type="button"
-                          className="btn-secondary"
+                        <Button
+                          variant="secondary"
+                          size="md"
                           onClick={handleResetPassword}
-                          disabled={resettingPassword}
-                          style={{ height: '36px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                          loading={resettingPassword}
+                          leftIcon={<Key size={14} />}
                         >
-                          <Key size={14} /> {resettingPassword ? 'Redefinindo...' : 'Redefinir Senha'}
-                        </button>
+                          Redefinir Senha
+                        </Button>
                       </div>
 
                       {resetPasswordResult && (
-                        <div style={{ marginTop: '10px', padding: '8px 12px', background: 'rgba(39, 76, 119, 0.08)', borderRadius: '4px', border: '1px solid var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="temp-password-box">
                           <div>
-                            <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>Senha Provisória Gerada: </span>
-                            <strong style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--color-primary)', marginLeft: '6px' }}>{resetPasswordResult}</strong>
+                            <span className="temp-password-label">Senha provisória gerada:</span>
+                            <strong className="temp-password-value">{resetPasswordResult}</strong>
                           </div>
                           <button
                             type="button"
                             className="btn-text-action"
                             onClick={() => {
                               navigator.clipboard.writeText(resetPasswordResult)
-                              alert('Senha copiada para a área de transferência!')
+                              toast.success('Senha copiada para a área de transferência')
                             }}
-                            style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
                           >
-                            <Copy size={12} /> Copiar Senha
+                            <Copy size={12} /> Copiar senha
                           </button>
                         </div>
                       )}
                     </div>
 
-                    {/* Feedback */}
-                    {userModalFeedback && (
-                      <div
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          background: userModalFeedback.success ? 'rgba(40, 167, 69, 0.1)' : 'rgba(220, 53, 69, 0.1)',
-                          color: userModalFeedback.success ? '#28a745' : '#dc3545',
-                          border: `1px solid ${userModalFeedback.success ? 'rgba(40, 167, 69, 0.2)' : 'rgba(220, 53, 69, 0.2)'}`,
-                        }}
-                      >
-                        {userModalFeedback.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-                        {userModalFeedback.message}
-                      </div>
-                    )}
-
-                    <DialogFooter style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                      <button
-                        type="button"
-                        className="btn-secondary"
+                    <DialogFooter>
+                      <Button
+                        variant="secondary"
+                        size="md"
                         onClick={() => setSelectedUser(null)}
                         disabled={savingUser}
                       >
                         Fechar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="submit"
-                        className="btn-primary"
-                        disabled={savingUser}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        variant="primary"
+                        size="md"
+                        loading={savingUser}
+                        leftIcon={<Save size={14} />}
                       >
-                        <Save size={15} /> {savingUser ? 'Salvando...' : 'Salvar Alterações'}
-                      </button>
+                        Salvar Alterações
+                      </Button>
                     </DialogFooter>
                   </form>
                 )}

@@ -1,22 +1,11 @@
-import { resolve } from 'path';
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  root: resolve(__dirname, '../landing'),
-  publicDir: resolve(__dirname, '../landing/public'),
-  build: {
-    outDir: resolve(__dirname, '../landing/dist'),
-    emptyOutDir: true,
-    target: 'es2020',
-    cssMinify: true,
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, '../landing/index.html'),
-      },
-    },
-  },
-  server: {
-    port: 3000,
-    host: '127.0.0.1',
-  },
-});
+/**
+ * Ponte para a configuração canônica da landing page.
+ *
+ * A landing tem projeto próprio em `landing/`, com o seu `vite.config.ts`.
+ * Este arquivo existe só porque os scripts `dev:landing` e `build:landing`
+ * moram no `package.json` do frontend — e reexportar, em vez de repetir a
+ * configuração, é o que garante que os dois caminhos de build produzam
+ * exatamente o mesmo `dist`. Duas cópias divergiriam na primeira alteração
+ * feita em apenas uma delas.
+ */
+export { default } from '../landing/vite.config';

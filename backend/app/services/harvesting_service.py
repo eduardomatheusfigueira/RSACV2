@@ -39,22 +39,99 @@ logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
-    """Gerenciador de conexões WebSocket para stream de progresso."""
+    """Gerenciador de conexões WebSocket e presença para colaboração ao vivo (Doc 43 §43.12)."""
 
     def __init__(self):
         self.active_connections: Dict[str, Set[WebSocket]] = {}
+        self.presence: Dict[str, Dict[str, dict]] = {}
+        self.ws_meta: Dict[WebSocket, tuple[str, str]] = {}
 
-    async def connect(self, project_id: str, websocket: WebSocket):
+    async def connect(
+        self,
+        project_id: str,
+        websocket: WebSocket,
+        user_id: Optional[str] = None,
+        username: Optional[str] = None,
+        screen: Optional[str] = "geral",
+    ):
         await websocket.accept()
         if project_id not in self.active_connections:
             self.active_connections[project_id] = set()
+            self.presence[project_id] = {}
         self.active_connections[project_id].add(websocket)
+        if user_id:
+            self.ws_meta[websocket] = (project_id, user_id)
+            self.presence[project_id][user_id] = {
+                "user_id": user_id,
+                "username": username or user_id,
+                "screen": screen or "geral",
+                "connected_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await self.broadcast(
+                project_id,
+                {
+                    "type": "presenca",
+                    "user_id": user_id,
+                    "username": username or user_id,
+                    "tela": screen or "geral",
+                    "status": "online",
+                    "active_users": list(self.presence[project_id].values()),
+                },
+            )
+
+    async def update_presence(self, project_id: str, user_id: str, username: str, screen: str):
+        if project_id in self.presence:
+            self.presence[project_id][user_id] = {
+                "user_id": user_id,
+                "username": username,
+                "screen": screen,
+                "connected_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await self.broadcast(
+                project_id,
+                {
+                    "type": "presenca",
+                    "user_id": user_id,
+                    "username": username,
+                    "tela": screen,
+                    "status": "online",
+                    "active_users": list(self.presence[project_id].values()),
+                },
+            )
 
     def disconnect(self, project_id: str, websocket: WebSocket):
         if project_id in self.active_connections:
             self.active_connections[project_id].discard(websocket)
+            meta = self.ws_meta.pop(websocket, None)
+            if meta:
+                _, u_id = meta
+                still_connected = any(
+                    self.ws_meta.get(ws) == (project_id, u_id)
+                    for ws in self.active_connections.get(project_id, set())
+                )
+                if not still_connected and project_id in self.presence:
+                    user_info = self.presence[project_id].pop(u_id, None)
+                    if user_info:
+                        try:
+                            loop = asyncio.get_running_loop()
+                            loop.create_task(
+                                self.broadcast(
+                                    project_id,
+                                    {
+                                        "type": "presenca",
+                                        "user_id": u_id,
+                                        "username": user_info.get("username", ""),
+                                        "tela": user_info.get("screen", ""),
+                                        "status": "offline",
+                                        "active_users": list(self.presence[project_id].values()),
+                                    },
+                                )
+                            )
+                        except RuntimeError:
+                            pass
             if not self.active_connections[project_id]:
                 del self.active_connections[project_id]
+                self.presence.pop(project_id, None)
 
     async def broadcast(self, project_id: str, message: dict):
         if project_id in self.active_connections:
@@ -66,6 +143,7 @@ class ConnectionManager:
                     dead.add(ws)
             for d in dead:
                 self.active_connections[project_id].discard(d)
+                self.ws_meta.pop(d, None)
 
 
 ws_manager = ConnectionManager()
@@ -80,13 +158,11 @@ class HarvestingService:
 
     def _load_credentials(self, db, owner_id: Optional[str] = None) -> Dict[str, dict]:
         """
-        Credenciais de coleta **do dono do projeto**.
+        Carrega as credenciais das fontes para o usuário informado.
 
-        A coleta roda em segundo plano, sem requisição HTTP de onde tirar o
-        usuário corrente — então o dono vem do próprio projeto, que é a
-        resposta certa: a busca é feita em nome de quem é titular do acervo.
-        Sem o filtro, o token institucional de uma universidade seria usado
-        pela coleta de outra (doc 39, O-03), o que além do vazamento viola o
+        Quando o usuário informa uma chave institucional (Doc 29 §29.3.2) ela é
+        utilizada aqui; quando não há, o coletor roda em modo anônimo se a
+        fonte permitir, ou é pulado com aviso quando a chave for obrigatória pelo
         contrato de licença da base.
         """
         creds = {}
@@ -111,6 +187,7 @@ class HarvestingService:
         source_name: str,
         query: HarvestQuery,
         creds: dict,
+        user_id: Optional[str] = None,
     ):
         """Executa a coleta de uma fonte individual com persistência em lote."""
         async with self._source_semaphore:
@@ -131,6 +208,7 @@ class HarvestingService:
                 ),
                 started_at=datetime.now(timezone.utc),
                 status="running",
+                run_by_user_id=user_id,
             )
             db.add(run)
             db.commit()
@@ -330,8 +408,9 @@ class HarvestingService:
         institutions: Optional[List[str]] = None,
         open_access_only: Optional[bool] = None,
         fetch_details: bool = True,
+        user_id: Optional[str] = None,
     ):
-        """Orquestra a coleta de múltiplos coletores em paralelo."""
+        """Orquestra a coleta de múltiplos coletores em paralelo usando as credenciais do ator (Doc 43 §43.11)."""
         db = SessionLocal()
         try:
             protocol = db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).first()
@@ -388,14 +467,14 @@ class HarvestingService:
                 fetch_details=fetch_details,
             )
 
-            # O dono do projeto é quem responde pela coleta: as credenciais
-            # usadas são as dele, não as da primeira linha da tabela.
+            # O usuário que aciona a coleta utiliza as suas próprias credenciais (D-03)
+            # com fallback para o dono do projeto se invocado em tarefa desacoplada.
             dono = (
                 db.query(ProjectModel.owner_id)
                 .filter(ProjectModel.id == project_id)
                 .scalar()
             )
-            creds = self._load_credentials(db, owner_id=dono)
+            creds = self._load_credentials(db, owner_id=user_id or dono)
 
         finally:
             db.close()
@@ -406,7 +485,7 @@ class HarvestingService:
         )
 
         tasks = [
-            self._harvest_single_source(project_id, s, harvest_query, creds)
+            self._harvest_single_source(project_id, s, harvest_query, creds, user_id=user_id)
             for s in sources
         ]
 

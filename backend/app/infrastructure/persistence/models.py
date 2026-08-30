@@ -20,9 +20,10 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     text,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 from app.security.encrypted_type import EncryptedText
 
@@ -94,6 +95,15 @@ class ProjectModel(Base):
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    collaboration_mode: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="individual", server_default="individual"
+    )
+    reviewers_per_paper: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    conflict_resolution: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="coordenador", server_default="coordenador"
+    )
 
     # Relationships
     protocol: Mapped["ProtocolModel"] = relationship(
@@ -108,10 +118,132 @@ class ProjectModel(Base):
     deduplication_reports: Mapped[list["DeduplicationReportModel"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    members: Mapped[list["ProjectMemberModel"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+    invitations: Mapped[list["ProjectInvitationModel"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.owner_id and not any(m.user_id == self.owner_id for m in getattr(self, "members", [])):
+            self.members.append(
+                ProjectMemberModel(
+                    user_id=self.owner_id,
+                    project_role="coordenador",
+                    is_active=True,
+                )
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────
-# Protocolo
+# Participação em Projeto (doc 43 §43.3.1 — Pesquisa em Equipe)
+# ─────────────────────────────────────────────────────────────────────
+
+class ProjectMemberModel(Base):
+    """
+    Participação de um usuário em um projeto de revisão.
+
+    `project_role` separa coordenador, revisor e observador dentro do projeto.
+    `is_active` desliga a participação sem apagar a linha, preservando o rastro
+    de autoria e proveniência dos julgamentos realizados.
+    """
+
+    __tablename__ = "project_members"
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_members_project_user"),
+        Index("ix_project_members_user", "user_id"),
+        Index("ix_project_members_project", "project_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    project_role: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="coordenador"
+    )  # 'coordenador' | 'revisor' | 'observador'
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    invited_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    left_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Relationships
+    project: Mapped["ProjectModel"] = relationship(back_populates="members")
+    user: Mapped["UserModel"] = relationship(
+        foreign_keys=[user_id], back_populates="memberships"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Convites de Projeto (doc 43 §43.3.2 — Pesquisa em Equipe)
+# ─────────────────────────────────────────────────────────────────────
+
+class ProjectInvitationModel(Base):
+    """
+    Convite para participação em projeto de revisão sistemática (§43.3.2).
+    """
+
+    __tablename__ = "project_invitations"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_project_invitations_code"),
+        Index("ix_project_invitations_project", "project_id"),
+        Index("ix_project_invitations_code", "code"),
+        Index("ix_project_invitations_created_by", "created_by_user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    project_role: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="revisor"
+    )  # 'coordenador' | 'revisor' | 'observador'
+    created_by_user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    accepted_by_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    # Relationships
+    project: Mapped["ProjectModel"] = relationship(back_populates="invitations")
+    created_by: Mapped["UserModel"] = relationship(
+        foreign_keys=[created_by_user_id]
+    )
+    accepted_by: Mapped["UserModel | None"] = relationship(
+        foreign_keys=[accepted_by_user_id]
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
+# Protocolo (Doc 45 — 4 Eixos Ortogonais)
 # ─────────────────────────────────────────────────────────────────────
 
 class ProtocolModel(Base):
@@ -119,11 +251,21 @@ class ProtocolModel(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), unique=True)
+    mode: Mapped[str] = mapped_column(String(20), default="simplificado", nullable=False)  # 'simplificado' | 'completo'
+    review_design: Mapped[str] = mapped_column(String(20), default="D4", nullable=False)  # 'D1'..'D14'
+    reporting_guideline: Mapped[str] = mapped_column(String(50), default="PRISMA-ScR", nullable=False)  # 'PRISMA-2020' | 'PRISMA-ScR' | ...
+    conduct_standards: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON list
+    question_framework: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON tipado (§7)
     objective: Mapped[str] = mapped_column(Text, default="")
-    pico_framework: Mapped[str] = mapped_column(Text, default="{}")  # JSON string
+    pico_framework: Mapped[str] = mapped_column(Text, default="{}")  # JSON string (legado / compatibilidade)
     search_descriptors: Mapped[str] = mapped_column(Text, default="{}")  # JSON string
     search_filters: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para recorte temporal, idiomas, etc.
-    manuscript_sections: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para todas as seções do PRISMA-ScR
+    manuscript_sections: Mapped[str] = mapped_column(Text, default="{}")  # JSON string para seções do manuscrito
+    appraisal: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON {instrument, policy, notes}
+    synthesis: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON {type, groupings, params}
+    bibliometrics: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON (§11.2)
+    status: Mapped[str] = mapped_column(String(20), default="rascunho", nullable=False)  # 'rascunho'|'vigente'|'concluido'
+    current_version: Mapped[str | None] = mapped_column(String(50), nullable=True)  # ex: 'v1.0'
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
@@ -135,6 +277,21 @@ class ProtocolModel(Base):
         back_populates="protocol", cascade="all, delete-orphan"
     )
     extraction_questions: Mapped[list["ExtractionQuestionModel"]] = relationship(
+        back_populates="protocol", cascade="all, delete-orphan"
+    )
+    search_strategies: Mapped[list["SearchStrategyModel"]] = relationship(
+        back_populates="protocol", cascade="all, delete-orphan"
+    )
+    search_executions: Mapped[list["SearchExecutionModel"]] = relationship(
+        back_populates="protocol", cascade="all, delete-orphan"
+    )
+    versions: Mapped[list["ProtocolVersionModel"]] = relationship(
+        back_populates="protocol", cascade="all, delete-orphan"
+    )
+    amendments: Mapped[list["ProtocolAmendmentModel"]] = relationship(
+        back_populates="protocol", cascade="all, delete-orphan"
+    )
+    checklist_audits: Mapped[list["ChecklistAuditModel"]] = relationship(
         back_populates="protocol", cascade="all, delete-orphan"
     )
 
@@ -150,6 +307,8 @@ class CriterionModel(Base):
     protocol_id: Mapped[str] = mapped_column(ForeignKey("protocols.id"))
     text: Mapped[str] = mapped_column(Text, nullable=False)
     is_exclusion: Mapped[bool] = mapped_column(Boolean, default=False)
+    dimension: Mapped[str] = mapped_column(String(30), default="outro", nullable=False)  # 'populacao'|'desenho'|'periodo'|'idioma'|'tipo_doc'|'contexto'|'outro'
+    applies_at: Mapped[str] = mapped_column(String(30), default="ambos", nullable=False)  # 'titulo_resumo' | 'texto_completo' | 'ambos'
     order: Mapped[int] = mapped_column(Integer, default=0)
 
     # Relationships
@@ -207,6 +366,17 @@ class PaperModel(Base):
     pdf_acquired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_duplicate: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     merged_into_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # ── Estado de Consolidação da Triagem (Doc 43 §43.3.5) ───────────────
+    # "legado" | "aguardando" | "parcial" | "consenso" | "conflito" | "resolvido"
+    screening_status: Mapped[str] = mapped_column(
+        String(20), default="aguardando", nullable=False
+    )
+    conflict_resolved_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    conflict_resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
@@ -226,6 +396,53 @@ class PaperModel(Base):
     audit_logs: Mapped[list["AuditLogModel"]] = relationship(
         back_populates="paper", cascade="all, delete-orphan"
     )
+    screenings: Mapped[list["PaperScreeningModel"]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan"
+    )
+    conflict_resolver: Mapped["UserModel | None"] = relationship(
+        foreign_keys=[conflict_resolved_by_user_id]
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Julgamento de Triagem por Revisor (doc 43 §43.3.4 — Modo Cego & Colaborativo)
+# ─────────────────────────────────────────────────────────────────────
+
+class PaperScreeningModel(Base):
+    """
+    Julgamento individual de um revisor sobre um estudo.
+
+    O coração da modalidade cega e da autoria de triagem. Em todas as modalidades,
+    registra o parecer, observações e critérios avaliados pelo revisor específico.
+    """
+
+    __tablename__ = "paper_screenings"
+    __table_args__ = (
+        UniqueConstraint("paper_id", "reviewer_id", name="uq_paper_screenings_paper_reviewer"),
+        Index("ix_paper_screenings_paper", "paper_id"),
+        Index("ix_paper_screenings_reviewer", "reviewer_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    reviewer_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    decision: Mapped[str] = mapped_column(String(20), default="Pendente", nullable=False)
+    observations: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    criteria_evaluations: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON {criterion_id: bool}
+    ai_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ai_assisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    # Relationships
+    paper: Mapped["PaperModel"] = relationship(back_populates="screenings")
+    reviewer: Mapped["UserModel"] = relationship(foreign_keys=[reviewer_id])
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -273,6 +490,9 @@ class ExtractionQuestionModel(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     protocol_id: Mapped[str] = mapped_column(ForeignKey("protocols.id"))
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    answer_type: Mapped[str] = mapped_column(String(30), default="texto", nullable=False)  # 'texto'|'numero'|'categoria'|'multipla'|'booleano'
+    options: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON list
+    required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     order: Mapped[int] = mapped_column(Integer, default=0)
 
     protocol: Mapped["ProtocolModel"] = relationship(back_populates="extraction_questions")
@@ -305,6 +525,157 @@ class ExtractionAnswerModel(Base):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# Estratégias de Busca Canônicas e Adaptadas por Base (Doc 45 §10, §14)
+# ─────────────────────────────────────────────────────────────────────
+
+class SearchStrategyModel(Base):
+    __tablename__ = "search_strategies"
+    __table_args__ = (
+        Index("ix_search_strategies_protocol_kind", "protocol_id", "kind"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    protocol_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("protocols.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(20), default="canonica", nullable=False)  # 'canonica' | 'adaptacao'
+    database: Mapped[str] = mapped_column(String(50), default="", nullable=False)  # '' para canônica ou 'BDTD', 'Scopus', etc.
+    blocks: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON list de blocos de conceito
+    combination: Mapped[str] = mapped_column(String(255), default="", nullable=False)  # ex: 'A AND B AND C'
+    target_fields: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON list: ['title', 'abstract', 'keywords']
+    limits: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON filtros: anos, idiomas, tipos, acesso aberto
+    rendered_query: Mapped[str] = mapped_column(Text, default="", nullable=False)  # Query traduzida e pronta
+    adaptation_note: Mapped[str] = mapped_column(Text, default="", nullable=False)  # Justificativa/nota técnica de adaptação
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    # Relationships
+    protocol: Mapped["ProtocolModel"] = relationship(back_populates="search_strategies")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Registro de Execuções de Busca por Base (Doc 45 §10.4, §10.5)
+# ─────────────────────────────────────────────────────────────────────
+
+class SearchExecutionModel(Base):
+    __tablename__ = "search_executions"
+    __table_args__ = (
+        Index("ix_search_executions_protocol", "protocol_id"),
+        Index("ix_search_executions_executed_at", "executed_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    protocol_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("protocols.id", ondelete="CASCADE"), nullable=False
+    )
+    harvest_run_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("harvest_runs.id", ondelete="SET NULL"), nullable=True
+    )
+    database: Mapped[str] = mapped_column(String(50), nullable=False)
+    query_sent: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    filters: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON filtros efetivamente aplicados
+    executed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    records_returned: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    records_after_dedup: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Relationships
+    protocol: Mapped["ProtocolModel"] = relationship(back_populates="search_executions")
+    harvest_run: Mapped["HarvestRunModel | None"] = relationship(back_populates="search_executions")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Versionamento e Congelamento de Protocolo (Doc 45 §12, §14)
+# ─────────────────────────────────────────────────────────────────────
+
+class ProtocolVersionModel(Base):
+    __tablename__ = "protocol_versions"
+    __table_args__ = (
+        Index("ix_protocol_versions_protocol", "protocol_id"),
+        Index("ix_protocol_versions_label", "protocol_id", "label"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    protocol_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("protocols.id", ondelete="CASCADE"), nullable=False
+    )
+    label: Mapped[str] = mapped_column(String(50), nullable=False)  # ex: 'v1.0'
+    snapshot: Mapped[str] = mapped_column(Text, nullable=False)  # JSON completo canônico
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)  # SHA-256
+    frozen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    frozen_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    protocol: Mapped["ProtocolModel"] = relationship(back_populates="versions")
+    frozen_by: Mapped["UserModel | None"] = relationship(foreign_keys=[frozen_by_user_id])
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Emendas ao Protocolo (Doc 45 §12.1, §14)
+# ─────────────────────────────────────────────────────────────────────
+
+class ProtocolAmendmentModel(Base):
+    __tablename__ = "protocol_amendments"
+    __table_args__ = (
+        Index("ix_protocol_amendments_protocol", "protocol_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    protocol_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("protocols.id", ondelete="CASCADE"), nullable=False
+    )
+    from_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    to_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    diff: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON com diferenças estruturadas
+    reason: Mapped[str] = mapped_column(Text, nullable=False)  # Justificativa metodológica
+    project_phase: Mapped[str] = mapped_column(String(50), default="coleta", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    protocol: Mapped["ProtocolModel"] = relationship(back_populates="amendments")
+    created_by: Mapped["UserModel | None"] = relationship(foreign_keys=[created_by_user_id])
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Auditoria de Conformidade com Checklist (Doc 45 §13.1, §14)
+# ─────────────────────────────────────────────────────────────────────
+
+class ChecklistAuditModel(Base):
+    __tablename__ = "checklist_audits"
+    __table_args__ = (
+        UniqueConstraint("protocol_id", "guideline", "item_id", name="uq_checklist_audit_protocol_guideline_item"),
+        Index("ix_checklist_audits_protocol_guideline", "protocol_id", "guideline"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    protocol_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("protocols.id", ondelete="CASCADE"), nullable=False
+    )
+    guideline: Mapped[str] = mapped_column(String(50), nullable=False)  # 'PRISMA-ScR', 'PRISMA-2020', 'BIBLIO', etc.
+    item_id: Mapped[str] = mapped_column(String(50), nullable=False)  # ex: '1', '2a', '7'
+    state: Mapped[str] = mapped_column(String(20), default="pendente", nullable=False)  # 'atendido' | 'nao_aplica' | 'pendente'
+    location: Mapped[str] = mapped_column(String(100), default="", nullable=False)  # ex: 'Pág. 3, Seção Métodos'
+    justification: Mapped[str] = mapped_column(Text, default="", nullable=False)  # Obrigatória se nao_aplica
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+    updated_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    protocol: Mapped["ProtocolModel"] = relationship(back_populates="checklist_audits")
+    updated_by: Mapped["UserModel | None"] = relationship(foreign_keys=[updated_by_user_id])
+
+
+# ─────────────────────────────────────────────────────────────────────
 # Execuções de Coleta (Harvest Runs)
 # ─────────────────────────────────────────────────────────────────────
 
@@ -324,8 +695,18 @@ class HarvestRunModel(Base):
     records_duplicate: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(20), default="running")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Autoria da execução de coleta (Doc 43 §43.3.7, Fase 3)
+    run_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # Relationships
+    search_executions: Mapped[list["SearchExecutionModel"]] = relationship(
+        back_populates="harvest_run"
+    )
 
     project: Mapped["ProjectModel"] = relationship(back_populates="harvest_runs")
+    runner: Mapped["UserModel | None"] = relationship(foreign_keys=[run_by_user_id])
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -420,6 +801,11 @@ class UserModel(Base):
 
     sessions: Mapped[list["SessionModel"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    memberships: Mapped[list["ProjectMemberModel"]] = relationship(
+        foreign_keys="ProjectMemberModel.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
 

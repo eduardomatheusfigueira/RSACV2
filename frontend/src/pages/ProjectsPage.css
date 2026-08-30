@@ -105,17 +105,27 @@
   background: var(--color-bg-tertiary);
 }
 
+/* Com metodologia, papel, modalidade e "ativo", a fita de selos passou a ser
+   quatro etiquetas: sem quebra de linha ela espremia "Cega por Pares (2)" em
+   três linhas e empurrava os botões para fora do cartão. */
 .card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
 
 .card-meta {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.card-meta > * {
+  white-space: nowrap;
 }
 
 .badge-methodology {

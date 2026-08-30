@@ -11,6 +11,7 @@ from app.infrastructure.persistence.models import (
     ExtractionQuestionModel,
     PaperModel,
     PaperSourceModel,
+    ProjectMemberModel,
     ProjectModel,
     ProtocolModel,
     SourceCredentialModel,
@@ -207,6 +208,7 @@ def test_full_profile_export_and_restoration(db_session):
     db_session.query(ExtractionQuestionModel).delete()
     db_session.query(CriterionModel).delete()
     db_session.query(ProtocolModel).delete()
+    db_session.query(ProjectMemberModel).delete()
     db_session.query(ProjectModel).delete()
     db_session.query(AISettingsModel).delete()
     db_session.commit()

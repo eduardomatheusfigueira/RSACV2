@@ -40,6 +40,8 @@ class HarvestRunResponse(BaseModel):
     records_duplicate: int = 0
     status: str
     error_message: Optional[str] = None
+    run_by_user_id: Optional[str] = None
+    run_by_username: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

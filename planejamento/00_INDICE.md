@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online) · `42–44` Vigente (Pesquisa em equipe)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online) · `42–44` Vigente (Pesquisa em equipe) · `45` Vigente (Protocolos)
 
 ---
 
@@ -73,6 +73,7 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 37–38   vigente            LGPD — diagnóstico e checklist verificável
 39–41   vigente            serviço online — diagnóstico, especificação e execução
 42–44   vigente            pesquisa em equipe — diagnóstico, especificação e execução
+45      vigente            protocolos — qualificação, modos Simplificado/Completo e bibliometria
 ```
 
 ---
@@ -168,6 +169,22 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 > (protocolo conjunto, julgamento independente, conflito resolvido e κ
 > relatado) são o mesmo mecanismo com `revisores_por_estudo` 1 ou 2 — doc 43
 > §43.2, princípio P2. A cegueira é do servidor, não da interface (P3).
+
+---
+
+## 📌 Planejamento vigente — protocolos
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **45** | [Plano de Qualificação e Requalificação dos Protocolos](./45_PLANO_QUALIFICACAO_PROTOCOLOS.md) | 13 achados no subsistema de protocolo; decomposição da metodologia única em quatro eixos (desenho, relato, condução, modo); catálogo de 14 desenhos incluindo bibliometria; modos **Simplificado** (núcleo PRISMA-S) e **Completo** (gabarito externo, Protocolo Revsist ou híbrido); estratégia de busca canônica com adaptadores por base; versionamento e emendas do protocolo. As quatro decisões em aberto foram fechadas em 30/08/2026 (§19.1) |
+
+> **Quatro eixos, não um enum.** *Que revisão é* (desenho), *como se relata*
+> (diretriz), *sob que regras se conduz* (padrão) e *com que profundidade se
+> preenche* (modo) são escolhas independentes na literatura — doc 45 §4. O modo
+> Simplificado é um protocolo de **escopo declarado**, não um protocolo pior:
+> cobre o PRISMA-S por inteiro e carimba em toda exportação o que não cobre
+> (§8.4). Seu produto exportável é o **Registro de Busca** — o confronto entre o
+> configurado e o executado, base a base (§10.5).
 
 ---
 

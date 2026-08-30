@@ -1085,7 +1085,10 @@ export function ExtractionPage(): JSX.Element {
           </Tabs.Root>
 
           {/* ── COLUNA DA DIREITA: FORMULÁRIO DE EXTRAÇÃO COM ASSISTÊNCIA INDIVIDUAL ── */}
-          <div className={`extraction-form-pane mobile-tab-view ${mobileTab === 'questions' ? 'mobile-show' : ''}`}>
+          <div
+            className={`extraction-form-pane mobile-tab-view ${mobileTab === 'questions' ? 'mobile-show' : ''}`}
+            data-trilho-target="extraction-matrix-table"
+          >
             <div className="form-pane-header">
               <div className="form-pane-title-group">
                 <FileText size={18} className="icon-accent" />

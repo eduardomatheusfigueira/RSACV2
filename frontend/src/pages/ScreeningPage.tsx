@@ -52,8 +52,11 @@ import {
   Edit3,
   Save,
   X,
+  Users,
 } from 'lucide-react'
 import { api, foiCancelado } from '@/api/client'
+import { useProjectChannel } from '@/hooks/useProjectChannel'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { useLogStore } from '@/stores/useLogStore'
@@ -134,10 +137,17 @@ export function ScreeningPage(): React.JSX.Element {
 
   // Filters & Pagination
   const [decisionFilter, setDecisionFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [conflictCount, setConflictCount] = useState(0)
+  const [resolvingConflict, setResolvingConflict] = useState(false)
+  const [conflictNotes, setConflictNotes] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
+
+  const isCoordinator = activeProject?.my_role === 'coordenador'
+  const isBlindMode = activeProject?.collaboration_mode === 'cega_por_pares'
 
   // Stats
   const [stats, setStats] = useState({
@@ -211,7 +221,7 @@ export function ScreeningPage(): React.JSX.Element {
     if (id) {
       loadPapers(id)
     }
-  }, [id, decisionFilter, searchTerm, page])
+  }, [id, decisionFilter, statusFilter, searchTerm, page])
 
   const initScreeningWebSocket = (projectId: string) => {
     try {
@@ -379,6 +389,9 @@ export function ScreeningPage(): React.JSX.Element {
         excluded: s.excluded_papers,
         pending: s.pending_papers,
       })
+      if (activeProject?.collaboration_mode === 'cega_por_pares') {
+        api.listScreeningConflicts(projectId).then(list => setConflictCount(list.length)).catch(() => {})
+      }
     } catch (err) {
       console.error('Erro ao carregar stats:', err)
     }
@@ -391,6 +404,7 @@ export function ScreeningPage(): React.JSX.Element {
         page,
         page_size: 20,
         decision: decisionFilter || undefined,
+        screening_status: statusFilter || undefined,
         search: searchTerm || undefined,
       })
       setPapers(res.items)
@@ -413,10 +427,75 @@ export function ScreeningPage(): React.JSX.Element {
     }
   }
 
-  const handleDecision = async (paperId: string, decision: Decision) => {
+  const handleResolveConflict = async (decision: Decision) => {
+    if (!id || !selectedPaper) return
+    try {
+      setResolvingConflict(true)
+      const updated = await api.resolveScreeningConflict(id, selectedPaper.id, {
+        decision,
+        observations: conflictNotes || undefined,
+        criteria_evaluations: selectedPaper.criteria_evaluations,
+      })
+      setPapers((prev) => prev.map((p) => (p.id === selectedPaper.id ? updated : p)))
+      setSelectedPaper(updated)
+      setConflictNotes('')
+      toast.success('Conflito resolvido', {
+        description: `Decisão arbitral registrada como "${decision}".`,
+      })
+      loadStats(id)
+      if (isCoordinator && isBlindMode) {
+        api.listScreeningConflicts(id).then(list => setConflictCount(list.length)).catch(() => {})
+      }
+    } catch (err: any) {
+      toast.error('Falha ao resolver conflito', { description: err.message })
+    } finally {
+      setResolvingConflict(false)
+    }
+  }
+
+  const usuarioAtual = useAuthStore((estado) => estado.user)
+
+  const { activeUsers } = useProjectChannel({
+    projectId: id,
+    screen: 'triagem',
+    onPaperDecided: (evt) => {
+      setPapers((prev) =>
+        prev.map((p) =>
+          p.id === evt.paper_id
+            ? { ...p, decision: evt.decision as Decision, updated_at: evt.updated_at || p.updated_at }
+            : p
+        )
+      )
+      if (selectedPaper?.id === evt.paper_id) {
+        setSelectedPaper((prev) =>
+          prev
+            ? {
+                ...prev,
+                decision: evt.decision as Decision,
+                updated_at: evt.updated_at || prev.updated_at,
+              }
+            : prev
+        )
+        toast.info(`Decisão atualizada por @${evt.por}: ${evt.decision}`)
+      }
+      if (id) loadStats(id)
+    },
+  })
+
+  /* "Triando agora com você" listava o próprio usuário junto dos colegas: a
+     presença do servidor inclui quem pergunta. Aqui a lista é só de terceiros —
+     e a barra some quando ninguém mais está na tela. */
+  const colegasPresentes = activeUsers.filter(
+    (u) => u.screen === 'triagem' && u.user_id !== usuarioAtual?.id
+  )
+
+  const handleDecision = async (paperId: string, decision: Decision, force = false) => {
     if (!id) return
     try {
-      const updated = await api.updatePaper(id, paperId, { decision })
+      const targetPaper = papers.find((p) => p.id === paperId) || selectedPaper
+      const ifMatch = (!force && targetPaper?.updated_at) ? new Date(targetPaper.updated_at).toISOString() : undefined
+
+      const updated = await api.updatePaper(id, paperId, { decision }, ifMatch)
 
       if (decisionFilter !== '' && decision !== decisionFilter) {
         // Se o filtro atual estiver ativo e a nova decisão for diferente, remove da lista filtrada e avança
@@ -452,7 +531,16 @@ export function ScreeningPage(): React.JSX.Element {
 
       loadStats(id)
     } catch (err: any) {
-      error('Triagem', `Erro ao registrar decisão ${decision}`, err.message)
+      if (err?.status === 409 || err?.message?.includes('409') || err?.detail?.includes('concorrência')) {
+        toast.warning('Conflito de concorrência', {
+          description: 'Outro pesquisador alterou este estudo. Os dados foram sincronizados.',
+        })
+        const latest = await api.getPaper(id, paperId)
+        setPapers((prev) => prev.map((p) => (p.id === paperId ? latest : p)))
+        if (selectedPaper?.id === paperId) setSelectedPaper(latest)
+      } else {
+        error('Triagem', `Erro ao registrar decisão ${decision}`, err.message)
+      }
     }
   }
 
@@ -990,6 +1078,25 @@ export function ScreeningPage(): React.JSX.Element {
         }
       />
 
+      {/* Indicador de presença de pesquisadores na Triagem (Doc 43 §43.12, Fase 3) */}
+      {colegasPresentes.length > 0 && (
+        <div className="presence-bar">
+          <Users size={14} className="icon-accent" aria-hidden="true" />
+          <span>Triando agora com você:</span>
+          <div className="presence-pills">
+            {colegasPresentes.map((u) => (
+                <span
+                  key={u.user_id}
+                  className="presence-pill"
+                  title={`Conectado desde ${new Date(u.connected_at).toLocaleTimeString()}`}
+                >
+                  @{u.username}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* ── NAVEGAÇÃO SEGMENTADA MOBILE (Exibida apenas em telas < 768px) ── */}
       <div className="screening-mobile-segmented-nav">
         <button
@@ -1065,6 +1172,7 @@ export function ScreeningPage(): React.JSX.Element {
               className={`counter-btn excluded ${decisionFilter === 'Excluído' ? 'active' : ''}`}
               onClick={() => {
                 setDecisionFilter('Excluído')
+                setStatusFilter('')
                 setPage(1)
               }}
             >
@@ -1072,6 +1180,22 @@ export function ScreeningPage(): React.JSX.Element {
               <span className="count-label">Excluídos</span>
               <span className="count-num">{stats.excluded}</span>
             </button>
+
+            {conflictCount > 0 && (
+              <button
+                className={`counter-btn conflict ${statusFilter === 'conflito' ? 'active' : ''}`}
+                onClick={() => {
+                  setStatusFilter(statusFilter === 'conflito' ? '' : 'conflito')
+                  setDecisionFilter('')
+                  setPage(1)
+                }}
+                title="Filtrar apenas estudos com divergência de triagem"
+              >
+                <AlertCircle size={14} />
+                <span className="count-label">Conflitos</span>
+                <span className="count-num">{conflictCount}</span>
+              </button>
+            )}
 
             {aiEnabled && (
               <button
@@ -1171,6 +1295,18 @@ export function ScreeningPage(): React.JSX.Element {
                       <span className={`badge-decision badge-${paper.decision.toLowerCase()}`}>
                         {paper.decision}
                       </span>
+                      {paper.screening_status && paper.screening_status !== 'legado' && (
+                        <span className={`badge-screening-status status-${paper.screening_status}`}>
+                          {paper.screening_status === 'parcial' && paper.reviewers_required_count
+                            ? `${paper.reviewers_completed_count || 0}/${paper.reviewers_required_count} pareceres`
+                            : paper.screening_status}
+                        </span>
+                      )}
+                      {paper.my_screening && paper.my_screening.decision !== 'Pendente' && (
+                        <span className="badge-my-vote" title={`Seu parecer individual: ${paper.my_screening.decision}`}>
+                          <Check size={10} /> Seu voto
+                        </span>
+                      )}
                       {isBeingScreened ? (
                         <span className="badge-screening-active" title="Análise da Assistência em andamento">
                           <RefreshCw size={10} className="animate-spin text-accent" /> Triando...
@@ -1237,7 +1373,7 @@ export function ScreeningPage(): React.JSX.Element {
           >
             {/* Action Bar with Quick Decision & Navigation */}
             <div className="study-actions-toolbar">
-              <div className="decision-buttons-group">
+              <div className="decision-buttons-group" data-trilho-target="screening-decision-buttons">
                 <button
                   className={`btn-dec include ${selectedPaper.decision === 'Incluído' ? 'active' : ''}`}
                   onClick={() => handleDecision(selectedPaper.id, 'Incluído')}
@@ -1682,6 +1818,78 @@ export function ScreeningPage(): React.JSX.Element {
               )}
             </div>
 
+            {/* Painel de Resolução de Conflito de Triagem (Doc 43 §43.8.3).
+                Fica FORA do bloco de critérios: estava aninhado nele, e uma
+                revisão cega cujo protocolo ainda não tem critérios deixava a
+                coordenação sem nenhuma tela para desempatar. */}
+            {selectedPaper.screening_status === 'conflito' && (
+              <div className="conflict-resolution-panel animate-fade-in">
+                <div className="conflict-panel-header">
+                  <AlertCircle size={18} className="text-warning" aria-hidden="true" />
+                  <div>
+                    <h4>Divergência entre Revisores (Conflito de Triagem)</h4>
+                    <p>Os revisores independentes divergiram na avaliação deste estudo.</p>
+                  </div>
+                </div>
+
+                {isCoordinator ? (
+                  <div className="coordinator-resolution-container">
+                    {selectedPaper.screenings && selectedPaper.screenings.length >= 2 && (
+                      <div className="conflict-reviewers-grid">
+                        {selectedPaper.screenings.map((s, idx) => (
+                          <div key={s.id || idx} className={`reviewer-conflict-card dec-${(s.decision || '').toLowerCase()}`}>
+                            <div className="reviewer-conflict-head">
+                              <span className="reviewer-name">
+                                <User size={13} /> @{s.reviewer_username || `Revisor ${idx + 1}`}
+                              </span>
+                              <span className={`badge-decision badge-${(s.decision || '').toLowerCase()}`}>
+                                {s.decision}
+                              </span>
+                            </div>
+                            {s.observations && (
+                              <p className="reviewer-conflict-obs">"{s.observations}"</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="coordinator-resolve-actions">
+                      <label className="resolution-label">Parecer Arbitral da Coordenação:</label>
+                      <textarea
+                        rows={3}
+                        className="resolution-textarea"
+                        placeholder="Anote a fundamentação do desempate metodológico..."
+                        value={conflictNotes}
+                        onChange={(e) => setConflictNotes(e.target.value)}
+                      />
+                      <div className="resolution-buttons">
+                        <button
+                          type="button"
+                          className="btn-dec include"
+                          disabled={resolvingConflict}
+                          onClick={() => handleResolveConflict('Incluído')}
+                        >
+                          <CheckCircle2 size={16} /> Desempatar: Incluir
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-dec exclude"
+                          disabled={resolvingConflict}
+                          onClick={() => handleResolveConflict('Excluído')}
+                        >
+                          <XCircle size={16} /> Desempatar: Excluir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="reviewer-conflict-notice">
+                    <p>Aguardando análise e desempate arbitral pela coordenação do projeto.</p>
+                  </div>
+                )}
+              </div>
+            )}
             {/* Criteria Badges & Smart Recommendations */}
             {protocol && protocol.criteria && protocol.criteria.length > 0 ? (
               <div className="criteria-pane-body">

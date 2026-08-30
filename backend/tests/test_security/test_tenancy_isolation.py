@@ -241,3 +241,52 @@ async def test_excluir_projeto_apaga_os_pdfs_do_disco(db_session, acervo, intrus
 
     assert resposta.status_code == 204
     assert not caminho.exists(), "o PDF sobreviveu à exclusão do projeto"
+
+
+@pytest.mark.anyio
+async def test_membro_ativo_acessa_projeto_compartilhado(db_session, acervo, intruso):
+    """Um membro ativo (convidado) consegue acessar os dados do projeto."""
+    from app.infrastructure.persistence.models import ProjectMemberModel
+
+    membro = ProjectMemberModel(
+        project_id=acervo["projeto"].id,
+        user_id=intruso.id,
+        project_role="revisor",
+        is_active=True,
+    )
+    db_session.add(membro)
+    db_session.commit()
+
+    cliente = await _cliente(db_session, INTRUSO_USERNAME)
+    res = await cliente.get(f"/api/v1/projects/{acervo['projeto'].id}")
+    papers = await cliente.get(f"/api/v1/projects/{acervo['projeto'].id}/papers")
+    await cliente.aclose()
+
+    assert res.status_code == 200
+    assert res.json()["my_role"] == "revisor"
+    assert res.json()["member_count"] == 2
+    assert papers.status_code == 200
+    assert papers.json()["total"] == 1
+
+
+@pytest.mark.anyio
+async def test_membro_inativo_recebe_404(db_session, acervo, intruso):
+    """Um membro desligado da equipe (is_active=False) recebe 404 em todas as rotas."""
+    from app.infrastructure.persistence.models import ProjectMemberModel
+
+    membro = ProjectMemberModel(
+        project_id=acervo["projeto"].id,
+        user_id=intruso.id,
+        project_role="revisor",
+        is_active=False,
+    )
+    db_session.add(membro)
+    db_session.commit()
+
+    cliente = await _cliente(db_session, INTRUSO_USERNAME)
+    res = await cliente.get(f"/api/v1/projects/{acervo['projeto'].id}")
+    papers = await cliente.get(f"/api/v1/projects/{acervo['projeto'].id}/papers")
+    await cliente.aclose()
+
+    assert res.status_code == 404
+    assert papers.status_code == 404

@@ -14,6 +14,9 @@ class ProjectCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str = ""
     methodology: str = "PRISMA-P"
+    collaboration_mode: str = "individual"
+    reviewers_per_paper: int = 1
+    conflict_resolution: str = "coordenador"
 
 
 class ProjectUpdate(BaseModel):
@@ -22,6 +25,9 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None
     methodology: Optional[str] = None
     is_archived: Optional[bool] = None
+    collaboration_mode: Optional[str] = None
+    reviewers_per_paper: Optional[int] = None
+    conflict_resolution: Optional[str] = None
 
 
 class ProjectResponse(BaseModel):
@@ -33,6 +39,11 @@ class ProjectResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     is_archived: bool
+    collaboration_mode: str = "individual"
+    reviewers_per_paper: int = 1
+    conflict_resolution: str = "coordenador"
+    my_role: Optional[str] = None
+    member_count: int = 1
 
     model_config = {"from_attributes": True}
 

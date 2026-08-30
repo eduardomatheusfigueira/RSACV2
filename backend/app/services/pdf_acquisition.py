@@ -109,6 +109,7 @@ async def acquire_for_paper(
     paper: PaperModel,
     pdf_service: Optional[PDFService] = None,
     client: Optional[httpx.AsyncClient] = None,
+    actor_id: Optional[str] = None,
 ) -> PDFAcquisition:
     """Busca o PDF de um trabalho e persiste o resultado."""
     service = pdf_service or PDFService()
@@ -118,7 +119,7 @@ async def acquire_for_paper(
     apply_acquisition(paper, result)
 
     if result.success:
-        owner_id = paper.project.owner_id if paper.project else None
+        owner_id = actor_id or (paper.project.owner_id if paper.project else None)
         ropa_service.registrar(
             db,
             operation="pdf_fetch",

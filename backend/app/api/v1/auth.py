@@ -27,7 +27,15 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.config import settings
-from app.infrastructure.persistence.models import InviteCodeModel, UserModel, as_utc
+from app.infrastructure.persistence.models import (
+    InviteCodeModel,
+    ProjectInvitationModel,
+    ProjectMemberModel,
+    ProjectModel,
+    UserModel,
+    as_utc,
+    utcnow,
+)
 from app.schemas.auth import (
     AuthStatusResponse,
     LocalTokenRequest,
@@ -350,9 +358,44 @@ def validar_convite(
     db: Session = Depends(get_db),
 ):
     """
-    Valida se um código de convite é autêntico, está ativo e ainda não foi utilizado.
+    Valida se um código de convite (plataforma ou equipe) é autêntico, está ativo e ainda não foi utilizado.
     """
     codigo = payload.invite_code.strip().upper()
+
+    if codigo.startswith("RSAC-EQ-"):
+        # Convite de equipe (doc 43 §43.10.2)
+        convite_eq = db.query(ProjectInvitationModel).filter(ProjectInvitationModel.code == codigo).first()
+        if not convite_eq:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Convite de equipe não encontrado. Verifique o código e tente novamente.",
+            )
+        if convite_eq.revoked_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite de equipe foi revogado pela coordenação do projeto.",
+            )
+        if convite_eq.accepted_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite de equipe já foi utilizado.",
+            )
+        agora = utcnow()
+        expira = as_utc(convite_eq.expires_at)
+        if expira and expira < agora:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite de equipe expirou.",
+            )
+        proj = db.query(ProjectModel).filter(ProjectModel.id == convite_eq.project_id).first()
+        nome_proj = f" '{proj.title}'" if proj else ""
+        return ValidateInviteResponse(
+            valid=True,
+            note=f"Convite de equipe ({convite_eq.project_role}) para o projeto{nome_proj}",
+            expires_at=convite_eq.expires_at,
+        )
+
+    # Convite geral da plataforma (InviteCodeModel)
     convite = db.query(InviteCodeModel).filter(InviteCodeModel.code == codigo).first()
 
     if not convite:
@@ -402,45 +445,74 @@ def registrar_com_convite(
     db: Session = Depends(get_db),
 ):
     """
-    Cadastra um novo pesquisador utilizando um convite de uso único.
-    Executa a criação da conta e a invalidação do convite de forma estritamente atômica.
+    Cadastra um novo pesquisador utilizando um convite de plataforma ou de equipe.
+    Executa a criação da conta, invalidação do convite e participação na mesma transação atômica.
     """
     codigo = payload.invite_code.strip().upper()
+    agora = utcnow()
+
+    is_team_invite = codigo.startswith("RSAC-EQ-")
+    convite_plataforma = None
+    convite_equipe = None
 
     # 1. Obter e bloquear o convite
-    convite = (
-        db.query(InviteCodeModel)
-        .filter(InviteCodeModel.code == codigo)
-        .with_for_update()
-        .first()
-    )
-
-    if not convite:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Código de convite inválido.",
+    if is_team_invite:
+        convite_equipe = (
+            db.query(ProjectInvitationModel)
+            .filter(ProjectInvitationModel.code == codigo)
+            .with_for_update()
+            .first()
         )
-
-    if convite.is_revoked:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este convite foi revogado pela administração.",
-        )
-
-    if convite.is_used:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Este convite já foi utilizado para registrar outro usuário.",
-        )
-
-    agora = datetime.now(timezone.utc)
-    if convite.expires_at:
-        expira = as_utc(convite.expires_at)
+        if not convite_equipe:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Código de convite de equipe inválido.",
+            )
+        if convite_equipe.revoked_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite de equipe foi revogado pela coordenação.",
+            )
+        if convite_equipe.accepted_at:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite de equipe já foi utilizado.",
+            )
+        expira = as_utc(convite_equipe.expires_at)
         if expira and expira < agora:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Este convite expirou.",
+                detail="Este convite de equipe expirou.",
             )
+    else:
+        convite_plataforma = (
+            db.query(InviteCodeModel)
+            .filter(InviteCodeModel.code == codigo)
+            .with_for_update()
+            .first()
+        )
+        if not convite_plataforma:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Código de convite inválido.",
+            )
+        if convite_plataforma.is_revoked:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite foi revogado pela administração.",
+            )
+        if convite_plataforma.is_used:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Este convite já foi utilizado para registrar outro usuário.",
+            )
+        if convite_plataforma.expires_at:
+            expira = as_utc(convite_plataforma.expires_at)
+            if expira and expira < agora:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este convite expirou.",
+                )
 
     # 2. Verificar se o username já existe
     username_limpo = payload.username.strip().lower()
@@ -493,10 +565,34 @@ def registrar_com_convite(
     db.add(novo_usuario)
     db.flush()
 
-    # 6. Marcar o convite como utilizado e associar ao usuário
-    convite.is_used = True
-    convite.used_at = agora
-    convite.used_by_user_id = novo_usuario.id
+    # 6. Atualizar o convite e, se for convite de equipe, criar a participação
+    if convite_equipe:
+        convite_equipe.accepted_at = agora
+        convite_equipe.accepted_by_user_id = novo_usuario.id
+
+        membro_equipe = ProjectMemberModel(
+            project_id=convite_equipe.project_id,
+            user_id=novo_usuario.id,
+            project_role=convite_equipe.project_role,
+            is_active=True,
+            invited_by_user_id=convite_equipe.created_by_user_id,
+            joined_at=agora,
+        )
+        db.add(membro_equipe)
+
+        ropa_service.registrar(
+            db,
+            operation="team_membership_created",
+            legal_basis="art7_V_execucao_de_contrato",
+            purpose="Inclusão em equipe de projeto via cadastro com convite RSAC-EQ",
+            data_categories=["identificacao"],
+            user_id=novo_usuario.id,
+            commit=False,
+        )
+    elif convite_plataforma:
+        convite_plataforma.is_used = True
+        convite_plataforma.used_at = agora
+        convite_plataforma.used_by_user_id = novo_usuario.id
 
     # 7. Criar sessão e cookie de acesso
     token, _sessao = create_session(
@@ -524,7 +620,7 @@ def registrar_com_convite(
         "[Cadastro] Novo usuário '%s' (%s) cadastrado com sucesso usando o convite '%s'.",
         novo_usuario.username,
         novo_usuario.email,
-        convite.code,
+        codigo,
     )
 
     return LoginResponse(

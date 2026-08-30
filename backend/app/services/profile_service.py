@@ -429,12 +429,24 @@ class ProfileService:
                         }
                         for ea in paper.extraction_answers
                     ],
+                    # A procedência sai junto com a decisão, e não só a
+                    # decisão. Quem foi conferir a revisão depois precisa de
+                    # `username`, `ai_provider`, `ai_model` e
+                    # `ai_context_sha256` — sem eles o registro diz que alguém
+                    # decidiu algo, mas não quem, com apoio de qual modelo, nem
+                    # sobre qual texto. É exatamente o que a landing promete e
+                    # o que uma banca pode pedir.
                     "audit_logs": [
                         {
                             "action": al.action,
                             "old_value": al.old_value,
                             "new_value": al.new_value,
                             "source": al.source,
+                            "username": al.username,
+                            "ai_provider": al.ai_provider,
+                            "ai_model": al.ai_model,
+                            "ai_context_sha256": al.ai_context_sha256,
+                            "ai_response_valid": al.ai_response_valid,
                             "created_at": al.created_at.isoformat() if al.created_at else None,
                         }
                         for al in paper.audit_logs
@@ -728,6 +740,15 @@ class ProfileService:
                         old_value=al_in.get("old_value"),
                         new_value=al_in.get("new_value", ""),
                         source=al_in.get("source", "profile_import"),
+                        # Restaurar a procedência é o que fecha a ida e volta:
+                        # exportar e reimportar não pode transformar uma decisão
+                        # auditável numa decisão anônima. Pacotes antigos, sem
+                        # estes campos, entram com o padrão vazio do modelo.
+                        username=al_in.get("username", ""),
+                        ai_provider=al_in.get("ai_provider", ""),
+                        ai_model=al_in.get("ai_model", ""),
+                        ai_context_sha256=al_in.get("ai_context_sha256", ""),
+                        ai_response_valid=al_in.get("ai_response_valid", True),
                     )
                     db.add(al)
 

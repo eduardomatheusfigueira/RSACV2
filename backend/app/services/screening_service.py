@@ -17,7 +17,9 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+import json
 from app.database import SessionLocal
+from app.domain.collaboration import politica_de
 from app.domain.entities import Decision, Methodology, Paper, Protocol
 from app.infrastructure.ai.base import BaseAIClient, ScreeningResult
 from app.infrastructure.ai.factory import AIFactory
@@ -27,8 +29,11 @@ from app.infrastructure.persistence.models import (
     CriterionModel,
     PaperCriterionModel,
     PaperModel,
+    PaperScreeningModel,
     ProtocolModel,
+    utcnow,
 )
+from app.services.consolidation_service import consolidar
 from app.services.harvesting_service import ws_manager
 from app.services import ropa_service
 
@@ -277,6 +282,7 @@ class ScreeningService:
             ["EXC", "E", "CE", "CRIT", "CRITERIO", "CRITÉRIO", "C"],
         )
 
+        crit_evals_dict = {}
         for raw_criteria, crit_map in (
             (result.inclusion_criteria, inc_map),
             (result.exclusion_criteria, exc_map),
@@ -286,6 +292,7 @@ class ScreeningService:
                 if not crit_id:
                     logger.debug(f"[ScreeningAI] Critério '{key}' não corresponde a nenhum critério do protocolo.")
                     continue
+                crit_evals_dict[crit_id] = bool_val
 
                 eval_record = (
                     db.query(PaperCriterionModel)
@@ -305,6 +312,50 @@ class ScreeningService:
                             value=bool_val,
                         )
                     )
+
+        # Gravar julgamento individual do ator ou do proprietário do projeto (doc 43 §43.3.4, P4)
+        target_reviewer_id = (
+            actor.user_id
+            if actor and actor.user_id
+            else (paper_model.project.owner_id if paper_model.project else None)
+        )
+
+        if target_reviewer_id:
+            screening = (
+                db.query(PaperScreeningModel)
+                .filter(
+                    PaperScreeningModel.paper_id == paper_model.id,
+                    PaperScreeningModel.reviewer_id == target_reviewer_id,
+                )
+                .first()
+            )
+            if not screening:
+                screening = PaperScreeningModel(
+                    paper_id=paper_model.id,
+                    reviewer_id=target_reviewer_id,
+                )
+                db.add(screening)
+                if paper_model.screenings is None:
+                    paper_model.screenings = []
+                paper_model.screenings.append(screening)
+
+            screening.decision = result.decision
+            screening.observations = clean_just
+            screening.criteria_evaluations = json.dumps(crit_evals_dict)
+            screening.ai_confidence = result.confidence
+            screening.ai_assisted = True
+            screening.decided_at = utcnow()
+            screening.updated_at = utcnow()
+        else:
+            paper_model.decision = result.decision
+            paper_model.screening_status = "consenso"
+
+        politica = (
+            politica_de(paper_model.project)
+            if paper_model.project
+            else politica_de(None)
+        )
+        consolidar(db, paper_model, politica)
 
         db.commit()
         db.refresh(paper_model)

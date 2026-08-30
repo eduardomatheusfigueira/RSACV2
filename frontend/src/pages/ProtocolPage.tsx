@@ -57,15 +57,23 @@ import {
   Building2,
   Info,
   StopCircle,
+  Users,
+  RotateCcw,
 } from 'lucide-react'
 import { api, foiCancelado } from '@/api/client'
+import { useProjectChannel } from '@/hooks/useProjectChannel'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
-import { PROTOCOL_CATALOG, PROTOCOL_OPTIONS } from '@/data/protocolCatalog'
+import { ANCORAGEM_NORMATIVA, PROTOCOL_CATALOG, PROTOCOL_OPTIONS, REVIEW_DESIGNS_CATALOG } from '@/data/protocolCatalog'
 import { GUIAS_DO_PROTOCOLO } from '@/data/guiasDoProtocolo'
 import { CampoDoProtocolo } from '@/components/protocol/CampoDoProtocolo'
 import type { CampoDoProtocoloProps } from '@/components/protocol/CampoDoProtocolo'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
+import { ProtocolReadinessCard } from '@/components/protocol/ProtocolReadinessCard'
+import { SimplifiedProtocolForm } from '@/components/protocol/SimplifiedProtocolForm'
+import { ProtocolVersionDialog } from '@/components/protocol/ProtocolVersionDialog'
+import type { ProtocolReadiness, SearchStrategy, SearchExecution } from '@/types/api'
 
 export const AVAILABLE_LANGUAGES = [
   { code: 'pt', label: 'Português', flag: '🇧🇷' },
@@ -157,6 +165,7 @@ import type {
   ExtractionSummaryResponse,
 } from '@/types/api'
 import './ProtocolPage.css'
+import '@/components/protocol/ProtocolStudio.css'
 
 export type StudioTab =
   | 'ident_intro'
@@ -177,6 +186,41 @@ export function ProtocolPage(): JSX.Element {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [copiedNotification, setCopiedNotification] = useState(false)
+
+  // Colaboração em tempo real e controle de concorrência (Doc 43 §43.12, Fase 3)
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
+  const [showConflictModal, setShowConflictModal] = useState(false)
+  const [remoteUpdateNotice, setRemoteUpdateNotice] = useState<string | null>(null)
+
+  const usuarioAtual = useAuthStore((estado) => estado.user)
+
+  const { activeUsers } = useProjectChannel({
+    projectId: id,
+    screen: 'protocolo',
+    onProtocolChanged: (evt) => {
+      setRemoteUpdateNotice(`Protocolo atualizado por @${evt.por} há instantes.`)
+      setTimeout(() => setRemoteUpdateNotice(null), 7000)
+    },
+  })
+
+  /* "Editando agora com você" listava o próprio usuário junto dos colegas: a
+     presença do servidor inclui quem pergunta. Aqui a lista é só de terceiros —
+     e a barra some quando ninguém mais está na tela. */
+  const colegasPresentes = activeUsers.filter(
+    (u) => u.screen === 'protocolo' && u.user_id !== usuarioAtual?.id
+  )
+
+  // 4 Eixos Metodológicos & Modo (Doc 45)
+  const [protocolMode, setProtocolMode] = useState<'simplificado' | 'completo'>('simplificado')
+  const [reviewDesign, setReviewDesign] = useState<string>('D4')
+  const [protocolStatus, setProtocolStatus] = useState<string>('rascunho')
+  const [currentVersion, setCurrentVersion] = useState<string | null>(null)
+  const [scopeStamp, setScopeStamp] = useState<string | null>(null)
+  const [readiness, setReadiness] = useState<ProtocolReadiness | null>(null)
+  const [readinessLoading, setReadinessLoading] = useState(false)
+  const [searchStrategies, setSearchStrategies] = useState<SearchStrategy[]>([])
+  const [searchExecutions, setSearchExecutions] = useState<SearchExecution[]>([])
+  const [isVersionDialogOpen, setIsVersionDialogOpen] = useState(false)
 
   // Active Tab for Manuscript Studio (Chronological Stages)
   const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('ident_intro')
@@ -366,16 +410,30 @@ export function ProtocolPage(): JSX.Element {
         setFrameworkType('PICO')
       }
 
-      // Carregar protocolo e resumo de extração em paralelo
-      const [proto, extSummary] = await Promise.all([
+      // Carregar protocolo, resumo de extração e prontidão em paralelo
+      const [proto, extSummary, readinessData] = await Promise.all([
         api.getProtocol(projectId),
         api.getExtractionSummary(projectId).catch(() => null),
+        api.getProtocolReadiness(projectId).catch(() => null),
       ])
 
       if (extSummary) {
         setExtractionSummary(extSummary)
       }
 
+      if (readinessData) {
+        setReadiness(readinessData)
+      }
+
+      setProtocolMode((proto.mode as any) || 'simplificado')
+      setReviewDesign(proto.review_design || 'D4')
+      setProtocolStatus(proto.status || 'rascunho')
+      setCurrentVersion(proto.current_version || null)
+      setScopeStamp(proto.scope_stamp || null)
+      setSearchStrategies(proto.search_strategies || [])
+      setSearchExecutions(proto.search_executions || [])
+
+      setLastUpdatedAt(proto.updated_at ? new Date(proto.updated_at).toISOString() : null)
       setObjective(proto.objective || '')
       setPico({
         population: proto.pico_framework?.population || '',
@@ -422,6 +480,59 @@ export function ProtocolPage(): JSX.Element {
       setErrorMessage(err.message || 'Falha ao carregar protocolo.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSwitchMode = async (newMode: 'simplificado' | 'completo') => {
+    if (!id) return
+    try {
+      setSaving(true)
+      const updated = await api.switchProtocolMode(id, newMode)
+      setProtocolMode(updated.mode as any)
+      setScopeStamp(updated.scope_stamp || null)
+      const newReadiness = await api.getProtocolReadiness(id).catch(() => null)
+      if (newReadiness) setReadiness(newReadiness)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
+    } catch (err: any) {
+      console.error('Erro ao alternar modo do protocolo:', err)
+      setErrorMessage(err.message || 'Falha ao alternar modo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSwitchReviewDesign = async (newDesignId: string) => {
+    if (!id) return
+    try {
+      setSaving(true)
+      const res = await api.switchReviewDesign(id, newDesignId)
+      setReviewDesign(newDesignId)
+      if (res.suggested_framework) {
+        setFrameworkType(res.suggested_framework as any)
+      }
+      const newReadiness = await api.getProtocolReadiness(id).catch(() => null)
+      if (newReadiness) setReadiness(newReadiness)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2000)
+    } catch (err: any) {
+      console.error('Erro ao alternar desenho metodológico:', err)
+      setErrorMessage(err.message || 'Falha ao alternar desenho.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleRefreshReadiness = async () => {
+    if (!id) return
+    setReadinessLoading(true)
+    try {
+      const res = await api.getProtocolReadiness(id)
+      setReadiness(res)
+    } catch (err) {
+      console.error('Erro ao recalcular prontidão:', err)
+    } finally {
+      setReadinessLoading(false)
     }
   }
 
@@ -672,9 +783,7 @@ export function ProtocolPage(): JSX.Element {
     setTimeout(() => setSaveSuccess(false), 2500)
   }
 
-  // ── Salvar Protocolo & Seções do Manuscrito ────────────────────────
-
-  const handleSave = async () => {
+  const handleSave = async (forceOverwrite = false) => {
     if (!id) return
     try {
       setSaving(true)
@@ -694,21 +803,42 @@ export function ProtocolPage(): JSX.Element {
         .filter((q) => (q.text || (q as any).question || '').trim().length > 0)
         .map((q, idx) => ({ ...q, text: (q.text || (q as any).question || '').trim(), order: idx }))
 
-      await api.updateProtocol(id, {
-        objective,
-        pico_framework: pico,
-        search_descriptors: cleanDescriptors,
-        search_filters: searchFilters,
-        manuscript_sections: manuscript,
-        criteria: cleanCriteria,
-        extraction_questions: cleanQuestions,
-      })
+      const ifMatchHeader = forceOverwrite ? undefined : (lastUpdatedAt || undefined)
 
+      const updated = await api.updateProtocol(
+        id,
+        {
+          mode: protocolMode,
+          review_design: reviewDesign,
+          objective,
+          pico_framework: pico,
+          search_descriptors: cleanDescriptors,
+          search_filters: searchFilters,
+          manuscript_sections: manuscript,
+          criteria: cleanCriteria,
+          extraction_questions: cleanQuestions,
+        },
+        ifMatchHeader
+      )
+
+      setLastUpdatedAt(updated.updated_at ? new Date(updated.updated_at).toISOString() : null)
+      const newReadiness = await api.getProtocolReadiness(id).catch(() => null)
+      if (newReadiness) setReadiness(newReadiness)
       setSaveSuccess(true)
+      setShowConflictModal(false)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err: any) {
-      console.error('Erro ao salvar protocolo:', err)
-      setErrorMessage(err.message || 'Falha ao salvar o protocolo.')
+      if (
+        err?.status === 409 ||
+        err?.message?.includes('409') ||
+        err?.detail?.includes('concorrência') ||
+        err?.detail?.includes('alterado por outro')
+      ) {
+        setShowConflictModal(true)
+      } else {
+        console.error('Erro ao salvar protocolo:', err)
+        setErrorMessage(err.message || err.detail || 'Falha ao salvar o protocolo.')
+      }
     } finally {
       setSaving(false)
     }
@@ -1002,12 +1132,50 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
         primaryAction={
           /* Ação primária ÚNICA. "Copiar Manuscrito" e "Sugerir com Assistência"
              saíram daqui: já vivem no ribbon, despachados pelo registro de
-             comandos, e repetir os três criava dois caminhos sem estado comum. */
-          <Button variant="primary" size="md" loading={saving} onClick={handleSave} leftIcon={<Save size={14} />}>
+             comandos, e repetir os três criava dois caminhos sem estado comum.
+
+             `onClick={handleSave}` entregava o MouseEvent como `forceOverwrite`:
+             todo salvamento pelo cabeçalho ia sem `If-Match` e sobrescrevia o
+             colega em silêncio — o oposto do que a Fase 3 existe para impedir. */
+          <Button variant="primary" size="md" loading={saving} onClick={() => handleSave()} leftIcon={<Save size={14} />}>
             {saving ? 'Salvando…' : 'Salvar Tudo'}
           </Button>
         }
       />
+
+      {/* Aviso de atualização remota por colega (Doc 43 §43.12, Fase 3) */}
+      {remoteUpdateNotice && (
+        <div className="protocol-remote-notice animate-fade-in">
+          <Info size={16} className="icon-accent" aria-hidden="true" />
+          <span>{remoteUpdateNotice}</span>
+          <button
+            type="button"
+            className="btn-link-sm"
+            onClick={() => id && loadProtocolAndProject(id)}
+          >
+            Recarregar dados
+          </button>
+        </div>
+      )}
+
+      {/* Indicador de presença de pesquisadores no protocolo */}
+      {colegasPresentes.length > 0 && (
+        <div className="presence-bar">
+          <Users size={14} className="icon-accent" aria-hidden="true" />
+          <span>Editando agora com você:</span>
+          <div className="presence-pills">
+            {colegasPresentes.map((u) => (
+                <span
+                  key={u.user_id}
+                  className="presence-pill"
+                  title={`Conectado desde ${new Date(u.connected_at).toLocaleTimeString()}`}
+                >
+                  @{u.username}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
 
       {errorMessage && (
         <div className="protocol-error-banner animate-fade-in">
@@ -1016,15 +1184,114 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
         </div>
       )}
 
-      {/* Studio Navigation Tabs with Clear Temporal Phase Grouping */}
-      <Tabs.Root
-        className="studio-tabs-root"
-        value={activeStudioTab}
-        onValueChange={(v) => setActiveStudioTab(v as StudioTab)}
-      >
-        <div className="studio-tabs-container">
-          <Tabs.List asChild>
-            <div className="studio-tabs-bar-grouped" aria-label="Seções do protocolo">
+      {/* Barra Superior de 4 Eixos & Governança Metodológica (doc 45 §4, §8.5, §12.1) */}
+      <div className="protocol-governance-bar">
+        <div className="protocol-governance-group">
+          <span className="protocol-governance-label">Modo de trabalho</span>
+          <div className="protocol-mode-switch" role="group" aria-label="Modo de preenchimento do protocolo">
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('simplificado')}
+              aria-pressed={protocolMode === 'simplificado'}
+              className={`protocol-mode-option ${protocolMode === 'simplificado' ? 'is-active' : ''}`}
+            >
+              Simplificado (14 campos)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('completo')}
+              aria-pressed={protocolMode === 'completo'}
+              className={`protocol-mode-option ${protocolMode === 'completo' ? 'is-active' : ''}`}
+            >
+              Completo (gabarito da diretriz)
+            </button>
+          </div>
+        </div>
+
+        <div className="protocol-governance-state">
+          <span className="protocol-status">
+            <span className="protocol-governance-label">Status</span>
+            <span className={`protocol-status__chip ${currentVersion ? 'is-vigente' : 'is-rascunho'}`}>
+              {currentVersion ? `Vigente (${currentVersion})` : 'Rascunho a priori'}
+            </span>
+          </span>
+
+          <Button variant="outline" size="sm" onClick={() => setIsVersionDialogOpen(true)}>
+            <Lock size={13} />
+            <span>Versões &amp; Emendas</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Carimbo Normativo de Escopo no Modo Simplificado (doc 45 §8.4) */}
+      {protocolMode === 'simplificado' && scopeStamp && (
+        <div className="protocol-scope-stamp">
+          <Info size={18} className="protocol-scope-stamp__icon" />
+          <div className="protocol-scope-stamp__body">
+            <div className="protocol-scope-stamp__head">
+              <span className="protocol-scope-stamp__title">Carimbo de escopo metodológico</span>
+              <button
+                type="button"
+                onClick={() => handleSwitchMode('completo')}
+                className="protocol-scope-stamp__action"
+              >
+                Migrar para o modo Completo →
+              </button>
+            </div>
+            <p className="protocol-scope-stamp__text">{scopeStamp}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Medidor de Prontidão e Avaliação de Portões */}
+      <ProtocolReadinessCard
+        readiness={readiness}
+        loading={readinessLoading}
+        onRefresh={handleRefreshReadiness}
+      />
+
+      {/* Corpo: Modo Simplificado vs Modo Completo */}
+      {protocolMode === 'simplificado' ? (
+        <SimplifiedProtocolForm
+          projectId={id || ''}
+          title={manuscript.manuscript_title || activeProject?.title || ''}
+          onTitleChange={(val) => updateManuscriptField('manuscript_title', val)}
+          objective={objective}
+          onObjectiveChange={setObjective}
+          frameworkType={frameworkType}
+          onFrameworkTypeChange={setFrameworkType}
+          frameworkComponents={pico}
+          onFrameworkComponentChange={(k, v) => setPico((prev) => ({ ...prev, [k]: v }))}
+          reviewDesign={reviewDesign}
+          onReviewDesignChange={handleSwitchReviewDesign}
+          searchFilters={searchFilters}
+          onSearchFiltersChange={setSearchFilters}
+          searchStrategy={searchStrategies.find((s) => s.kind === 'canonica') || null}
+          onSearchStrategySaved={(strat) => {
+            const next = searchStrategies.filter((s) => s.id !== strat.id)
+            setSearchStrategies([...next, strat])
+            handleRefreshReadiness()
+          }}
+          infoSources={manuscript.info_sources || ''}
+          onInfoSourcesChange={(val) => updateManuscriptField('info_sources', val)}
+          criteria={criteria}
+          onCriteriaChange={setCriteria}
+          extractionQuestions={questions}
+          onExtractionQuestionsChange={setQuestions}
+          searchExecutions={searchExecutions}
+          dedupNotes={manuscript.search_strategy_notes || ''}
+          onDedupNotesChange={(val) => updateManuscriptField('search_strategy_notes', val)}
+        />
+      ) : (
+        /* Modo Completo: Studio Navigation Tabs with Clear Temporal Phase Grouping */
+        <Tabs.Root
+          className="studio-tabs-root"
+          value={activeStudioTab}
+          onValueChange={(v) => setActiveStudioTab(v as StudioTab)}
+        >
+          <div className="studio-tabs-container">
+            <Tabs.List asChild>
+              <div className="studio-tabs-bar-grouped" aria-label="Seções do protocolo">
               {/* GRUPO A PRIORI: PROTOCOLO DE PESQUISA */}
               <div className="tabs-group a-priori-group">
                 <div className="tabs-group-header">
@@ -1712,9 +1979,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
               </div>
             </div>
 
-            <p className="section-help">
-              Conforme PRISMA-ScR (Item 7 e 8) e PRISMA 2020: Estabeleça explicitamente todos os limites de busca (período temporal, restrições linguísticas, tipos de publicação aceitos e bases de dados alvo) antes de iniciar a coleta.
-            </p>
+            <p className="section-help">{ANCORAGEM_NORMATIVA.limitesDeBusca}</p>
 
             {helpOpen.searchFilters && (
               <div className="structured-guide-box animate-fade-in">
@@ -2640,6 +2905,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
           </Card>
         </Tabs.Content>
       </Tabs.Root>
+      )}
 
       {/* Proposta de protocolo por assistência */}
       <Dialog
@@ -2724,6 +2990,73 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
           </DialogBody>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Conflito de Concorrência (Doc 43 §43.12.2, Fase 3) */}
+      <Dialog open={showConflictModal} onOpenChange={setShowConflictModal}>
+        <DialogContent variant="window" size="md" aria-describedby={undefined}>
+          <DialogTitlebar>
+            Conflito de Concorrência Detectado
+          </DialogTitlebar>
+          <DialogBody>
+            <div className="protocol-conflict-modal-body">
+              <div className="conflict-notice-box">
+                <AlertTriangle size={24} className="text-warning" />
+                <div>
+                  <strong>Alterações concorrentes encontradas</strong>
+                  <p>
+                    Outro pesquisador salvou uma nova versão deste protocolo no servidor enquanto você o editava.
+                    Escolha como deseja proceder para evitar perda de dados da equipe:
+                  </p>
+                </div>
+              </div>
+
+              <div className="conflict-options-list">
+                <div className="conflict-option-card">
+                  <h4>Opção 1: Recarregar dados do servidor (Recomendado)</h4>
+                  <p>Descarta o rascunho local e carrega a versão mais recente gravada pelo colega.</p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      if (id) loadProtocolAndProject(id)
+                      setShowConflictModal(false)
+                    }}
+                    leftIcon={<RotateCcw size={14} />}
+                  >
+                    Recarregar Versão do Servidor
+                  </Button>
+                </div>
+
+                <div className="conflict-option-card danger">
+                  <h4>Opção 2: Sobrescrever versão do servidor</h4>
+                  <p>Força o salvamento do seu rascunho atual, sobrepondo o estado do servidor.</p>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    loading={saving}
+                    onClick={() => handleSave(true)}
+                    leftIcon={<Save size={14} />}
+                  >
+                    Sobrescrever Versão Atual
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Versionamento, Congelamento e Emendas (Doc 45 §12) */}
+      <ProtocolVersionDialog
+        projectId={id || ''}
+        open={isVersionDialogOpen}
+        onOpenChange={setIsVersionDialogOpen}
+        currentVersion={currentVersion}
+        protocolStatus={protocolStatus}
+        onVersionChanged={() => {
+          if (id) loadProtocolAndProject(id)
+        }}
+      />
     </div>
   )
 }

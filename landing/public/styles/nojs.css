@@ -1,0 +1,61 @@
+/**
+ * Revsist — Ajustes para navegação sem JavaScript.
+ *
+ * Carregado apenas de dentro de um `<noscript>` no `<head>`. É um arquivo
+ * externo, e não um `<style>` embutido, porque a política de segurança da
+ * página proíbe estilo inline — e abrir essa exceção por um detalhe de
+ * apresentação enfraqueceria a proteção contra injeção de conteúdo.
+ *
+ * O critério de aceite do doc 41 (item 5.14) é que a página funcione inteira
+ * sem JS. O que este arquivo faz é remover os dois controles que dependem de
+ * script e devolver ao conteúdo o estado visível.
+ */
+
+/* Botões que não fariam nada sem script. */
+.btn-theme-toggle,
+.btn-nav-toggle {
+  display: none !important;
+}
+
+/* A revelação ao rolar depende do IntersectionObserver: sem ele, o conteúdo
+   não pode ficar em `opacity: 0`. */
+.reveal-on-scroll {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* Sem o botão de menu, os links de seção viram uma faixa que quebra linha
+   logo abaixo da marca, em vez de um painel que ninguém consegue abrir. */
+@media (max-width: 1080px) {
+  .header-inner {
+    height: auto;
+    flex-wrap: wrap;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    row-gap: 0.5rem;
+  }
+
+  .nav-links {
+    position: static;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    order: 3;
+    width: 100%;
+    gap: 0.35rem 1.1rem;
+    padding: 0.75rem 0 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: none;
+    box-shadow: none;
+    background: none;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .nav-link {
+    padding: 0;
+    font-size: 0.85rem;
+    border-bottom: none;
+  }
+}

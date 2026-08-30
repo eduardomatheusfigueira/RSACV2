@@ -21,10 +21,13 @@ from app.api.v1.invites import router as invites_router
 from app.api.v1.me import router as me_router
 from app.api.v1.papers import router as papers_router
 from app.api.v1.profile import router as profile_router
+from app.api.v1.protocol_catalog import router as protocol_catalog_router
 from app.api.v1.projects import router as projects_router
 from app.api.v1.protocols import router as protocols_router
+from app.api.v1.screening import router as screening_router
 from app.api.v1.screening_ai import router as screening_ai_router
 from app.api.v1.settings import router as settings_router
+from app.api.v1.team import router as team_router
 from app.config import settings
 from app.schemas.common import HealthResponse
 from app.security.dependencies import require_session
@@ -59,17 +62,20 @@ api_router.include_router(auth_router)
 api_router.include_router(invites_router)
 api_router.include_router(me_router)
 api_router.include_router(projects_router)
+api_router.include_router(team_router)
 api_router.include_router(protocols_router)
 api_router.include_router(papers_router)
 api_router.include_router(harvest_router)
 api_router.include_router(deduplication_router)
 api_router.include_router(settings_router)
 api_router.include_router(ai_router)
+api_router.include_router(screening_router)
 api_router.include_router(screening_ai_router)
 api_router.include_router(extraction_router)
 api_router.include_router(project_extraction_router)
 api_router.include_router(export_router)
 api_router.include_router(insights_router)
 api_router.include_router(profile_router)
+api_router.include_router(protocol_catalog_router)
 
 

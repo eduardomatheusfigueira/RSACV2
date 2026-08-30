@@ -9,8 +9,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.security.dependencies import projeto_do_usuario
-from app.infrastructure.persistence.models import DeduplicationReportModel, ProjectModel
+from app.infrastructure.persistence.models import (
+    DeduplicationReportModel,
+    ProjectMemberModel,
+    ProjectModel,
+)
+from app.security.dependencies import exige_revisor_ou_coordenador, projeto_do_usuario
 from app.security.middleware import erro_interno
 from app.services.dedup_service import DeduplicationService
 
@@ -31,6 +35,7 @@ dedup_service = DeduplicationService()
 def run_deduplication(
     project_id: str,
     db: Session = Depends(get_db),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
     """
     Executa a deduplicação completa dos artigos coletados no projeto,

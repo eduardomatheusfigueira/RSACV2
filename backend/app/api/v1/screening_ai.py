@@ -4,6 +4,7 @@
 """Revsist — Router de Triagem com IA (Individual e Batch)."""
 
 import logging
+from typing import Optional
 
 from fastapi import (
     APIRouter,
@@ -15,11 +16,17 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.infrastructure.persistence.models import AISettingsModel, ProjectModel, UserModel
+from app.infrastructure.persistence.models import (
+    AISettingsModel,
+    ProjectMemberModel,
+    ProjectModel,
+    UserModel,
+)
 from app.schemas.ai import BatchScreeningRequest
 from app.security.dependencies import (
-    projeto_do_usuario,
+    exige_revisor_ou_coordenador,
     origem_do_websocket_e_permitida,
+    projeto_do_usuario,
     require_session,
     require_websocket_session,
     verificar_projeto_do_usuario,
@@ -48,12 +55,14 @@ screening_service = ScreeningService()
 batch_job_manager = AsyncJobManager("uma triagem em lote")
 
 
-def _check_ai_enabled(db: Session):
-    settings = db.query(AISettingsModel).first()
+def _check_ai_enabled(db: Session, user_id: Optional[str] = None):
+    if not user_id:
+        return
+    settings = db.query(AISettingsModel).filter(AISettingsModel.user_id == user_id).first()
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
-            detail="Os recursos de IA estão desativados nas Configurações (Modo 100% Manual).",
+            detail="Os recursos de Assistência estão desativados nas suas Configurações (Modo 100% Manual).",
         )
 
 
@@ -63,9 +72,10 @@ async def screen_single_paper(
     paper_id: str,
     db: Session = Depends(get_db),
     usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
     """Executa a triagem com IA para um único artigo e retorna a decisão estruturada."""
-    _check_ai_enabled(db)
+    _check_ai_enabled(db, user_id=usuario.id)
     ator = AuditActor(user_id=usuario.id, username=usuario.username)
     try:
         result = await screening_service.screen_single_paper(
@@ -96,9 +106,10 @@ async def start_batch_screening(
     data: BatchScreeningRequest,
     db: Session = Depends(get_db),
     usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
     """Inicia a triagem em lote de artigos pendentes em segundo plano."""
-    _check_ai_enabled(db)
+    _check_ai_enabled(db, user_id=usuario.id)
     project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail=f"Projeto '{project_id}' não encontrado.")
@@ -131,7 +142,11 @@ async def start_batch_screening(
 
 
 @router.post("/batch/cancel")
-async def cancel_batch_screening(project_id: str):
+async def cancel_batch_screening(
+    project_id: str,
+    usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
+):
     """Interrompe a triagem em lote em andamento no projeto."""
     # Os contadores são lidos antes do cancelamento: o `finally` da tarefa os
     # descarta, e é justamente o parcial que interessa relatar a quem parou.

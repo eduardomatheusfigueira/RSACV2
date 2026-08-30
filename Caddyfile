@@ -1,6 +1,18 @@
 # ==============================================================================
 # Revsist — Caddyfile de Produção (TLS Automático, Proxy Reverso e Segurança)
 # ==============================================================================
+#
+# Mapa de rotas — a mesma ordem que `backend/app/main.py` aplica quando o
+# backend serve os arquivos sozinho, para que desenvolvimento e produção não
+# discordem sobre o que responde em cada caminho:
+#
+#   /api/*        → backend
+#   /health       → backend (o rodapé da landing lê a versão daqui)
+#   /docs, /redoc, /openapi.json → backend
+#   /assets/*     → landing primeiro, SPA em seguida
+#   /app, /app/*  → SPA React (roteamento por hash, um único index.html)
+#   tudo o mais   → landing estática (raiz, /termos, /privacidade)
+# ==============================================================================
 
 {
     # Configurações globais
@@ -49,6 +61,13 @@
         }
     }
 
+    # ── Health check ──────────────────────────────────────────────────────────
+    # Servido pelo backend, e não pelo Caddy: o que interessa saber é se a
+    # aplicação responde, não se o proxy está de pé.
+    handle /health {
+        reverse_proxy api:8000
+    }
+
     # ── Documentação OpenAPI e Swagger (apenas se liberado no backend) ─────────
     handle /docs* {
         reverse_proxy api:8000
@@ -60,10 +79,47 @@
         reverse_proxy api:8000
     }
 
-    # ── Aplicação Frontend SPA (dist) ─────────────────────────────────────────
-    handle {
+    # ── Recursos compilados ───────────────────────────────────────────────────
+    # Landing e SPA compilam para `/assets/` cada uma no seu diretório, com nome
+    # com hash — não colidem. `pass_thru` faz o primeiro `file_server` devolver
+    # o controle quando não acha o arquivo, em vez de responder 404: é o que
+    # permite tentar os dois diretórios em ordem.
+    handle /assets/* {
+        header Cache-Control "public, max-age=31536000, immutable"
+
+        root * /srv/landing
+        file_server {
+            pass_thru
+        }
+
+        root * /srv/frontend
+        file_server
+    }
+
+    # ── Aplicação Frontend SPA (React) ────────────────────────────────────────
+    # O roteador é de hash: qualquer caminho sob /app devolve o mesmo documento.
+    handle /app* {
         root * /srv/frontend
         try_files {path} /index.html
+        file_server
+    }
+
+    # ── Landing Page institucional e documentos de governança ─────────────────
+    # `{path}/index.html` é o que faz `/termos` e `/privacidade` funcionarem sem
+    # extensão, do jeito que os links da página e o sitemap declaram.
+    handle {
+        root * /srv/landing
+
+        # Documento é revalidado com frequência; o recurso com hash, não.
+        header Cache-Control "public, max-age=300"
+
+        # CSP da landing como cabeçalho. A página também traz um <meta> com a
+        # mesma política, mas `frame-ancestors` só vale por cabeçalho — e é
+        # aqui, e não no bloco global, porque a SPA tem política própria, mais
+        # larga, e as duas se somariam pela mais restritiva.
+        header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+
+        try_files {path} {path}/index.html {path}.html /index.html
         file_server
     }
 }

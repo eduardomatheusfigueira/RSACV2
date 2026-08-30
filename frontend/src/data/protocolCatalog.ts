@@ -493,3 +493,318 @@ export const PROTOCOL_OPTIONS: Methodology[] = [
   'Methodi Ordinatio',
   'Other',
 ]
+
+// ── Catálogo de 14 Desenhos de Revisão Metodológica (Doc 45 §5.1) ─────
+
+export interface ReviewDesignOption {
+  id: string
+  code: string
+  name: string
+  badge: string
+  whenToUse: string
+  defaultFramework: string
+  defaultReporting: string
+  conductStandards: string[]
+  criticalAppraisal: 'obrigatoria' | 'opcional' | 'nao_se_aplica'
+  expectedSynthesis: string
+  registryEligibility: string
+  suggestedExtractionQuestions: string[]
+}
+
+export const REVIEW_DESIGNS_CATALOG: ReviewDesignOption[] = [
+  {
+    id: 'D1',
+    code: 'D1',
+    name: 'RS de Efetividade (com ou sem metanálise)',
+    badge: 'EFETIVIDADE',
+    whenToUse: 'Pergunta fechada de efeito de intervenção, política pública ou tratamento.',
+    defaultFramework: 'PICO',
+    defaultReporting: 'PRISMA-2020',
+    conductStandards: ['Cochrane/MECIR', 'Campbell/MECCIR'],
+    criticalAppraisal: 'obrigatoria',
+    expectedSynthesis: 'Quantitativa (metanálise) ou descritiva estruturada',
+    registryEligibility: 'Elegível a registro no PROSPERO',
+    suggestedExtractionQuestions: [
+      'Desenho metodológico do estudo primário',
+      'Tamanho da amostra / população avaliada',
+      'Descrição da intervenção / política aplicada',
+      'Comparador / grupo de controle',
+      'Desfecho primário mensurado',
+      'Medida de efeito e intervalo de confiança',
+      'Limitações e vieses declarados',
+    ],
+  },
+  {
+    id: 'D2',
+    code: 'D2',
+    name: 'RS de Prevalência ou Associação',
+    badge: 'PREVALÊNCIA',
+    whenToUse: 'Frequência, incidência, exposição ou fatores determinantes em estudos observacionais.',
+    defaultFramework: 'PECO',
+    defaultReporting: 'PRISMA-2020',
+    conductStandards: ['JBI', 'Cochrane/MECIR'],
+    criticalAppraisal: 'obrigatoria',
+    expectedSynthesis: 'Prevalência ponderada ou síntese narrativa',
+    registryEligibility: 'Elegível a registro no PROSPERO',
+    suggestedExtractionQuestions: [
+      'Tamanho da população amostrada',
+      'Taxa de prevalência / incidência encontrada',
+      'Fatores determinantes analisados',
+      'Critérios de mensuração e amostragem',
+    ],
+  },
+  {
+    id: 'D3',
+    code: 'D3',
+    name: 'Síntese Qualitativa / Metassíntese',
+    badge: 'QUALITATIVA',
+    whenToUse: 'Experiências, percepções, significados e dinâmicas socioculturais.',
+    defaultFramework: 'SPIDER',
+    defaultReporting: 'ENTREQ',
+    conductStandards: ['JBI meta-agregação'],
+    criticalAppraisal: 'obrigatoria',
+    expectedSynthesis: 'Meta-agregação temática ou metaetnografia',
+    registryEligibility: 'Elegível a registro no PROSPERO',
+    suggestedExtractionQuestions: [
+      'Abordagem metodológica qualitativa',
+      'Contexto sociocultural e institucional',
+      'Temas e categorias analíticas',
+      'Evidências narrativas e citações',
+      'Interpretação dos autores',
+    ],
+  },
+  {
+    id: 'D4',
+    code: 'D4',
+    name: 'Revisão de Escopo (Scoping Review)',
+    badge: 'ESCOPO',
+    whenToUse: 'Mapeamento abrangente de conceitos-chave, extensão das evidências e lacunas de pesquisa.',
+    defaultFramework: 'PCC',
+    defaultReporting: 'PRISMA-ScR',
+    conductStandards: ['JBI', 'Arksey & O\'Malley + Levac'],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Mapeamento descritivo, tabular e representação de lacunas',
+    registryEligibility: 'OSF / Figshare (não aceito pelo PROSPERO)',
+    suggestedExtractionQuestions: [
+      'População ou participantes caracterizados',
+      'Conceito central investigado',
+      'Contexto geográfico, setorial ou institucional',
+      'Tipo de fonte e desenho metodológico',
+      'Principais achados e lacunas identificadas',
+    ],
+  },
+  {
+    id: 'D5',
+    code: 'D5',
+    name: 'Mapa Sistemático / Mapa de Evidências',
+    badge: 'MAPA',
+    whenToUse: 'Catalogação do corpo de evidências sem sintetizar efeito ou gerar metanálise.',
+    defaultFramework: 'PCC',
+    defaultReporting: 'ROSES',
+    conductStandards: ['CEE v5.1'],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Matriz de evidências e mapas de calor de lacunas',
+    registryEligibility: 'Depósito em repositório aberto (OSF / CEE)',
+    suggestedExtractionQuestions: [
+      'Subtema / Intervenção territorial',
+      'Desfecho ou impacto catalogado',
+      'Distribuição geográfica e recorte territorial',
+      'Volume e maturidade das evidências',
+    ],
+  },
+  {
+    id: 'D6',
+    code: 'D6',
+    name: 'Revisão de Revisões (Umbrella Review)',
+    badge: 'UMBRELLA',
+    whenToUse: 'Síntese e comparação de múltiplas revisões sistemáticas pré-existentes.',
+    defaultFramework: 'PICO',
+    defaultReporting: 'PRIOR',
+    conductStandards: ['JBI Umbrella'],
+    criticalAppraisal: 'obrigatoria',
+    expectedSynthesis: 'Matriz de sobreposição (CCA) e síntese comparativa',
+    registryEligibility: 'Elegível a registro no PROSPERO',
+    suggestedExtractionQuestions: [
+      'Bases consultadas pela revisão incluída',
+      'Número de estudos primários sintetizados',
+      'Qualidade metodológica (AMSTAR 2)',
+      'Grau de sobreposição de estudos primários',
+      'Consistência das conclusões',
+    ],
+  },
+  {
+    id: 'D7',
+    code: 'D7',
+    name: 'Revisão Integrativa',
+    badge: 'INTEGRATIVA',
+    whenToUse: 'Combinação de literatura teórica, empírica e metodologias diversas.',
+    defaultFramework: 'SPIDER',
+    defaultReporting: 'PRISMA-2020',
+    conductStandards: ['Whittemore & Knafl (2005)', 'Souza et al. (2010)'],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Análise de conteúdo e síntese integrativa',
+    registryEligibility: 'Depósito em repositório aberto (OSF)',
+    suggestedExtractionQuestions: [
+      'Referencial teórico adotado',
+      'Metodologia empírica empregada',
+      'Conceitos e dimensões fundamentais',
+      'Implicações práticas e teóricas',
+    ],
+  },
+  {
+    id: 'D8',
+    code: 'D8',
+    name: 'Revisão Rápida (Rapid Review)',
+    badge: 'RÁPIDA',
+    whenToUse: 'Síntese ágil em prazos curtos para subsidiar tomada de decisão.',
+    defaultFramework: 'PICO',
+    defaultReporting: 'PRISMA-2020',
+    conductStandards: ['Cochrane RRMG'],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Síntese narrativa com declaração de atalhos metodológicos',
+    registryEligibility: 'PROSPERO (com justificativa de atalhos)',
+    suggestedExtractionQuestions: [
+      'Atalho metodológico empregado',
+      'Achados principais sintetizados',
+      'Limitações decorrentes do tempo',
+    ],
+  },
+  {
+    id: 'D9',
+    code: 'D9',
+    name: 'RS em Engenharia de Software (EBSE)',
+    badge: 'EBSE',
+    whenToUse: 'Comparação de tecnologias, métodos, processos ou ferramentas de software.',
+    defaultFramework: 'PICOC',
+    defaultReporting: 'EBSE',
+    conductStandards: ['Kitchenham & Charters (2007)'],
+    criticalAppraisal: 'obrigatoria',
+    expectedSynthesis: 'Agrupamento técnico e análise comparativa',
+    registryEligibility: 'Repositório institucional ou aberto',
+    suggestedExtractionQuestions: [
+      'Tecnologia / Ferramenta avaliada',
+      'Contexto de aplicação',
+      'Métricas de desempenho ou produtividade',
+      'Ameaças à validade',
+    ],
+  },
+  {
+    id: 'D10',
+    code: 'D10',
+    name: 'RS em Gestão / Negócios (SPAR-4-SLR)',
+    badge: 'SPAR-4-SLR',
+    whenToUse: 'Domínio, teoria, método e proposição de agenda futura em administração.',
+    defaultFramework: 'CIMO',
+    defaultReporting: 'SPAR-4-SLR',
+    conductStandards: ['Paul et al. 2021 (SPAR-4-SLR)', 'Tranfield et al. 2003'],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Framework TCCM (Theory, Context, Characteristics, Methodology)',
+    registryEligibility: 'Repositório aberto ou institucional',
+    suggestedExtractionQuestions: [
+      'Teoria de suporte (Theory)',
+      'Contexto setorial e ambiental (Context)',
+      'Características investigadas (Characteristics)',
+      'Abordagem metodológica (Methodology)',
+      'Agenda futura de pesquisa',
+    ],
+  },
+  {
+    id: 'D11',
+    code: 'D11',
+    name: 'Estudo Bibliométrico / Cienciométrico',
+    badge: 'BIBLIOMETRIA',
+    whenToUse: 'Mapeamento da estrutura intelectual, conceitual e social de um campo.',
+    defaultFramework: 'Domínio-Recorte-Unidade',
+    defaultReporting: 'BIBLIO',
+    conductStandards: ['Zupic & Čater (2015)', 'Donthu et al. (2021)'],
+    criticalAppraisal: 'nao_se_aplica',
+    expectedSynthesis: 'Indicadores de produção, redes de cocitação e coocorrência',
+    registryEligibility: 'Depósito em repositório aberto (OSF)',
+    suggestedExtractionQuestions: [
+      'Unidade de análise',
+      'Autores, filiações e países mais produtivos',
+      'Palavras-chave e tópicos emergentes',
+      'Contagem de citações',
+      'Métricas de rede',
+    ],
+  },
+  {
+    id: 'D12',
+    code: 'D12',
+    name: 'Portfólio Ordenado (Methodi Ordinatio)',
+    badge: 'ORDINATIO',
+    whenToUse: 'Seleção e hierarquização multicritério de portfólio relevante via InOrdinatio.',
+    defaultFramework: 'Livre',
+    defaultReporting: 'Generic',
+    conductStandards: ['Methodi Ordinatio (Pagani et al. 2015 / 2022)'],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Ranking ponderado InOrdinatio',
+    registryEligibility: 'Repositório institucional ou aberto',
+    suggestedExtractionQuestions: [
+      'Ano de publicação',
+      'Fator de impacto (JCR / SJR)',
+      'Número de citações',
+      'Índice InOrdinatio',
+    ],
+  },
+  {
+    id: 'D13',
+    code: 'D13',
+    name: 'Revisão Narrativa Estruturada',
+    badge: 'NARRATIVA',
+    whenToUse: 'Panorama conceitual e teórico com relato estruturado e critérios explícitos.',
+    defaultFramework: 'Livre',
+    defaultReporting: 'SANRA',
+    conductStandards: [],
+    criticalAppraisal: 'nao_se_aplica',
+    expectedSynthesis: 'Síntese narrativa temática',
+    registryEligibility: 'Repositório institucional ou aberto',
+    suggestedExtractionQuestions: [
+      'Tópico conceitual',
+      'Perspectiva teórica',
+      'Principais argumentos',
+      'Lacunas conceituais',
+    ],
+  },
+  {
+    id: 'D14',
+    code: 'D14',
+    name: 'Outro / Híbrido Declarado',
+    badge: 'HÍBRIDO',
+    whenToUse: 'Combinação metodológica customizada ou abordagem emergente.',
+    defaultFramework: 'Livre',
+    defaultReporting: 'Generic',
+    conductStandards: [],
+    criticalAppraisal: 'opcional',
+    expectedSynthesis: 'Síntese customizada conforme declarado',
+    registryEligibility: 'Livre',
+    suggestedExtractionQuestions: [
+      'Dados customizados de interesse',
+    ],
+  },
+]
+
+
+/**
+ * Ancoragem normativa de decisões de PRODUTO.
+ *
+ * Estes textos citam diretriz por nome, e é DE PROPÓSITO: eles não descrevem a
+ * diretriz ativa do projeto — descrevem por que o Revsist desenhou um campo do
+ * jeito que desenhou. A justificativa de que as perguntas de extração ficam no
+ * núcleo do modo Simplificado é o item 12 do PRISMA-P, e continua sendo esse
+ * item mesmo num projeto que relate em ROSES ou em BIBLIO.
+ *
+ * Por isso moram aqui, e não no JSX: a regra R7 do linter de tokens
+ * (`scripts/lint-design-tokens.mjs`) proíbe diretriz fixa em texto visível
+ * justamente porque a diretriz ATIVA varia por projeto — e isenta
+ * `src/data/protocol*`, que é onde o texto normativo invariante pertence.
+ * Para citar a diretriz do projeto, continue lendo de PROTOCOL_CATALOG.
+ */
+export const ANCORAGEM_NORMATIVA = {
+  perguntasDeExtracaoNoNucleo:
+    'Ficam no núcleo por decisão de projeto: listar a priori as variáveis para as quais se buscará dado é exigência do PRISMA-P (item 12) e do PRISMA 2020 (item 10a). Decidir o que extrair depois de ver o que a busca trouxe é o que o protocolo a priori existe para impedir.',
+  emendaDeProtocolo:
+    'Alteração metodológica após o início da coleta precisa de justificativa registrada. A exigência é do PRISMA-P (item 3) e do PRISMA 2020 (item 24c), e a emenda entra na exportação do protocolo junto do histórico.',
+  limitesDeBusca:
+    'Estabeleça todos os limites da busca — período, idiomas, tipos de publicação e bases-alvo — antes de iniciar a coleta. São os itens 7 e 8 do PRISMA-ScR e o item 7 do PRISMA 2020.',
+} as const

@@ -1572,3 +1572,195 @@
 .batch-floating-dock .btn-dock-stop:hover {
   background: var(--color-error-bg);
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   ESTILOS DE TRIAGEM CEGA E RESOLUÇÃO DE CONFLITOS (Doc 43 §43.7, §43.8)
+   ═════════════════════════════════════════════════════════════════════ */
+
+.badge-screening-status {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-bold);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-screening-status.status-aguardando {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.badge-screening-status.status-parcial {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.badge-screening-status.status-consenso {
+  background: var(--color-included-bg);
+  color: var(--color-included-text);
+  border: 1px solid var(--color-included);
+}
+
+.badge-screening-status.status-conflito {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  border: 1px solid var(--color-error);
+}
+
+.badge-screening-status.status-resolvido {
+  background: var(--color-bg-secondary);
+  color: var(--color-accent-on-surface);
+  border: 1px solid var(--color-accent);
+}
+
+.badge-my-vote {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-semibold);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent-on-surface);
+}
+
+.counter-btn.conflict {
+  border-color: var(--color-error);
+  color: var(--color-error-text);
+}
+
+.counter-btn.conflict.active {
+  background: var(--color-error-bg);
+  border-color: var(--color-error);
+  color: var(--color-error-text);
+}
+
+/* Painel de Resolução de Conflitos */
+.conflict-resolution-panel {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.conflict-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.conflict-panel-header h4 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-error-text);
+}
+
+.conflict-panel-header p {
+  margin: var(--space-0-5) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.coordinator-resolution-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.conflict-reviewers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2-5);
+}
+
+.reviewer-conflict-card {
+  padding: var(--space-2-5);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.reviewer-conflict-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reviewer-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.reviewer-conflict-obs {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.coordinator-resolve-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.resolution-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.resolution-textarea {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+}
+
+.resolution-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.resolution-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.resolution-buttons .btn-dec {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+.reviewer-conflict-notice {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}

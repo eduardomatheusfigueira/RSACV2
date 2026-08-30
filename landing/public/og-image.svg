@@ -1,28 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
-  <defs>
-    <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a3350"/>
-      <stop offset="100%" stop-color="#0f1f33"/>
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" fill="url(#bg-grad)"/>
-  <rect x="60" y="60" width="1080" height="510" fill="none" stroke="#274c77" stroke-width="2" rx="16"/>
-  
-  <!-- Monograma R-Lupa -->
-  <g transform="translate(140, 185) scale(2.6)">
-    <g fill="none" stroke="#ffffff" stroke-width="14.0" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="Revsist — revisão sistemática com rastro">
+  <!--
+    Cartão de compartilhamento. Cor chapada de propósito: o doc 40 §40.8.1
+    proíbe gradiente vibrante, e um fundo chapado ainda comprime em PNG a uma
+    fração do tamanho — o que importa porque as redes sociais buscam esta
+    imagem a cada compartilhamento.
+
+    O PNG equivalente (og-image.png) é o que as redes realmente renderizam;
+    este SVG é a fonte de verdade a partir da qual ele é gerado.
+  -->
+  <rect width="1200" height="630" fill="#152940"/>
+  <rect x="56" y="56" width="1088" height="518" fill="none" stroke="#2f5c8a" stroke-width="2" rx="14"/>
+
+  <!-- Monograma R-Lupa (brand/svg/rsac-mark.svg), grade 80x100, traço 14 -->
+  <g transform="translate(132, 196) scale(2.4)">
+    <g fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
       <path d="M 7 7 V 93"/>
       <circle cx="32" cy="32" r="25"/>
       <path d="M 45.946 52.749 L 73 93" stroke="#6096ba"/>
     </g>
   </g>
-  
-  <!-- Tipografia -->
-  <text x="420" y="270" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="76" font-weight="800" fill="#ffffff" letter-spacing="-1.5">Revsist</text>
-  <text x="420" y="340" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="30" font-weight="500" fill="#6096ba">Revisão Sistemática Assistida por Computador</text>
-  <text x="420" y="410" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="400" fill="#cbd8e4">Rigor metodológico · 11 diretrizes (PRISMA, JBI, Cochrane) · BDTD &amp; SciELO</text>
-  
-  <!-- Badge BETA -->
-  <rect x="420" y="450" width="100" height="34" rx="6" fill="#274c77"/>
-  <text x="470" y="473" font-family="monospace" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">v2.0 BETA</text>
+
+  <!-- Régua vertical separando símbolo e assinatura -->
+  <line x1="392" y1="196" x2="392" y2="436" stroke="#2f5c8a" stroke-width="2"/>
+
+  <text x="452" y="268" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="82" font-weight="700" fill="#ffffff" letter-spacing="-2">Revsist</text>
+  <text x="452" y="330" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="600" fill="#8cb8d6">Revisão sistemática com rastro</text>
+  <text x="452" y="382" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="23" font-weight="400" fill="#cbd8e4">Quem decidiu, com qual modelo, sobre qual texto.</text>
+  <text x="452" y="414" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="23" font-weight="400" fill="#cbd8e4">11 diretrizes · BDTD e SciELO · software livre</text>
+
+  <!-- Selo BETA: etiqueta de engenharia, contorno com cantos cirúrgicos -->
+  <rect x="452" y="452" width="132" height="38" rx="4" fill="none" stroke="#6096ba" stroke-width="2"/>
+  <text x="518" y="478" font-family="Consolas, 'Courier New', monospace" font-size="18" font-weight="700" fill="#6096ba" text-anchor="middle" letter-spacing="1">v2.0 BETA</text>
 </svg>

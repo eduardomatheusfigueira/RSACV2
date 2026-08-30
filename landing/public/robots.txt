@@ -1,7 +1,17 @@
-# Revsist — Robots.txt
+# Revsist — robots.txt
+#
+# A landing e os dois documentos de governança são públicos e devem ser
+# indexados. Tudo atrás de autenticação, não: `/app` é a aplicação e `/api`
+# é a interface de programação — nenhuma das duas responde nada de útil a um
+# rastreador, e ambas gastariam banda do servidor à toa.
+
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /app
 Disallow: /app/
+Disallow: /docs
+Disallow: /redoc
+Disallow: /openapi.json
 
 Sitemap: https://revsist.com/sitemap.xml

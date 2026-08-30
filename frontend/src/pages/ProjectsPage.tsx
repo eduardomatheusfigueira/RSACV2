@@ -16,6 +16,9 @@ import {
   Sparkles,
   ArrowRight,
   Filter,
+  Users,
+  Key,
+  Shield,
 } from 'lucide-react'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
@@ -34,7 +37,7 @@ import {
   DialogTitlebar,
   DialogBody,
 } from '@/components/ui'
-import type { Project, Methodology } from '@/types/api'
+import type { Project, Methodology, CollaborationMode } from '@/types/api'
 import './ProjectsPage.css'
 
 export function ProjectsPage(): JSX.Element {
@@ -45,12 +48,17 @@ export function ProjectsPage(): JSX.Element {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false)
+  const [joinCode, setJoinCode] = useState('')
+  const [joining, setJoining] = useState(false)
   const [searchFilter, setSearchFilter] = useState('')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'mine' | 'team'>('all')
 
   // Form State
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [methodology, setMethodology] = useState<Methodology>('PRISMA-ScR')
+  const [collaborationMode, setCollaborationMode] = useState<CollaborationMode>('individual')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -88,17 +96,47 @@ export function ProjectsPage(): JSX.Element {
         title: title.trim(),
         description: description.trim(),
         methodology,
+        collaboration_mode: collaborationMode,
+        reviewers_per_paper: collaborationMode === 'cega_por_pares' ? 2 : 1,
+        conflict_resolution: 'coordenador',
       })
       setProjects([newProj, ...projects])
       setActiveProject(newProj)
       setIsModalOpen(false)
       setTitle('')
       setDescription('')
+      setCollaborationMode('individual')
       navigate(`/projects/${newProj.id}/protocol`)
     } catch (err) {
       console.error('Erro ao criar projeto:', err)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleJoinProject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const code = joinCode.trim().toUpperCase()
+    if (!code) return
+
+    try {
+      setJoining(true)
+      const res = await api.acceptTeamInvitation(code)
+      toast.success('Ingresso na Equipe', {
+        description: res.message || 'Convite aceito com sucesso!',
+      })
+      setIsJoinModalOpen(false)
+      setJoinCode('')
+      await loadProjects()
+      if (res.project_id) {
+        navigate(`/projects/${res.project_id}/protocol`)
+      }
+    } catch (err: any) {
+      toast.error('Erro ao aceitar convite', {
+        description: err?.detail || err?.message || 'Código de convite inválido ou expirado.',
+      })
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -126,12 +164,21 @@ export function ProjectsPage(): JSX.Element {
     navigate(`/projects/${project.id}/protocol`)
   }
 
-  const filteredProjects = projects.filter(
-    (p) =>
+  const filteredProjects = projects.filter((p) => {
+    const matchesSearch =
       p.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
       p.description.toLowerCase().includes(searchFilter.toLowerCase()) ||
       p.methodology.toLowerCase().includes(searchFilter.toLowerCase())
-  )
+    if (!matchesSearch) return false
+
+    if (roleFilter === 'mine') {
+      return !p.my_role || p.my_role === 'coordenador'
+    }
+    if (roleFilter === 'team') {
+      return p.my_role === 'revisor' || p.my_role === 'observador' || (p.member_count && p.member_count > 1)
+    }
+    return true
+  })
 
   return (
     <div className="projects-page animate-fade-in">
@@ -139,9 +186,24 @@ export function ProjectsPage(): JSX.Element {
         title="Projetos de Revisão Sistemática"
         subtitle="Crie, selecione e gerencie seus protocolos e revisões com rigor metodológico"
         primaryAction={
-          <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)} leftIcon={<Plus size={14} />}>
-            Novo Projeto
-          </Button>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setIsJoinModalOpen(true)}
+              leftIcon={<Key size={14} />}
+            >
+              Entrar com Convite
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setIsModalOpen(true)}
+              leftIcon={<Plus size={14} />}
+            >
+              Novo Projeto
+            </Button>
+          </div>
         }
       />
 
@@ -157,23 +219,51 @@ export function ProjectsPage(): JSX.Element {
             onChange={(e) => setSearchFilter(e.target.value)}
           />
         </div>
+
+        <div className="role-filter-tabs">
+          <button
+            type="button"
+            className={`filter-tab-btn ${roleFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setRoleFilter('all')}
+          >
+            Todos ({projects.length})
+          </button>
+          <button
+            type="button"
+            className={`filter-tab-btn ${roleFilter === 'mine' ? 'active' : ''}`}
+            onClick={() => setRoleFilter('mine')}
+          >
+            Minhas Coordenações
+          </button>
+          <button
+            type="button"
+            className={`filter-tab-btn ${roleFilter === 'team' ? 'active' : ''}`}
+            onClick={() => setRoleFilter('team')}
+          >
+            <Users size={12} /> Revisões em Equipe
+          </button>
+        </div>
       </div>
 
       {/* Grid of Projects */}
       {loading ? (
         <LoadingState label="Carregando projetos…" />
       ) : filteredProjects.length === 0 ? (
-        /* O vazio por filtro e o vazio por acervo têm causas diferentes e
-           saídas diferentes — dizer "crie um projeto" a quem só digitou mal
-           no filtro é mandar a pessoa pelo caminho errado. */
-        searchFilter.trim() ? (
+        searchFilter.trim() || roleFilter !== 'all' ? (
           <EmptyState
             icon={<Search size={32} strokeWidth={1.25} aria-hidden="true" />}
             title="Nenhum projeto corresponde ao filtro"
-            description={<>Nenhum título, metodologia ou descrição contém <strong>{searchFilter}</strong>.</>}
+            description={<>Nenhum projeto encontrado para o filtro selecionado.</>}
             action={
-              <Button variant="secondary" size="md" onClick={() => setSearchFilter('')}>
-                Limpar filtro
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => {
+                  setSearchFilter('')
+                  setRoleFilter('all')
+                }}
+              >
+                Limpar filtros
               </Button>
             }
           />
@@ -181,11 +271,16 @@ export function ProjectsPage(): JSX.Element {
           <EmptyState
             icon={<FolderOpen size={32} strokeWidth={1.25} aria-hidden="true" />}
             title="Nenhum projeto ainda"
-            description="Um projeto reúne protocolo, acervo e decisões de triagem sob a mesma metodologia. Comece pelo primeiro."
+            description="Um projeto reúne protocolo, acervo e decisões de triagem sob a mesma metodologia. Comece pelo primeiro ou entre na equipe de um colega com convite."
             action={
-              <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)} leftIcon={<Plus size={14} />}>
-                Criar Novo Projeto
-              </Button>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                <Button variant="secondary" size="md" onClick={() => setIsJoinModalOpen(true)} leftIcon={<Key size={14} />}>
+                  Entrar com Convite
+                </Button>
+                <Button variant="primary" size="md" onClick={() => setIsModalOpen(true)} leftIcon={<Plus size={14} />}>
+                  Criar Novo Projeto
+                </Button>
+              </div>
             }
           />
         )
@@ -193,11 +288,10 @@ export function ProjectsPage(): JSX.Element {
         <div className="projects-grid">
           {filteredProjects.map((project) => {
             const isActive = activeProject?.id === project.id
+            const role = project.my_role || 'coordenador'
+            const memberCount = project.member_count || 1
+
             return (
-              /* O cartão inteiro abre o projeto, mas carrega dentro de si o
-                 botão de excluir. Controle dentro de controle é marcação
-                 inválida — então quem é clicável é o título, e a área do
-                 cartão vira alvo dele por um ::after esticado. */
               <Card
                 key={project.id}
                 className={`project-card-full ${isActive ? 'active-card' : ''}`}
@@ -207,21 +301,50 @@ export function ProjectsPage(): JSX.Element {
                 <div className="card-header">
                   <div className="card-meta">
                     <span className="badge-methodology">{project.methodology}</span>
+                    <span className={`badge-role role-${role}`}>
+                      <Shield size={10} /> {role}
+                    </span>
+                    <span className={`badge-collab-mode mode-${project.collaboration_mode || 'individual'}`}>
+                      {project.collaboration_mode === 'cega_por_pares'
+                        ? 'Cega por Pares (2)'
+                        : project.collaboration_mode === 'colaborativa'
+                        ? 'Colaborativa'
+                        : 'Individual'}
+                    </span>
                     {isActive && (
                       <span className="badge-active">
                         <CheckCircle2 size={12} /> Ativo
                       </span>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    className="btn-icon danger"
-                    title="Excluir Projeto"
-                    aria-label={`Excluir projeto: ${project.title}`}
-                    onClick={(e) => handleDeleteProject(project.id, e)}
-                  >
-                    <Trash2 size={16} aria-hidden="true" />
-                  </button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <button
+                      type="button"
+                      className="badge-team-btn"
+                      title="Gerenciar Equipe e Convites"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setActiveProject(project)
+                        navigate(`/projects/${project.id}/team`)
+                      }}
+                    >
+                      <Users size={12} />
+                      <span>{memberCount > 1 ? `${memberCount} membros` : 'Equipe'}</span>
+                    </button>
+
+                    {role === 'coordenador' && (
+                      <button
+                        type="button"
+                        className="btn-icon danger"
+                        title="Excluir Projeto"
+                        aria-label={`Excluir projeto: ${project.title}`}
+                        onClick={(e) => handleDeleteProject(project.id, e)}
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <h3 className="card-title">
@@ -330,6 +453,37 @@ export function ProjectsPage(): JSX.Element {
                 </div>
 
                 <div className="form-group">
+                  <label htmlFor="new-proj-collab-mode">Modalidade de Colaboração (Doc 43)</label>
+                  <select
+                    id="new-proj-collab-mode"
+                    value={collaborationMode}
+                    onChange={(e) => setCollaborationMode(e.target.value as CollaborationMode)}
+                    disabled={submitting}
+                  >
+                    <option value="individual">Individual (Pesquisador Único)</option>
+                    <option value="colaborativa">Equipe Colaborativa (Acervo e Protocolo Compartilhados)</option>
+                    <option value="cega_por_pares">Revisão Cega por Pares (2 Revisores Independentes)</option>
+                  </select>
+                  <div className="collab-preview-desc">
+                    {collaborationMode === 'cega_por_pares' && (
+                      <p>
+                        <strong>Duplo-Cego:</strong> Cada estudo recebe 2 pareceres independentes. Divergências são enviadas para resolução pela coordenação.
+                      </p>
+                    )}
+                    {collaborationMode === 'colaborativa' && (
+                      <p>
+                        <strong>Colaborativo:</strong> Todos os membros podem coeditar protocolo e acervo. 1 parecer define a decisão do estudo.
+                      </p>
+                    )}
+                    {collaborationMode === 'individual' && (
+                      <p>
+                        <strong>Individual:</strong> Protocolo e decisões centralizadas no autor do projeto.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-group">
                   <div className="form-label-row">
                     <label htmlFor="new-proj-desc">Descrição / Justificativa</label>
                     <AIAssistButton
@@ -370,6 +524,50 @@ export function ProjectsPage(): JSX.Element {
                   </button>
                 </div>
               </form>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Entrar com Código de Convite RSAC-EQ */}
+      <Dialog open={isJoinModalOpen} onOpenChange={setIsJoinModalOpen}>
+        <DialogContent variant="window" size="sm" aria-describedby={undefined}>
+          <DialogTitlebar>Ingressar em Revisão por Convite</DialogTitlebar>
+          <DialogBody>
+            <div className="modal-intro">
+              <p>
+                Insira o código <code>RSAC-EQ-...</code> fornecido pelo coordenador da pesquisa para ter acesso imediato ao protocolo e estudos.
+              </p>
+            </div>
+
+            <form onSubmit={handleJoinProject} className="modal-form">
+              <div className="form-group">
+                <label htmlFor="join-invite-code">Código do Convite *</label>
+                <input
+                  id="join-invite-code"
+                  type="text"
+                  required
+                  placeholder="Ex: RSAC-EQ-XXXX-YYYY"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value)}
+                  disabled={joining}
+                  style={{ textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsJoinModalOpen(false)}
+                  disabled={joining}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={joining}>
+                  {joining ? 'Validando...' : 'Ingressar na Revisão'}
+                </button>
+              </div>
+            </form>
           </DialogBody>
         </DialogContent>
       </Dialog>

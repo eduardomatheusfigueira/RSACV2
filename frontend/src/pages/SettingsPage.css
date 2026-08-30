@@ -186,7 +186,7 @@
 }
 
 .provider-privacy-notice.local-privacy {
-  border-left-color: var(--color-success, #10b981);
+  border-left-color: var(--color-success);
   background: rgba(16, 185, 129, 0.08);
 }
 
@@ -729,7 +729,10 @@
 
 .settings-main-tabs {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* 180px cortava "1. Assistência & Modelos" e "4. Backup & Portabilidade" com
+     reticências em qualquer largura de janela; 232px é a medida do rótulo mais
+     longo, e abaixo disso as abas quebram em duas fileiras em vez de truncar. */
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
   gap: var(--space-2);
   margin-bottom: var(--space-6);
   width: 100%;
@@ -824,8 +827,8 @@
 }
 
 .admin-tab-btn.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--color-accent-on-surface);
+  border-bottom-color: var(--color-accent);
   font-weight: var(--weight-bold);
   background: var(--color-bg-secondary);
 }
@@ -836,29 +839,289 @@
 }
 
 .user-row-clickable:hover {
-  background: var(--color-bg-tertiary, rgba(0, 0, 0, 0.03)) !important;
+  background: var(--color-bg-tertiary) !important;
 }
 
-.role-badge {
-  display: inline-flex;
+/* ═════════════════════════════════════════════════════════════════════
+   PAINEL ADMINISTRATIVO — CONVITES E USUÁRIOS
+
+   Esta aba era desenhada por 137 objetos `style={{}}` no JSX, com px cruos e
+   a paleta do Bootstrap (#28a745, #dc3545, #6c757d) — cores que não pertencem
+   a tema nenhum do Revsist e que ignoram a troca de tema por completo. O
+   cabeçalho do cartão, além disso, pegava emprestada a classe `.card-header`
+   da folha da tela de Projetos: uma alteração lá reposicionava o título aqui.
+   ═════════════════════════════════════════════════════════════════════ */
+
+.admin-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.admin-card-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
+  justify-content: center;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--color-accent-on-surface);
 }
 
-.role-badge.owner {
-  background: rgba(39, 76, 119, 0.12);
-  color: var(--color-primary, #274c77);
-  border: 1px solid rgba(39, 76, 119, 0.25);
+.admin-card-header h2 {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  margin: 0;
 }
 
-.role-badge.researcher {
-  background: rgba(40, 167, 69, 0.1);
-  color: #28a745;
-  border: 1px solid rgba(40, 167, 69, 0.25);
+.admin-card-subtitle {
+  margin: var(--space-1) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.admin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Formulário de emissão ─────────────────────────────────────────── */
+
+.invite-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.admin-form-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.invite-create-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+@media (max-width: 720px) {
+  .invite-create-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Barra de título das listas ────────────────────────────────────── */
+
+.admin-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.admin-table-title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.admin-table-help {
+  margin: var(--space-0-5) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+/* ── Tabelas ───────────────────────────────────────────────────────── */
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+  text-align: left;
+}
+
+.admin-table th {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-secondary);
+  vertical-align: top;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table .col-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+.cell-code {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-on-surface);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.cell-strong {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.cell-sub {
+  margin-top: var(--space-0-5);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+}
+
+.cell-muted {
+  color: var(--color-text-tertiary);
+}
+
+.cell-self {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-accent-on-surface);
+}
+
+/* ── Credenciais de bases: rótulo e selo na mesma linha ────────────── */
+
+.source-cred-group {
+  margin-top: var(--space-3);
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.source-cred-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ── Diálogo de gestão de usuário ──────────────────────────────────── */
+
+.user-edit-section .form-group {
+  margin: 0;
+}
+
+.user-edit-section .form-group label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.user-edit-section .rsac-custom-select {
+  width: 100%;
+}
+
+.user-form-row {
+  margin-bottom: var(--space-3);
+}
+
+.user-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.user-password-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .user-password-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A senha provisória é lida uma vez e copiada: precisa de moldura própria,
+   monoespaçada e destacada, não de um retângulo genérico. */
+.temp-password-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-accent-subtle);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+.temp-password-label {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+}
+
+.temp-password-value {
+  margin-left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-accent-on-surface);
+  letter-spacing: 0.04em;
 }
 
 .user-edit-modal-grid {

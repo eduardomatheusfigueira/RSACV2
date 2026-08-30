@@ -16,9 +16,14 @@ O Revsist disponibiliza aos pesquisadores um ecossistema integrado para:
 1. Elaboração de protocolos científicos (pergunta de pesquisa, critérios de inclusão/exclusão, descritores de busca e estratégia PICO).
 2. Conexão automatizada com repositórios e bases bibliográficas (ex: BDTD, SciELO, Scopus, PubMed, OpenAlex).
 3. Deduplicação e gerenciamento de acervos bibliográficos.
-4. Triagem cega e colaborativa de títulos e resumos, com suporte opcional a modelos de linguagem (IA).
+4. Triagem de títulos e resumos, com parecer sugerido opcional por modelos de linguagem (IA) e conferência humana obrigatória.
 5. Aquisição, leitura e extração de dados de textos integrais (PDFs).
-6. Exportação de sínteses quantitativas e qualitativas em formatos abertos (CSV, JSON, RIS, BibTeX).
+6. Exportação da síntese em planilha `.xlsx`, referências em `.bib` e pacote de portabilidade em JSON.
+
+> **Nota de escopo (30/08/2026).** Triagem em equipe com dupla avaliação cega e
+> importação de arquivos `.ris`/`.bib` estão especificados nos docs 43 e 44, mas
+> **não** implementados. Enquanto não estiverem, não integram o objeto destes
+> termos. A versão publicada em `/termos` já reflete isso.
 
 ---
 

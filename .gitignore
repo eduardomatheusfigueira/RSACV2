@@ -106,6 +106,7 @@ rsac-perfil-backup-*.json
 # ── IDEs & Operating Systems ────────────────────────────────────────
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 .DS_Store

@@ -13,14 +13,20 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
-from app.security.dependencies import projeto_do_usuario
+from app.security.dependencies import (
+    exige_revisor_ou_coordenador,
+    projeto_do_usuario,
+    require_session,
+)
 from app.database import SessionLocal
 from app.infrastructure.persistence.models import (
     AISettingsModel,
     ExtractionAnswerModel,
     PaperModel,
+    ProjectMemberModel,
     ProjectModel,
     ProtocolModel,
+    UserModel,
 )
 from app.security.middleware import erro_interno
 from app.services.extraction_service import ExtractionService
@@ -171,34 +177,55 @@ def get_project_extraction_summary(
 
 
 @router.get("")
-def get_paper_extraction_answers(
+def get_paper_extraction(
     project_id: str,
     paper_id: str,
     db: Session = Depends(get_db),
 ):
-    """Obtém as respostas de extração de dados e o estado do PDF do artigo."""
-    paper = _get_paper(db, project_id, paper_id)
-
-    answers = (
-        db.query(ExtractionAnswerModel)
-        .filter(ExtractionAnswerModel.paper_id == paper_id)
-        .all()
+    """Obtém as respostas de extração de um artigo com referências aos trechos do PDF."""
+    paper = (
+        db.query(PaperModel)
+        .options(selectinload(PaperModel.extraction_answers))
+        .filter(PaperModel.project_id == project_id, PaperModel.id == paper_id)
+        .first()
     )
+    if not paper:
+        raise HTTPException(status_code=404, detail="Artigo não encontrado.")
+
+    protocol = (
+        db.query(ProtocolModel)
+        .options(selectinload(ProtocolModel.extraction_questions))
+        .filter(ProtocolModel.project_id == project_id)
+        .first()
+    )
+    questions = protocol.extraction_questions if protocol else []
+    answers = {a.question_id: a for a in paper.extraction_answers}
 
     return {
         "paper_id": paper_id,
-        **_pdf_state(paper),
+        "questions": [
+            {
+                "id": q.id,
+                "text": q.text,
+                "order": q.order,
+                "answer": answers[q.id].answer if q.id in answers else "",
+                "evidence": answers[q.id].evidence if q.id in answers else "",
+                "page_ref": answers[q.id].page_ref if q.id in answers else "",
+                "source_kind": answers[q.id].source_kind if q.id in answers else "manual",
+                "ai_generated": answers[q.id].ai_generated if q.id in answers else False,
+            }
+            for q in questions
+        ],
         "answers": [
             {
-                "id": a.id,
                 "question_id": a.question_id,
                 "answer": a.answer,
+                "evidence": a.evidence,
+                "page_ref": a.page_ref,
+                "source_kind": a.source_kind,
                 "ai_generated": a.ai_generated,
-                "evidence": a.evidence or "",
-                "page_ref": a.page_ref or "",
-                "source_kind": a.source_kind or "",
             }
-            for a in answers
+            for a in answers.values()
         ],
     }
 
@@ -209,8 +236,9 @@ def update_paper_extraction_answers(
     paper_id: str,
     data: Dict[str, str],  # { "question_id": "answer" }
     db: Session = Depends(get_db),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
-    """Salva ou atualiza manualmente as respostas de extração."""
+    """Salva ou atualiza manualmente as respostas de extração (requer revisor ou coordenador)."""
     paper = db.query(PaperModel).filter(PaperModel.project_id == project_id, PaperModel.id == paper_id).first()
     if not paper:
         raise HTTPException(status_code=404, detail="Artigo não encontrado.")
@@ -250,23 +278,24 @@ async def extract_answers_with_ai(
     question_id: Optional[str] = Query(None, description="ID opcional para extrair apenas uma pergunta específica"),
     db: Session = Depends(get_db),
     projeto: ProjectModel = Depends(projeto_do_usuario),
+    usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
-    """Executa a extração automática das respostas do artigo (todas ou uma específica) usando IA."""
-    # A configuração de IA é a do dono do projeto — é a chave dele que será
-    # usada, e é a preferência dele que decide se a assistência está ligada.
+    """Executa a extração automática das respostas do artigo usando a chave de quem aciona (Doc 43 §43.11)."""
+    # A configuração de IA é a do usuário que aciona a operação ("Quem age paga", D-03)
     settings = (
         db.query(AISettingsModel)
-        .filter(AISettingsModel.user_id == projeto.owner_id)
+        .filter(AISettingsModel.user_id == usuario.id)
         .first()
     )
     if settings and not settings.ai_enabled:
         raise HTTPException(
             status_code=400,
-            detail="Os recursos de Assistência estão desativados nas Configurações (Modo Manual).",
+            detail="Os recursos de Assistência estão desativados nas suas Configurações (Modo Manual).",
         )
     try:
         answers = await extraction_service.extract_answers_with_ai(
-            db, project_id, paper_id, question_id=question_id, user_id=projeto.owner_id
+            db, project_id, paper_id, question_id=question_id, user_id=usuario.id
         )
         return {"status": "success", "answers": answers}
     except Exception as e:
@@ -344,6 +373,8 @@ async def acquire_paper_pdf(
     project_id: str,
     paper_id: str,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
     """
     Busca o PDF do trabalho por todas as vias disponíveis (DOI, Unpaywall,
@@ -351,7 +382,7 @@ async def acquire_paper_pdf(
     landing page) e devolve a trilha completa do que foi tentado.
     """
     paper = _get_paper(db, project_id, paper_id)
-    result = await acquire_for_paper(db, paper, pdf_service=pdf_service)
+    result = await acquire_for_paper(db, paper, pdf_service=pdf_service, actor_id=usuario.id)
 
     return {
         "status": "downloaded" if result.success else "failed",
@@ -365,10 +396,12 @@ async def download_paper_pdf(
     project_id: str,
     paper_id: str,
     db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+    _membro: ProjectMemberModel = Depends(exige_revisor_ou_coordenador),
 ):
     """Alias histórico de `/pdf/acquire` — mantido para compatibilidade."""
     paper = _get_paper(db, project_id, paper_id)
-    result = await acquire_for_paper(db, paper, pdf_service=pdf_service)
+    result = await acquire_for_paper(db, paper, pdf_service=pdf_service, actor_id=usuario.id)
 
     if not result.success:
         raise HTTPException(

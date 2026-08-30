@@ -7,6 +7,7 @@ import { Outlet } from 'react-router-dom'
 import { TopRibbonBar } from './TopRibbonBar'
 import { StatusBar } from './StatusBar'
 import { LogPanel } from './LogPanel'
+import { TrilhoTutorBar, TrilhoDecisionModal, TrilhoSpotlight } from '@/components/trilho'
 import './AppShell.css'
 
 export function AppShell(): JSX.Element {
@@ -22,6 +23,12 @@ export function AppShell(): JSX.Element {
         </div>
         <StatusBar />
       </div>
+
+      {/* Camada Global do Modo Trilho (Tutor Metodológico) */}
+      <TrilhoSpotlight />
+      <TrilhoDecisionModal />
+      <TrilhoTutorBar />
     </div>
   )
 }
+

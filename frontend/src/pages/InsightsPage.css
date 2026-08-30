@@ -118,3 +118,95 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* Concordância Interobservador e Kappa de Cohen */
+.insights-concordancia-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.insights-concordancia-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.insights-kappa-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.insights-stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--weight-medium);
+}
+
+.insights-kappa-value {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  color: var(--color-accent-on-surface);
+}
+
+.insights-po-value {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+}
+
+.insights-kappa-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.insights-po-detail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.insights-contingency-table-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.insights-contingency-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+}
+
+.insights-contingency-table th,
+.insights-contingency-table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.insights-contingency-table th {
+  color: var(--color-text-tertiary);
+  font-weight: var(--weight-semibold);
+  font-size: var(--font-size-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dot-included { color: var(--color-included-on-surface); }
+.dot-excluded { color: var(--color-excluded-on-surface); }
+.dot-divergent { color: var(--color-warning-on-surface); }

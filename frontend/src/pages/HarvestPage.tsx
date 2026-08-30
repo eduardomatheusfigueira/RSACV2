@@ -510,6 +510,7 @@ export function HarvestPage(): JSX.Element {
               onClick={handleStartHarvest}
               disabled={selectedSources.length === 0 || allDescriptors.length === 0}
               leftIcon={<Play size={14} />}
+              data-trilho-target="harvest-run-btn"
             >
               Iniciar Coleta Multibase
             </Button>
@@ -547,7 +548,7 @@ export function HarvestPage(): JSX.Element {
       {/* ═══════════════════════════════════════════════════════════════════
           BARRA SUPERIOR DE STATUS E MÉTRICAS DA COLETA (ACIMA)
       ═══════════════════════════════════════════════════════════════════ */}
-      <div className="harvest-queue-container">
+      <div className="harvest-queue-container" data-trilho-target="dedup-summary-card">
         <div className="harvest-top-controls-bar">
           <div className="harvest-metrics-group">
             <span className="queue-status-chip">

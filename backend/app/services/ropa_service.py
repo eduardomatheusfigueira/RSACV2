@@ -48,6 +48,9 @@ OPERACOES = frozenset({
     "pdf_fetch",
     "consent_given",
     "consent_revoked",
+    "team_invitation_issued",
+    "team_membership_created",
+    "team_membership_revoked",
 })
 
 # Categorias, não valores. "contato" é categoria; "fulano@exemplo.br" não é.

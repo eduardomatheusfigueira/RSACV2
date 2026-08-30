@@ -17,7 +17,7 @@ class Decision(str, Enum):
 
 
 class Methodology(str, Enum):
-    """Metodologias de revisão sistemática suportadas."""
+    """Metodologias de revisão sistemática suportadas (campo derivado/legado)."""
     PRISMA_SCR = "PRISMA-ScR"
     PRISMA_2020 = "PRISMA-2020"
     PRISMA_P = "PRISMA-P"
@@ -29,6 +29,80 @@ class Methodology(str, Enum):
     EBSE = "EBSE"
     UMBRELLA = "Umbrella Review"
     OTHER = "Other"
+
+
+class ReviewDesign(str, Enum):
+    """Desenhos de revisão sistemática e bibliometria catalogados (Doc 45 §5.1)."""
+    D1 = "D1"    # RS de efetividade (com/sem metanálise)
+    D2 = "D2"    # RS de prevalência ou associação
+    D3 = "D3"    # Síntese qualitativa / metassíntese
+    D4 = "D4"    # Revisão de escopo (Scoping Review)
+    D5 = "D5"    # Mapa sistemático / mapa de evidências e lacunas
+    D6 = "D6"    # Revisão de revisões (Umbrella Review)
+    D7 = "D7"    # Revisão integrativa
+    D8 = "D8"    # Revisão rápida (Rapid Review)
+    D9 = "D9"    # RS em Engenharia de Software (EBSE)
+    D10 = "D10"  # RS em Gestão / Negócios (SPAR-4-SLR)
+    D11 = "D11"  # Estudo bibliométrico / cienciométrico
+    D12 = "D12"  # Portfólio ordenado (Methodi Ordinatio)
+    D13 = "D13"  # Revisão narrativa estruturada
+    D14 = "D14"  # Outro / híbrido declarado
+
+
+class ReportingGuideline(str, Enum):
+    """Diretrizes de relato metodológico (Doc 45 §3.2, §6.1)."""
+    PRISMA_2020 = "PRISMA-2020"
+    PRISMA_SCR = "PRISMA-ScR"
+    PRISMA_P = "PRISMA-P"
+    PRISMA_S = "PRISMA-S"
+    PRIOR = "PRIOR"
+    ROSES = "ROSES"
+    ENTREQ = "ENTREQ"
+    EMERGE = "eMERGe"
+    RAMESES = "RAMESES"
+    SANRA = "SANRA"
+    BIBLIO = "BIBLIO"
+    GENERIC = "Generic"
+
+
+class ProtocolMode(str, Enum):
+    """Modos de preenchimento do protocolo (Doc 45 §8, §9)."""
+    SIMPLIFICADO = "simplificado"  # Núcleo de busca (14 campos + perguntas de extração)
+    COMPLETO = "completo"          # Gabarito oficial / Protocolo Revsist
+
+
+class ProtocolStatus(str, Enum):
+    """Estados do ciclo de vida do protocolo (Doc 45 §12.1)."""
+    RASCUNHO = "rascunho"
+    VIGENTE = "vigente"
+    CONCLUIDO = "concluido"
+
+
+class CriterionDimension(str, Enum):
+    """Dimensões conceituais dos critérios de elegibilidade (Doc 45 §14.1)."""
+    POPULACAO = "populacao"
+    DESENHO = "desenho"
+    PERIODO = "periodo"
+    IDIOMA = "idioma"
+    TIPO_DOC = "tipo_doc"
+    CONTEXTO = "contexto"
+    OUTRO = "outro"
+
+
+class CriterionAppliesAt(str, Enum):
+    """Momento de aplicação do critério de elegibilidade (Doc 45 §14.1)."""
+    TITULO_RESUMO = "titulo_resumo"
+    TEXTO_COMPLETO = "texto_completo"
+    AMBOS = "ambos"
+
+
+class AnswerType(str, Enum):
+    """Tipos de resposta das perguntas de extração de dados (Doc 45 §14.1)."""
+    TEXTO = "texto"
+    NUMERO = "numero"
+    CATEGORIA = "categoria"
+    MULTIPLA = "multipla"
+    BOOLEANO = "booleano"
 
 
 class HarvesterSource(str, Enum):

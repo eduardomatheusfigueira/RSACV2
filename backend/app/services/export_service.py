@@ -267,3 +267,272 @@ class ExportService:
                 "studies_included_in_synthesis": len(included),
             },
         }
+
+    @staticmethod
+    def generate_search_log(db: Session, project_id: str, format_type: str = "json") -> tuple[bytes | str, str, str]:
+        """
+        Gera o Registro de Busca e Confronto Metodológico nos formatos DOCX, PDF, CSV e JSON (Doc 45 D-B).
+        Retorna (conteudo, media_type, extensao).
+        """
+        import json
+        import csv
+        from app.infrastructure.persistence.models import (
+            SearchStrategyModel,
+            SearchExecutionModel,
+            ProtocolVersionModel,
+        )
+
+        project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+        protocol = db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).first()
+
+        # 1. Recupera estratégias e execuções
+        canonical_strat = None
+        executions_list = []
+        if protocol:
+            canonical_strat = db.query(SearchStrategyModel).filter(
+                SearchStrategyModel.protocol_id == protocol.id,
+                SearchStrategyModel.kind == "canonica",
+            ).first()
+
+            execs = db.query(SearchExecutionModel).filter(
+                SearchExecutionModel.protocol_id == protocol.id
+            ).order_by(SearchExecutionModel.executed_at.asc()).all()
+
+            for e in execs:
+                executions_list.append({
+                    "database": e.database,
+                    "executed_at": e.executed_at.isoformat() if e.executed_at else "",
+                    "query_sent": e.query_sent,
+                    "filters": json.loads(e.filters) if e.filters else {},
+                    "records_returned": e.records_returned,
+                    "records_after_dedup": e.records_after_dedup,
+                    "error": e.error or "",
+                })
+
+        # Fallback sintético a partir de HarvestRuns se não houver registros em SearchExecutionModel
+        if not executions_list:
+            runs = db.query(HarvestRunModel).filter(HarvestRunModel.project_id == project_id).all()
+            for r in runs:
+                executions_list.append({
+                    "database": r.source_name,
+                    "executed_at": r.created_at.isoformat() if r.created_at else "",
+                    "query_sent": f"Execução de busca na base {r.source_name}",
+                    "filters": json.loads(r.filters_applied) if r.filters_applied else {},
+                    "records_returned": r.records_found,
+                    "records_after_dedup": max(0, r.records_found - r.records_duplicate),
+                    "error": "",
+                })
+
+        # Dados estruturados base
+        log_data = {
+            "project_id": project_id,
+            "project_title": project.title if project else "Sem título",
+            "review_design": protocol.review_design if protocol else "D4",
+            "reporting_guideline": protocol.reporting_guideline if protocol else "PRISMA-ScR",
+            "protocol_version": protocol.current_version if protocol else "v1.0",
+            "canonical_query": canonical_strat.rendered_query if canonical_strat else "",
+            "canonical_blocks": json.loads(canonical_strat.blocks) if canonical_strat and canonical_strat.blocks else [],
+            "executions": executions_list,
+        }
+
+        # ── Formato JSON ────────────────────────────────────────────────
+        if format_type.lower() == "json":
+            content_str = json.dumps(log_data, indent=2, ensure_ascii=False)
+            return content_str, "application/json", "json"
+
+        # ── Formato CSV ─────────────────────────────────────────────────
+        if format_type.lower() == "csv":
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow([
+                "Base de Dados",
+                "Data/Hora de Execucao",
+                "Consulta Enviada",
+                "Filtros Aplicados",
+                "Registros Brutos",
+                "Apos Deduplicacao",
+                "Erros / Observacoes",
+            ])
+            for e in executions_list:
+                writer.writerow([
+                    neutralizar_formula(e["database"]),
+                    e["executed_at"],
+                    neutralizar_formula(e["query_sent"]),
+                    neutralizar_formula(json.dumps(e["filters"], ensure_ascii=False)),
+                    e["records_returned"],
+                    e["records_after_dedup"],
+                    neutralizar_formula(e["error"]),
+                ])
+            return output.getvalue(), "text/csv; charset=utf-8", "csv"
+
+        # ── Formato DOCX ────────────────────────────────────────────────
+        if format_type.lower() == "docx":
+            import docx
+            from docx.shared import Inches, Pt, RGBColor
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.enum.table import WD_TABLE_ALIGNMENT
+
+            doc = docx.Document()
+
+            title_p = doc.add_paragraph()
+            title_p.paragraph_format.space_after = Pt(6)
+            title_run = title_p.add_run("Registro de Busca e Confronto Metodológico (PRISMA-S)")
+            title_run.bold = True
+            title_run.font.size = Pt(16)
+            title_run.font.color.rgb = RGBColor(15, 23, 42)
+
+            sub_p = doc.add_paragraph()
+            sub_p.paragraph_format.space_after = Pt(14)
+            sub_run = sub_p.add_run(f"Projeto: {log_data['project_title']} | Versão do Protocolo: {log_data['protocol_version']}")
+            sub_run.font.size = Pt(10)
+            sub_run.font.italic = True
+            sub_run.font.color.rgb = RGBColor(71, 85, 105)
+
+            # Seção 1: Metadados do Protocolo
+            h1 = doc.add_heading("1. Metadados do Protocolo de Pesquisa", level=1)
+            meta_p = doc.add_paragraph()
+            meta_p.add_run(f"Desenho Metodológico: ").bold = True
+            meta_p.add_run(f"{log_data['review_design']}\n")
+            meta_p.add_run(f"Diretriz de Relato: ").bold = True
+            meta_p.add_run(f"{log_data['reporting_guideline']}\n")
+            meta_p.add_run(f"Estratégia Canônica: ").bold = True
+            meta_p.add_run(f"{log_data['canonical_query'] or 'Não configurada'}\n")
+
+            # Seção 2: Confronto de Execuções por Base
+            doc.add_heading("2. Registro de Execução e Coleta nas Bases de Dados", level=1)
+            
+            table = doc.add_table(rows=1, cols=5)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            hdr_cells = table.rows[0].cells
+            headers = ["Base", "Data/Hora", "Consulta Enviada", "Registros", "Pós-Dedup"]
+            for idx, h_text in enumerate(headers):
+                hdr_cells[idx].text = h_text
+                for p in hdr_cells[idx].paragraphs:
+                    for r in p.runs:
+                        r.bold = True
+                        r.font.size = Pt(9)
+
+            for e in executions_list:
+                row_cells = table.add_row().cells
+                row_cells[0].text = e["database"]
+                row_cells[1].text = e["executed_at"][:16].replace("T", " ") if e["executed_at"] else "-"
+                row_cells[2].text = e["query_sent"][:120] + ("..." if len(e["query_sent"]) > 120 else "")
+                row_cells[3].text = str(e["records_returned"])
+                row_cells[4].text = str(e["records_after_dedup"])
+                for c in row_cells:
+                    for p in c.paragraphs:
+                        for r in p.runs:
+                            r.font.size = Pt(8.5)
+
+            stream = io.BytesIO()
+            doc.save(stream)
+            stream.seek(0)
+            return stream.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"
+
+        # ── Formato PDF ─────────────────────────────────────────────────
+        if format_type.lower() == "pdf":
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib import colors
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+            stream = io.BytesIO()
+            doc_pdf = SimpleDocTemplate(
+                stream,
+                pagesize=A4,
+                rightMargin=36,
+                leftMargin=36,
+                topMargin=36,
+                bottomMargin=36,
+            )
+
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                "TitleStyle",
+                parent=styles["Heading1"],
+                fontSize=14,
+                leading=16,
+                textColor=colors.HexColor("#0f172a"),
+            )
+            body_style = ParagraphStyle(
+                "BodyStyle",
+                parent=styles["Normal"],
+                fontSize=8.5,
+                leading=11,
+                textColor=colors.HexColor("#334155"),
+            )
+            table_hdr_style = ParagraphStyle(
+                "TableHdr",
+                parent=styles["Normal"],
+                fontSize=8,
+                leading=9,
+                textColor=colors.white,
+                fontName="Helvetica-Bold",
+            )
+            table_cell_style = ParagraphStyle(
+                "TableCell",
+                parent=styles["Normal"],
+                fontSize=7.5,
+                leading=9,
+                textColor=colors.HexColor("#1e293b"),
+            )
+
+            story = []
+            story.append(Paragraph("Registro de Busca e Confronto Metodológico (PRISMA-S)", title_style))
+            story.append(Spacer(1, 4))
+            story.append(Paragraph(f"Projeto: {log_data['project_title']} | Versão do Protocolo: {log_data['protocol_version']}", body_style))
+            story.append(Spacer(1, 10))
+
+            # Resumo Metodológico
+            meta_text = (
+                f"<b>Desenho:</b> {log_data['review_design']} | "
+                f"<b>Diretriz de Relato:</b> {log_data['reporting_guideline']}<br/>"
+                f"<b>Consulta Canônica:</b> <i>{log_data['canonical_query'] or 'Definida por pares de termos'}</i>"
+            )
+            story.append(Paragraph(meta_text, body_style))
+            story.append(Spacer(1, 10))
+
+            # Tabela de Execuções
+            story.append(Paragraph("<b>Execuções de Busca por Base de Dados</b>", styles["Heading3"]))
+            story.append(Spacer(1, 6))
+
+            table_data = [
+                [
+                    Paragraph("Base", table_hdr_style),
+                    Paragraph("Data/Hora", table_hdr_style),
+                    Paragraph("Consulta Enviada", table_hdr_style),
+                    Paragraph("Brutos", table_hdr_style),
+                    Paragraph("Pós-Dedup", table_hdr_style),
+                ]
+            ]
+
+            for e in executions_list:
+                dt_str = e["executed_at"][:16].replace("T", " ") if e["executed_at"] else "-"
+                q_text = e["query_sent"][:100] + ("..." if len(e["query_sent"]) > 100 else "")
+                table_data.append([
+                    Paragraph(e["database"], table_cell_style),
+                    Paragraph(dt_str, table_cell_style),
+                    Paragraph(q_text, table_cell_style),
+                    Paragraph(str(e["records_returned"]), table_cell_style),
+                    Paragraph(str(e["records_after_dedup"]), table_cell_style),
+                ])
+
+            pdf_table = Table(table_data, colWidths=[65, 80, 240, 50, 50])
+            pdf_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]))
+            story.append(pdf_table)
+
+            doc_pdf.build(story)
+            stream.seek(0)
+            return stream.getvalue(), "application/pdf", "pdf"
+
+        # Fallback default
+        return json.dumps(log_data), "application/json", "json"
+

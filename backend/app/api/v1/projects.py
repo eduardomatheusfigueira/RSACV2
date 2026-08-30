@@ -1,12 +1,16 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-"""Revsist — Router de Projetos."""
-
+import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -19,15 +23,26 @@ from app.infrastructure.persistence.models import (
     PaperCriterionModel,
     PaperModel,
     PaperSourceModel,
+    ProjectMemberModel,
     ProjectModel,
     ProtocolModel,
     UserModel,
 )
 from app.config import settings
 from app.schemas.project import ProjectCreate, ProjectListResponse, ProjectResponse, ProjectUpdate
-from app.security.dependencies import projeto_do_usuario, require_session
+from app.security.dependencies import (
+    exige_coordenador,
+    exige_dono_do_projeto,
+    origem_do_websocket_e_permitida,
+    projeto_do_usuario,
+    require_session,
+    require_websocket_session,
+    verificar_projeto_do_usuario,
+)
+from app.services.harvesting_service import ws_manager
 from app.services.pdf_service import PDFService
 from app.security.middleware import erro_interno
+from app.domain.collaboration import MODALIDADES_VALIDAS
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +57,38 @@ def list_projects(
     db: Session = Depends(get_db),
     usuario: UserModel = Depends(require_session),
 ):
-    """Lista os projetos **de quem está pedindo**."""
-    query = db.query(ProjectModel).filter(ProjectModel.owner_id == usuario.id)
+    """Lista os projetos em que o usuário tem participação ativa."""
+    query = (
+        db.query(ProjectModel, ProjectMemberModel.project_role)
+        .join(ProjectMemberModel, ProjectMemberModel.project_id == ProjectModel.id)
+        .filter(
+            ProjectMemberModel.user_id == usuario.id,
+            ProjectMemberModel.is_active.is_(True),
+        )
+    )
     if archived is not None:
         query = query.filter(ProjectModel.is_archived == archived)
     query = query.order_by(ProjectModel.updated_at.desc())
 
-    projects = query.all()
+    results = query.all()
+    items = []
+    for project, role in results:
+        member_count = (
+            db.query(ProjectMemberModel)
+            .filter(
+                ProjectMemberModel.project_id == project.id,
+                ProjectMemberModel.is_active.is_(True),
+            )
+            .count()
+        )
+        resp = ProjectResponse.model_validate(project)
+        resp.my_role = role
+        resp.member_count = member_count
+        items.append(resp)
+
     return ProjectListResponse(
-        items=[ProjectResponse.model_validate(p) for p in projects],
-        total=len(projects),
+        items=items,
+        total=len(items),
     )
 
 
@@ -75,11 +112,20 @@ def create_project(
             ),
         )
 
+    if data.collaboration_mode not in MODALIDADES_VALIDAS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Modalidade inválida: '{data.collaboration_mode}'. Válidas: {sorted(MODALIDADES_VALIDAS)}",
+        )
+
     project = ProjectModel(
         owner_id=usuario.id,
         title=data.title,
         description=data.description,
         methodology=data.methodology,
+        collaboration_mode=data.collaboration_mode,
+        reviewers_per_paper=data.reviewers_per_paper,
+        conflict_resolution=data.conflict_resolution,
     )
     db.add(project)
     db.flush()
@@ -92,26 +138,73 @@ def create_project(
     db.refresh(project)
 
     logger.info(f"Projeto criado: '{project.title}' (ID: {project.id})")
-    return ProjectResponse.model_validate(project)
+    resp = ProjectResponse.model_validate(project)
+    resp.my_role = "coordenador"
+    resp.member_count = 1
+    return resp
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
+    request: Request,
     project: ProjectModel = Depends(projeto_do_usuario),
+    db: Session = Depends(get_db),
 ):
     """Obtém detalhes de um projeto específico."""
-    return ProjectResponse.model_validate(project)
+    membro = getattr(request.state, "membro", None)
+    member_count = (
+        db.query(ProjectMemberModel)
+        .filter(
+            ProjectMemberModel.project_id == project.id,
+            ProjectMemberModel.is_active.is_(True),
+        )
+        .count()
+    )
+    resp = ProjectResponse.model_validate(project)
+    if membro:
+        resp.my_role = membro.project_role
+    resp.member_count = member_count
+    return resp
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)
 def update_project(
     data: ProjectUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     project: ProjectModel = Depends(projeto_do_usuario),
+    _membro: ProjectMemberModel = Depends(exige_coordenador),
 ):
-    """Atualiza um projeto existente."""
+    """Atualiza um projeto existente (requer papel de coordenador)."""
 
     update_data = data.model_dump(exclude_unset=True)
+
+    # D-05: Se a modalidade de colaboração estiver sendo alterada, verificar se há decisões
+    novo_modo = update_data.get("collaboration_mode")
+    if novo_modo is not None and novo_modo != project.collaboration_mode:
+        if novo_modo not in MODALIDADES_VALIDAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Modalidade inválida: '{novo_modo}'. Válidas: {sorted(MODALIDADES_VALIDAS)}",
+            )
+        estudos_decididos = (
+            db.query(PaperModel)
+            .filter(
+                PaperModel.project_id == project.id,
+                PaperModel.decision != "Pendente",
+            )
+            .count()
+        )
+        if estudos_decididos > 0:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Não é possível alterar a modalidade de colaboração: o projeto já possui "
+                    f"{estudos_decididos} estudo(s) com decisão de triagem. Para alterar a "
+                    f"modalidade, utilize a reabertura de triagem pela coordenação."
+                ),
+            )
+
     for field, value in update_data.items():
         setattr(project, field, value)
 
@@ -119,7 +212,90 @@ def update_project(
     db.refresh(project)
 
     logger.info(f"Projeto atualizado: '{project.title}' (ID: {project.id})")
-    return ProjectResponse.model_validate(project)
+    resp = ProjectResponse.model_validate(project)
+    resp.my_role = _membro.project_role
+    return resp
+
+
+class ReabrirTriagemPayload(ProjectUpdate):
+    motivo: Optional[str] = "Reabertura de triagem pela coordenação"
+
+
+@router.post("/{project_id}/screening/reabrir")
+def reabrir_triagem(
+    payload: ReabrirTriagemPayload,
+    db: Session = Depends(get_db),
+    project: ProjectModel = Depends(projeto_do_usuario),
+    _membro: ProjectMemberModel = Depends(exige_coordenador),
+    usuario: UserModel = Depends(require_session),
+):
+    """
+    Reabre a triagem de todos os estudos decididos do projeto (Doc 43 §43.4.3).
+    Registra logs de auditoria, redefine decisões para 'Pendente' e altera a modalidade se solicitada.
+    """
+    from app.infrastructure.persistence.models import utcnow
+    from sqlalchemy import text
+
+    estudos = (
+        db.query(PaperModel)
+        .filter(PaperModel.project_id == project.id)
+        .all()
+    )
+    agora = utcnow()
+    count_decididos = 0
+
+    for paper in estudos:
+        if paper.decision != "Pendente":
+            count_decididos += 1
+            db.add(
+                AuditLogModel(
+                    paper_id=paper.id,
+                    action="screening_reopened",
+                    old_value=paper.decision,
+                    new_value="Pendente",
+                    source="manual",
+                    user_id=usuario.id,
+                    username=usuario.username,
+                    created_at=agora,
+                )
+            )
+            paper.decision = "Pendente"
+            paper.observations = ""
+            paper.ai_confidence = None
+            paper.ai_assisted = False
+
+    # Limpar critérios consolidados de papers
+    db.execute(
+        text("DELETE FROM paper_criteria WHERE paper_id IN (SELECT id FROM papers WHERE project_id = :pid)"),
+        {"pid": project.id},
+    )
+
+    if payload.collaboration_mode:
+        if payload.collaboration_mode not in MODALIDADES_VALIDAS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Modalidade inválida: '{payload.collaboration_mode}'. Válidas: {sorted(MODALIDADES_VALIDAS)}",
+            )
+        project.collaboration_mode = payload.collaboration_mode
+
+    db.commit()
+    db.refresh(project)
+
+    logger.info(
+        "[Projetos] Triagem do projeto '%s' (%s) reaberta por %s. %d estudos resetados.",
+        project.title,
+        project.id,
+        usuario.username,
+        count_decididos,
+    )
+
+    return {
+        "status": "reopened",
+        "project_id": project.id,
+        "collaboration_mode": project.collaboration_mode,
+        "papers_reset": count_decididos,
+        "message": f"Triagem reaberta com sucesso. {count_decididos} estudo(s) tiveram sua decisão redefinida para Pendente.",
+    }
 
 
 @router.delete("/{project_id}", status_code=204)
@@ -127,6 +303,7 @@ def delete_project(
     project_id: str,
     db: Session = Depends(get_db),
     project: ProjectModel = Depends(projeto_do_usuario),
+    _dono: ProjectModel = Depends(exige_dono_do_projeto),
 ):
     """
     Exclui um projeto e todos os dados associados com cascata rigorosa e segura
@@ -243,3 +420,56 @@ def get_project_stats(
         "total_harvest_runs": len(project.harvest_runs),
         "sources": {name: count for name, count in source_counts},
     }
+
+
+@router.websocket("/{project_id}/ws")
+async def project_collaboration_websocket(
+    project_id: str,
+    websocket: WebSocket,
+    db: Session = Depends(get_db),
+):
+    """
+    Canal WebSocket unificado do projeto para colaboração ao vivo e presença (Doc 43 §43.12).
+    """
+    if not origem_do_websocket_e_permitida(websocket):
+        await websocket.close(code=1008, reason="Origem não autorizada.")
+        return
+
+    usuario = await require_websocket_session(websocket, db)
+    if not usuario:
+        await websocket.close(code=1008, reason="Autenticação necessária.")
+        return
+
+    if not verificar_projeto_do_usuario(db, project_id, usuario):
+        await websocket.close(code=1008, reason="Projeto não encontrado ou acesso revogado.")
+        return
+
+    await ws_manager.connect(
+        project_id,
+        websocket,
+        user_id=usuario.id,
+        username=usuario.username,
+        screen="geral",
+    )
+    try:
+        while True:
+            raw_data = await websocket.receive_text()
+            if raw_data == "ping":
+                await websocket.send_text("pong")
+                continue
+            try:
+                msg = json.loads(raw_data)
+                if msg.get("type") == "presenca":
+                    tela = msg.get("tela", "geral")
+                    await ws_manager.update_presence(
+                        project_id=project_id,
+                        user_id=usuario.id,
+                        username=usuario.username,
+                        screen=tela,
+                    )
+            except Exception:
+                pass
+    except WebSocketDisconnect:
+        ws_manager.disconnect(project_id, websocket)
+    except Exception:
+        ws_manager.disconnect(project_id, websocket)

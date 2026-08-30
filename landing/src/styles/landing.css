@@ -1,8 +1,42 @@
 /**
  * Revsist — Landing Page Stylesheet
- * Tema: Platinum & Dusk Blue (Documento Científico Contemporâneo)
- * Totalmente autocontido, sem dependências externas e zero requisição a terceiros.
+ * Tema: Platinum & Dusk Blue (doc 40 §40.8.2)
+ *
+ * Regra que organiza tudo (doc 40 §40.8.1): a página se parece com um
+ * documento científico bem tipografado, não com uma página de startup.
+ * Réguas finas em vez de cartões com sombra, números reais em vez de
+ * contadores animados, a lista das diretrizes em vez de depoimentos.
+ *
+ * Autocontido: nenhuma requisição a terceiros, nenhuma fonte de CDN.
  */
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Tipografia auto-hospedada
+   ──────────────────────────────────────────────────────────────────────────
+   O doc 40 §40.8.2 pede Inter e JetBrains Mono em woff2 servidos da própria
+   origem — nunca do CDN do Google, que envia o IP de cada visitante a um
+   terceiro sem base legal declarada.
+
+   Os arquivos ainda não estão no repositório. Enquanto não estiverem, a
+   página usa a pilha de sistema abaixo, que é próxima o bastante em métrica
+   para não mudar o layout quando as fontes entrarem. Para ativar:
+   colocar os woff2 em `landing/public/fonts/` e descomentar este bloco.
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-variable.woff2') format('woff2-variations');
+  font-weight: 400 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-variable.woff2') format('woff2-variations');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
 
 :root {
   /* ── Cores do Tema Claro (Platinum & Dusk Blue) ────────────────────────── */
@@ -21,6 +55,10 @@
   --accent-hover: #1b3554;
   --accent-light: #6096ba;
   --accent-subtle: #e3ebf3;
+  /* Etiqueta pequena em mono sobre fundo tingido. No tema claro é o próprio
+     acento; no escuro, o acento a 12 px sobre `--bg-highlight` fica em 3,6:1
+     e reprova no WCAG AA, então ali este token clareia. */
+  --accent-label: #274c77;
 
   --border-main: #c4d3de;
   --border-subtle: #dbe5ec;
@@ -30,90 +68,19 @@
   --shadow-md: 0 4px 12px rgba(21, 41, 64, 0.08);
 
   /* ── Tipografia & Ritmo ────────────────────────────────────────────────── */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, 'Liberation Mono', Menlo, monospace;
 
-  --max-width: 1140px;
+  --max-width: 1200px;
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
+  /* Altura do cabeçalho fixo. Alimenta o `scroll-margin-top` das seções:
+     sem isso, um link de âncora esconde o próprio título atrás da barra. */
+  --header-height: 64px;
+
   --transition-speed: 200ms;
-}
-
-/* ── Tema Escuro (Automático ou Ativado Manualmente) ───────────────────── */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg-page: #0d1b2a;
-    --bg-surface: #152940;
-    --bg-surface-elevated: #1b3554;
-    --bg-surface-subtle: #1a3350;
-    --bg-highlight: #1e3a5f;
-
-    --text-main: #f0f4f8;
-    --text-muted: #cbd8e4;
-    --text-subtle: #8faec9;
-    --text-inverse: #0d1b2a;
-
-    --accent-primary: #6096ba;
-    --accent-hover: #8cb8d6;
-    --accent-light: #a3cce8;
-    --accent-subtle: #1c385c;
-
-    --border-main: #274c77;
-    --border-subtle: #1e3a5f;
-    --border-focus: #6096ba;
-
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  }
-}
-
-[data-theme='dark'] {
-  --bg-page: #0d1b2a;
-  --bg-surface: #152940;
-  --bg-surface-elevated: #1b3554;
-  --bg-surface-subtle: #1a3350;
-  --bg-highlight: #1e3a5f;
-
-  --text-main: #f0f4f8;
-  --text-muted: #cbd8e4;
-  --text-subtle: #8faec9;
-  --text-inverse: #0d1b2a;
-
-  --accent-primary: #6096ba;
-  --accent-hover: #8cb8d6;
-  --accent-light: #a3cce8;
-  --accent-subtle: #1c385c;
-
-  --border-main: #274c77;
-  --border-subtle: #1e3a5f;
-  --border-focus: #6096ba;
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme='light'] {
-  --bg-page: #e7ecef;
-  --bg-surface: #ffffff;
-  --bg-surface-elevated: #ffffff;
-  --bg-surface-subtle: #dce3e7;
-  --bg-highlight: #e3ebf3;
-
-  --text-main: #152940;
-  --text-muted: #3d5a78;
-  --text-subtle: #4d6175;
-  --text-inverse: #ffffff;
-
-  --accent-primary: #274c77;
-  --accent-hover: #1b3554;
-  --accent-light: #6096ba;
-  --accent-subtle: #e3ebf3;
-
-  --border-main: #c4d3de;
-  --border-subtle: #dbe5ec;
-  --border-focus: #274c77;
 }
 
 /* ── Reset e Base ───────────────────────────────────────────────────────── */
@@ -126,6 +93,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -135,6 +103,57 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  overflow-x: hidden;
+}
+
+img, svg {
+  max-width: 100%;
+}
+
+/* ── Foco visível (WCAG 2.1 AA, critério 2.4.7) ─────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Navegadores que ainda dão o anel padrão em clique de mouse: só o
+   `:focus-visible` acima deve desenhar. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Salto para o conteúdo (WCAG 2.4.1) ─────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--accent-primary);
+  color: var(--text-inverse);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 0 0 var(--radius-md) 0;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* Lido por leitor de tela, invisível na tela. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ── Layout & Seções ────────────────────────────────────────────────────── */
@@ -150,6 +169,8 @@ body {
 .section {
   padding: 4.5rem 0;
   border-bottom: 1px solid var(--border-main);
+  /* Compensa o cabeçalho fixo ao chegar por âncora. */
+  scroll-margin-top: var(--header-height);
 }
 
 .section:last-of-type {
@@ -172,11 +193,12 @@ body {
 }
 
 .section-title {
-  font-size: 1.85rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.5vw, 1.95rem);
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: -0.02em;
   line-height: 1.25;
+  text-wrap: balance;
 }
 
 .section-subtitle {
@@ -193,14 +215,14 @@ body {
   z-index: 100;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-main);
-  backdrop-filter: blur(8px);
 }
 
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  gap: 1rem;
+  height: var(--header-height);
 }
 
 .brand-link {
@@ -209,12 +231,14 @@ body {
   gap: 0.75rem;
   text-decoration: none;
   color: var(--text-main);
+  flex-shrink: 0;
 }
 
 .brand-mark {
   width: 26px;
   height: 32px;
   color: var(--accent-primary);
+  flex-shrink: 0;
 }
 
 .brand-name {
@@ -223,29 +247,34 @@ body {
   letter-spacing: -0.03em;
 }
 
+/* Selo BETA — etiqueta de engenharia (marca §4): mono, versalete,
+   contorno com preenchimento translúcido, cantos cirúrgicos. */
 .badge-beta {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
   padding: 0.15rem 0.4rem;
   border-radius: var(--radius-sm);
   background-color: var(--bg-surface-subtle);
-  color: var(--accent-primary);
+  color: var(--accent-label);
   border: 1px solid var(--border-main);
+  white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.1rem;
   list-style: none;
 }
 
 .nav-link {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
+  white-space: nowrap;
   transition: color var(--transition-speed);
 }
 
@@ -253,10 +282,36 @@ body {
   color: var(--accent-primary);
 }
 
+/* Seção corrente, marcada pelo script. */
+.nav-link[aria-current='true'] {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+/* Botão do menu — só existe abaixo de 1080px. */
+.btn-nav-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-main);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-nav-toggle:hover {
+  color: var(--text-main);
+  border-color: var(--accent-primary);
 }
 
 /* ── Botões ─────────────────────────────────────────────────────────────── */
@@ -266,13 +321,15 @@ body {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.65rem 1.25rem;
+  font-family: inherit;
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-speed);
+  transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
   border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -303,33 +360,13 @@ body {
   font-size: 0.8rem;
 }
 
-.btn-theme-toggle {
-  background: none;
-  border: 1px solid var(--border-main);
-  color: var(--text-muted);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-theme-toggle:hover {
-  color: var(--text-main);
-  border-color: var(--accent-primary);
+.btn-block {
+  width: 100%;
 }
 
 /* ── Seção 1: Hero ──────────────────────────────────────────────────────── */
 .hero-section {
-  padding: 5rem 0 4rem;
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem;
+  padding: 4.5rem 0 4rem;
 }
 
 .hero-content {
@@ -341,8 +378,9 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  color: var(--accent-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--accent-label);
   background-color: var(--bg-highlight);
   border: 1px solid var(--border-subtle);
   padding: 0.35rem 0.75rem;
@@ -350,13 +388,18 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.hero-eyebrow-dot {
+  color: var(--accent-light);
+}
+
 .hero-title {
-  font-size: 2.75rem;
+  font-size: clamp(2rem, 1.4rem + 3vw, 3rem);
   font-weight: 800;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.12;
   color: var(--text-main);
   margin-bottom: 1.25rem;
+  text-wrap: balance;
 }
 
 .hero-title-highlight {
@@ -364,10 +407,11 @@ body {
 }
 
 .hero-subtitle {
-  font-size: 1.2rem;
+  font-size: clamp(1.05rem, 1rem + 0.4vw, 1.2rem);
   color: var(--text-muted);
   line-height: 1.6;
   margin-bottom: 2rem;
+  max-width: 62ch;
 }
 
 .hero-cta-group {
@@ -375,13 +419,22 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hero-cta-note {
+  font-size: 0.85rem;
+  color: var(--text-subtle);
   margin-bottom: 2.5rem;
 }
 
 .hero-meta-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
+  display: grid;
+  /* 168px é o maior mínimo que ainda deixa as quatro colunas caberem nos
+     820px de `.hero-content`; em 190px a quarta caía sozinha na linha de
+     baixo. Abaixo disso a grade reduz para três, duas e uma naturalmente. */
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 1.5rem 2rem;
   padding-top: 1.75rem;
   border-top: 1px solid var(--border-subtle);
 }
@@ -389,11 +442,13 @@ body {
 .meta-item {
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
 }
 
 .meta-label {
   font-family: var(--font-mono);
   font-size: 0.7rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-subtle);
 }
@@ -404,10 +459,10 @@ body {
   color: var(--text-main);
 }
 
-/* ── Seção 2: O Problema (Números Medidos) ───────────────────────────────── */
+/* ── Seção 2: O Problema (números medidos, com fonte) ───────────────────── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 1.5rem;
 }
 
@@ -428,11 +483,12 @@ body {
 
 .stat-number {
   font-family: var(--font-mono);
-  font-size: 2.5rem;
+  font-size: clamp(2rem, 1.6rem + 1.6vw, 2.5rem);
   font-weight: 800;
   color: var(--accent-primary);
   line-height: 1;
   margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
 }
 
 .stat-headline {
@@ -451,13 +507,18 @@ body {
 
 .stat-citation {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
   color: var(--text-subtle);
   border-top: 1px solid var(--border-subtle);
   padding-top: 0.75rem;
 }
 
-/* ── Seção 3: Fluxo Metodológico (Diagrama SVG Inline) ──────────────────── */
+.stat-citation a {
+  color: inherit;
+}
+
+/* ── Seção 3: Fluxo Metodológico (diagrama SVG inline) ──────────────────── */
 .flow-diagram-wrapper {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
@@ -468,14 +529,61 @@ body {
 
 .flow-diagram-svg {
   width: 100%;
-  min-width: 800px;
+  min-width: 820px;
   height: auto;
   display: block;
 }
 
+/* O diagrama é pigmentado pelos tokens, e não por hex fixo: sem isto ele
+   fica com caixas brancas e texto azul-escuro no tema escuro. */
+.flow-rail {
+  stroke: var(--border-main);
+}
+
+.flow-node {
+  fill: var(--bg-surface);
+  stroke: var(--accent-primary);
+}
+
+.flow-node-final {
+  fill: var(--accent-primary);
+  stroke: var(--accent-primary);
+}
+
+.flow-arrow {
+  stroke: var(--accent-primary);
+}
+
+.flow-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--accent-primary);
+}
+
+.flow-sublabel {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  fill: var(--text-muted);
+}
+
+.flow-label-inverse {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text-inverse);
+}
+
+.flow-sublabel-inverse {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  fill: var(--text-inverse);
+  opacity: 0.82;
+}
+
 .flow-step-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: 1.5rem;
   margin-top: 2rem;
 }
@@ -506,63 +614,32 @@ body {
   color: var(--text-muted);
 }
 
-/* ── Seção 4: As 11 Diretrizes Suportadas ────────────────────────────────── */
-.guidelines-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
-}
-
-.guideline-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-  transition: all var(--transition-speed);
-}
-
-.guideline-card:hover {
-  border-color: var(--accent-primary);
-  background-color: var(--bg-surface-elevated);
-}
-
-.guideline-tag {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--accent-primary);
+/* ── Etiqueta de item ainda não entregue ────────────────────────────────── */
+.tag-roadmap {
   display: inline-block;
-  margin-bottom: 0.35rem;
-}
-
-.guideline-name {
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
   font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 0.35rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  border: 1px dashed var(--border-main);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.35rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
-.guideline-desc {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-}
-
-/* ── Seção 5: Assistência com Procedência ────────────────────────────────── */
+/* ── Seção: Assistência com procedência (doc 40 §40.8.3 nº 5) ───────────── */
 .provenance-box {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
   padding: 2rem;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 2rem;
-}
-
-@media (max-width: 768px) {
-  .provenance-box {
-    grid-template-columns: 1fr;
-  }
 }
 
 .provenance-item {
@@ -575,15 +652,17 @@ body {
   height: 36px;
   border-radius: var(--radius-md);
   background-color: var(--bg-highlight);
-  color: var(--accent-primary);
+  color: var(--accent-label);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: var(--font-mono);
   font-weight: 700;
+  font-size: 0.85rem;
   flex-shrink: 0;
 }
 
-.provenance-content h4 {
+.provenance-content h3 {
   font-size: 1rem;
   font-weight: 700;
   margin-bottom: 0.35rem;
@@ -594,12 +673,20 @@ body {
   color: var(--text-muted);
 }
 
-/* ── Seção 4: O Rastro de Decisão (A Prova Metodológica) ────────────────── */
+.provenance-content code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background-color: var(--bg-highlight);
+  border-radius: var(--radius-sm);
+  padding: 0.05rem 0.3rem;
+}
+
+/* ── Seção: O Rastro de Decisão (a prova metodológica) ──────────────────── */
 .trace-demo-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
   box-shadow: var(--shadow-md);
   margin-top: 1rem;
 }
@@ -622,7 +709,7 @@ body {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-label);
   background-color: var(--bg-highlight);
   border: 1px solid var(--border-main);
   padding: 0.35rem 0.75rem;
@@ -635,6 +722,13 @@ body {
   color: var(--text-subtle);
 }
 
+.trace-caption {
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+  margin-bottom: 1.25rem;
+  font-style: italic;
+}
+
 .trace-paper-info {
   margin-bottom: 1.5rem;
 }
@@ -644,7 +738,7 @@ body {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--accent-primary);
+  color: var(--accent-label);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.35rem;
@@ -665,15 +759,9 @@ body {
 
 .trace-inspection-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 1.5rem;
   margin-bottom: 1.5rem;
-}
-
-@media (max-width: 768px) {
-  .trace-inspection-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .trace-box {
@@ -693,15 +781,22 @@ body {
 .trace-submeta {
   font-family: var(--font-mono);
   font-size: 0.72rem;
+  line-height: 1.6;
   color: var(--text-subtle);
   border-top: 1px dashed var(--border-main);
   padding-top: 0.5rem;
+  /* Um SHA-256 não cabe em 320px sem isto. */
+  overflow-wrap: anywhere;
+}
+
+.trace-submeta code {
+  overflow-wrap: anywhere;
 }
 
 .trace-human-meta {
   font-size: 0.82rem;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .trace-footer {
@@ -715,10 +810,53 @@ body {
   color: var(--accent-primary);
 }
 
-/* ── Seção 6: Bases Integradas ──────────────────────────────────────────── */
+/* ── Seção: Diretrizes ──────────────────────────────────────────────────── */
+.guidelines-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  gap: 1rem;
+}
+
+.guideline-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  transition: border-color var(--transition-speed), background-color var(--transition-speed);
+}
+
+.guideline-card:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--bg-surface-elevated);
+}
+
+.guideline-tag {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent-primary);
+  display: inline-block;
+  margin-bottom: 0.35rem;
+}
+
+.guideline-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.35rem;
+}
+
+.guideline-desc {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ── Seção: Bases Integradas ────────────────────────────────────────────── */
 .sources-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
   gap: 1rem;
 }
 
@@ -734,7 +872,8 @@ body {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
-  color: var(--accent-primary);
+  letter-spacing: 0.04em;
+  color: var(--accent-label);
   background-color: var(--bg-surface-subtle);
   padding: 0.15rem 0.4rem;
   border-radius: var(--radius-sm);
@@ -753,24 +892,32 @@ body {
   color: var(--text-muted);
 }
 
-/* ── Seção 7: O Que o Revsist Não Faz (Limites Metodológicos) ───────────── */
-.boundaries-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+/* Régua de nota abaixo de uma grade — o que ainda não está lá. */
+.section-note {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  max-width: 760px;
 }
 
-@media (max-width: 768px) {
-  .boundaries-grid {
-    grid-template-columns: 1fr;
-  }
+.section-note strong {
+  color: var(--text-main);
+}
+
+/* ── Seção: O que o Revsist não faz ─────────────────────────────────────── */
+.boundaries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 2rem;
 }
 
 .boundary-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
-  padding: 2rem;
+  padding: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
 }
 
 .boundary-card-positive {
@@ -821,29 +968,24 @@ body {
   font-weight: 800;
 }
 
-/* ── Seção 7: Seus Dados & LGPD ─────────────────────────────────────────── */
+/* ── Seção: Seus Dados & LGPD ───────────────────────────────────────────── */
 .lgpd-banner {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
   border-left: 4px solid var(--accent-primary);
   border-radius: var(--radius-md);
-  padding: 2rem;
+  padding: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 2rem;
   align-items: center;
 }
 
-@media (max-width: 768px) {
-  .lgpd-banner {
-    grid-template-columns: 1fr;
-  }
-}
-
-.lgpd-text h3 {
-  font-size: 1.25rem;
+.lgpd-text h2 {
+  font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
+  letter-spacing: -0.01em;
 }
 
 .lgpd-text p {
@@ -858,17 +1000,25 @@ body {
 }
 
 .lgpd-checklist li {
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.45rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.5rem;
   color: var(--text-main);
+  line-height: 1.5;
 }
 
 .lgpd-checklist li::before {
   content: '✓';
   color: var(--accent-primary);
   font-weight: 800;
+  flex-shrink: 0;
+}
+
+.lgpd-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 /* ── Rodapé ─────────────────────────────────────────────────────────────── */
@@ -880,16 +1030,9 @@ body {
 
 .footer-top {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr repeat(3, 1fr);
   gap: 3rem;
   margin-bottom: 3rem;
-}
-
-@media (max-width: 768px) {
-  .footer-top {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-  }
 }
 
 .footer-brand p {
@@ -899,9 +1042,10 @@ body {
   max-width: 320px;
 }
 
-.footer-col h5 {
-  font-size: 0.85rem;
+.footer-col h2 {
+  font-size: 0.8rem;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   font-family: var(--font-mono);
   color: var(--text-main);
@@ -925,6 +1069,7 @@ body {
 
 .footer-links a:hover {
   color: var(--accent-primary);
+  text-decoration: underline;
 }
 
 .footer-bottom {
@@ -932,14 +1077,204 @@ body {
   border-top: 1px solid var(--border-subtle);
   display: flex;
   flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
   justify-content: space-between;
   align-items: center;
   font-size: 0.8rem;
   color: var(--text-subtle);
 }
 
+.footer-bottom a {
+  color: inherit;
+}
+
 .footer-meta {
   font-family: var(--font-mono);
+}
+
+/* ── Páginas de texto legal (/termos, /privacidade) ─────────────────────── */
+.legal-main {
+  padding: 3.5rem 0 4.5rem;
+}
+
+.legal-doc {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.legal-doc h1 {
+  font-size: clamp(1.6rem, 1.3rem + 1.5vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  text-wrap: balance;
+}
+
+.legal-meta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border-main);
+  line-height: 1.8;
+}
+
+.legal-doc h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 2.5rem 0 0.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  scroll-margin-top: calc(var(--header-height) + 1rem);
+}
+
+.legal-doc h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.legal-doc p,
+.legal-doc li {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.legal-doc p {
+  margin-bottom: 1rem;
+}
+
+.legal-doc ul,
+.legal-doc ol {
+  margin: 0 0 1rem 1.25rem;
+}
+
+.legal-doc li {
+  margin-bottom: 0.4rem;
+}
+
+.legal-doc strong {
+  color: var(--text-main);
+}
+
+.legal-doc a {
+  color: var(--accent-primary);
+}
+
+.legal-doc code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background-color: var(--bg-highlight);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.35rem;
+  overflow-wrap: anywhere;
+}
+
+.legal-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-md);
+}
+
+.legal-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  min-width: 620px;
+}
+
+.legal-doc th,
+.legal-doc td {
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  vertical-align: top;
+}
+
+.legal-doc th {
+  background-color: var(--bg-highlight);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.legal-doc tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.legal-callout {
+  background-color: var(--bg-highlight);
+  border-left: 3px solid var(--accent-primary);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.legal-callout p:last-child {
+  margin-bottom: 0;
+}
+
+/* Campo que o responsável ainda precisa preencher antes do go-live.
+   Fica visualmente óbvio de propósito — um aviso legal com lacuna é pior
+   do que um aviso legal que declara a lacuna. */
+.legal-pending {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  font-weight: 700;
+  color: var(--text-main);
+  background-color: var(--bg-surface-subtle);
+  border: 1px dashed var(--accent-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+}
+
+.legal-toc {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.legal-toc h2 {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-subtle);
+  margin: 0 0 0.75rem;
+  padding: 0;
+  border: none;
+  font-weight: 700;
+}
+
+.legal-toc ol {
+  margin: 0 0 0 1.1rem;
+  font-size: 0.88rem;
+}
+
+.legal-toc li {
+  margin-bottom: 0.3rem;
+}
+
+.legal-toc a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.legal-toc a:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
 }
 
 /* ── Efeito de Revelação ao Rolar ───────────────────────────────────────── */
@@ -954,13 +1289,198 @@ body {
   transform: translateY(0);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Grades de tela
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Medido, não estimado: marca + oito links + botões de acesso ocupam ~1.095 px.
+   Abaixo daqui o menu vira painel, senão o cabeçalho estoura a linha. */
+@media (max-width: 1160px) {
+  .nav-links {
+    position: absolute;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.5rem 1.5rem 1rem;
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-main);
+    box-shadow: var(--shadow-md);
+    max-height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+  }
+
+  .nav-links.is-open {
+    display: flex;
+  }
+
+  .nav-link {
+    padding: 0.75rem 0.25rem;
+    font-size: 0.95rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .nav-link:last-child {
+    border-bottom: none;
+  }
+
+  .btn-nav-toggle {
+    display: flex;
+    order: 3;
+  }
+}
+
+@media (max-width: 860px) {
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem 2.5rem;
+  }
+
+  .footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .container {
+    padding-left: 1.15rem;
+    padding-right: 1.15rem;
+  }
+
+  .section {
+    padding: 3.25rem 0;
+  }
+
+  .hero-section {
+    padding: 3rem 0 3rem;
+  }
+
+  .section-header {
+    margin-bottom: 2rem;
+  }
+
+  .lgpd-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card,
+  .provenance-box {
+    padding: 1.5rem;
+  }
+
+  .flow-diagram-wrapper {
+    padding: 1.5rem 1rem;
+  }
+
+  .footer-bottom {
+    justify-content: flex-start;
+  }
+}
+
+/* Abaixo daqui só o essencial cabe lado a lado. O rótulo textual dos botões
+   do topo sai; o ícone e o link "Entrar" ficam. */
+@media (max-width: 520px) {
+  .header-actions .btn-secondary {
+    display: none;
+  }
+
+  .brand-name {
+    font-size: 1.15rem;
+  }
+
+  .footer-top {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-cta-group .btn {
+    width: 100%;
+  }
+
+  .trace-header {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .badge-beta {
+    display: none;
+  }
+}
+
+/* ── Movimento reduzido ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .reveal-on-scroll {
     opacity: 1;
     transform: none;
     transition: none;
   }
-  html {
-    scroll-behavior: auto;
+
+  .stat-card:hover {
+    transform: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Contraste elevado ──────────────────────────────────────────────────── */
+@media (prefers-contrast: more) {
+  :root {
+    --border-main: #7d97ab;
+    --text-muted: #24405c;
+  }
+
+  [data-theme='dark'] {
+    --border-main: #7fa9cc;
+    --text-muted: #e3ecf5;
+  }
+}
+
+/* ── Impressão ──────────────────────────────────────────────────────────── */
+@media print {
+  .site-header,
+  .skip-link,
+  .hero-cta-group,
+  .lgpd-actions,
+  .btn {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .section {
+    padding: 1.5rem 0;
+    break-inside: avoid;
+  }
+
+  .stat-card,
+  .guideline-card,
+  .trace-demo-card,
+  .boundary-card {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  /* Num documento impresso, uma referência sem endereço é inútil. */
+  .stat-citation a::after,
+  .legal-doc a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    word-break: break-all;
   }
 }

@@ -188,6 +188,24 @@
   color: currentColor;
 }
 
+.ribbon-action-pill.trilho-active {
+  background: var(--olive-leaf);
+  color: var(--color-text-on-olive);
+  border-color: var(--olive-leaf);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.ribbon-action-pill.trilho-inactive {
+  background: var(--color-chrome-hover);
+  color: var(--color-text-tertiary);
+  border-color: var(--color-chrome-border);
+}
+
+.ribbon-action-pill.trilho-inactive:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-muted);
+}
+
 .ribbon-icon-btn {
   display: flex;
   align-items: center;

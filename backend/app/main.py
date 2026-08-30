@@ -286,7 +286,11 @@ def create_app() -> FastAPI:
         "allow_origins": settings.effective_cors_origins,
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        "allow_headers": ["Authorization", "Content-Type", "X-Requested-With"],
+        # `If-Match` carrega o controle de concorrência otimista do protocolo e
+        # da triagem (doc 43 §43.12.2). Sem ele na lista, o preflight barra o
+        # cabeçalho e o cliente de outra origem — a SPA hospedada e o Vite em
+        # desenvolvimento — grava sempre sem versão, sobrescrevendo o colega.
+        "allow_headers": ["Authorization", "Content-Type", "X-Requested-With", "If-Match"],
         "expose_headers": ["Content-Disposition", "X-PDF-Attempts"],
         "max_age": 600,
     }
@@ -410,13 +414,22 @@ def create_app() -> FastAPI:
                 if cand and cand.is_file():
                     return FileResponse(cand)
 
+                # Página da landing servida por diretório: `/termos` e
+                # `/privacidade` compilam para `termos/index.html` e
+                # `privacidade/index.html`. Sem esta tentativa, o caminho não
+                # casa nenhum arquivo e cai na SPA lá embaixo — quem clicasse
+                # em "Termos de uso" receberia a aplicação React.
+                cand = _resolve_within(landing_root, f"{full_path.rstrip('/')}/index.html")
+                if cand and cand.is_file():
+                    return FileResponse(cand)
+
             # Arquivos estáticos da SPA
             if spa_root:
                 cand = _resolve_within(spa_root, full_path)
                 if cand and cand.is_file():
                     return FileResponse(cand)
 
-            # Se for rota do app (/projects, /login, /settings) -> serve SPA
+            # Se for rota do app (/projects, /settings) -> serve SPA
             if spa_root and (spa_root / "index.html").is_file():
                 return FileResponse(spa_root / "index.html")
 

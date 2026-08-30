@@ -1754,6 +1754,196 @@ select {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   PRESENÇA AO VIVO (doc 43 §43.12.1)
+
+   A mesma barra aparece no Protocolo e na Triagem. Estava declarada como
+   `.protocol-presence-bar` na folha do Protocolo, e a Triagem a reaproveitava
+   com um `style` inline para corrigir a margem — dependência silenciosa entre
+   duas páginas. Aqui ela tem nome próprio e uma margem só.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.presence-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.presence-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.presence-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-semibold);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SELOS DE COLABORAÇÃO (papel na revisão e modalidade do projeto)
+
+   Vivem aqui, e não na folha de uma página, porque o mesmo selo aparece no
+   cartão de projeto e na tela de Equipe: duas cópias divergiriam na primeira
+   vez que uma delas fosse ajustada.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Selos de papel e modalidade — mesma gramática de `.badge-methodology`:
+   superfície do tema, moldura afundada e tinta medida para contraste. Cores
+   cruas quebrariam nos treze temas, que trocam fundo e tinta por completo. */
+.badge-role {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.badge-role.role-coordenador {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+.badge-role.role-revisor {
+  background: var(--color-info-bg);
+  color: var(--color-info-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-info) 35%, transparent);
+}
+
+.badge-role.role-observador {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.badge-collab-mode {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-semibold);
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.badge-collab-mode.mode-cega_por_pares {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+.badge-collab-mode.mode-colaborativa {
+  background: var(--color-success-bg);
+  color: var(--color-success-on-surface);
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+
+.badge-collab-mode.mode-individual {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.collab-preview-desc {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-subtle);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.collab-preview-desc p {
+  margin: 0;
+}
+
+.badge-team-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-neo-raised);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  position: relative;
+  z-index: var(--z-sticky);
+  transition: all var(--transition-fast);
+}
+
+.badge-team-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+  background: var(--color-bg-tertiary);
+}
+
+.badge-team-btn:active {
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.role-filter-tabs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.filter-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-neo-raised);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-tab-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+}
+
+.filter-tab-btn.active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-neo-sunken);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    CARD & WINDOW FRAMES (Crisp Architectural Panels)
    ═══════════════════════════════════════════════════════════════════════ */
 

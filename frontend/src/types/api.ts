@@ -36,6 +36,8 @@ export type CanonicalDocumentType =
   | 'Relatório Técnico'
   | 'Outro'
 
+export type CollaborationMode = 'individual' | 'colaborativa' | 'cega_por_pares'
+
 // ── Project ───────────────────────────────────────────────────────────
 
 export interface Project {
@@ -43,15 +45,23 @@ export interface Project {
   title: string
   description: string
   methodology: Methodology
+  collaboration_mode?: CollaborationMode
+  reviewers_per_paper?: number
+  conflict_resolution?: string
   created_at: string
   updated_at: string
   is_archived: boolean
+  my_role?: 'coordenador' | 'revisor' | 'observador'
+  member_count?: number
 }
 
 export interface ProjectCreate {
   title: string
   description?: string
   methodology: Methodology
+  collaboration_mode?: CollaborationMode
+  reviewers_per_paper?: number
+  conflict_resolution?: string
 }
 
 export interface ProjectUpdate {
@@ -59,6 +69,22 @@ export interface ProjectUpdate {
   description?: string
   methodology?: Methodology
   is_archived?: boolean
+  collaboration_mode?: CollaborationMode
+  reviewers_per_paper?: number
+  conflict_resolution?: string
+}
+
+export interface ReopenScreeningPayload {
+  collaboration_mode?: CollaborationMode
+  motivo?: string
+}
+
+export interface ReopenScreeningResponse {
+  status: string
+  project_id: string
+  collaboration_mode: string
+  papers_reset: number
+  message: string
 }
 
 export interface ProjectListResponse {
@@ -72,12 +98,17 @@ export interface Criterion {
   id?: string
   text: string
   is_exclusion: boolean
+  dimension?: 'populacao' | 'desenho' | 'periodo' | 'idioma' | 'tipo_doc' | 'contexto' | 'outro' | string
+  applies_at?: 'titulo_resumo' | 'texto_completo' | 'ambos' | string
   order: number
 }
 
 export interface ExtractionQuestion {
   id?: string
   text: string
+  answer_type?: 'texto' | 'numero' | 'categoria' | 'multipla' | 'booleano' | string
+  options?: string[]
+  required?: boolean
   order: number
 }
 
@@ -91,31 +122,217 @@ export interface SearchFilters {
   target_databases?: string[]
 }
 
+export interface SearchStrategyBlock {
+  key: string
+  label: string
+  terms: string[]
+}
+
+export interface SearchStrategy {
+  id: string
+  protocol_id: string
+  kind: 'canonica' | 'adaptacao' | string
+  database: string
+  blocks: SearchStrategyBlock[]
+  combination: string
+  target_fields: string[]
+  limits: Record<string, any>
+  rendered_query: string
+  adaptation_note: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SearchExecution {
+  id: string
+  protocol_id: string
+  harvest_run_id?: string | null
+  database: string
+  query_sent: string
+  filters: Record<string, any>
+  executed_at: string
+  records_returned: number
+  records_after_dedup: number
+  error?: string | null
+}
+
+export interface ProtocolVersion {
+  id: string
+  protocol_id: string
+  label: string
+  snapshot: Record<string, any>
+  content_hash: string
+  frozen_at: string
+  frozen_by_user_id?: string | null
+  frozen_by_username?: string | null
+}
+
+export interface ProtocolAmendment {
+  id: string
+  protocol_id: string
+  from_version: string
+  to_version: string
+  diff: Record<string, any>
+  reason: string
+  project_phase: string
+  created_at: string
+  created_by_user_id?: string | null
+  created_by_username?: string | null
+}
+
+export interface ChecklistAudit {
+  id: string
+  protocol_id: string
+  guideline: string
+  item_id: string
+  state: 'atendido' | 'nao_aplica' | 'pendente' | string
+  location: string
+  justification: string
+  updated_at: string
+  updated_by_user_id?: string | null
+}
+
+export interface ProtocolGate {
+  gate_name: string
+  stage: string
+  passed: boolean
+  requirements: string[]
+  missing: string[]
+  is_blocking: boolean
+  warning_message?: string | null
+}
+
+export interface ProtocolReadiness {
+  overall_percentage: number
+  mode: 'simplificado' | 'completo' | string
+  review_design: string
+  checklist_guideline: string
+  total_checklist_items: number
+  completed_checklist_items: number
+  gates: ProtocolGate[]
+  summary_badge: string
+}
+
+export interface ReviewDesignMeta {
+  id: string
+  name: string
+  when_to_use: string
+  default_framework: string
+  default_reporting: string
+  conduct_standards: string[]
+  critical_appraisal_requirement: 'obrigatoria' | 'opcional' | 'nao_se_aplica' | string
+  expected_synthesis: string
+  registry_eligibility: string
+  suggested_extraction_questions: string[]
+}
+
+export interface ReportingGuidelineMeta {
+  id: string
+  name: string
+  description: string
+  item_count: number
+  reference: string
+}
+
+export interface ConductStandardMeta {
+  id: string
+  name: string
+  organization: string
+  description: string
+  reference: string
+}
+
+export interface QuestionFrameworkMeta {
+  id: string
+  name: string
+  components: Array<{ key: string; label: string }>
+  recommended_for: string
+}
+
+export interface AppraisalInstrumentMeta {
+  id: string
+  name: string
+  applicable_to: string
+  domains: string[]
+  reference: string
+}
+
+export interface ProtocolCatalog {
+  designs: ReviewDesignMeta[]
+  guidelines: ReportingGuidelineMeta[]
+  standards: ConductStandardMeta[]
+  frameworks: QuestionFrameworkMeta[]
+  instruments: AppraisalInstrumentMeta[]
+}
+
 export interface Protocol {
   id: string
   project_id: string
+  mode: 'simplificado' | 'completo' | string
+  review_design: string
+  reporting_guideline: string
+  conduct_standards: string[]
+  question_framework: Record<string, any>
   objective: string
   pico_framework: Record<string, string>
   search_descriptors: Record<string, string[]>
   search_filters?: SearchFilters
   manuscript_sections?: Record<string, string>
+  appraisal?: Record<string, any>
+  synthesis?: Record<string, any>
+  bibliometrics?: Record<string, any>
+  status: 'rascunho' | 'vigente' | 'emenda' | 'concluido' | string
+  current_version?: string | null
   created_at: string
   updated_at: string
   criteria: Criterion[]
   extraction_questions: ExtractionQuestion[]
+  search_strategies?: SearchStrategy[]
+  latest_executions?: SearchExecution[]
+  scope_stamp?: string | null
 }
 
 export interface ProtocolUpdate {
+  mode?: 'simplificado' | 'completo' | string
+  review_design?: string
+  reporting_guideline?: string
+  conduct_standards?: string[]
+  question_framework?: Record<string, any>
   objective?: string
   pico_framework?: Record<string, string>
   search_descriptors?: Record<string, string[]>
   search_filters?: SearchFilters
   manuscript_sections?: Record<string, string>
+  appraisal?: Record<string, any>
+  synthesis?: Record<string, any>
+  bibliometrics?: Record<string, any>
   criteria?: Criterion[]
   extraction_questions?: ExtractionQuestion[]
 }
 
-// ── Paper ─────────────────────────────────────────────────────────────
+// ── Paper & Screening ──────────────────────────────────────────────────
+
+export type ScreeningStatus =
+  | 'aguardando'
+  | 'parcial'
+  | 'consenso'
+  | 'conflito'
+  | 'resolvido'
+  | 'legado'
+
+export interface PaperScreening {
+  id: string
+  paper_id: string
+  reviewer_id: string
+  reviewer_username?: string | null
+  decision: Decision | string
+  observations: string
+  criteria_evaluations: Record<string, boolean>
+  ai_confidence?: number | null
+  ai_assisted: boolean
+  decided_at?: string | null
+  updated_at: string
+}
 
 export interface Paper {
   id: string
@@ -137,6 +354,14 @@ export interface Paper {
   observations: string
   ai_confidence: number | null
   criteria_evaluations?: Record<string, boolean>
+  screening_status?: ScreeningStatus
+  reviewers_completed_count?: number
+  reviewers_required_count?: number
+  my_screening?: PaperScreening | null
+  screenings?: PaperScreening[] | null
+  conflict_resolved_by_user_id?: string | null
+  conflict_resolved_by_username?: string | null
+  conflict_resolved_at?: string | null
   pdf_path: string | null
   pdf_text_extracted: boolean
   pdf_status?: PdfStatus
@@ -186,6 +411,30 @@ export interface PaperListResponse {
   total_pages: number
 }
 
+export interface ConflictResolutionPayload {
+  decision: Decision
+  observations?: string
+  criteria_evaluations?: Record<string, boolean>
+}
+
+export interface AgreementMetrics {
+  total_papers: number
+  evaluated_papers_count: number
+  raw_agreement: number | null
+  raw_agreement_percent: number
+  cohen_kappa: number | null
+  kappa_classification: string
+  concordant_count: number
+  discordant_count: number
+  contingency_matrix: {
+    both_included: number
+    both_excluded: number
+    r1_included_r2_excluded?: number
+    r1_excluded_r2_included?: number
+    divergent: number
+  }
+}
+
 // ── Harvest ───────────────────────────────────────────────────────────
 
 export interface HarvestStartRequest {
@@ -214,6 +463,8 @@ export interface HarvestRun {
   records_duplicate: number
   status: string
   error_message: string | null
+  run_by_user_id?: string | null
+  run_by_username?: string | null
 }
 
 export interface HarvestRunListResponse {
@@ -752,6 +1003,63 @@ export interface HealthResponse {
   status: string
   version: string
   database: string
+}
+
+// ── Equipe e Convites de Projeto (doc 43 §43.3, Fase 1) ─────────────────
+
+export type ProjectRoleType = 'coordenador' | 'revisor' | 'observador'
+
+export interface ProjectMember {
+  id: string
+  project_id: string
+  user_id: string
+  username: string
+  display_name?: string
+  email?: string
+  project_role: ProjectRoleType
+  is_active: boolean
+  joined_at: string
+  left_at?: string
+}
+
+export interface ProjectInvitationCreate {
+  email?: string
+  project_role: ProjectRoleType
+  note?: string
+}
+
+export interface ProjectInvitation {
+  id: string
+  project_id: string
+  code: string
+  email?: string
+  project_role: ProjectRoleType
+  created_by_user_id: string
+  created_by_username?: string
+  created_at: string
+  expires_at: string
+  accepted_at?: string
+  accepted_by_user_id?: string
+  accepted_by_username?: string
+  revoked_at?: string
+  is_valid: boolean
+  note: string
+}
+
+export interface TeamResponse {
+  project_id: string
+  members: ProjectMember[]
+  invitations: ProjectInvitation[]
+  my_role: ProjectRoleType
+  my_user_id: string
+}
+
+export interface AcceptInvitationResponse {
+  status: string
+  project_id: string
+  project_title: string
+  project_role: ProjectRoleType
+  message: string
 }
 
 // ── Electron API ──────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ import {
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { Button, Card, EmptyState, FormGroup, Input, LoadingState, PageHeader, Select } from '@/components/ui'
-import type { InsightsFilters, NameCount, ProjectInsights } from '@/types/api'
+import type { AgreementMetrics, InsightsFilters, NameCount, ProjectInsights } from '@/types/api'
 import { formatarPercentual } from './insightsFormat'
 import './InsightsPage.css'
 
@@ -160,6 +160,7 @@ export function InsightsPage(): JSX.Element {
   const { activeProject, setActiveProject } = useSettingsStore()
 
   const [dados, setDados] = useState<ProjectInsights | null>(null)
+  const [agreement, setAgreement] = useState<AgreementMetrics | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [atualizando, setAtualizando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -177,8 +178,14 @@ export function InsightsPage(): JSX.Element {
           const proj = await api.getProject(id)
           if (!cancelado) setActiveProject(proj)
         }
-        const resultado = await api.getInsights(id, filtros)
-        if (!cancelado) setDados(resultado)
+        const [resultado, metrics] = await Promise.all([
+          api.getInsights(id, filtros),
+          api.getAgreementMetrics(id).catch(() => null),
+        ])
+        if (!cancelado) {
+          setDados(resultado)
+          if (metrics) setAgreement(metrics)
+        }
       } catch (e) {
         console.error('Erro ao carregar indicadores:', e)
         if (!cancelado) setErro('Não foi possível carregar os indicadores deste projeto.')
@@ -327,7 +334,7 @@ export function InsightsPage(): JSX.Element {
         funil de critérios e o volume por base continuam sobre o projeto inteiro.
       </p>
 
-      <div className="insights-grid">
+      <div className="insights-grid" data-trilho-target="prisma-flowchart">
         {/* ── Funil PRISMA ──────────────────────────────────────────── */}
         <Bloco
           titulo="Funil de identificação e triagem"
@@ -584,6 +591,71 @@ export function InsightsPage(): JSX.Element {
                 </>
               )}
             </>
+          )}
+        </Bloco>
+
+        {/* ── Concordância Interobservador e Kappa de Cohen (Doc 43 §43.9) ── */}
+        <Bloco
+          titulo="Concordância Interobservador (Kappa de Cohen)"
+          descricao="Estatística de confiabilidade e concordância metodológica entre pares independentes (Doc 43 §43.9)."
+        >
+          {!agreement || agreement.evaluated_papers_count === 0 ? (
+            <EmptyState
+              size="inline"
+              title="Sem estudos com triagem independente suficiente"
+              description="O cálculo de concordância requer ao menos 1 estudo avaliado por 2 revisores distintos."
+            />
+          ) : (
+            <div className="insights-concordancia-container">
+              <div className="insights-concordancia-cards">
+                <div className="insights-kappa-card">
+                  <span className="insights-stat-label">Kappa de Cohen (κ)</span>
+                  <span className="insights-kappa-value">
+                    {agreement.cohen_kappa !== null ? agreement.cohen_kappa.toFixed(3) : '—'}
+                  </span>
+                  <span className={`insights-kappa-badge kappa-${agreement.kappa_classification.toLowerCase().split(' ')[0]}`}>
+                    {agreement.kappa_classification}
+                  </span>
+                </div>
+                <div className="insights-kappa-card">
+                  <span className="insights-stat-label">Concordância Bruta (Po)</span>
+                  <span className="insights-po-value">{agreement.raw_agreement_percent}%</span>
+                  <span className="insights-po-detail">
+                    {agreement.concordant_count} de {agreement.evaluated_papers_count} estudos em acordo
+                  </span>
+                </div>
+              </div>
+
+              <div className="insights-contingency-table-wrapper">
+                <p className="insights-bloco__subtitulo">Matriz de Contingência Cruzada (2x2)</p>
+                <table className="insights-contingency-table">
+                  <thead>
+                    <tr>
+                      <th>Julgamento</th>
+                      <th>Estudos</th>
+                      <th>Percentual</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span className="dot-included">●</span> Ambos Incluíram</td>
+                      <td><strong>{agreement.contingency_matrix.both_included}</strong></td>
+                      <td>{((agreement.contingency_matrix.both_included / agreement.evaluated_papers_count) * 100).toFixed(1)}%</td>
+                    </tr>
+                    <tr>
+                      <td><span className="dot-excluded">●</span> Ambos Excluíram</td>
+                      <td><strong>{agreement.contingency_matrix.both_excluded}</strong></td>
+                      <td>{((agreement.contingency_matrix.both_excluded / agreement.evaluated_papers_count) * 100).toFixed(1)}%</td>
+                    </tr>
+                    <tr>
+                      <td><span className="dot-divergent">●</span> Divergentes (Conflito)</td>
+                      <td><strong>{agreement.contingency_matrix.divergent}</strong></td>
+                      <td>{((agreement.contingency_matrix.divergent / agreement.evaluated_papers_count) * 100).toFixed(1)}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </Bloco>
       </div>

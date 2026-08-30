@@ -12,6 +12,13 @@ import type {
   ProjectStats,
   Protocol,
   ProtocolUpdate,
+  ProtocolCatalog,
+  ProtocolReadiness,
+  SearchStrategy,
+  SearchExecution,
+  ProtocolVersion,
+  ProtocolAmendment,
+  ChecklistAudit,
   Paper,
   PaperCreate,
   PaperUpdate,
@@ -24,6 +31,13 @@ import type {
   AIScreeningSingleResult,
   ProtocolSuggestions,
   ExtractionResponse,
+  TeamResponse,
+  ProjectMember,
+  ProjectInvitation,
+  ProjectInvitationCreate,
+  AcceptInvitationResponse,
+  ReopenScreeningPayload,
+  ReopenScreeningResponse,
 } from '@/types/api'
 
 import { useLogStore } from '@/stores/useLogStore'
@@ -452,18 +466,126 @@ class APIClient {
     return this.request<void>(`/projects/${id}`, { method: 'DELETE' })
   }
 
+  async reopenScreening(
+    projectId: string,
+    data: ReopenScreeningPayload = {}
+  ): Promise<ReopenScreeningResponse> {
+    return this.request<ReopenScreeningResponse>(`/projects/${projectId}/screening/reabrir`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async getProjectStats(id: string): Promise<ProjectStats> {
     return this.request<ProjectStats>(`/projects/${id}/stats`)
   }
 
-  // ── Protocols ─────────────────────────────────────────────────────
+  // ── Protocols (4 Eixos, Estratégia, Versões e Auditoria) ──────────
+
+  async getProtocolCatalog(): Promise<ProtocolCatalog> {
+    return this.request<ProtocolCatalog>('/protocol-catalog')
+  }
 
   async getProtocol(projectId: string): Promise<Protocol> {
     return this.request<Protocol>(`/projects/${projectId}/protocol`)
   }
 
-  async updateProtocol(projectId: string, data: ProtocolUpdate): Promise<Protocol> {
+  async updateProtocol(projectId: string, data: ProtocolUpdate, ifMatch?: string): Promise<Protocol> {
+    const headers: Record<string, string> = {}
+    if (ifMatch) {
+      headers['If-Match'] = ifMatch
+    }
     return this.request<Protocol>(`/projects/${projectId}/protocol`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    })
+  }
+
+  async switchProtocolMode(projectId: string, mode: 'simplificado' | 'completo'): Promise<Protocol> {
+    return this.request<Protocol>(`/projects/${projectId}/protocol/mode`, {
+      method: 'POST',
+      body: JSON.stringify({ mode }),
+    })
+  }
+
+  async switchReviewDesign(projectId: string, review_design: string): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/protocol/design`, {
+      method: 'POST',
+      body: JSON.stringify({ review_design }),
+    })
+  }
+
+  async getProtocolReadiness(projectId: string): Promise<ProtocolReadiness> {
+    return this.request<ProtocolReadiness>(`/projects/${projectId}/protocol/readiness`)
+  }
+
+  async getSearchStrategies(projectId: string): Promise<SearchStrategy[]> {
+    return this.request<SearchStrategy[]>(`/projects/${projectId}/protocol/search-strategy`)
+  }
+
+  async saveSearchStrategy(projectId: string, data: any): Promise<SearchStrategy> {
+    return this.request<SearchStrategy>(`/projects/${projectId}/protocol/search-strategy`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async renderSearchStrategy(
+    projectId: string,
+    data: { database: string; blocks: any[]; combination?: string; limits?: any }
+  ): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/protocol/search-strategy/render`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async analyzePressReview(
+    projectId: string,
+    data: { blocks: any[]; combination?: string }
+  ): Promise<any> {
+    return this.request<any>(`/projects/${projectId}/protocol/search-strategy/press`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async freezeProtocolVersion(projectId: string, label: string): Promise<ProtocolVersion> {
+    return this.request<ProtocolVersion>(`/projects/${projectId}/protocol/freeze`, {
+      method: 'POST',
+      body: JSON.stringify({ label }),
+    })
+  }
+
+  async listProtocolVersions(projectId: string): Promise<ProtocolVersion[]> {
+    return this.request<ProtocolVersion[]>(`/projects/${projectId}/protocol/versions`)
+  }
+
+  async createProtocolAmendment(
+    projectId: string,
+    data: { from_version: string; to_version: string; reason: string; project_phase: string; diff?: any }
+  ): Promise<ProtocolAmendment> {
+    return this.request<ProtocolAmendment>(`/projects/${projectId}/protocol/amendments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async listProtocolAmendments(projectId: string): Promise<ProtocolAmendment[]> {
+    return this.request<ProtocolAmendment[]>(`/projects/${projectId}/protocol/amendments`)
+  }
+
+  async getChecklistAudits(projectId: string, guideline?: string): Promise<ChecklistAudit[]> {
+    const qs = guideline ? `?guideline=${encodeURIComponent(guideline)}` : ''
+    return this.request<ChecklistAudit[]>(`/projects/${projectId}/protocol/checklist-audit${qs}`)
+  }
+
+  async updateChecklistAuditItem(
+    projectId: string,
+    data: { guideline: string; item_id: string; state: string; location?: string; justification?: string }
+  ): Promise<ChecklistAudit> {
+    return this.request<ChecklistAudit>(`/projects/${projectId}/protocol/checklist-audit`, {
       method: 'PUT',
       body: JSON.stringify(data),
     })
@@ -477,6 +599,7 @@ class APIClient {
       page?: number
       page_size?: number
       decision?: string
+      screening_status?: string
       search?: string
       source?: string
     }
@@ -485,6 +608,7 @@ class APIClient {
     if (params?.page) searchParams.set('page', String(params.page))
     if (params?.page_size) searchParams.set('page_size', String(params.page_size))
     if (params?.decision) searchParams.set('decision', params.decision)
+    if (params?.screening_status) searchParams.set('screening_status', params.screening_status)
     if (params?.search) searchParams.set('search', params.search)
     if (params?.source) searchParams.set('source', params.source)
 
@@ -503,11 +627,37 @@ class APIClient {
     return this.request<Paper>(`/projects/${projectId}/papers/${paperId}`)
   }
 
-  async updatePaper(projectId: string, paperId: string, data: PaperUpdate): Promise<Paper> {
+  async updatePaper(projectId: string, paperId: string, data: PaperUpdate, ifMatch?: string): Promise<Paper> {
+    const headers: Record<string, string> = {}
+    if (ifMatch) {
+      headers['If-Match'] = ifMatch
+    }
     return this.request<Paper>(`/projects/${projectId}/papers/${paperId}`, {
       method: 'PATCH',
+      headers,
       body: JSON.stringify(data),
     })
+  }
+
+  // ── Screening, Conflicts & Agreement (Doc 43) ──────────────────────
+
+  async listScreeningConflicts(projectId: string): Promise<Paper[]> {
+    return this.request<Paper[]>(`/projects/${projectId}/screening/conflitos`)
+  }
+
+  async resolveScreeningConflict(
+    projectId: string,
+    paperId: string,
+    data: import('@/types/api').ConflictResolutionPayload
+  ): Promise<Paper> {
+    return this.request<Paper>(`/projects/${projectId}/screening/conflitos/${paperId}/resolver`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getAgreementMetrics(projectId: string): Promise<import('@/types/api').AgreementMetrics> {
+    return this.request<import('@/types/api').AgreementMetrics>(`/projects/${projectId}/screening/concordancia`)
   }
 
   // ── Harvest ───────────────────────────────────────────────────────
@@ -1005,6 +1155,45 @@ class APIClient {
         body: JSON.stringify({ new_password: newPassword || undefined }),
       }
     )
+  }
+
+  // ── Pesquisa em Equipe e Convites de Projeto (doc 43, Fase 1) ──────
+
+  async getTeam(projectId: string): Promise<TeamResponse> {
+    return this.request<TeamResponse>(`/projects/${projectId}/team`)
+  }
+
+  async getTeamMembers(projectId: string): Promise<ProjectMember[]> {
+    return this.request<ProjectMember[]>(`/projects/${projectId}/team/members`)
+  }
+
+  async removeTeamMember(projectId: string, userId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/projects/${projectId}/team/members/${userId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async getTeamInvitations(projectId: string): Promise<ProjectInvitation[]> {
+    return this.request<ProjectInvitation[]>(`/projects/${projectId}/team/invitations`)
+  }
+
+  async createTeamInvitation(projectId: string, data: ProjectInvitationCreate): Promise<ProjectInvitation> {
+    return this.request<ProjectInvitation>(`/projects/${projectId}/team/invitations`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async revokeTeamInvitation(projectId: string, inviteId: string): Promise<{ status: string; message: string }> {
+    return this.request<{ status: string; message: string }>(`/projects/${projectId}/team/invitations/${inviteId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async acceptTeamInvitation(code: string): Promise<AcceptInvitationResponse> {
+    return this.request<AcceptInvitationResponse>(`/projects/invitations/${code}/accept`, {
+      method: 'POST',
+    })
   }
 }
 
