@@ -11,16 +11,8 @@
  */
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Tipografia auto-hospedada
-   ──────────────────────────────────────────────────────────────────────────
-   O doc 40 §40.8.2 pede Inter e JetBrains Mono em woff2 servidos da própria
-   origem — nunca do CDN do Google, que envia o IP de cada visitante a um
-   terceiro sem base legal declarada.
-
-   Os arquivos ainda não estão no repositório. Enquanto não estiverem, a
-   página usa a pilha de sistema abaixo, que é próxima o bastante em métrica
-   para não mudar o layout quando as fontes entrarem. Para ativar:
-   colocar os woff2 em `landing/public/fonts/` e descomentar este bloco.
+   Tipografia auto-hospedada (doc 40 §40.8.2 e doc 51 §51.2 item 5)
+   ────────────────────────────────────────────────────────────────────────── */
 
 @font-face {
   font-family: 'Inter';
@@ -36,7 +28,6 @@
   font-style: normal;
   font-display: swap;
 }
-*/
 
 :root {
   /* ── Cores do Tema Claro (Platinum & Dusk Blue) ────────────────────────── */
@@ -459,72 +450,53 @@ img, svg {
   color: var(--text-main);
 }
 
-/* ── Seção 2: O Problema (números medidos, com fonte) ───────────────────── */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: 1.5rem;
-}
-
-.stat-card {
-  background-color: var(--bg-surface);
+/* ── Componente: Figura de Tela Real do App (doc 51 §51.5 A3) ──────────── */
+.figura-tela {
+  margin: 1.5rem 0;
   border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  transition: transform var(--transition-speed), border-color var(--transition-speed);
+  background-color: var(--bg-surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-speed);
 }
 
-.stat-card:hover {
-  transform: translateY(-2px);
+.figura-tela:hover {
   border-color: var(--accent-primary);
 }
 
-.stat-number {
+.figura-hero {
+  margin-top: 2rem;
+  margin-bottom: 0;
+  box-shadow: var(--shadow-md);
+}
+
+.img-tela {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-subtle);
+}
+
+.figura-tela figcaption {
   font-family: var(--font-mono);
-  font-size: clamp(2rem, 1.6rem + 1.6vw, 2.5rem);
-  font-weight: 800;
-  color: var(--accent-primary);
-  line-height: 1;
-  margin-bottom: 0.75rem;
-  letter-spacing: -0.02em;
-}
-
-.stat-headline {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 0.5rem;
-}
-
-.stat-desc {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  flex-grow: 1;
-  margin-bottom: 1.25rem;
-}
-
-.stat-citation {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   line-height: 1.5;
-  color: var(--text-subtle);
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 0.75rem;
+  color: var(--text-muted);
+  background-color: var(--bg-surface);
+  padding: 0.85rem 1.25rem;
 }
 
-.stat-citation a {
-  color: inherit;
-}
-
-/* ── Seção 3: Fluxo Metodológico (diagrama SVG inline) ──────────────────── */
+/* ── Seção 1: Fluxo Metodológico com 6 Blocos e Prints Reais ────────────── */
 .flow-diagram-wrapper {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
   border-radius: var(--radius-lg);
-  padding: 2.5rem 1.5rem;
+  padding: 2rem 1.5rem;
   overflow-x: auto;
+  margin-bottom: 2.5rem;
 }
 
 .flow-diagram-svg {
@@ -534,8 +506,6 @@ img, svg {
   display: block;
 }
 
-/* O diagrama é pigmentado pelos tokens, e não por hex fixo: sem isto ele
-   fica com caixas brancas e texto azul-escuro no tema escuro. */
 .flow-rail {
   stroke: var(--border-main);
 }
@@ -581,233 +551,63 @@ img, svg {
   opacity: 0.82;
 }
 
-.flow-step-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
+.fluxo-blocos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
 }
 
-.step-card {
-  padding: 1.5rem;
+.fluxo-bloco-card {
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.25rem, 1rem + 1.2vw, 2rem);
+  box-shadow: var(--shadow-sm);
 }
 
-.step-number {
+.fluxo-bloco-header {
+  margin-bottom: 1.25rem;
+}
+
+.fluxo-bloco-etapa {
   font-family: var(--font-mono);
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--accent-primary);
-  margin-bottom: 0.35rem;
-}
-
-.step-title {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.step-desc {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-}
-
-/* ── Etiqueta de item ainda não entregue ────────────────────────────────── */
-.tag-roadmap {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-subtle);
-  border: 1px dashed var(--border-main);
-  border-radius: var(--radius-sm);
-  padding: 0.1rem 0.35rem;
-  margin-left: 0.4rem;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-/* ── Seção: Assistência com procedência (doc 40 §40.8.3 nº 5) ───────────── */
-.provenance-box {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-  gap: 2rem;
-}
-
-.provenance-item {
-  display: flex;
-  gap: 1rem;
-}
-
-.provenance-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  background-color: var(--bg-highlight);
-  color: var(--accent-label);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
-.provenance-content h3 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin-bottom: 0.35rem;
-}
-
-.provenance-content p {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-}
-
-.provenance-content code {
-  font-family: var(--font-mono);
-  font-size: 0.82em;
-  background-color: var(--bg-highlight);
-  border-radius: var(--radius-sm);
-  padding: 0.05rem 0.3rem;
-}
-
-/* ── Seção: O Rastro de Decisão (a prova metodológica) ──────────────────── */
-.trace-demo-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-lg);
-  padding: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
-  box-shadow: var(--shadow-md);
-  margin-top: 1rem;
-}
-
-.trace-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: 1.5rem;
-}
-
-.trace-badge-included {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--accent-label);
-  background-color: var(--bg-highlight);
-  border: 1px solid var(--border-main);
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--radius-sm);
-}
-
-.trace-meta-mono {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-subtle);
-}
-
-.trace-caption {
-  font-size: 0.82rem;
-  color: var(--text-subtle);
-  margin-bottom: 1.25rem;
-  font-style: italic;
-}
-
-.trace-paper-info {
-  margin-bottom: 1.5rem;
-}
-
-.trace-label {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--accent-label);
-  text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
   margin-bottom: 0.35rem;
 }
 
-.trace-paper-title {
-  font-size: 1.15rem;
+.fluxo-bloco-titulo {
+  font-size: clamp(1.2rem, 1.1rem + 0.6vw, 1.5rem);
   font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 0.35rem;
-}
-
-.trace-paper-abstract {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.trace-inspection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.trace-box {
-  background-color: var(--bg-highlight);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-}
-
-.trace-box-content {
-  font-size: 0.88rem;
   color: var(--text-main);
   margin-bottom: 0.75rem;
-  line-height: 1.5;
 }
 
-.trace-submeta {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  line-height: 1.6;
-  color: var(--text-subtle);
-  border-top: 1px dashed var(--border-main);
-  padding-top: 0.5rem;
-  /* Um SHA-256 não cabe em 320px sem isto. */
-  overflow-wrap: anywhere;
-}
-
-.trace-submeta code {
-  overflow-wrap: anywhere;
-}
-
-.trace-human-meta {
-  font-size: 0.82rem;
+.fluxo-bloco-desc {
+  font-size: 0.95rem;
+  line-height: 1.65;
   color: var(--text-muted);
-  line-height: 1.6;
+  max-width: 960px;
 }
 
-.trace-footer {
-  border-top: 1px solid var(--border-subtle);
-  padding-top: 1rem;
+/* ── Seção 2: O Rastro de Decisão e Auditoria ────────────────────────────── */
+.rastro-destaque-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+  box-shadow: var(--shadow-sm);
 }
 
-.trace-footer-note {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent-primary);
+.rastro-texto-prosa {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  margin-bottom: 1.75rem;
+  max-width: 980px;
 }
 
 /* ── Seção: Diretrizes ──────────────────────────────────────────────────── */
@@ -817,155 +617,409 @@ img, svg {
   gap: 1rem;
 }
 
-.guideline-card {
+/* ── Seção 3: Diretrizes, Bases e Limites (grade densa unificada) ───────── */
+.escopo-denso-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+  gap: 1.75rem;
+}
+
+.escopo-col {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-main);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-  transition: border-color var(--transition-speed), background-color var(--transition-speed);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
 }
 
-.guideline-card:hover {
-  border-color: var(--accent-primary);
-  background-color: var(--bg-surface-elevated);
+.escopo-col-header {
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.guideline-tag {
+.escopo-col-tag {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
   color: var(--accent-primary);
-  display: inline-block;
-  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
 }
 
-.guideline-name {
-  font-size: 1rem;
+.escopo-col-title {
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-main);
-  margin-bottom: 0.35rem;
 }
 
-.guideline-desc {
+.escopo-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex-grow: 1;
+}
+
+.escopo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.escopo-item-nome {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.escopo-item-nome code {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background-color: var(--bg-highlight);
+  color: var(--accent-label);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+}
+
+.escopo-item-desc {
   font-size: 0.82rem;
   color: var(--text-muted);
   line-height: 1.45;
 }
 
-/* ── Seção: Bases Integradas ────────────────────────────────────────────── */
-.sources-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-  gap: 1rem;
-}
-
-.source-item {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-md);
-  padding: 1.25rem;
-  text-align: center;
-}
-
-.source-badge {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--accent-label);
-  background-color: var(--bg-surface-subtle);
-  padding: 0.15rem 0.4rem;
-  border-radius: var(--radius-sm);
-  display: inline-block;
-  margin-bottom: 0.5rem;
-}
-
-.source-name {
-  font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
-}
-
-.source-desc {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-/* Régua de nota abaixo de uma grade — o que ainda não está lá. */
-.section-note {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border-subtle);
+.escopo-limite-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
   font-size: 0.88rem;
-  color: var(--text-muted);
-  max-width: 760px;
-}
-
-.section-note strong {
-  color: var(--text-main);
-}
-
-/* ── Seção: O que o Revsist não faz ─────────────────────────────────────── */
-.boundaries-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-  gap: 2rem;
-}
-
-.boundary-card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-lg);
-  padding: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
-}
-
-.boundary-card-positive {
-  border-top: 4px solid var(--accent-primary);
-}
-
-.boundary-card-negative {
-  border-top: 4px solid var(--text-subtle);
-}
-
-.boundary-title {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 1.25rem;
-}
-
-.boundary-list {
-  list-style: none;
-  font-size: 0.88rem;
-}
-
-.boundary-list li {
-  margin-bottom: 0.75rem;
-  padding-left: 1.5rem;
-  position: relative;
   color: var(--text-muted);
   line-height: 1.5;
 }
 
-.boundary-list li strong {
+.escopo-limite-item .icone-limite {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: var(--text-subtle);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.escopo-limite-item strong {
   color: var(--text-main);
 }
 
-.boundary-card-positive .boundary-list li::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: var(--accent-primary);
-  font-weight: 800;
+/* ── Layout e Tipografia do Blog ────────────────────────────────────────── */
+.blog-index-layout,
+.blog-article-layout {
+  padding: 3.5rem 0 5rem;
 }
 
-.boundary-card-negative .boundary-list li::before {
-  content: '✕';
-  position: absolute;
-  left: 0;
-  color: var(--text-subtle);
+.blog-index-header {
+  margin-bottom: 3rem;
+  max-width: 800px;
+}
+
+.blog-index-title {
+  font-size: clamp(2rem, 1.6rem + 1.8vw, 2.75rem);
   font-weight: 800;
+  color: var(--text-main);
+  margin: 0.5rem 0 1rem;
+}
+
+.blog-index-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 2rem;
+}
+
+.blog-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--transition-speed), border-color var(--transition-speed);
+}
+
+.blog-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-primary);
+}
+
+.blog-card-meta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-subtle);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.blog-card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.blog-card-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.blog-card-title a:hover {
+  color: var(--accent-primary);
+}
+
+.blog-card-summary {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  flex-grow: 1;
+  margin-bottom: 1.5rem;
+}
+
+.blog-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 1rem;
+}
+
+.read-more-link {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.read-more-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Página do Artigo (Post) ────────────────────────────────────────────── */
+.article-container {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.breadcrumb-nav {
+  margin-bottom: 2rem;
+}
+
+.breadcrumb-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  color: var(--text-subtle);
+}
+
+.breadcrumb-list a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.breadcrumb-list a:hover {
+  text-decoration: underline;
+}
+
+.article-header {
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border-main);
+  padding-bottom: 2rem;
+}
+
+.article-meta-top {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-subtle);
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.meta-dot {
+  color: var(--text-subtle);
+}
+
+.article-title {
+  font-size: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.25;
+  margin-bottom: 1.25rem;
+}
+
+.article-lead {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.article-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background-color: var(--bg-highlight);
+  color: var(--accent-label);
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+}
+
+.prose {
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--text-main);
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.5rem;
+}
+
+.prose h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose p {
+  margin-bottom: 1.35rem;
+}
+
+.prose ul, .prose ol {
+  margin-bottom: 1.5rem;
+  padding-left: 1.75rem;
+}
+
+.prose li {
+  margin-bottom: 0.5rem;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.92rem;
+}
+
+.prose th, .prose td {
+  border: 1px solid var(--border-main);
+  padding: 0.75rem 1rem;
+  text-align: left;
+}
+
+.prose th {
+  background-color: var(--bg-surface-subtle);
+  font-weight: 700;
+}
+
+.article-cta-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-main);
+  border-left: 4px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  padding: 2rem;
+  margin: 3.5rem 0 2rem;
+}
+
+.article-cta-box h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.article-cta-box p {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 1.25rem;
+}
+
+.article-cta-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.post-related {
+  margin-top: 3.5rem;
+  border-top: 1px solid var(--border-main);
+  padding-top: 2rem;
+}
+
+.post-related h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.post-related ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.post-related li {
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.post-related a {
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.post-related a:hover {
+  text-decoration: underline;
+}
+
+.related-date {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
 }
 
 /* ── Seção: Seus Dados & LGPD ───────────────────────────────────────────── */
@@ -1366,8 +1420,8 @@ img, svg {
     grid-template-columns: 1fr;
   }
 
-  .stat-card,
-  .provenance-box {
+  .fluxo-bloco-card,
+  .rastro-destaque-box {
     padding: 1.5rem;
   }
 
@@ -1422,7 +1476,8 @@ img, svg {
     transition: none;
   }
 
-  .stat-card:hover {
+  .blog-card:hover,
+  .figura-tela:hover {
     transform: none;
   }
 
@@ -1468,17 +1523,18 @@ img, svg {
     break-inside: avoid;
   }
 
-  .stat-card,
-  .guideline-card,
-  .trace-demo-card,
-  .boundary-card {
+  .figura-tela,
+  .fluxo-bloco-card,
+  .rastro-destaque-box,
+  .escopo-col,
+  .lgpd-banner {
     break-inside: avoid;
     box-shadow: none;
   }
 
   /* Num documento impresso, uma referência sem endereço é inútil. */
-  .stat-citation a::after,
-  .legal-doc a[href^='http']::after {
+  .legal-doc a[href^='http']::after,
+  .prose a[href^='http']::after {
     content: ' (' attr(href) ')';
     font-size: 0.85em;
     word-break: break-all;
