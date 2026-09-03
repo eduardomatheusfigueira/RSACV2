@@ -13,6 +13,7 @@ from sqlalchemy import or_, func
 
 from app.api.deps import get_db
 from app.domain.collaboration import politica_de
+from app.domain.triabilidade import filtro_com_resumo, filtro_sem_resumo
 from app.infrastructure.persistence.models import (
     AuditLogModel,
     PaperCriterionModel,
@@ -65,11 +66,21 @@ def list_papers(
     screening_status: Optional[str] = Query(None, description="Filtrar por status de triagem"),
     search: Optional[str] = Query(None, description="Busca textual em título, autores ou abstract"),
     source: Optional[str] = Query(None, description="Filtrar por base fonte"),
+    sort_by: str = Query("year_desc", description="Critério de ordenação: year_desc, year_asc, title_asc, title_desc, authors_asc, authors_desc, confidence_desc, confidence_asc, updated_desc, created_desc"),
     include_duplicates: bool = Query(False, description="Se deve incluir registros marcados como duplicatas"),
+    com_resumo: Optional[bool] = Query(
+        None,
+        description=(
+            "Recorta por triabilidade: `true` devolve só o que tem resumo utilizável "
+            "(a fila da triagem assistida), `false` só o que não tem. Omitido, devolve "
+            "os dois — um registro sem resumo continua no acervo e continua contando "
+            "no fluxo PRISMA."
+        ),
+    ),
     db: Session = Depends(get_db),
     usuario: Optional[UserModel] = Depends(require_session),
 ):
-    """Lista artigos de um projeto com filtros, paginação e proteção de cegueira no servidor."""
+    """Lista artigos de um projeto com filtros, ordenação configurável, paginação e proteção de cegueira no servidor."""
     projeto = getattr(request.state, "projeto", None)
     membro = getattr(request.state, "membro", None)
     is_coordinator = bool(membro and membro.project_role == "coordenador")
@@ -89,6 +100,11 @@ def list_papers(
 
     if not include_duplicates:
         query = query.filter(or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)))
+
+    if com_resumo is True:
+        query = query.filter(filtro_com_resumo(PaperModel))
+    elif com_resumo is False:
+        query = query.filter(filtro_sem_resumo(PaperModel))
 
     if screening_status:
         query = query.filter(func.lower(PaperModel.screening_status) == screening_status.lower())
@@ -112,9 +128,33 @@ def list_papers(
     total = query.count()
     total_pages = math.ceil(total / page_size) if total > 0 else 1
 
+    # Mapeamento de ordenação (ano mais recente primeiro por padrão)
+    sort_key = (sort_by or "year_desc").lower().strip()
+    year_expr = func.nullif(PaperModel.year, "")
+
+    if sort_key == "year_asc":
+        query = query.order_by(year_expr.asc().nullslast(), PaperModel.created_at.asc())
+    elif sort_key == "title_asc":
+        query = query.order_by(PaperModel.title.asc().nullslast())
+    elif sort_key == "title_desc":
+        query = query.order_by(PaperModel.title.desc().nullslast())
+    elif sort_key == "authors_asc":
+        query = query.order_by(PaperModel.authors.asc().nullslast())
+    elif sort_key == "authors_desc":
+        query = query.order_by(PaperModel.authors.desc().nullslast())
+    elif sort_key == "confidence_desc":
+        query = query.order_by(PaperModel.ai_confidence.desc().nullslast(), year_expr.desc().nullslast())
+    elif sort_key == "confidence_asc":
+        query = query.order_by(PaperModel.ai_confidence.asc().nullslast(), year_expr.desc().nullslast())
+    elif sort_key == "updated_desc":
+        query = query.order_by(PaperModel.updated_at.desc())
+    elif sort_key == "created_desc":
+        query = query.order_by(PaperModel.created_at.desc())
+    else:  # Padrão: year_desc (ano mais recente primeiro, mais antigos depois, nulos por último)
+        query = query.order_by(year_expr.desc().nullslast(), PaperModel.created_at.desc())
+
     papers = (
-        query.order_by(PaperModel.updated_at.desc())
-        .offset((page - 1) * page_size)
+        query.offset((page - 1) * page_size)
         .limit(page_size)
         .all()
     )

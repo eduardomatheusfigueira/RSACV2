@@ -231,6 +231,7 @@ class OpenAlexHarvester(BaseHarvester):
                                 journal=journal_name,
                                 institution="OpenAlex",
                                 matched_descriptor=desc_clean,
+                                extra_metadata={"raw_work": work},
                             )
 
                             if paper.title:

@@ -81,4 +81,25 @@ class FieldAssistResponse(BaseModel):
 
 class BatchScreeningRequest(BaseModel):
     limit: int = Field(default=50, ge=1, le=500)
-    concurrency: int = Field(default=3, ge=1, le=10)
+    concurrency: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description=(
+            "Estudos analisados ao mesmo tempo. O padrão é 1, e a interface não "
+            "oferece outro valor: o gargalo é o provedor, não o aplicativo, de "
+            "modo que o paralelismo não acelerava o que importa e multiplicava a "
+            "chance de recusa por limite. O campo continua aceitando mais para "
+            "quem tem cota folgada e chama a API diretamente."
+        ),
+    )
+    pausa_entre_estudos: float = Field(
+        default=4.0,
+        ge=0.0,
+        le=30.0,
+        description=(
+            "Intervalo mínimo, em segundos, entre disparos ao provedor. Limitar "
+            "apenas a concorrência não basta: com uma chamada rápida, mesmo um "
+            "estudo por vez ultrapassa o limite por minuto do provedor."
+        ),
+    )

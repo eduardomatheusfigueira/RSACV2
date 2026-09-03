@@ -13,11 +13,13 @@
  * dentro a variedade que se queria tirar de lá.
  */
 
+import React from 'react'
 import { HelpCircle, Plus } from 'lucide-react'
 import { Card } from '@/components/ui'
 import type { GuiaEstruturado } from '@/data/guiasDoProtocolo'
 
-export interface CampoDoProtocoloProps {
+export interface CampoDoProtocoloProps
+  extends Omit<React.HTMLAttributes<HTMLElement>, 'title' | 'children'> {
   /** Ícone da seção, à esquerda do título. */
   icone: React.ReactNode
   titulo: string
@@ -47,6 +49,8 @@ export interface CampoDoProtocoloProps {
      */
     aoInserirModelo?: () => void
   }
+  /** Cartão mais apertado — usado no trio de campos automáticos do núcleo. */
+  compact?: boolean
   children: React.ReactNode
 }
 
@@ -59,10 +63,18 @@ export function CampoDoProtocolo({
   ajuda,
   assistencia,
   guia,
+  compact = false,
   children,
+  className = '',
+  ...resto
 }: CampoDoProtocoloProps): JSX.Element {
   return (
-    <Card surface="secundaria" className="protocol-card">
+    <Card
+      surface="secundaria"
+      compact={compact}
+      className={`protocol-card ${className}`.trim()}
+      {...resto}
+    >
       <div className="item-header-meta">
         <span className={`item-tag ${essencial ? 'essential' : 'optional'}`}>{etiquetaItem}</span>
         <span className="item-section-tag">{secao}</span>

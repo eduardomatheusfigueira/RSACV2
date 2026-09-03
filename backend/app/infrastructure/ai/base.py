@@ -135,6 +135,7 @@ class BaseAIClient(ABC):
         project_context: Optional[dict] = None,
         action: str = "generate",
         custom_instruction: str = "",
+        field_id: str = "",
     ) -> dict:
         """Preenche, corrige ou aprimora o conteúdo de um campo específico com system prompt adequado."""
         pass
@@ -144,3 +145,71 @@ class BaseAIClient(ABC):
         """Testa conectividade e validade das chaves com o provedor."""
         pass
 
+    async def diagnosticar_conexao(self) -> "DiagnosticoDeConexao":
+        """
+        Testa a conexão e explica o resultado.
+
+        A implementação padrão apenas embrulha `test_connection()`, para que um
+        provedor novo continue funcionando sem precisar reescrever nada. Quem
+        consegue distinguir as causas — como o cliente do Gemini — sobrescreve.
+        """
+        try:
+            ok = await self.test_connection()
+        except Exception as e:  # noqa: BLE001
+            return DiagnosticoDeConexao(
+                ok=False,
+                mensagem=f"Não foi possível falar com o provedor: {e}",
+                provedor=self.provider_name,
+                modelo=self.model_name,
+            )
+        return DiagnosticoDeConexao(
+            ok=ok,
+            mensagem=(
+                "Conexão estabelecida."
+                if ok
+                else "O provedor recusou a chamada. Verifique a chave e o modelo configurados."
+            ),
+            provedor=self.provider_name,
+            modelo=self.model_name,
+        )
+
+
+class ProvedorIndisponivel(RuntimeError):
+    """
+    O provedor recusou a chamada por limite ou cota — não por causa do estudo.
+
+    Existe para separar duas falhas que a triagem em lote tratava como uma só.
+    "Este resumo não deu para analisar" é problema de um artigo, e o lote deve
+    seguir para o próximo. "A cota da sua chave acabou" é problema de todos os
+    artigos, e insistir só transforma 100 estudos em 100 falhas — que foi
+    exatamente o que se via: um lote que rodava inteiro, terminava, e não
+    decidia nada.
+    """
+
+    def __init__(self, mensagem: str, *, esgotado_por_cota: bool = False):
+        super().__init__(mensagem)
+        self.esgotado_por_cota = esgotado_por_cota
+
+
+@dataclass
+class DiagnosticoDeConexao:
+    """
+    O que o teste de conexão descobriu — e não apenas se deu certo.
+
+    `test_connection()` devolvia um booleano, e a rota transformava qualquer
+    `False` na mesma frase: "Verifique a API Key ou endpoint". Isso é enganoso
+    na maioria dos casos reais. Uma recusa por limite de taxa, uma chave entre
+    oito que expirou e um modelo fora de catálogo têm causas e soluções
+    diferentes, e o pesquisador não tem como distingui-las se a mensagem é
+    sempre a mesma — chegando a trocar chaves que estavam boas.
+    """
+
+    ok: bool
+    mensagem: str
+    provedor: str = ""
+    modelo: str = ""
+    chaves_testadas: int = 0
+    chaves_boas: int = 0
+    chaves_recusadas: int = 0
+    chaves_ignoradas: int = 0
+    limite_de_taxa: bool = False

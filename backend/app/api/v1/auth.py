@@ -83,6 +83,8 @@ from app.services import ropa_service
 
 logger = logging.getLogger(__name__)
 
+from app.security import bilhete_de_canal
+
 public_auth_router = APIRouter(prefix="/auth", tags=["auth"])
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -782,6 +784,27 @@ def logout(
 def me(usuario: UserModel = Depends(require_session)):
     """Identidade da sessão corrente."""
     return _serializar(usuario)
+
+
+@router.post("/ws-ticket", status_code=200)
+def emitir_bilhete_de_canal(usuario: UserModel = Depends(require_session)):
+    """
+    Emite a credencial de uso único que abre um WebSocket.
+
+    Existe porque abrir um WebSocket é a única requisição em que o navegador
+    não deixa mandar cabeçalho: o token de sessão não tem por onde ir, e o
+    cookie — `SameSite=strict`, de propósito — não viaja quando a interface
+    está numa origem e a API em outra. Esta rota é uma requisição HTTP comum,
+    autenticada pelo que houver (cookie ou token), e devolve um bilhete que
+    vale por instantes e serve só para isto.
+
+    Ver `app/security/bilhete_de_canal.py` para o porquê de não devolver
+    simplesmente o token da sessão.
+    """
+    return {
+        "ticket": bilhete_de_canal.emitir(usuario.id),
+        "expires_in": int(bilhete_de_canal.VALIDADE_SEGUNDOS),
+    }
 
 
 @router.post("/terms/accept", response_model=UserResponse)

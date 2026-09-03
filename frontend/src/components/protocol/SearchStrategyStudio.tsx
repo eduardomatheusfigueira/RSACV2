@@ -14,6 +14,8 @@ import {
 import type { SearchFilters, SearchStrategy, SearchStrategyBlock } from '@/types/api'
 import { Button, Input, Dialog, DialogContent, DialogTitlebar, DialogBody, DialogFooter } from '@/components/ui'
 import { api } from '@/api/client'
+import { AIAssistButton } from '@/components/common/AIAssistButton'
+import type { FerramentasDeApoio } from './apoioDoProtocolo'
 import './ProtocolStudio.css'
 
 /** Bases com adaptador declarado no backend (doc 45 §10.2). */
@@ -30,6 +32,8 @@ interface SearchStrategyStudioProps {
    */
   searchFilters?: SearchFilters
   onStrategySaved?: (strat: SearchStrategy) => void
+  /** Guia e assistência por campo (doc 45 §16.4). Ver `apoioDoProtocolo.ts`. */
+  apoio?: FerramentasDeApoio
   readOnly?: boolean
 }
 
@@ -38,6 +42,7 @@ export function SearchStrategyStudio({
   strategy,
   searchFilters,
   onStrategySaved,
+  apoio,
   readOnly = false,
 }: SearchStrategyStudioProps): JSX.Element {
   const [blocks, setBlocks] = useState<SearchStrategyBlock[]>(() => {
@@ -191,6 +196,22 @@ export function SearchStrategyStudio({
     }
   }
 
+  /**
+   * Substitui os termos de um bloco pelo que a assistência devolveu, um termo
+   * por linha. Substitui em vez de acrescentar porque o pesquisador vê a lista
+   * proposta antes de aplicar, e porque `AIAssistButton` já oferece desfazer.
+   */
+  const aplicarTermosSugeridos = (blockIdx: number, texto: string) => {
+    const termos = texto
+      .split('\n')
+      .map((t) => t.replace(/^[-*\d.)\s]+/, '').trim())
+      .filter(Boolean)
+    if (termos.length === 0) return
+    const novos = [...blocks]
+    novos[blockIdx] = { ...novos[blockIdx], terms: termos }
+    setBlocks(novos)
+  }
+
   const consultaCanonica = generateLiveCanonicalQuery()
 
   const handleCopyQuery = (text: string) => {
@@ -264,7 +285,22 @@ export function SearchStrategyStudio({
             </div>
 
             <div className="strategy-block__terms">
-              <span className="strategy-block__terms-label">Termos e sinônimos (OR)</span>
+              <div className="strategy-block__terms-head">
+                <span className="strategy-block__terms-label">Termos e sinônimos (OR)</span>
+                {!readOnly && (
+                  <AIAssistButton
+                    fieldId={`search_block_${block.key}`}
+                    fieldLabel={`Sinônimos do bloco ${block.key} — ${block.label}`}
+                    currentValue={block.terms.filter(Boolean).join('\n')}
+                    fieldGuidelines={`Liste termos de busca para o conceito "${block.label}", um por linha, sem numeração e sem operadores. Inclua sinônimos, variantes de grafia, plurais, siglas por extenso e as traduções em inglês e espanhol que a literatura da área efetivamente usa.`}
+                    projectTitle={apoio?.projeto?.titulo}
+                    methodology={apoio?.projeto?.metodologia}
+                    projectContext={apoio?.contexto?.('search_strategy')}
+                    onApply={(texto) => aplicarTermosSugeridos(bIdx, texto)}
+                    compact
+                  />
+                )}
+              </div>
 
               {block.terms.map((term, tIdx) => (
                 <div key={tIdx} className="strategy-term">

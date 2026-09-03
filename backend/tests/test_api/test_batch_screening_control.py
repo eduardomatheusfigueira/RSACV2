@@ -73,7 +73,20 @@ def client(db_session, contas, monkeypatch):
     )
     for i in range(6):
         db_session.add(
-            PaperModel(id=f"p{i}", project_id=PROJETO, title=f"Artigo {i}", decision="Pendente")
+            PaperModel(
+                id=f"p{i}",
+                project_id=PROJETO,
+                title=f"Artigo {i}",
+                # Resumo de tamanho realista: desde que registros sem resumo
+                # utilizável saíram da fila da triagem assistida, um artigo sem
+                # `abstract` é — corretamente — ignorado pelo lote, e o teste
+                # falharia por um motivo que não é o que ele investiga.
+                abstract=(
+                    "Resumo de teste com extensão suficiente para a triagem assistida: "
+                    "este estudo analisa um recorte empírico e apresenta resultados."
+                ),
+                decision="Pendente",
+            )
         )
     db_session.commit()
 

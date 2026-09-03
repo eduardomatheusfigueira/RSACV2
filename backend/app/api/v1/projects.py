@@ -402,6 +402,22 @@ def get_project_stats(
     excluded = papers.filter(PaperModel.decision == "Excluído").count()
     pending = papers.filter(PaperModel.decision == "Pendente").count()
 
+    # Pendentes que a triagem assistida não alcança, por falta de resumo. É
+    # deliberado que este número apareça: eles saem da fila da assistência, mas
+    # continuam no acervo e no fluxo PRISMA, e some-los seria perder a conta.
+    from app.domain.triabilidade import filtro_com_resumo, filtro_sem_resumo
+
+    pending_sem_resumo = (
+        papers.filter(PaperModel.decision == "Pendente")
+        .filter(filtro_sem_resumo(PaperModel))
+        .count()
+    )
+    pending_triaveis = (
+        papers.filter(PaperModel.decision == "Pendente")
+        .filter(filtro_com_resumo(PaperModel))
+        .count()
+    )
+
     # Contagem por fonte
     from app.infrastructure.persistence.models import PaperSourceModel
     source_counts = (
@@ -417,6 +433,8 @@ def get_project_stats(
         "included_papers": included,
         "excluded_papers": excluded,
         "pending_papers": pending,
+        "pending_triaveis": pending_triaveis,
+        "pending_sem_resumo": pending_sem_resumo,
         "total_harvest_runs": len(project.harvest_runs),
         "sources": {name: count for name, count in source_counts},
     }

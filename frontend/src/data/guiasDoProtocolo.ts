@@ -355,3 +355,167 @@ Os resultados oferecem um panorama estruturado para gestores públicos, formulad
     ],
   },
 }
+
+/**
+ * Guias dos campos abertos pelo doc 45 — o Núcleo de Busca do modo Simplificado,
+ * o desenho da revisão, a estratégia canônica e as emendas.
+ *
+ * Foram escritos depois dos 14 originais, e por um motivo específico: o modo
+ * Simplificado nasceu sem nenhum botão de guia, o que contradizia o que o
+ * Estúdio já entregava no modo Completo. Um campo sem guia é um campo em que o
+ * pesquisador adivinha o que se espera dele — e adivinhar é exatamente o que um
+ * protocolo existe para evitar.
+ */
+export const GUIAS_DO_NUCLEO: Record<string, GuiaEstruturado> = {
+  objective: {
+    rotuloBotao: 'Guia da Pergunta (?)',
+    tituloBotao: 'Ver guia de formulação da pergunta e do objetivo',
+    titulo: 'Estrutura da Pergunta e do Objetivo',
+    modelo: {
+      rotulo: 'Inserir Estrutura no Editor',
+      confirmacao: 'Substituir a pergunta e o objetivo pelo modelo estruturado?',
+      texto: (ctx) => `Pergunta de Pesquisa:
+Quais [conceito central] estão documentados na literatura sobre [população/fenômeno] em [contexto territorial e temporal]?
+
+Objetivo Geral:
+Mapear e sintetizar, conforme ${ctx.diretriz}, a produção científica que trata de [tema], identificando [o que se pretende caracterizar].
+
+Objetivos Específicos:
+(a) caracterizar a distribuição temporal, geográfica e institucional dos estudos;
+(b) identificar as abordagens teóricas e metodológicas predominantes;
+(c) apontar as lacunas que orientam a agenda futura de pesquisa.`,
+    },
+    itens: [
+      { tag: '1. Pergunta única e respondível', desc: 'Uma pergunta central, não uma lista de temas. Se não for possível respondê-la com os estudos que a busca trará, ela ainda é ampla demais.' },
+      { tag: '2. Alinhada ao desenho', desc: 'Pergunta aberta de mapeamento pede revisão de escopo; pergunta fechada de efeito pede revisão sistemática. A pergunta é que escolhe o desenho, não o contrário.' },
+      { tag: '3. Objetivo no infinitivo', desc: 'Mapear, caracterizar, comparar, estimar — o verbo declara o que a revisão entrega.' },
+      { tag: '4. Recorte explícito', desc: 'Território, período e população entram já na pergunta; é o que a torna verificável.' },
+    ],
+  },
+
+  question_framework: {
+    rotuloBotao: 'Guia do Framework (?)',
+    tituloBotao: 'Ver guia de decomposição estruturada da pergunta',
+    titulo: 'Como decompor a pergunta em componentes',
+    itens: [
+      { tag: 'PCC — escopo', desc: 'População, Conceito, Contexto. É o framework do JBI para revisões de escopo: não pede comparador nem desfecho, porque a revisão mapeia em vez de medir.' },
+      { tag: 'PICO / PICOS — efetividade', desc: 'População, Intervenção, Comparação, Desfecho (e Desenho do estudo, quando ele próprio é critério de elegibilidade).' },
+      { tag: 'PECO — observacional', desc: 'Troca Intervenção por Exposição. É o formato de perguntas ambientais, epidemiológicas e de política pública em que ninguém "aplicou" nada.' },
+      { tag: 'SPIDER — qualitativa', desc: 'Sample, Phenomenon of Interest, Design, Evaluation, Research type. Fala em amostra, e não em população, porque a síntese qualitativa não busca representatividade.' },
+      { tag: 'CIMO — gestão e políticas', desc: 'Contexto, Intervenção, Mecanismo, Desfecho. Responde "o que funciona, para quem, em que circunstâncias e por quê".' },
+      { tag: 'Para que serve preencher', desc: 'Cada componente vira um bloco de conceito da estratégia de busca. É esta ligação que impede a busca de nascer desalinhada da pergunta.' },
+    ],
+  },
+
+  review_design: {
+    rotuloBotao: 'Guia dos Desenhos (?)',
+    tituloBotao: 'Ver como escolher o desenho da revisão',
+    titulo: 'Como escolher o desenho da revisão',
+    itens: [
+      { tag: '1. Sua pergunta é fechada?', desc: 'Não → revisão de escopo (mapear o que existe) ou mapa sistemático (catalogar sem sintetizar). Sim → siga adiante.' },
+      { tag: '2. A unidade de análise', desc: 'Se você vai ler revisões sistemáticas em vez de estudos primários, o desenho é revisão de revisões (umbrella), com AMSTAR 2 e tratamento da sobreposição.' },
+      { tag: '3. O que você quer produzir', desc: 'Estimativa de efeito → metanálise. Compreensão de experiências → síntese qualitativa. Frequência ou associação → revisão de prevalência. Mapa da estrutura do campo → estudo bibliométrico.' },
+      { tag: '4. O que o desenho arrasta', desc: 'A escolha define o framework sugerido, a diretriz de relato, se a apreciação crítica é obrigatória e se a revisão é elegível a registro no PROSPERO.' },
+      { tag: '5. Pode mudar depois', desc: 'Trocar o desenho não apaga nada do que já foi preenchido — mas, se a busca já rodou, a mudança é uma emenda e pede justificativa registrada.' },
+    ],
+  },
+
+  search_strategy: {
+    rotuloBotao: 'Guia da Estratégia (?)',
+    tituloBotao: 'Ver guia de construção da estratégia de busca',
+    titulo: 'Anatomia de uma estratégia reproduzível',
+    itens: [
+      { tag: '1. Um bloco por conceito', desc: 'Cada bloco corresponde a um componente da pergunta. Dois conceitos no mesmo bloco tornam a busca imprecisa; um conceito partido em dois blocos a torna estreita demais.' },
+      { tag: '2. Sinônimos unidos por OR', desc: 'Dentro do bloco entram variantes, plurais, sinônimos e traduções. Esquecer um sinônimo é a causa mais comum de perda de estudos relevantes.' },
+      { tag: '3. Blocos unidos por AND', desc: 'A combinação entre blocos é o que estreita o resultado. Comece por dois blocos; um terceiro só se o volume exigir.' },
+      { tag: '4. Expressões entre aspas', desc: 'Termos compostos precisam de aspas para não serem quebrados pela base ("arranjo produtivo local").' },
+      { tag: '5. Adaptação por base é declarada', desc: 'Cada base recebe a tradução do seu adaptador. Quando a base não aceita booleana completa, a decomposição é registrada — e vai para o Registro de Busca como nota de adaptação.' },
+      { tag: '6. Revise antes de executar', desc: 'A revisão PRESS confere tradução da pergunta, operadores, termos de assunto, termos livres, sintaxe e limites.' },
+    ],
+  },
+
+  search_filters: {
+    rotuloBotao: 'Guia do Recorte (?)',
+    tituloBotao: 'Ver guia de bases-alvo e limites da busca',
+    titulo: 'Bases-alvo e limites do recorte',
+    itens: [
+      { tag: '1. Justifique as bases', desc: 'A escolha das bases precisa de razão declarada — cobertura temática, cobertura regional, acesso institucional. É item do PRISMA-S, e é o que separa uma busca desenhada de uma busca conveniente.' },
+      { tag: '2. Combine cobertura', desc: 'Bases internacionais (Scopus, OpenAlex) e nacionais (SciELO, BDTD) cobrem literaturas diferentes. Em Ciências Sociais Aplicadas, deixar as nacionais de fora costuma ser perda real.' },
+      { tag: '3. Todo limite exclui', desc: 'Ano, idioma e tipo documental cortam resultados. Cada corte precisa de razão metodológica — nunca "para reduzir o volume".' },
+      { tag: '4. Restrição de idioma tem custo', desc: 'Limitar a português e inglês introduz viés de idioma, e isso deve ser declarado nas limitações.' },
+      { tag: '5. Literatura cinzenta', desc: 'Teses, dissertações e relatórios técnicos entram pelo campo de métodos complementares, não pelos filtros das bases.' },
+    ],
+  },
+
+  extraction_questions: {
+    rotuloBotao: 'Guia da Extração (?)',
+    tituloBotao: 'Ver guia de formulação das perguntas de extração',
+    titulo: 'O que perguntar a cada estudo incluído',
+    itens: [
+      { tag: '1. Decidido antes da busca', desc: 'Listar a priori as variáveis para as quais se buscará dado é exigência das diretrizes de protocolo. Definir depois de ver os resultados é o viés que o protocolo existe para impedir.' },
+      { tag: '2. Uma variável por pergunta', desc: 'Perguntas compostas produzem respostas que não se tabulam. Separe "qual o método" de "qual a amostra".' },
+      { tag: '3. Blocos usuais', desc: 'Identificação (autoria, ano, país), método (desenho, amostra, instrumento), conteúdo (conceitos, marco teórico), resultados (achados, limitações declaradas).' },
+      { tag: '4. Tipo de resposta orienta a síntese', desc: 'Categórica e numérica tabulam e viram gráfico; texto livre alimenta a síntese narrativa. Escolher o tipo agora poupa retrabalho na análise.' },
+      { tag: '5. Comece pelo conjunto sugerido', desc: 'Cada desenho traz um conjunto inicial coerente com o que aquele tipo de revisão precisa relatar. Ajuste em vez de partir do zero.' },
+    ],
+  },
+
+  deduplication: {
+    rotuloBotao: 'Guia da Deduplicação (?)',
+    tituloBotao: 'Ver guia de relato da deduplicação',
+    titulo: 'Como relatar a deduplicação',
+    modelo: {
+      rotulo: 'Inserir Estrutura no Editor',
+      confirmacao: 'Substituir o texto de deduplicação pelo modelo?',
+      texto: `Procedimento de Deduplicação:
+Os registros recuperados nas bases foram reunidos e deduplicados automaticamente pelo Revsist, por correspondência exata de DOI e por similaridade de título normalizado.
+
+Conferência Manual:
+Os pares sinalizados como prováveis duplicatas foram conferidos manualmente antes da remoção.
+
+Registro Quantitativo:
+Foram identificados N registros; após a remoção de D duplicatas, restaram N-D registros únicos submetidos à triagem por título e resumo.`,
+    },
+    itens: [
+      { tag: '1. Método declarado', desc: 'Automática, manual ou combinada — e por qual chave (DOI, título normalizado, autoria e ano).' },
+      { tag: '2. Números registrados', desc: 'Quantos registros entraram, quantas duplicatas saíram e quantos seguiram para a triagem. São os números do topo do fluxograma PRISMA.' },
+      { tag: '3. Conferência', desc: 'Deduplicação automática sem conferência descarta estudos legítimos. Declare se houve verificação humana.' },
+    ],
+  },
+
+  amendment_reason: {
+    rotuloBotao: 'Guia da Emenda (?)',
+    tituloBotao: 'Ver guia de justificativa de emenda ao protocolo',
+    titulo: 'Como justificar uma emenda',
+    itens: [
+      { tag: '1. O que mudou', desc: 'Nomeie o campo alterado e o valor anterior. "Ampliamos o recorte" não é registro; "recorte inicial 2015–2026 ampliado para 2012–2026" é.' },
+      { tag: '2. Por que mudou', desc: 'A razão metodológica, não a operacional. "Marcos regulatórios anteriores a 2015 foram identificados na busca-piloto" justifica; "vieram poucos resultados" não.' },
+      { tag: '3. Quando mudou', desc: 'A fase do projeto importa: emenda no planejamento é ajuste; emenda depois da triagem exige explicar por que não compromete a seleção já feita.' },
+      { tag: '4. O efeito sobre o já feito', desc: 'Diga se a mudança obriga a repetir a busca, a reavaliar estudos já triados, ou nenhum dos dois.' },
+      { tag: '5. Para que serve', desc: 'É esta justificativa que responde, na revisão por pares, se os critérios mudaram depois de ver os resultados.' },
+    ],
+  },
+
+  registro_execucao: {
+    rotuloBotao: 'Guia do Registro (?)',
+    tituloBotao: 'Ver o que o sistema registra da execução da busca',
+    titulo: 'O que a execução registra, e por que importa',
+    itens: [
+      { tag: '1. Por que é automático', desc: 'Data, hora e contagem por base são fatos da execução, não decisões do pesquisador. Digitá-los à mão abriria espaço para divergência entre o que foi relatado e o que aconteceu.' },
+      { tag: '2. Data e hora de cada busca', desc: 'Bases mudam diariamente. Sem o momento exato da execução, ninguém consegue reproduzir o conjunto de registros recuperado — e a revisão deixa de ser reproduzível por construção.' },
+      { tag: '3. Registros por base', desc: 'Quantos vieram de cada base, antes e depois da deduplicação. São os números do topo do fluxograma, e é o que permite mostrar a contribuição de cada fonte.' },
+      { tag: '4. Vai para o Registro de Busca', desc: 'Estes campos formam a coluna "executado" do documento exportável, ao lado da coluna "configurado" — o confronto entre o que foi planejado e o que de fato rodou.' },
+      { tag: '5. Enquanto está vazio', desc: 'Nada foi coletado ainda. Os campos se preenchem sozinhos no primeiro disparo da coleta, base a base.' },
+    ],
+  },
+}
+
+/**
+ * Registro único consultado pelo Estúdio. Mantém `GUIAS_DO_PROTOCOLO` como
+ * estava — os 14 campos do manuscrito — e acrescenta os do Núcleo de Busca, sem
+ * obrigar quem consulta a saber em qual dos dois mapas procurar.
+ */
+export const GUIAS: Record<string, GuiaEstruturado> = {
+  ...GUIAS_DO_PROTOCOLO,
+  ...GUIAS_DO_NUCLEO,
+}

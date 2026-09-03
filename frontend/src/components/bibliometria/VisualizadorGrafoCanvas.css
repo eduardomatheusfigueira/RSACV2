@@ -1,0 +1,289 @@
+/* ═════════════════════════════════════════════════════════════════════
+   Revsist — VISUALIZADOR DE GRAFOS EM CANVAS (Contemporary Neo-Retro)
+   ═════════════════════════════════════════════════════════════════════ */
+
+.grafo-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.grafo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--space-px) solid var(--color-border-subtle);
+}
+
+.grafo-titulo h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+.grafo-titulo p {
+  margin: var(--space-0-5) 0 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.grafo-acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.grafo-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-0-5);
+  padding: var(--space-0-5);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.grafo-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.grafo-toggle-btn:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+}
+
+.grafo-toggle-btn--active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.grafo-toggle-btn--active:hover {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+/* ── Canvas Viewport ─────────────────────────────────────────────────── */
+.grafo-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.grafo-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+}
+
+.grafo-canvas:active {
+  cursor: grabbing;
+}
+
+/* ── Controles Flutuantes de Zoom ────────────────────────────────────── */
+.grafo-zoom-controls {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+  z-index: var(--z-sticky);
+}
+
+.grafo-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.grafo-zoom-btn:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  transform: translateY(-1px);
+}
+
+/* ── Popover / Detalhes do Nó Selecionado ────────────────────────────── */
+.grafo-no-card {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  width: 260px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-neo-raised);
+  font-size: var(--text-xs);
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.grafo-no-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1-5);
+  border-bottom: var(--space-px) solid var(--color-border-subtle);
+}
+
+.grafo-no-card__label {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grafo-no-card__bullet {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.grafo-no-card__grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.grafo-no-card__val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+/* ── Tabela Acessível de Nós ─────────────────────────────────────────── */
+.grafo-tabela-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.grafo-tabela-filtro {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+}
+
+.grafo-tabela-filtro:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.grafo-tabela-wrapper {
+  max-height: 440px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.grafo-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.grafo-tabela th,
+.grafo-tabela td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--space-px) solid var(--color-border-subtle);
+}
+
+.grafo-tabela th {
+  background: var(--color-bg-primary);
+  position: sticky;
+  top: 0;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.5px;
+}
+
+.grafo-tabela tr {
+  cursor: pointer;
+  transition: background var(--motion-fast) ease;
+}
+
+.grafo-tabela tr:hover {
+  background: var(--color-bg-elevated);
+}
+
+.grafo-tabela tr.is-selected {
+  background: var(--color-accent-subtle));
+}
+
+.grafo-badge-cluster {
+  display: inline-block;
+  padding: var(--space-px) var(--space-1-5);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--color-text-on-accent);
+  text-shadow: 0 1px 1px var(--color-overlay);
+}
+
+/* ── Nota Metodológica de Proveniência ───────────────────────────────── */
+.grafo-nota-proveniencia {
+  padding: var(--space-2-5) var(--space-4);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.grafo-nota-proveniencia strong {
+  color: var(--color-text-primary);
+}

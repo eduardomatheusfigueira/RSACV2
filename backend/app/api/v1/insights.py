@@ -37,6 +37,13 @@ def get_insights(
     ),
     year_from: int | None = Query(None, description="Ano inicial (inclusive) do recorte temporal"),
     year_to: int | None = Query(None, description="Ano final (inclusive) do recorte temporal"),
+    instantaneo: str | None = Query(
+        None,
+        description=(
+            "Calcula os agregados de conteúdo sobre um corpus congelado, "
+            "em vez do acervo de agora (doc 48 §3)"
+        ),
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -57,4 +64,5 @@ def get_insights(
         source=source,
         year_from=year_from,
         year_to=year_to,
+        snapshot_id=instantaneo,
     )

@@ -2,7 +2,7 @@
 
 > **Revisão Sistemática Assistida por Computador — Versão 2.0**  
 > **Arquitetura Python + Electron | Agosto 2026**  
-> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online) · `42–44` Vigente (Pesquisa em equipe) · `45` Vigente (Protocolos)
+> **Estrutura:** `01–21` Histórico · `22` Log de Auditoria · `23–27` Vigente (Design System & Governança) · `28–30` Concluído (Segurança) · `31–33` Concluído (B.I. e Bibliometria) · `34–36` Vigente (Coleta) · `37–38` Vigente (LGPD) · `39–41` Vigente (Serviço online) · `42–44` Vigente (Pesquisa em equipe) · `45` Vigente (Protocolos) · `47–49` Vigente (Bibliometria auditável) · `50` Vigente (Espaço de equipe e mural)
 
 ---
 
@@ -74,6 +74,8 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 39–41   vigente            serviço online — diagnóstico, especificação e execução
 42–44   vigente            pesquisa em equipe — diagnóstico, especificação e execução
 45      vigente            protocolos — qualificação, modos Simplificado/Completo e bibliometria
+47–49   vigente            bibliometria auditável — instantâneo, instrumento, indicador, evidência
+50      vigente            espaço de equipe — perfil compartilhado, trabalhos e mural
 ```
 
 ---
@@ -172,6 +174,23 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 
 ---
 
+## 📌 Planejamento vigente — espaço de equipe
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **50** | [Plano do Espaço de Equipe, Trabalhos e Mural](./50_PLANO_ESPACO_DE_EQUIPE.md) | Documento único — diagnóstico, especificação e execução. Reabre a **D-02** do doc 42: a equipe deixa de ser atributo de cada revisão e passa a ser um **perfil durável**, com composição própria, trabalhos que os membros podem assumir, controle de envolvimento por trabalho (`restrito`/`listado`/`aberto`) e um **mural** como tela inicial. Sete tabelas novas, duas colunas em `projects`, oito fases; 21 a 28 dias |
+
+> **A barreira de isolamento não ganha um `OR`** — doc 50 §50.5, princípio PE1.
+> Pertencer à equipe não autoriza a ler um trabalho: autoriza a **ingressar**
+> nele, e o ingresso grava a participação em `project_members`. É o que mantém
+> `projeto_do_usuario` (`security/dependencies.py:218`) sendo a mesma junção de
+> uma tabela que o doc 44 entregou e testou por mutação. O segundo princípio
+> duro é o inverso do doc 43 §43.13.3: julgamento de triagem se **pseudonimiza**
+> ao eliminar a conta, publicação de mural se **apaga** — registro científico e
+> comunicação têm regimes de eliminação opostos (PE5).
+
+---
+
 ## 📌 Planejamento vigente — protocolos
 
 | # | Documento | Descrição |
@@ -185,6 +204,25 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 > cobre o PRISMA-S por inteiro e carimba em toda exportação o que não cobre
 > (§8.4). Seu produto exportável é o **Registro de Busca** — o confronto entre o
 > configurado e o executado, base a base (§10.5).
+
+
+---
+
+## 📊 Planejamento vigente — bibliometria auditável
+
+| # | Documento | Descrição |
+|---|-----------|-----------|
+| **47** | [Diagnóstico da Bibliometria](./47_DIAGNOSTICO_BIBLIOMETRIA.md) | Oito lacunas medidas no acervo real (87.108 registros): ranking de instituições que ordena coletores (99,7% dos registros), `keywords` que existe em três camadas e não no banco, ausência total de referências citadas, 17 textos completos em 87 mil, e indicadores calculados sobre banco vivo. Mede a viabilidade do enriquecimento externo: 50 de 50 DOIs encontrados no OpenAlex |
+| **48** | [Especificação do Ambiente de Indicadores](./48_ESPECIFICACAO_AMBIENTE_INDICADORES.md) | Quatro pilares — **instantâneo**, **instrumento**, **indicador**, **evidência**; catálogo em quatro níveis por substrato; grafos com layout determinístico; estatística sob demanda por especificação validada; incerteza e sensibilidade declaradas; pré-registro do plano bibliométrico no protocolo |
+| **49** | [Plano de Execução — Bibliometria](./49_PLANO_EXECUCAO_BIBLIOMETRIA.md) | Dez fases independentes, da correção do ranking de instituições ao relatório de conformidade BIBLIO, com critérios de aceite e quatro testes transversais |
+
+> **A regra que governa o ambiente.** *Nenhum número exibido pode ter sido
+> produzido por um modelo de linguagem* — doc 48 §2. A IA propõe vocabulário,
+> sugere fusões de termos, nomeia agrupamentos e traduz perguntas em
+> especificações; contar, somar e ordenar é sempre código determinístico, e
+> toda proposta da IA passa por aprovação humana antes de virar número. É o que
+> torna possível responder "de onde veio esse número?" com o instantâneo, o
+> instrumento, a versão e as passagens — em vez de "do banco, naquele dia".
 
 ---
 

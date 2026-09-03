@@ -80,10 +80,22 @@ LIMITES: dict[str, tuple[int, int]] = {
 }
 
 
+# Leituras de acompanhamento: moram sob `/screening/ai`, mas não chamam
+# provedor nenhum — só devolvem estado que já está na memória do processo.
+# Contá-las na cota de IA foi o que fez a tela do lote derrubar a si mesma: a
+# consulta de progresso, sozinha, consumia a maior parte das 20 requisições por
+# minuto, e a triagem seguinte era recusada com "muitas requisições em pouco
+# tempo" — uma recusa do próprio aplicativo, facilmente confundida com a do
+# provedor.
+LEITURAS_DE_ACOMPANHAMENTO = ("/batch/status",)
+
+
 def _familia_da_rota(caminho: str, metodo: str) -> str:
     """Classifica a requisição na família de limite correspondente."""
     if "/auth/login" in caminho or "/auth/local" in caminho or "/auth/google" in caminho:
         return "auth"
+    if metodo == "GET" and any(caminho.endswith(s) for s in LEITURAS_DE_ACOMPANHAMENTO):
+        return "geral"
     if "/ai/" in caminho or "/screening/ai" in caminho:
         return "ai"
     if metodo == "POST" and ("/harvest" in caminho or "/pdf/batch" in caminho):

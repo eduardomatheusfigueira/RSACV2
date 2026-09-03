@@ -246,6 +246,7 @@ class OpenAICompatibleAIClient(BaseAIClient):
         project_context: Optional[dict] = None,
         action: str = "generate",
         custom_instruction: str = "",
+        field_id: str = "",
     ) -> dict:
         """Preenche, corrige ou aprimora o conteúdo de um campo específico com system prompt adequado."""
         prompt = build_field_assist_prompt(
@@ -257,6 +258,7 @@ class OpenAICompatibleAIClient(BaseAIClient):
             project_context=project_context,
             action=action,
             custom_instruction=custom_instruction,
+            field_id=field_id,
         )
         data = await self._call_chat_completion(prompt)
         return {

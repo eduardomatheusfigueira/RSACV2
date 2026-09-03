@@ -241,17 +241,24 @@ async def test_ai_connection(
         )
 
     client = AIFactory.get_client(db, user_id=usuario.id)
-    success = await client.test_connection()
-    if not success:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Falha ao conectar com o provedor '{client.provider_name}' ({client.model_name}). Verifique a API Key ou endpoint.",
-        )
+    diagnostico = await client.diagnosticar_conexao()
+
+    if not diagnostico.ok:
+        # 502 continua sendo o código certo — a falha é do provedor, não do
+        # pedido —, mas a mensagem agora diz QUAL é a falha. A anterior culpava
+        # a chave em todos os casos, inclusive quando as chaves estavam boas e
+        # o provedor só estava limitando a taxa.
+        raise HTTPException(status_code=502, detail=diagnostico.mensagem)
+
     return {
         "status": "ok",
-        "provider": client.provider_name,
-        "model": client.model_name,
-        "message": "Conexão com IA estabelecida com sucesso!",
+        "provider": diagnostico.provedor or client.provider_name,
+        "model": diagnostico.modelo or client.model_name,
+        "message": diagnostico.mensagem,
+        "chaves_testadas": diagnostico.chaves_testadas,
+        "chaves_boas": diagnostico.chaves_boas,
+        "chaves_recusadas": diagnostico.chaves_recusadas,
+        "chaves_ignoradas": diagnostico.chaves_ignoradas,
     }
 
 
@@ -309,6 +316,7 @@ async def assist_field(
             project_context=data.project_context,
             action=data.action,
             custom_instruction=data.custom_instruction,
+            field_id=data.field_id,
         )
         return FieldAssistResponse(
             field_id=data.field_id,

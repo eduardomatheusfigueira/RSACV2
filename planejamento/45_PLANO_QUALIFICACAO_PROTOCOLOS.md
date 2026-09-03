@@ -631,6 +631,14 @@ protocolo; no Simplificado é o produto principal, junto do protocolo carimbado.
 
 ## 11. Bibliometria (D11) — bloco próprio
 
+> **O ambiente que executa este bloco** está especificado na série
+> [47](./47_DIAGNOSTICO_BIBLIOMETRIA.md) →
+> [48](./48_ESPECIFICACAO_AMBIENTE_INDICADORES.md) →
+> [49](./49_PLANO_EXECUCAO_BIBLIOMETRIA.md). O pré-registro do plano
+> bibliométrico — indicadores previstos, unidade de análise, janela, tesauro e
+> cortes declarados antes de ver resultado — reaproveita o versionamento e as
+> emendas do §12 deste documento (doc 48 §11).
+
 ### 11.1 Por que não é uma revisão sistemática com outro nome
 
 Uma bibliometria não avalia estudos: avalia **registros**. Não há risco de viés

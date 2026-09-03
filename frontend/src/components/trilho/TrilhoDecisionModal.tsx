@@ -58,9 +58,7 @@ export function TrilhoDecisionModal({ onApplyActionPayload }: TrilhoDecisionModa
               <strong>{questionText}</strong>
             </p>
             {helpContext && (
-              <p className="text-xs text-muted-foreground mt-1" style={{ margin: '4px 0 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-tertiary)' }}>
-                {helpContext}
-              </p>
+              <p className="trilho-decision-help">{helpContext}</p>
             )}
           </div>
 
@@ -85,17 +83,17 @@ export function TrilhoDecisionModal({ onApplyActionPayload }: TrilhoDecisionModa
 
                 {opt.example && (
                   <div className="trilho-option-example">
-                    <span className="font-semibold text-foreground">Exemplo: </span>
+                    <span className="trilho-option-label">Exemplo: </span>
                     {opt.example}
                   </div>
                 )}
 
                 <div className="trilho-option-consequences">
-                  <span className="font-semibold">Consequência: </span>
+                  <span className="trilho-option-label">Consequência: </span>
                   {opt.consequences}
                 </div>
 
-                <div className="flex items-center justify-end text-xs font-bold text-accent mt-1 gap-1" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontSize: 'var(--text-2xs)', color: 'var(--color-accent)', fontWeight: 'var(--weight-bold)' }}>
+                <div className="trilho-option-cta">
                   <span>Escolher este caminho</span>
                   <ArrowRight size={13} />
                 </div>
@@ -105,8 +103,8 @@ export function TrilhoDecisionModal({ onApplyActionPayload }: TrilhoDecisionModa
         </div>
 
         {/* Rodapé */}
-        <div className="trilho-tutor-footer" style={{ justifyContent: 'space-between' }}>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-2xs)', color: 'var(--color-text-tertiary)' }}>
+        <div className="trilho-tutor-footer">
+          <div className="trilho-decision-source">
             <BookOpen size={13} />
             <span>Fundamentado em: {currentNode.guidelineReference}</span>
           </div>

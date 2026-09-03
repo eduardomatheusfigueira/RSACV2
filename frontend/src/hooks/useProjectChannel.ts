@@ -35,6 +35,8 @@ export interface ProjectChannelOptions {
   }) => void
   onTeamChanged?: (data: { user_id: string; acao: string }) => void
   onPresenceUpdate?: (activeUsers: ActiveUserPresence[]) => void
+  onBatchScreeningMessage?: (data: any) => void
+  onMessage?: (data: any) => void
 }
 
 export function useProjectChannel({
@@ -45,6 +47,8 @@ export function useProjectChannel({
   onHarvestCompleted,
   onTeamChanged,
   onPresenceUpdate,
+  onBatchScreeningMessage,
+  onMessage,
 }: ProjectChannelOptions) {
   const [isConnected, setIsConnected] = useState(false)
   const [activeUsers, setActiveUsers] = useState<ActiveUserPresence[]>([])
@@ -57,6 +61,8 @@ export function useProjectChannel({
     onHarvestCompleted,
     onTeamChanged,
     onPresenceUpdate,
+    onBatchScreeningMessage,
+    onMessage,
   })
 
   useEffect(() => {
@@ -66,8 +72,18 @@ export function useProjectChannel({
       onHarvestCompleted,
       onTeamChanged,
       onPresenceUpdate,
+      onBatchScreeningMessage,
+      onMessage,
     }
-  }, [onPaperDecided, onProtocolChanged, onHarvestCompleted, onTeamChanged, onPresenceUpdate])
+  }, [
+    onPaperDecided,
+    onProtocolChanged,
+    onHarvestCompleted,
+    onTeamChanged,
+    onPresenceUpdate,
+    onBatchScreeningMessage,
+    onMessage,
+  ])
 
   useEffect(() => {
     if (!projectId) return
@@ -98,6 +114,12 @@ export function useProjectChannel({
           if (evt.data === 'pong') return
           try {
             const msg = JSON.parse(evt.data)
+            callbacksRef.current.onMessage?.(msg)
+
+            if (typeof msg.type === 'string' && msg.type.startsWith('batch_screening')) {
+              callbacksRef.current.onBatchScreeningMessage?.(msg)
+            }
+
             if (msg.type === 'presenca') {
               if (Array.isArray(msg.active_users)) {
                 setActiveUsers(msg.active_users)

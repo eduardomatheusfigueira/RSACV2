@@ -18,7 +18,7 @@ import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import TeamPage from '@/pages/TeamPage'
 import { LoginPage } from '@/pages/LoginPage'
-import { Toaster } from '@/components/ui'
+import { ErrorBoundary, Toaster } from '@/components/ui'
 import { api } from '@/api/client'
 import {
   analisarUrlDeBackend,
@@ -346,7 +346,9 @@ export function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <HashRouter>
-        <AppContent />
+        <ErrorBoundary fallbackTitle="Erro na aplicação">
+          <AppContent />
+        </ErrorBoundary>
         <Toaster />
       </HashRouter>
     </QueryClientProvider>

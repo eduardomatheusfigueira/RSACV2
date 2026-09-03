@@ -19,7 +19,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { construirQueryDeInsights, formatarPercentual } from './insightsFormat'
+import { construirQueryDeInsights, formatarPercentual, formatarContagem } from './insightsFormat'
 
 describe('formatarPercentual', () => {
   it('devolve travessão para valor nulo (agregado sem dado suficiente)', () => {
@@ -67,5 +67,33 @@ describe('construirQueryDeInsights', () => {
     const semFiltro = construirQueryDeInsights({ decision: 'Incluído' })
     const comOutraDecisao = construirQueryDeInsights({ decision: 'Pendente' })
     expect(semFiltro).not.toBe(comOutraDecisao)
+  })
+})
+
+describe('construirQueryDeInsights — instantâneo', () => {
+  it('leva o instantâneo para a query quando há um escolhido', () => {
+    expect(construirQueryDeInsights({ instantaneo: 'snp_a91f' })).toContain('instantaneo=snp_a91f')
+  })
+
+  it('omite o parâmetro quando os indicadores descrevem o acervo de agora', () => {
+    expect(construirQueryDeInsights({ decision: 'Incluído' })).not.toContain('instantaneo')
+  })
+})
+
+describe('formatarContagem', () => {
+  it('separa milhar na convenção pt-BR', () => {
+    expect(formatarContagem(43861)).toBe('43.861')
+    expect(formatarContagem(1000000)).toBe('1.000.000')
+  })
+
+  it('não enfeita número pequeno', () => {
+    expect(formatarContagem(454)).toBe('454')
+    expect(formatarContagem(0)).toBe('0')
+  })
+
+  it('ausência de dado não vira zero', () => {
+    expect(formatarContagem(null)).toBe('—')
+    expect(formatarContagem(undefined)).toBe('—')
+    expect(formatarContagem(NaN)).toBe('—')
   })
 })

@@ -78,3 +78,7 @@ export type {
   TextareaProps,
   SelectProps,
 } from './FormControls'
+
+// Error Boundary
+export { ErrorBoundary } from './ErrorBoundary'
+

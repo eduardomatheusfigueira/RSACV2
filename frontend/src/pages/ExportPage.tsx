@@ -126,6 +126,9 @@ export function ExportPage(): JSX.Element {
             <span className="queue-status-chip">
               <Filter size={13} className="icon-accent" />
               Triados (Fase 1): <strong>{prismaData?.screening.records_screened ?? 0}</strong>
+              {prismaData?.screening.records_to_screen != null && (
+                <> de {prismaData.screening.records_to_screen} únicos</>
+              )}
             </span>
             <span className="queue-status-chip inc">
               <CheckCircle2 size={13} />
@@ -284,7 +287,10 @@ export function ExportPage(): JSX.Element {
                     <div className="prisma-box-compact highlight">
                       <h5>Registros únicos triados</h5>
                       <div className="prisma-count-big">
-                        {prismaData.screening.records_screened} artigos
+                        {prismaData.screening.records_screened} de{' '}
+                        {prismaData.screening.records_to_screen ??
+                          prismaData.screening.records_screened}{' '}
+                        artigos
                       </div>
                     </div>
 

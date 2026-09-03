@@ -90,6 +90,18 @@ def _serialize_protocol(protocol: ProtocolModel, db: Session) -> ProtocolRespons
     except Exception:
         descriptors = {}
 
+    has_any_descriptor = any(p.strip() for pairs in descriptors.values() for p in pairs if p.strip()) if isinstance(descriptors, dict) else False
+    if not has_any_descriptor and protocol.search_strategies:
+        canonical_strat = next((s for s in protocol.search_strategies if s.kind == "canonica"), None)
+        if canonical_strat and canonical_strat.blocks:
+            try:
+                blocks = json.loads(canonical_strat.blocks)
+                pairs, _ = render_bdtd_decomposition(blocks, max_pairs=5)
+                if pairs:
+                    descriptors = {"pt": pairs}
+            except Exception:
+                pass
+
     try:
         filters = json.loads(protocol.search_filters) if protocol.search_filters else {}
     except Exception:
@@ -278,15 +290,35 @@ async def update_protocol(
         protocol.bibliometrics = json.dumps(data.bibliometrics, ensure_ascii=False)
 
     if data.search_descriptors is not None:
-        for lang, pairs in data.search_descriptors.items():
-            for pair in pairs:
-                terms = [t.strip() for t in pair.split(" AND ") if t.strip()]
-                if len(terms) > 2:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"A expressão '{pair}' contém mais de 2 termos combinados. Formule no máximo em pares ('termo_1' AND 'termo_2') para compatibilidade BDTD.",
-                    )
-        protocol.search_descriptors = json.dumps(data.search_descriptors, ensure_ascii=False)
+        has_valid_pair = any(p.strip() for pairs in data.search_descriptors.values() for p in pairs if p.strip())
+        if has_valid_pair:
+            for lang, pairs in data.search_descriptors.items():
+                for pair in pairs:
+                    terms = [t.strip() for t in pair.split(" AND ") if t.strip()]
+                    if len(terms) > 2:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"A expressão '{pair}' contém mais de 2 termos combinados. Formule no máximo em pares ('termo_1' AND 'termo_2') para compatibilidade BDTD.",
+                        )
+            protocol.search_descriptors = json.dumps(data.search_descriptors, ensure_ascii=False)
+        else:
+            # Se a payload enviada estiver vazia (comum ao salvar na aba simplificada), checar se há estratégia canônica
+            strat = db.query(SearchStrategyModel).filter(
+                SearchStrategyModel.protocol_id == protocol.id,
+                SearchStrategyModel.kind == "canonica",
+            ).first()
+            if strat and strat.blocks:
+                try:
+                    blocks = json.loads(strat.blocks)
+                    pairs, _ = render_bdtd_decomposition(blocks, max_pairs=5)
+                    if pairs:
+                        protocol.search_descriptors = json.dumps({"pt": pairs}, ensure_ascii=False)
+                    else:
+                        protocol.search_descriptors = json.dumps(data.search_descriptors, ensure_ascii=False)
+                except Exception:
+                    protocol.search_descriptors = json.dumps(data.search_descriptors, ensure_ascii=False)
+            else:
+                protocol.search_descriptors = json.dumps(data.search_descriptors, ensure_ascii=False)
 
     if data.search_filters is not None:
         protocol.search_filters = json.dumps(data.search_filters, ensure_ascii=False)
@@ -520,6 +552,23 @@ def save_canonical_strategy(
         strat.rendered_query = rendered
         strat.adaptation_note = strategy_data.adaptation_note
         strat.updated_at = utcnow()
+
+    # Sincronizar pares de busca com protocol.search_descriptors para coleta multibase
+    if strategy_data.kind == "canonica" and strategy_data.blocks:
+        try:
+            blocks_raw = [b.model_dump() for b in strategy_data.blocks]
+            pairs, _ = render_bdtd_decomposition(blocks_raw, max_pairs=5)
+            if pairs:
+                current_desc = {}
+                if protocol.search_descriptors:
+                    try:
+                        current_desc = json.loads(protocol.search_descriptors)
+                    except Exception:
+                        current_desc = {}
+                current_desc["pt"] = pairs
+                protocol.search_descriptors = json.dumps(current_desc, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"Falha ao sincronizar search_descriptors na estratégia canônica: {e}")
 
     db.commit()
     db.refresh(strat)

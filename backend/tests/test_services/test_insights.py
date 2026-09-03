@@ -498,3 +498,81 @@ async def test_endpoint_aplica_filtros_via_query(async_client, projeto_populado)
     corpo = resposta.json()
     assert corpo["filters_applied"]["decision"] == "Excluído"
     assert {item["name"] for item in corpo["top_authors"]} == {"Pereira, A."}
+
+
+# ── Afiliação: o campo `institution` traz o nome do coletor ─────────────
+#
+# Medido no acervo real em 31/08/2026: 86.859 de 87.108 registros — 99,7% —
+# trazem "SciELO" ou "OpenAlex" onde deveria estar a afiliação dos autores
+# (doc 47 §B-01). O ranking lia esse campo direto e informava que a
+# instituição mais produtiva do campo era a biblioteca de onde os registros
+# vieram.
+
+
+def test_ranking_de_instituicoes_nao_lista_nome_de_coletor(db_session):
+    """Nenhum dos literais que os coletores gravam pode sair como instituição."""
+    proj, _ = _novo_projeto(db_session, "Projeto com afiliação de coletor")
+    coletores = ["SciELO", "OpenAlex", "PubMed/NCBI", "Scopus/Elsevier", "BDTD/IBICT"]
+    db_session.add_all([
+        PaperModel(
+            project_id=proj.id, title=f"Estudo {i}", institution=nome,
+            decision=Decision.INCLUDED.value,
+        )
+        for i, nome in enumerate(coletores)
+    ])
+    db_session.commit()
+
+    dados = get_project_insights(db_session, proj.id)
+
+    nomes = {item["name"] for item in dados["top_institutions"]}
+    assert nomes == set(), f"Reportou coletor como instituição: {nomes}"
+
+
+def test_variacao_de_caixa_e_acento_do_coletor_tambem_e_barrada(db_session):
+    """`Scielo`, `SCIELO` e `SciELO ` são o mesmo literal, e nenhum é afiliação."""
+    proj, _ = _novo_projeto(db_session, "Projeto com grafias variadas")
+    db_session.add_all([
+        PaperModel(
+            project_id=proj.id, title=f"Estudo {i}", institution=nome,
+            decision=Decision.INCLUDED.value,
+        )
+        for i, nome in enumerate(["Scielo", "SCIELO", " SciELO ", "openalex"])
+    ])
+    db_session.commit()
+
+    assert get_project_insights(db_session, proj.id)["top_institutions"] == []
+
+
+def test_afiliacao_real_sobrevive_ao_filtro(db_session, projeto_populado):
+    """O filtro tira o literal do coletor, não a afiliação de verdade.
+
+    A BDTD é a única base que preenche o campo com o que ele diz ser, e esses
+    registros continuam valendo.
+    """
+    proj, _, _ = projeto_populado
+
+    dados = get_project_insights(db_session, proj.id)
+
+    assert [item["name"] for item in dados["top_institutions"]] == ["UFRJ"]
+    assert dados["top_institutions"][0]["count"] == 2
+
+
+def test_ranking_de_instituicoes_declara_a_cobertura(db_session):
+    """Um ranking sobre 1 de 4 registros precisa dizer que é sobre 1 de 4.
+
+    Sem o denominador, uma lista construída sobre 0,3% do acervo é lida como
+    se descrevesse o acervo (doc 48 §6.4).
+    """
+    proj, _ = _novo_projeto(db_session, "Projeto com cobertura parcial")
+    db_session.add_all([
+        PaperModel(
+            project_id=proj.id, title=f"Estudo {i}", institution=nome,
+            decision=Decision.INCLUDED.value,
+        )
+        for i, nome in enumerate(["UFRRJ", "SciELO", "SciELO", "OpenAlex"])
+    ])
+    db_session.commit()
+
+    cobertura = get_project_insights(db_session, proj.id)["institutions_coverage"]
+
+    assert cobertura == {"with_affiliation": 1, "total": 4}

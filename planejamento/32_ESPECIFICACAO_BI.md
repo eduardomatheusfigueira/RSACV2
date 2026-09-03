@@ -193,6 +193,13 @@ backend — o endpoint devolve a lista ordenada completa (ou um teto alto, ex.
 
 ## 7. Fora de escopo (extensões futuras)
 
+> **Retomado em 31/08/2026.** Os quatro itens desta seção foram diagnosticados
+> e especificados na série [47](./47_DIAGNOSTICO_BIBLIOMETRIA.md) →
+> [48](./48_ESPECIFICACAO_AMBIENTE_INDICADORES.md) →
+> [49](./49_PLANO_EXECUCAO_BIBLIOMETRIA.md). A medição do acervo real mostrou
+> que os três primeiros são, na prática, a mesma lacuna: nunca termos pedido ao
+> OpenAlex o que ele já devolve (doc 47 §5).
+
 Registrado aqui para não ser esquecido, não para ser implementado nesta
 rodada:
 

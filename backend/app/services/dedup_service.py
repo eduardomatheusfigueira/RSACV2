@@ -198,6 +198,23 @@ class DeduplicationService:
                 source_id=record.source_id or "",
             )
         )
+
+        if record.extra_metadata and "raw_work" in record.extra_metadata:
+            raw_work = record.extra_metadata["raw_work"]
+            try:
+                from app.services.bibliometria.enriquecimento import extrair_metadados_openalex
+                meta, authors, refs, topics, kws = extrair_metadados_openalex(raw_work, new_paper.id, enrichment_id="")
+                db.add(meta)
+                for a in authors:
+                    db.add(a)
+                for r in refs:
+                    db.add(r)
+                for t in topics:
+                    db.add(t)
+                for k in kws:
+                    db.add(k)
+            except Exception as e:
+                logger.warning(f"[DedupService] Falha ao persistir metadados brutos do coletor: {e}")
         db.flush()
         return new_paper, True
 

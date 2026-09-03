@@ -55,6 +55,7 @@ export interface PrismaFlowData {
     duplicates_removed: number
   }
   screening: {
+    records_to_screen?: number
     records_screened: number
     records_excluded: number
     records_pending: number
@@ -302,6 +303,38 @@ class APIClient {
 
   getScreeningWebSocketUrl(projectId: string): string {
     return this.withSessionToken(`${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`)
+  }
+
+  /**
+   * Credencial de uso único para abrir um WebSocket.
+   *
+   * Abrir um WebSocket é a única requisição em que o navegador não deixa mandar
+   * cabeçalho. Sobram o token na query — que só existe se a sessão foi aberta
+   * *nesta aba*, porque mora em `sessionStorage` — e o cookie, que é
+   * `SameSite=strict` e não viaja quando a interface está numa origem e a API
+   * em outra. Uma aba duplicada servida pelo Vite cai fora dos dois, e o canal
+   * simplesmente não abria: a triagem seguia no servidor sem nada na tela.
+   *
+   * Esta chamada é HTTP comum, então leva o que houver, e devolve um bilhete
+   * que vale segundos e serve só para isto.
+   */
+  async obterBilheteDeCanal(): Promise<string | null> {
+    try {
+      const res = await this.request<{ ticket: string }>('/auth/ws-ticket', { method: 'POST' })
+      return res.ticket || null
+    } catch {
+      return null
+    }
+  }
+
+  /** Endereço do canal de triagem, já com a melhor credencial disponível. */
+  async montarUrlDoCanalDeTriagem(projectId: string): Promise<string> {
+    const base = `${this.getWsBaseUrl()}/projects/${projectId}/screening/ai/ws`
+    const bilhete = await this.obterBilheteDeCanal()
+    if (bilhete) return `${base}?ticket=${encodeURIComponent(bilhete)}`
+    // Sem bilhete, ainda vale tentar o caminho antigo: numa mesma origem o
+    // cookie resolve, e numa aba que fez login o token resolve.
+    return this.withSessionToken(base)
   }
 
   getExcelExportUrl(projectId: string): string {
@@ -602,6 +635,9 @@ class APIClient {
       screening_status?: string
       search?: string
       source?: string
+      sort_by?: string
+      /** `true` = só o que a triagem assistida alcança; `false` = só o que ela não alcança. */
+      com_resumo?: boolean
     }
   ): Promise<PaperListResponse> {
     const searchParams = new URLSearchParams()
@@ -611,6 +647,8 @@ class APIClient {
     if (params?.screening_status) searchParams.set('screening_status', params.screening_status)
     if (params?.search) searchParams.set('search', params.search)
     if (params?.source) searchParams.set('source', params.source)
+    if (params?.sort_by) searchParams.set('sort_by', params.sort_by)
+    if (params?.com_resumo !== undefined) searchParams.set('com_resumo', String(params.com_resumo))
 
     const qs = searchParams.toString() ? `?${searchParams.toString()}` : ''
     return this.request<PaperListResponse>(`/projects/${projectId}/papers${qs}`)
@@ -861,7 +899,10 @@ class APIClient {
     })
   }
 
-  async startBatchScreeningAI(projectId: string, data: { limit?: number; concurrency?: number }): Promise<any> {
+  async startBatchScreeningAI(
+    projectId: string,
+    data: { limit?: number; concurrency?: number; pausa_entre_estudos?: number }
+  ): Promise<any> {
     return this.request<any>(`/projects/${projectId}/screening/ai/batch`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -884,14 +925,24 @@ class APIClient {
    */
   async getBatchScreeningStatus(projectId: string): Promise<{
     is_running: boolean
+    /** Quantas telas estão escutando o canal deste projeto. */
+    ouvintes_do_canal?: number
     progress: {
       processed: number
       total: number
       percentage: number
+      /** Estudo em análise e últimos resultados — para a tela funcionar sem o canal. */
+      current_paper_id?: string
+      current_paper_title?: string
+      current_paper_authors?: string
+      current_paper_year?: string
+      /** A relação completa do lote, na ordem de triagem. */
+      itens?: import('@/types/api').ItemDoLote[]
+      /** Paralelismo e pausa vigentes, ajustados pelo servidor. */
+      ritmo?: import('@/types/api').RitmoDoLote | null
       included: number
       excluded: number
       pending: number
-      current_paper_title?: string
     } | null
   }> {
     return this.request(`/projects/${projectId}/screening/ai/batch/status`)
@@ -1043,6 +1094,387 @@ class APIClient {
     const qs = construirQueryDeInsights(filters)
     return this.request<import('@/types/api').ProjectInsights>(`/projects/${projectId}/insights${qs}`)
   }
+
+  // ── Bibliometria: instantâneo do corpus (docs 47–49) ───────────────
+
+  async listarInstantaneos(projectId: string): Promise<import('@/types/api').Instantaneo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/instantaneos`)
+  }
+
+  async criarInstantaneo(
+    projectId: string,
+    corpo: { rotulo?: string; escopo?: import('@/types/api').Instantaneo['scope'] } = {}
+  ): Promise<import('@/types/api').Instantaneo> {
+    return this.request(`/projects/${projectId}/bibliometria/instantaneos`, {
+      method: 'POST',
+      body: JSON.stringify({ rotulo: corpo.rotulo ?? '', escopo: corpo.escopo ?? {} }),
+    })
+  }
+
+  async conferirInstantaneo(
+    projectId: string,
+    snapshotId: string
+  ): Promise<import('@/types/api').ConferenciaDoInstantaneo> {
+    return this.request(`/projects/${projectId}/bibliometria/instantaneos/${snapshotId}/conferir`)
+  }
+
+  async obterSituacaoEnriquecimento(
+    projectId: string
+  ): Promise<import('@/types/api').SituacaoEnriquecimento> {
+    return this.request(`/projects/${projectId}/bibliometria/enriquecimento/situacao`)
+  }
+
+  async iniciarEnriquecimento(
+    projectId: string
+  ): Promise<{ status: string; message: string; project_id: string }> {
+    return this.request(`/projects/${projectId}/bibliometria/enriquecimento`, {
+      method: 'POST',
+    })
+  }
+
+  async pararEnriquecimento(
+    projectId: string
+  ): Promise<{ status: string; message: string }> {
+    return this.request(`/projects/${projectId}/bibliometria/enriquecimento/parar`, {
+      method: 'POST',
+    })
+  }
+
+  async obterIndicadoresBibliometricos(
+    projectId: string,
+    params: {
+      instantaneo?: string
+      decision?: string
+      source?: string
+      year_from?: number
+      year_to?: number
+    } = {}
+  ): Promise<import('@/types/api').IndicadoresBibliometricos> {
+    const sp = new URLSearchParams()
+    if (params.instantaneo) sp.set('instantaneo', params.instantaneo)
+    if (params.decision) sp.set('decision', params.decision)
+    if (params.source) sp.set('source', params.source)
+    if (params.year_from) sp.set('year_from', String(params.year_from))
+    if (params.year_to) sp.set('year_to', String(params.year_to))
+    const queryStr = sp.toString() ? `?${sp.toString()}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/indicadores${queryStr}`)
+  }
+
+  // ── Camada de Texto e Tesauro (Fase 4, doc 48 §5, §12) ──────────────────
+
+  async obterTextoDoArtigo(projectId: string, paperId: string): Promise<import('@/types/api').BibTextoInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/textos/${paperId}`)
+  }
+
+  async listarTesauros(projectId: string): Promise<import('@/types/api').TesauroInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/tesauros`)
+  }
+
+  async listarEntradasTesauro(
+    projectId: string,
+    thesaurusId: string,
+    apenasAprovadas = false
+  ): Promise<import('@/types/api').TesauroEntryInfo[]> {
+    const query = apenasAprovadas ? '?apenas_aprovadas=true' : ''
+    return this.request(`/projects/${projectId}/bibliometria/tesauros/${thesaurusId}/entradas${query}`)
+  }
+
+  async adicionarEntradaTesauro(
+    projectId: string,
+    thesaurusId: string,
+    payload: import('@/types/api').TesauroEntryCreatePayload
+  ): Promise<import('@/types/api').TesauroEntryInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/tesauros/${thesaurusId}/entradas`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async aprovarEntradasTesauro(
+    projectId: string,
+    thesaurusId: string,
+    entryIds: string[]
+  ): Promise<import('@/types/api').TesauroEntryInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/tesauros/${thesaurusId}/entradas/aprovar`, {
+      method: 'POST',
+      body: JSON.stringify({ entry_ids: entryIds }),
+    })
+  }
+
+  // ── Instrumentos de Medida e Evidências (Fase 5, doc 48 §6, §12) ─────────
+
+  async sugerirLexicoConceitual(
+    projectId: string,
+    payload: { concept: string; definition?: string; language?: string }
+  ): Promise<import('@/types/api').SugerirLexicoResponse> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos/sugerir-lexico`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async listarInstrumentos(projectId: string): Promise<import('@/types/api').InstrumentoInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos`)
+  }
+
+  async criarInstrumento(
+    projectId: string,
+    payload: import('@/types/api').InstrumentoCreatePayload
+  ): Promise<import('@/types/api').InstrumentoInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async obterInstrumento(
+    projectId: string,
+    instrumentId: string
+  ): Promise<import('@/types/api').InstrumentoInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos/${instrumentId}`)
+  }
+
+  async aprovarInstrumento(
+    projectId: string,
+    instrumentId: string
+  ): Promise<import('@/types/api').InstrumentoInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos/${instrumentId}/aprovar`, {
+      method: 'PATCH',
+    })
+  }
+
+  async medirInstrumento(
+    projectId: string,
+    instrumentId: string,
+    payload: { snapshot_id?: string; preview?: boolean } = {}
+  ): Promise<import('@/types/api').MedidaResultado> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos/${instrumentId}/medir`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async listarMedidasInstrumento(
+    projectId: string,
+    instrumentId: string
+  ): Promise<import('@/types/api').MedidaInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos/${instrumentId}/medidas`)
+  }
+
+  async listarOcorrenciasMedida(
+    projectId: string,
+    medidaId: string
+  ): Promise<import('@/types/api').OcorrenciaInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/medidas/${medidaId}/ocorrencias`)
+  }
+
+  async sortearAmostraConferencia(
+    projectId: string,
+    instrumentId: string,
+    k = 30,
+    seed = 42
+  ): Promise<import('@/types/api').OcorrenciaInfo[]> {
+    return this.request(
+      `/projects/${projectId}/bibliometria/instrumentos/${instrumentId}/amostra-conferencia?k=${k}&seed=${seed}`,
+      { method: 'POST' }
+    )
+  }
+
+  async julgarAmostra(
+    projectId: string,
+    instrumentId: string,
+    payload: { acertos_positivos: number; total_avaliados: number }
+  ): Promise<{ estimated_precision: number; precision_ci: [number, number] }> {
+    return this.request(`/projects/${projectId}/bibliometria/instrumentos/${instrumentId}/julgar-amostra`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  // ── Grafos e Análise Estrutural (Fase 6, doc 48 §8, §12) ─────────────────
+
+  async gerarGrafo(
+    projectId: string,
+    payload: import('@/types/api').GerarGrafoPayload
+  ): Promise<import('@/types/api').GrafoInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/grafos/gerar`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async listarGrafos(projectId: string): Promise<import('@/types/api').GrafoInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/grafos`)
+  }
+
+  async obterGrafo(projectId: string, grafoId: string): Promise<import('@/types/api').GrafoInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/grafos/${grafoId}`)
+  }
+
+  exportarGrafoUrl(projectId: string, grafoId: string): string {
+    return `${this.baseUrl}/projects/${projectId}/bibliometria/grafos/${grafoId}/exportar`
+  }
+
+  // ── Estatística Sob Demanda (Fase 7, doc 48 §9, §12) ─────────────────────
+
+  async interpretarPerguntaEstatistica(
+    projectId: string,
+    question: string
+  ): Promise<import('@/types/api').InterpretarPerguntaResponse> {
+    return this.request(`/projects/${projectId}/bibliometria/analises/interpretar`, {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    })
+  }
+
+  async executarEspecificacaoEstatistica(
+    projectId: string,
+    payload: {
+      specification: import('@/types/api').EspecificacaoEstatistica
+      snapshot_id?: string | null
+    }
+  ): Promise<import('@/types/api').ExecutarEspecificacaoResponse> {
+    return this.request(`/projects/${projectId}/bibliometria/analises/executar`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async salvarAnaliseEstatistica(
+    projectId: string,
+    payload: {
+      question: string
+      specification: import('@/types/api').EspecificacaoEstatistica
+    }
+  ): Promise<import('@/types/api').AnaliseSalvaInfo> {
+    return this.request(`/projects/${projectId}/bibliometria/analises/salvas`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async listarAnalisesEstatisticas(
+    projectId: string
+  ): Promise<import('@/types/api').AnaliseSalvaInfo[]> {
+    return this.request(`/projects/${projectId}/bibliometria/analises/salvas`)
+  }
+
+  async excluirAnaliseEstatistica(
+    projectId: string,
+    analiseId: string
+  ): Promise<{ ok: boolean }> {
+    return this.request(`/projects/${projectId}/bibliometria/analises/salvas/${analiseId}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // ── Indicadores de Vanguarda e Sensibilidade (Fase 8, doc 48 §7.4, §10, §12) ──
+
+  async obterDiagramaEstrategico(
+    projectId: string,
+    snapshotId?: string | null
+  ): Promise<import('@/types/api').DiagramaEstrategicoResponse> {
+    const q = snapshotId ? `?snapshot_id=${snapshotId}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/vanguarda/diagrama-estrategico${q}`)
+  }
+
+  async obterRajadasTermos(
+    projectId: string,
+    options?: { snapshotId?: string | null; s?: number }
+  ): Promise<import('@/types/api').RajadasResponse> {
+    const params = new URLSearchParams()
+    if (options?.snapshotId) params.set('snapshot_id', options.snapshotId)
+    if (options?.s) params.set('s', String(options.s))
+    const q = params.toString() ? `?${params.toString()}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/vanguarda/rajadas${q}`)
+  }
+
+  async obterBootstrapRankings(
+    projectId: string,
+    options?: {
+      tipoRanking?: string
+      snapshotId?: string | null
+      nBoot?: number
+      seed?: number
+    }
+  ): Promise<import('@/types/api').BootstrapRankingsResponse> {
+    const params = new URLSearchParams()
+    if (options?.tipoRanking) params.set('tipo_ranking', options.tipoRanking)
+    if (options?.snapshotId) params.set('snapshot_id', options.snapshotId)
+    if (options?.nBoot) params.set('n_boot', String(options.nBoot))
+    if (options?.seed) params.set('seed', String(options.seed))
+    const q = params.toString() ? `?${params.toString()}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/vanguarda/bootstrap-rankings${q}`)
+  }
+
+  async obterSensibilidadeParametros(
+    projectId: string,
+    snapshotId?: string | null
+  ): Promise<import('@/types/api').SensibilidadeParametrosResponse> {
+    const q = snapshotId ? `?snapshot_id=${snapshotId}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/vanguarda/sensibilidade${q}`)
+  }
+
+  async obterCoberturaCampo(
+    projectId: string,
+    snapshotId?: string | null
+  ): Promise<import('@/types/api').CoberturaCampoResponse> {
+    const q = snapshotId ? `?snapshot_id=${snapshotId}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/vanguarda/cobertura-campo${q}`)
+  }
+
+  // ── Pré-Registro e Relatório BIBLIO (Fase 9, doc 48 §11, §12) ─────────────
+
+  async obterPlanoBibliometrico(
+    projectId: string
+  ): Promise<import('@/types/api').PlanoBibliometrico> {
+    return this.request(`/projects/${projectId}/bibliometria/preregistro/plano`)
+  }
+
+  async atualizarPlanoBibliometrico(
+    projectId: string,
+    payload: import('@/types/api').AtualizarPlanoBibliometricoRequest
+  ): Promise<import('@/types/api').PlanoBibliometrico> {
+    return this.request(`/projects/${projectId}/bibliometria/preregistro/plano`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async obterRelatorioConformidadeBiblio(
+    projectId: string,
+    snapshotId?: string | null
+  ): Promise<import('@/types/api').RelatorioConformidadeBiblioResponse> {
+    const q = snapshotId ? `?snapshot_id=${snapshotId}` : ''
+    return this.request(`/projects/${projectId}/bibliometria/preregistro/relatorio-biblio${q}`)
+  }
+
+  async baixarPacoteReplicacao(
+    projectId: string,
+    snapshotId?: string | null
+  ): Promise<Blob> {
+    const q = snapshotId ? `?snapshot_id=${snapshotId}` : ''
+    const url = `${this.baseUrl}/projects/${projectId}/bibliometria/exportar-pacote${q}`
+    const res = await fetch(url, {
+      // `credentials` e o Bearer pelos mesmos motivos de `request()`: este
+      // download não passa por lá porque devolve blob, mas precisa da mesma
+      // credencial. `this.token` não existia — o campo é `sessionToken` —, e
+      // o cabeçalho saía como "Bearer undefined".
+      credentials: 'include',
+      headers: {
+        ...(this.sessionToken ? { Authorization: `Bearer ${this.sessionToken}` } : {}),
+      },
+    })
+    if (!res.ok) throw new Error('Falha ao baixar pacote de replicação.')
+    return res.blob()
+  }
+
+
+
+
+
+
+
 
   // ── Profile & Keys Portability ────────────────────────────────────
 

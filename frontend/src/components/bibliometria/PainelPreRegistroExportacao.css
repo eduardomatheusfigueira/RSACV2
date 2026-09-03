@@ -1,0 +1,243 @@
+/* ═════════════════════════════════════════════════════════════════════
+   Revsist — Painel de Pré-Registro e Exportação (Doc 48 §11, §12, Doc 49 Fase 9)
+   Design System: Contemporary Neo-Retro System Aesthetic
+   ═════════════════════════════════════════════════════════════════════ */
+
+.painel-preregistro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.painel-preregistro__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--space-px) solid var(--color-border);
+  padding-bottom: var(--space-3);
+}
+
+.painel-preregistro__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+.painel-preregistro__nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.painel-preregistro__nav-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.painel-preregistro__nav-btn--active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-neo-pressed);
+}
+
+.painel-preregistro__badge-score {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-px) var(--space-1-5);
+  background: var(--color-success);
+  color: var(--color-text-on-success);
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  margin-left: var(--space-1);
+}
+
+/* Indicadores de Status do Protocolo */
+.painel-preregistro__status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2-5) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.painel-preregistro__status-bar--vigente {
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  color: var(--color-success-text);
+}
+
+.painel-preregistro__status-bar--rascunho {
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning-text);
+}
+
+/* Grid de Indicadores Confirmatórios */
+.painel-preregistro__grid-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-2);
+}
+
+.painel-preregistro__item-indicador {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.painel-preregistro__item-indicador:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border));
+}
+
+.painel-preregistro__item-indicador--sel {
+  border-color: var(--color-accent);
+  background: var(--color-warning-bg);
+}
+
+.painel-preregistro__item-indicador-label {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* Relatório BIBLIO (20 itens) */
+.painel-preregistro__biblio-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.painel-preregistro__biblio-stat {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.painel-preregistro__biblio-stat-valor {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.painel-preregistro__biblio-stat-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.painel-preregistro__biblio-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  padding: var(--space-2-5) var(--space-4);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+.painel-preregistro__biblio-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.painel-preregistro__biblio-item-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.painel-preregistro__biblio-badge-resp {
+  font-size: var(--text-2xs);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+}
+
+.painel-preregistro__biblio-badge-resp--software {
+  background: var(--color-success-bg);
+  color: var(--color-success-on-surface);
+}
+
+.painel-preregistro__biblio-badge-resp--author {
+  background: var(--color-info-bg);
+  color: var(--color-info-on-surface);
+}
+
+/* Pacote de Replicação ZIP */
+.painel-preregistro__exportar-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.painel-preregistro__arquivos-zip {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  text-align: left;
+  margin-top: var(--space-3);
+}
+
+.painel-preregistro__arquivo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1-5) var(--space-3);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: monospace;
+}
+
+/* Largura de leitura confortável para a prosa do relatório. */
+.painel-preregistro__coluna-texto {
+  max-width: 540px;
+}

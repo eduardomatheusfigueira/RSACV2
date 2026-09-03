@@ -1824,14 +1824,14 @@
 
 .matrix-mode-badge.native {
   background: var(--color-included-bg);
-  color: var(--color-included);
+  color: var(--color-included-text);
   border: 1px solid var(--color-included);
 }
 
 .matrix-mode-badge.post {
-  background: var(--color-warning-bg, #fffbeb);
-  color: var(--color-warning, #d97706);
-  border: 1px solid var(--color-warning, #d97706);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning);
 }
 
 .matrix-note {
@@ -1847,7 +1847,7 @@
   gap: var(--space-3);
   padding: var(--space-3);
   margin-top: var(--space-3);
-  background: var(--color-info-bg, #eff6ff);
+  background: var(--color-info-bg);
   border: 1px solid color-mix(in srgb, var(--color-info) 40%, transparent);
   border-radius: var(--radius-sm);
 }

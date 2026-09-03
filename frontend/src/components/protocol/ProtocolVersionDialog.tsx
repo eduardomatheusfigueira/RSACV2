@@ -6,6 +6,7 @@ import {
   User,
   Hash,
   CheckCircle2,
+  HelpCircle,
   ShieldCheck,
   History,
 } from 'lucide-react'
@@ -25,6 +26,9 @@ import {
 } from '@/components/ui'
 import { api } from '@/api/client'
 import { ANCORAGEM_NORMATIVA } from '@/data/protocolCatalog'
+import { AIAssistButton } from '@/components/common/AIAssistButton'
+import { GUIAS } from '@/data/guiasDoProtocolo'
+import type { FerramentasDeApoio } from './apoioDoProtocolo'
 import './ProtocolStudio.css'
 
 interface ProtocolVersionDialogProps {
@@ -34,6 +38,8 @@ interface ProtocolVersionDialogProps {
   currentVersion?: string | null
   protocolStatus?: string
   onVersionChanged?: () => void
+  /** Guia e assistência por campo (doc 45 §16.4). Ver `apoioDoProtocolo.ts`. */
+  apoio?: FerramentasDeApoio
   readOnly?: boolean
 }
 
@@ -44,8 +50,10 @@ export function ProtocolVersionDialog({
   currentVersion,
   protocolStatus,
   onVersionChanged,
+  apoio,
   readOnly = false,
 }: ProtocolVersionDialogProps): JSX.Element {
+  const [guiaEmendaAberto, setGuiaEmendaAberto] = useState(false)
   const [activeTab, setActiveTab] = useState<'freeze' | 'amend' | 'history'>('history')
   const [versions, setVersions] = useState<ProtocolVersion[]>([])
   const [amendments, setAmendments] = useState<ProtocolAmendment[]>([])
@@ -333,10 +341,55 @@ export function ProtocolVersionDialog({
                 </FormGroup>
 
                 <FormGroup
-                  label="Justificativa da emenda"
+                  label={
+                    <span className="protocol-component-label">
+                      <span>Justificativa da emenda</span>
+                      <span className="protocol-component-label__acoes">
+                        <AIAssistButton
+                          fieldId="amendment_reason"
+                          fieldLabel="Justificativa da Emenda ao Protocolo"
+                          currentValue={amendReason}
+                          fieldGuidelines="Redija a justificativa nomeando o campo alterado e o valor anterior, a razão metodológica da mudança, a fase do projeto em que ocorreu e o efeito sobre o que já foi feito."
+                          projectTitle={apoio?.projeto?.titulo}
+                          methodology={apoio?.projeto?.metodologia}
+                          projectContext={apoio?.contexto?.('amendment_reason')}
+                          onApply={setAmendReason}
+                          compact
+                        />
+                        <button
+                          type="button"
+                          className={`btn-help-toggle ${guiaEmendaAberto ? 'active' : ''}`}
+                          onClick={() => setGuiaEmendaAberto((v) => !v)}
+                          aria-expanded={guiaEmendaAberto}
+                          title={GUIAS.amendment_reason.tituloBotao}
+                        >
+                          <HelpCircle size={14} aria-hidden="true" />
+                          <span>{GUIAS.amendment_reason.rotuloBotao}</span>
+                        </button>
+                      </span>
+                    </span>
+                  }
                   required
                   helperText="O que mudou e por quê. É este texto que aparece no histórico exportado."
                 >
+                  {guiaEmendaAberto && (
+                    <div className="structured-guide-box animate-fade-in">
+                      <div className="guide-header">
+                        <div className="guide-title">
+                          <HelpCircle size={16} className="icon-accent" aria-hidden="true" />
+                          <strong>{GUIAS.amendment_reason.titulo}</strong>
+                        </div>
+                      </div>
+                      <div className="guide-grid">
+                        {GUIAS.amendment_reason.itens.map((item) => (
+                          <div key={item.tag} className="guide-item">
+                            <span className="guide-tag">{item.tag}</span>
+                            <p>{item.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <Textarea
                     value={amendReason}
                     onChange={(e) => setAmendReason(e.target.value)}

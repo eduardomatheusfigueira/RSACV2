@@ -22,6 +22,8 @@ interface FiltrosDeConsulta {
   source?: string
   year_from?: number
   year_to?: number
+  /** Calcula sobre um corpus congelado, em vez do acervo de agora. */
+  instantaneo?: string
 }
 
 /**
@@ -35,7 +37,19 @@ export function construirQueryDeInsights(filtros?: FiltrosDeConsulta): string {
   if (filtros?.source) params.set('source', filtros.source)
   if (filtros?.year_from) params.set('year_from', String(filtros.year_from))
   if (filtros?.year_to) params.set('year_to', String(filtros.year_to))
+  if (filtros?.instantaneo) params.set('instantaneo', filtros.instantaneo)
 
   const qs = params.toString()
   return qs ? `?${qs}` : ''
+}
+
+/**
+ * Contagem com separador de milhar, na convenção pt-BR.
+ *
+ * A aba lida com acervos de dezenas de milhares, e `43861` cru obriga o leitor
+ * a contar dígitos para saber a ordem de grandeza.
+ */
+export function formatarContagem(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined || Number.isNaN(valor)) return '—'
+  return valor.toLocaleString('pt-BR')
 }

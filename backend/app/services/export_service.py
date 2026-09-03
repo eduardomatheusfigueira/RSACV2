@@ -12,8 +12,10 @@ import re
 from typing import Dict
 
 import pandas as pd
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.domain.afiliacao import e_nome_de_coletor
 from app.infrastructure.persistence.models import (
     ExtractionAnswerModel,
     HarvestRunModel,
@@ -91,7 +93,16 @@ class ExportService:
         project = db.query(ProjectModel).filter(ProjectModel.id == project_id).first()
         protocol = db.query(ProtocolModel).filter(ProtocolModel.project_id == project_id).first()
 
-        all_papers = db.query(PaperModel).filter(PaperModel.project_id == project_id).all()
+        # Duplicatas fora, pelo mesmo critério da fila de triagem e do
+        # instantâneo: exportá-las inflaria toda contagem da planilha.
+        all_papers = (
+            db.query(PaperModel)
+            .filter(
+                PaperModel.project_id == project_id,
+                or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)),  # noqa: E712
+            )
+            .all()
+        )
         included_papers = [p for p in all_papers if p.decision == "Incluído"]
         excluded_papers = [p for p in all_papers if p.decision == "Excluído"]
         pending_papers = [p for p in all_papers if p.decision == "Pendente"]
@@ -116,7 +127,11 @@ class ExportService:
                 "Periódico / Revista": p.journal or "",
                 "Bases de Dados": sources_str,
                 "Tipo de Pesquisa": p.research_type,
-                "Instituição": p.institution,
+                # Vazio quando o campo traz só o nome do coletor: a procedência
+                # já está em "Bases de Dados", e repeti-la sob o rótulo de
+                # instituição faz a planilha afirmar uma afiliação que ninguém
+                # coletou (doc 47 §B-01).
+                "Instituição": "" if e_nome_de_coletor(p.institution) else p.institution,
                 "URL / Link": p.download_url,
                 "Critérios de Inclusão Atendidos": "; ".join(inc_crits),
                 "Resumo (Abstract)": p.abstract,
@@ -173,28 +188,92 @@ class ExportService:
         prisma_data = [
             {"Etapa PRISMA 2020": "Total de Registros Identificados nas Bases", "Quantidade": total_found},
             {"Etapa PRISMA 2020": "Registros Duplicados Removidos", "Quantidade": total_dup},
-            {"Etapa PRISMA 2020": "Registros Únicos Triados (Título e Resumo)", "Quantidade": len(all_papers)},
+            {"Etapa PRISMA 2020": "Registros Únicos a Triar (após deduplicação)", "Quantidade": len(all_papers)},
+            # Triados são os que TÊM decisão. Contar o acervo inteiro aqui
+            # declarava triagem que não aconteceu — ver `get_prisma_flow_data`.
+            {
+                "Etapa PRISMA 2020": "Registros Triados (Título e Resumo)",
+                "Quantidade": len(included_papers) + len(excluded_papers),
+            },
             {"Etapa PRISMA 2020": "Estudos Excluídos na Triagem 1", "Quantidade": len(excluded_papers)},
-            {"Etapa PRISMA 2020": "Estudos Pendentes de Avaliação", "Quantidade": len(pending_papers)},
+            {"Etapa PRISMA 2020": "Estudos Ainda Não Triados", "Quantidade": len(pending_papers)},
             {"Etapa PRISMA 2020": "Estudos Elegíveis / Incluídos na Síntese", "Quantidade": len(included_papers)},
         ]
         df_prisma = pd.DataFrame(prisma_data)
 
+        # ── Aba 5: Indicadores Bibliométricos (doc 48 §7, doc 49 Fase 3)
+        try:
+            from app.services.bibliometria.indicadores import obter_indicadores_bibliometricos
+            ind = obter_indicadores_bibliometricos(db, project_id, decision="Incluído")
+            cagr = ind.get("production_temporal", {})
+            bradford = ind.get("bradford", {})
+            lotka = ind.get("lotka", {})
+            colab = ind.get("collaboration", {})
+            conc = ind.get("concentration", {})
+            cit = ind.get("citations", {})
+            oa = ind.get("open_access", {})
+
+            biblio_data = [
+                {"Dimensão": "Produção Temporal", "Indicador": "Período Analisado", "Valor": f"{cagr.get('year_start')} - {cagr.get('year_end')}" if cagr.get('year_start') else "—"},
+                {"Dimensão": "Produção Temporal", "Indicador": "Taxa Composta de Crescimento Anual (CAGR)", "Valor": f"{cagr.get('cagr_pct')}%" if cagr.get('cagr_pct') is not None else "—"},
+                {"Dimensão": "Produção Temporal", "Indicador": "Total de Estudos no Período", "Valor": cagr.get("total_period", 0)},
+                {"Dimensão": "Lei de Bradford", "Indicador": "Total de Periódicos Identificados", "Valor": bradford.get("total_journals", 0)},
+                {"Dimensão": "Lei de Bradford", "Indicador": "Razão de Periódicos por Zona (r1 : r2 : r3)", "Valor": bradford.get("formula_ratio", "—")},
+                {"Dimensão": "Lei de Bradford", "Indicador": "Multiplicador de Bradford (k médio)", "Valor": bradford.get("k_multiplier") if bradford.get("k_multiplier") is not None else "—"},
+                {"Dimensão": "Lei de Lotka", "Indicador": "Total de Autores Únicos", "Valor": lotka.get("n_authors", 0)},
+                {"Dimensão": "Lei de Lotka", "Indicador": "Expoente da Lei de Potência (alpha)", "Valor": lotka.get("alpha") if lotka.get("alpha") is not None else "—"},
+                {"Dimensão": "Lei de Lotka", "Indicador": "Estatística de Teste Kolmogorov-Smirnov (D_KS)", "Valor": lotka.get("d_ks") if lotka.get("d_ks") is not None else "—"},
+                {"Dimensão": "Lei de Lotka", "Indicador": "Valor Crítico KS (5%)", "Valor": lotka.get("d_critical") if lotka.get("d_critical") is not None else "—"},
+                {"Dimensão": "Lei de Lotka", "Indicador": "Veredicto de Aderência Formal", "Valor": lotka.get("p_verdict", "—")},
+                {"Dimensão": "Colaboração", "Indicador": "Índice de Subramanyam (C)", "Valor": colab.get("subramanyam_index") if colab.get("subramanyam_index") is not None else "—"},
+                {"Dimensão": "Colaboração", "Indicador": "Média de Autores por Artigo", "Valor": colab.get("avg_authors_per_paper", 0.0)},
+                {"Dimensão": "Colaboração", "Indicador": "Artigos em Coautoria", "Valor": colab.get("multi_author_articles", 0)},
+                {"Dimensão": "Colaboração", "Indicador": "Artigos com Autor Único", "Valor": colab.get("single_author_articles", 0)},
+                {"Dimensão": "Concentração", "Indicador": "Coeficiente de Gini de Autores", "Valor": conc.get("gini_authors") if conc.get("gini_authors") is not None else "—"},
+                {"Dimensão": "Concentração", "Indicador": "Coeficiente de Gini de Periódicos", "Valor": conc.get("gini_journals") if conc.get("gini_journals") is not None else "—"},
+                {"Dimensão": "Concentração", "Indicador": "Índice Herfindahl-Hirschman (HHI) de Periódicos", "Valor": conc.get("hhi_journals") if conc.get("hhi_journals") is not None else "—"},
+                {"Dimensão": "Impacto e Citações", "Indicador": "Índice h do Corpus", "Valor": cit.get("h_index", 0)},
+                {"Dimensão": "Impacto e Citações", "Indicador": "Total de Citações Recebidas", "Valor": cit.get("total_citations", 0)},
+                {"Dimensão": "Impacto e Citações", "Indicador": "Média de Citações por Artigo", "Valor": cit.get("mean_citations", 0.0)},
+                {"Dimensão": "Impacto e Citações", "Indicador": "Mediana de Citações", "Valor": cit.get("median_citations", 0.0)},
+                {"Dimensão": "Acesso Aberto", "Indicador": "Proporção Open Access", "Valor": f"{oa.get('open_access_pct')}%" if oa.get("open_access_pct") is not None else "—"},
+                {"Dimensão": "Acesso Aberto", "Indicador": "Estudos em Acesso Aberto", "Valor": oa.get("open_access_count", 0)},
+            ]
+        except Exception:
+            biblio_data = [{"Dimensão": "Erro", "Indicador": "Falha no cálculo", "Valor": "Indisponível"}]
+
+        df_biblio = pd.DataFrame(biblio_data)
+
+        # ── Aba 6: Metadados de Proveniência ───────────────────────────
+        from datetime import datetime, timezone
+        prov_data = [
+            {"Propriedade": "Sistema", "Valor": "Revsist — Ambiente de Revisão Sistemática e Bibliometria"},
+            {"Propriedade": "Versão do Motor", "Valor": "2.0.0"},
+            {"Propriedade": "Projeto ID", "Valor": project_id},
+            {"Propriedade": "Título do Projeto", "Valor": project.title},
+            {"Propriedade": "Metodologia", "Valor": project.methodology},
+            {"Propriedade": "Data da Exportação (UTC)", "Valor": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")},
+            {"Propriedade": "Total de Estudos no Projeto", "Valor": len(all_papers)},
+            {"Propriedade": "Regra de Integridade Numérica", "Valor": "Cálculo 100% determinístico; nenhum indicador produzido por LLM (Doc 48 §2)"},
+        ]
+        df_prov = pd.DataFrame(prov_data)
+
         # Gerar BytesIO
         output = io.BytesIO()
-        # Neutralização aplicada no ponto único de escrita: cobre as quatro
-        # abas de uma vez e não depende de lembrar disso a cada campo novo
-        # acrescentado às planilhas (doc 29 §29.9.1).
         df_included = df_included.map(neutralizar_formula)
         df_extraction = df_extraction.map(neutralizar_formula)
         df_excluded = df_excluded.map(neutralizar_formula)
         df_prisma = df_prisma.map(neutralizar_formula)
+        df_biblio = df_biblio.map(neutralizar_formula)
+        df_prov = df_prov.map(neutralizar_formula)
 
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df_included.to_excel(writer, sheet_name="Artigos Incluídos", index=False)
             df_extraction.to_excel(writer, sheet_name="Extração de Dados", index=False)
             df_excluded.to_excel(writer, sheet_name="Artigos Excluídos", index=False)
             df_prisma.to_excel(writer, sheet_name="Métricas PRISMA 2020", index=False)
+            df_biblio.to_excel(writer, sheet_name="Bibliometria", index=False)
+            df_prov.to_excel(writer, sheet_name="Proveniência", index=False)
 
         output.seek(0)
         return output
@@ -238,7 +317,29 @@ class ExportService:
 
     @staticmethod
     def get_prisma_flow_data(db: Session, project_id: str) -> Dict:
-        """Retorna estrutura de dados para o diagrama de fluxo PRISMA 2020."""
+        """Dados do diagrama de fluxo PRISMA 2020.
+
+        **`records_screened` conta os registros que já foram triados** — os que
+        têm decisão —, e não o tamanho do acervo.
+
+        A distinção não é sutil e não é acadêmica. Antes, este campo devolvia
+        `len(all_papers)`, o que declarava como "triados" todos os registros
+        do projeto, inclusive os que ninguém tinha olhado. Medido nos acervos
+        reais em 01/09/2026: um projeto com **454** estudos triados reportava
+        16.578 (37×), e outro com **209** reportava 65.955 (316×).
+
+        O diagrama PRISMA é o artefato regulado de uma revisão sistemática, e
+        esse número entra nele, na planilha exportada e na tela. Errá-lo por
+        duas ordens de grandeza é o pior defeito que este arquivo poderia ter.
+
+        `records_to_screen` é o denominador — quantos entraram na fila — e
+        existe para que a tela mostre "454 de 16.578" em vez de um número
+        solto que se lê como se a triagem estivesse terminada.
+
+        Duplicatas ficam de fora de todas as contagens, pelo mesmo critério da
+        fila de triagem, do contador do projeto e do instantâneo. Antes, a
+        consulta não as filtrava.
+        """
         runs = db.query(HarvestRunModel).filter(HarvestRunModel.project_id == project_id).all()
         total_found = sum(r.records_found for r in runs)
         total_duplicates = sum(r.records_duplicate for r in runs)
@@ -247,10 +348,17 @@ class ExportService:
         for r in runs:
             by_source[r.source_name] = by_source.get(r.source_name, 0) + r.records_found
 
-        all_papers = db.query(PaperModel).filter(PaperModel.project_id == project_id).all()
-        included = [p for p in all_papers if p.decision == "Incluído"]
-        excluded = [p for p in all_papers if p.decision == "Excluído"]
-        pending = [p for p in all_papers if p.decision == "Pendente"]
+        unicos = (
+            db.query(PaperModel)
+            .filter(
+                PaperModel.project_id == project_id,
+                or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)),  # noqa: E712
+            )
+            .all()
+        )
+        included = [p for p in unicos if p.decision == "Incluído"]
+        excluded = [p for p in unicos if p.decision == "Excluído"]
+        pending = [p for p in unicos if p.decision == "Pendente"]
 
         return {
             "identification": {
@@ -259,7 +367,10 @@ class ExportService:
                 "duplicates_removed": total_duplicates,
             },
             "screening": {
-                "records_screened": len(all_papers),
+                # Quantos entraram na fila de triagem — o denominador.
+                "records_to_screen": len(unicos),
+                # Quantos de fato já foram triados: os que têm decisão.
+                "records_screened": len(included) + len(excluded),
                 "records_excluded": len(excluded),
                 "records_pending": len(pending),
             },

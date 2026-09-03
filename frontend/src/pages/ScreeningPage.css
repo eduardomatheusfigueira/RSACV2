@@ -131,6 +131,43 @@
   box-shadow: var(--shadow-neo-sunken), 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
+.screening-page .queue-sort-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.screening-page .queue-sort-wrapper .sort-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.screening-page .queue-sort-select {
+  height: 28px;
+  padding: 0 var(--space-2-5) 0 var(--space-6);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-neo-sunken);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-medium);
+  outline: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.screening-page .queue-sort-select:hover {
+  border-color: var(--color-accent);
+}
+
+.screening-page .queue-sort-select:focus {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-neo-sunken), 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
 .queue-pagination-inline {
   display: flex;
   align-items: center;
@@ -1521,6 +1558,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-0-5);
+  max-width: 380px;
+}
+
+.batch-floating-dock .dock-info-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .batch-floating-dock .dock-info strong {
@@ -1529,11 +1573,38 @@
   font-weight: var(--weight-bold);
 }
 
-.batch-floating-dock .dock-info span {
-  font-size: var(--font-size-xs);
+.batch-floating-dock .dock-progress-tag {
+  font-size: var(--font-size-2xs);
   color: var(--color-accent-on-surface);
   font-family: var(--font-mono);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-bold);
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  padding: var(--space-px) var(--space-1-5);
+  border-radius: var(--radius-xs);
+}
+
+.batch-floating-dock .dock-current-study {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batch-floating-dock .dock-last-result {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .batch-floating-dock .btn-dock-expand {
@@ -1580,7 +1651,7 @@
 .badge-screening-status {
   font-size: var(--font-size-2xs);
   font-weight: var(--weight-bold);
-  padding: 1px 6px;
+  padding: var(--space-px) var(--space-1-5);
   border-radius: var(--radius-xs);
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -1619,10 +1690,10 @@
 .badge-my-vote {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0-5);
   font-size: var(--font-size-2xs);
   font-weight: var(--weight-semibold);
-  padding: 1px 5px;
+  padding: var(--space-px) var(--space-1-5);
   border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
   color: var(--color-accent-on-surface);
@@ -1763,4 +1834,17 @@
   border-radius: var(--radius-xs);
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
+}
+
+/* Pendentes sem resumo utilizável.
+   Cor de aviso, não de erro: não é um problema do registro, é um limite do que
+   a triagem assistida consegue julgar — e o estudo continua no acervo. */
+.counter-btn.sem-resumo.active,
+.counter-btn.sem-resumo:hover {
+  border-color: var(--color-warning);
+  color: var(--color-warning-on-surface);
+}
+
+.counter-btn.sem-resumo.active {
+  background: var(--color-warning-bg);
 }

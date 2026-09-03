@@ -4,7 +4,7 @@
  * da triagem em lote com Assistência.
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Sparkles,
   Zap,
@@ -20,9 +20,12 @@ import {
   Minimize2,
   ArrowRight,
   StopCircle,
+  AlertTriangle,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@/components/ui'
 import './BatchScreeningModal.css'
+import type { ItemDoLote, RitmoDoLote } from '@/types/api'
+import { limitePadraoDoLote } from './limiteDoLote'
 
 export interface BatchScreeningItem {
   id: string
@@ -54,12 +57,68 @@ interface BatchScreeningModalProps {
     included: number
     excluded: number
     pending: number
+    /** Paralelismo e pausa vigentes, ajustados pelo servidor. */
+    ritmo?: RitmoDoLote | null
   } | null
   currentStudy: CurrentScreeningStudy | null
-  activityFeed: BatchScreeningItem[]
-  onStartBatch: (limit: number, concurrency: number) => Promise<void>
+  /**
+   * A relação do lote, na ordem de triagem.
+   *
+   * Substitui o antigo `activityFeed`, que listava só os últimos resultados. A
+   * pergunta que a janela precisa responder é sobre o CONJUNTO — quais estudos
+   * entraram, quais já foram, quais faltam —, e uma fila dos últimos eventos
+   * nunca responde isso: quem abre a janela no meio, ou perde o canal por um
+   * instante, fica sem o que passou.
+   */
+  itensDoLote: ItemDoLote[]
+  /** O canal ao vivo está entregando? Falso = acompanhando por consulta. */
+  canalAoVivo?: boolean
+  onStartBatch: (limit: number, concurrency: number, pausa: number) => Promise<void>
   onCancelBatch: () => Promise<void>
 }
+
+/**
+ * Os três ritmos oferecidos.
+ *
+ * `porMinuto` é uma estimativa para o pesquisador se situar, calculada para uma
+ * resposta típica de ~8s do provedor. Não é promessa: o tempo de resposta varia
+ * muito entre modelos e horários.
+ */
+/**
+ * Os três ritmos oferecidos.
+ *
+ * `teto` é o MÁXIMO de estudos em paralelo, não um valor fixo: o lote começa
+ * abaixo dele e se move sozinho — sobe enquanto o provedor aceita, recua assim
+ * que ele recusa. Escolher um número fixo nunca funcionou aqui, porque o limite
+ * real depende do plano, do modelo, de quantas chaves estão cadastradas e da
+ * hora do dia. Alto demais derrubava o lote em recusas; baixo demais
+ * desperdiçava minutos à toa.
+ */
+const RITMOS = {
+  cauteloso: {
+    rotulo: 'Cauteloso',
+    teto: 2,
+    pausa: 4,
+    resumo: 'até 2 em paralelo',
+    explicacao: 'Sobe pouco e espera bastante. É o que usar quando o provedor vem recusando por limite.',
+  },
+  equilibrado: {
+    rotulo: 'Equilibrado',
+    teto: 4,
+    pausa: 1.5,
+    resumo: 'até 4 em paralelo',
+    explicacao: 'Começa com 2 e sobe até 4 se o provedor aceitar. Recua sozinho ao primeiro sinal de limite.',
+  },
+  rapido: {
+    rotulo: 'Rápido',
+    teto: 8,
+    pausa: 0,
+    resumo: 'até 8 em paralelo',
+    explicacao: 'Aproveita várias chaves cadastradas ou plano pago. Recua igual, só parte de mais alto.',
+  },
+} as const
+
+type ChaveDeRitmo = keyof typeof RITMOS
 
 export function BatchScreeningModal({
   isOpen,
@@ -69,12 +128,45 @@ export function BatchScreeningModal({
   isRunning,
   progress,
   currentStudy,
-  activityFeed,
+  itensDoLote,
+  canalAoVivo = true,
   onStartBatch,
   onCancelBatch,
 }: BatchScreeningModalProps): JSX.Element | null {
-  const [limitOption, setLimitOption] = useState<number>(Math.min(50, Math.max(1, pendingCount)))
-  const [concurrency, setConcurrency] = useState<number>(3)
+  /* O limite acompanha o contador de pendentes até o pesquisador escolher um.
+     Sem isto, o valor era calculado uma única vez — na montagem da tela, com o
+     contador ainda em 0 — e o lote saía com limite 1. */
+  const [limitOption, setLimitOption] = useState<number>(() => limitePadraoDoLote(pendingCount))
+  const limiteEscolhidoRef = useRef(false)
+
+  useEffect(() => {
+    if (limiteEscolhidoRef.current) return
+    setLimitOption(limitePadraoDoLote(pendingCount))
+  }, [pendingCount])
+
+  /* Reabrir a janela depois de um lote volta a sugerir o padrão: o pesquisador
+     que triou 10 e voltou para triar o resto não deveria reencontrar o 10. */
+  useEffect(() => {
+    if (!isOpen) {
+      limiteEscolhidoRef.current = false
+    }
+  }, [isOpen])
+
+  const escolherLimite = (valor: number) => {
+    limiteEscolhidoRef.current = true
+    setLimitOption(valor)
+  }
+  /**
+   * Ritmo da triagem.
+   *
+   * Antes havia só "concorrência", em múltiplos de 1x a 5x. Dois problemas:
+   * o número não diz nada a quem não conhece a API por dentro, e limitar
+   * quantos correm ao mesmo tempo NÃO limita a que velocidade as requisições
+   * saem — com chamadas rápidas, mesmo um por vez ultrapassa o limite por
+   * minuto do provedor. Cada ritmo agora fixa os dois controles.
+   */
+  const [ritmo, setRitmo] = useState<ChaveDeRitmo>('equilibrado')
+  const { pausa, teto: concurrency } = RITMOS[ritmo]
   const [isStarting, setIsStarting] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
 
@@ -88,7 +180,7 @@ export function BatchScreeningModal({
   const handleStart = async () => {
     try {
       setIsStarting(true)
-      await onStartBatch(limitOption, concurrency)
+      await onStartBatch(limitOption, concurrency, pausa)
     } finally {
       setIsStarting(false)
     }
@@ -102,6 +194,13 @@ export function BatchScreeningModal({
       setIsStopping(false)
     }
   }
+
+  /* Contados da própria relação: se a janela mostra a lista, a legenda tem de
+     concordar com ela — e não com um contador que veio por outro caminho. */
+  const concluidos = itensDoLote.filter((i) => i.status === 'concluido').length
+  const emAnalise = itensDoLote.filter((i) => i.status === 'em_analise').length
+  const naFila = itensDoLote.filter((i) => i.status === 'na_fila').length
+  const naoTriados = itensDoLote.filter((i) => i.status === 'nao_triado').length
 
   const effectiveTotal = progress?.total || limitOption || pendingCount
   const effectiveProcessed = progress?.processed || 0
@@ -188,7 +287,7 @@ export function BatchScreeningModal({
                           key={preset}
                           type="button"
                           className={`btn-preset ${limitOption === preset ? 'active' : ''}`}
-                          onClick={() => setLimitOption(preset)}
+                          onClick={() => escolherLimite(preset)}
                         >
                           {preset} estudos
                         </button>
@@ -198,7 +297,7 @@ export function BatchScreeningModal({
                       <button
                         type="button"
                         className={`btn-preset ${limitOption === pendingCount ? 'active' : ''}`}
-                        onClick={() => setLimitOption(pendingCount)}
+                        onClick={() => escolherLimite(pendingCount)}
                       >
                         Todos ({pendingCount})
                       </button>
@@ -212,33 +311,36 @@ export function BatchScreeningModal({
                       min={1}
                       max={pendingCount || 1000}
                       value={limitOption}
-                      onChange={(e) => setLimitOption(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) => escolherLimite(Math.max(1, parseInt(e.target.value) || 1))}
                     />
                   </div>
                 </div>
 
-                {/* Concorrência */}
+                {/* Ritmo */}
                 <div className="batch-config-card">
                   <div className="config-card-header">
                     <Sliders size={16} className="icon-accent" />
-                    <strong>Concorrência / Velocidade</strong>
+                    <strong>Ritmo da Triagem</strong>
                   </div>
-                  <p className="config-card-desc">Número de requisições simultâneas ao modelo de linguagem:</p>
-                  <div className="concurrency-selector">
-                    {[1, 2, 3, 4, 5].map((level) => (
+                  <p className="config-card-desc">
+                    O ritmo define o <strong>teto</strong>, não um valor fixo: a triagem
+                    começa abaixo dele, sobe enquanto o provedor aceita e recua sozinha
+                    assim que ele recusa por limite.
+                  </p>
+                  <div className="ritmo-selector">
+                    {(Object.keys(RITMOS) as ChaveDeRitmo[]).map((chave) => (
                       <button
-                        key={level}
+                        key={chave}
                         type="button"
-                        className={`btn-concurrency ${concurrency === level ? 'active' : ''}`}
-                        onClick={() => setConcurrency(level)}
+                        className={`btn-ritmo ${ritmo === chave ? 'active' : ''}`}
+                        onClick={() => setRitmo(chave)}
                       >
-                        {level}x
+                        <span className="btn-ritmo__nome">{RITMOS[chave].rotulo}</span>
+                        <span className="btn-ritmo__taxa">{RITMOS[chave].resumo}</span>
                       </button>
                     ))}
                   </div>
-                  <span className="concurrency-hint">
-                    {concurrency <= 2 ? 'Recomendado para limites de taxa restritos.' : concurrency === 3 ? 'Equilíbrio ideal entre velocidade e estabilidade.' : 'Velocidade máxima (requer limites de API compatíveis).'}
-                  </span>
+                  <span className="concurrency-hint">{RITMOS[ritmo].explicacao}</span>
                 </div>
               </div>
             </div>
@@ -247,6 +349,19 @@ export function BatchScreeningModal({
           {/* STATE 2: LIVE RUNNING OU FINISHED */}
           {(isRunning || progress !== null) && (
             <div className="batch-live-view">
+              {/* O canal caiu: a triagem segue, mas a tela passa a depender da
+                  consulta periódica. Dizer isso evita que uma atualização mais
+                  lenta seja lida como lote travado. */}
+              {!canalAoVivo && isRunning && (
+                <div className="batch-canal-aviso">
+                  <RefreshCw size={13} />
+                  <span>
+                    Canal ao vivo indisponível — acompanhando por consulta ao servidor.
+                    A triagem segue normalmente; só a tela atualiza mais devagar.
+                  </span>
+                </div>
+              )}
+
               {/* Placar de Resultados em Tempo Real */}
               <div className="batch-live-stats-bar">
                 <div className="live-stat-chip processed">
@@ -304,54 +419,123 @@ export function BatchScreeningModal({
               </div>
 
               {/* Estudo Atualmente em Análise (Destaque do Processo) */}
-              {isRunning && currentStudy && (
+              {isRunning && (
                 <div className="current-analyzing-card animate-fade-in">
                   <div className="analyzing-header">
                     <span className="analyzing-pulse-tag">
-                      <Sparkles size={13} /> Analisando agora
+                      <Sparkles size={13} /> {currentStudy ? 'Analisando agora' : 'Preparando envio à Assistência...'}
                     </span>
-                    {currentStudy.year && <span className="analyzing-year">{currentStudy.year}</span>}
+                    {currentStudy?.year && <span className="analyzing-year">{currentStudy.year}</span>}
                   </div>
-                  <h4 className="analyzing-title">{currentStudy.title}</h4>
-                  {currentStudy.authors && (
+                  <h4 className="analyzing-title">
+                    {currentStudy ? currentStudy.title : 'Enviando estudo para avaliação de critérios com IA...'}
+                  </h4>
+                  {currentStudy?.authors ? (
                     <p className="analyzing-authors">{currentStudy.authors}</p>
+                  ) : (
+                    <p className="analyzing-authors" style={{ fontStyle: 'italic', opacity: 0.8 }}>
+                      Aguardando retorno do modelo de IA...
+                    </p>
                   )}
                 </div>
               )}
 
               {/* Feed de Estudos Concluídos no Lote */}
-              <div className="batch-feed-container">
-                <div className="feed-header">
-                  <h5>Estudos Recém-Triados neste Lote ({activityFeed.length})</h5>
+              {/* ── A relação do lote ───────────────────────────────
+                  Cada estudo com a sua situação, na ordem em que serão
+                  triados. É o painel que responde "onde está o lote": o que
+                  já foi decidido, o que está sendo analisado agora e o que
+                  ainda está na fila. */}
+              <div className="batch-roster">
+                <div className="batch-roster__head">
+                  <h5>Estudos deste lote ({itensDoLote.length})</h5>
+                  <div className="batch-roster__legend">
+                    {isRunning && progress?.ritmo && (
+                      <span
+                        className="roster-chip is-ritmo"
+                        title={`Teto de ${progress.ritmo.teto}. Ajustado automaticamente conforme o provedor responde.`}
+                      >
+                        {progress.ritmo.paralelismo} em paralelo
+                        {progress.ritmo.pausa > 0 ? ` · ${progress.ritmo.pausa}s` : ''}
+                      </span>
+                    )}
+                    <span className="roster-chip is-concluido">
+                      {concluidos} triado{concluidos === 1 ? '' : 's'}
+                    </span>
+                    <span className="roster-chip is-em_analise">{emAnalise} em análise</span>
+                    <span className="roster-chip is-na_fila">{naFila} na fila</span>
+                    {naoTriados > 0 && (
+                      <span className="roster-chip is-nao_triado">
+                        {naoTriados} sem resposta do provedor
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="feed-list">
-                  {activityFeed.length === 0 ? (
-                    <div className="feed-empty-state">
-                      <RefreshCw size={18} className="animate-spin icon-accent" />
-                      <span>Aguardando a resposta dos primeiros estudos...</span>
-                    </div>
+
+                <ol className="batch-roster__list">
+                  {itensDoLote.length === 0 ? (
+                    <li className="batch-roster__empty">
+                      <RefreshCw size={16} className="animate-spin icon-accent" />
+                      <span>Selecionando os estudos do lote...</span>
+                    </li>
                   ) : (
-                    activityFeed.map((item, idx) => (
-                      <div key={item.id || idx} className="feed-item-card animate-fade-in">
-                        <div className="feed-item-header">
-                          <span className={`badge-decision badge-${item.decision.toLowerCase()}`}>
-                            {item.decision === 'Incluído' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                            {item.decision}
-                          </span>
-                          {item.confidence !== undefined && (
-                            <span className="feed-item-conf">
-                              Confiança: {Math.round(item.confidence * 100)}%
+                    itensDoLote.map((item, idx) => (
+                      <li key={item.id || idx} className={`roster-item is-${item.status}`}>
+                        <span className="roster-item__pos">{idx + 1}</span>
+
+                        <span className="roster-item__estado">
+                          {item.status === 'concluido' ? (
+                            <span
+                              className={`badge-decision badge-${(item.decision || '').toLowerCase()}`}
+                            >
+                              {item.decision === 'Incluído' ? (
+                                <CheckCircle2 size={12} />
+                              ) : item.decision === 'Excluído' ? (
+                                <XCircle size={12} />
+                              ) : (
+                                <Clock size={12} />
+                              )}
+                              {item.decision || 'Sem decisão'}
+                            </span>
+                          ) : item.status === 'em_analise' ? (
+                            <span className="roster-estado-tag em-analise">
+                              <RefreshCw size={12} className="animate-spin" /> Analisando
+                            </span>
+                          ) : item.status === 'nao_triado' ? (
+                            <span className="roster-estado-tag nao-triado">
+                              <AlertTriangle size={12} /> Não triado
+                            </span>
+                          ) : (
+                            <span className="roster-estado-tag na-fila">
+                              <Clock size={12} /> Na fila
                             </span>
                           )}
-                        </div>
-                        <p className="feed-item-title">{item.title}</p>
-                        {item.justification && (
-                          <p className="feed-item-justification">{item.justification}</p>
+                        </span>
+
+                        <span className="roster-item__corpo">
+                          <span className="roster-item__titulo">{item.title}</span>
+                          {(item.authors || item.year) && (
+                            <span className="roster-item__meta">
+                              {[item.authors, item.year].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
+                          {(item.status === 'concluido' || item.status === 'nao_triado') &&
+                            item.justification && (
+                              <span className="roster-item__justificativa">
+                                {item.justification}
+                              </span>
+                            )}
+                        </span>
+
+                        {item.status === 'concluido' && item.confidence != null && (
+                          <span className="roster-item__conf" title="Confiança declarada pela assistência">
+                            {Math.round(item.confidence * 100)}%
+                          </span>
                         )}
-                      </div>
+                      </li>
                     ))
                   )}
-                </div>
+                </ol>
               </div>
             </div>
           )}
@@ -390,6 +574,14 @@ export function BatchScreeningModal({
                   className="btn-primary"
                   onClick={handleStart}
                   disabled={isStarting || pendingCount === 0}
+                  /* Sem pendentes não há lote — mas um botão apagado sem
+                     explicação é indistinguível de um botão quebrado, que foi
+                     como este apareceu quando o contador não carregava. */
+                  title={
+                    pendingCount === 0
+                      ? 'Nenhum estudo pendente de triagem neste projeto.'
+                      : `Triar os próximos ${limitOption} estudos pendentes com assistência.`
+                  }
                 >
                   {isStarting ? (
                     <>

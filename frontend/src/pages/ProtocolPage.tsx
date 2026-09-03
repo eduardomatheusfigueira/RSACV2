@@ -66,7 +66,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useRibbonStore } from '@/stores/useRibbonStore'
 import { ANCORAGEM_NORMATIVA, PROTOCOL_CATALOG, PROTOCOL_OPTIONS, REVIEW_DESIGNS_CATALOG } from '@/data/protocolCatalog'
-import { GUIAS_DO_PROTOCOLO } from '@/data/guiasDoProtocolo'
+import { GUIAS } from '@/data/guiasDoProtocolo'
 import { CampoDoProtocolo } from '@/components/protocol/CampoDoProtocolo'
 import type { CampoDoProtocoloProps } from '@/components/protocol/CampoDoProtocolo'
 import type { ProtocolSectionKey } from '@/data/protocolCatalog'
@@ -330,32 +330,53 @@ export function ProtocolPage(): JSX.Element {
    * `manuscript` inteiro para o componente o acoplaria ao formato do
    * manuscrito por nada.
    */
+  /**
+   * `alvo` generaliza o que antes era fixo no manuscrito. Os campos do Núcleo
+   * de Busca — objetivo, critérios, estratégia, perguntas de extração — não
+   * moram em `manuscript`, e sem isso metade do Estúdio ficaria sem botão de
+   * guia. Quando `alvo` não é passado, o guia abre sem o botão de modelo: há
+   * campo (o seletor de desenho, a grade de bases) em que "inserir texto" não
+   * quer dizer nada.
+   */
   const montarGuia = (
-    campo: keyof typeof manuscript,
-    chaveDeAjuda: string
+    chaveDoGuia: string,
+    chaveDeAjuda: string,
+    alvo?: { valorAtual: string; aplicar: (texto: string) => void }
   ): CampoDoProtocoloProps['guia'] => {
-    const conteudo = GUIAS_DO_PROTOCOLO[campo as string]
+    const conteudo = GUIAS[chaveDoGuia]
     if (!conteudo) return undefined
+
+    const doManuscrito = chaveDoGuia in manuscript
+    const alvoEfetivo =
+      alvo ??
+      (doManuscrito
+        ? {
+            valorAtual: manuscript[chaveDoGuia] || '',
+            aplicar: (texto: string) => updateManuscriptField(chaveDoGuia, texto),
+          }
+        : undefined)
+
     return {
       conteudo,
-      referencia: getFieldItemRef(campo as string),
+      referencia: getFieldItemRef(chaveDoGuia),
       aberto: Boolean(helpOpen[chaveDeAjuda]),
       alternar: () => toggleHelp(chaveDeAjuda),
-      aoInserirModelo: conteudo.modelo
-        ? () => {
-            const { texto, confirmacao } = conteudo.modelo!
-            const resolvido =
-              typeof texto === 'function'
-                ? texto({
-                    diretriz: currentProtocolDef.name,
-                    referencia: currentProtocolDef.reference,
-                    framework: currentProtocolDef.defaultFramework,
-                  })
-                : texto
-            if (manuscript[campo] && !window.confirm(confirmacao)) return
-            updateManuscriptField(campo as string, resolvido)
-          }
-        : undefined,
+      aoInserirModelo:
+        conteudo.modelo && alvoEfetivo
+          ? () => {
+              const { texto, confirmacao } = conteudo.modelo!
+              const resolvido =
+                typeof texto === 'function'
+                  ? texto({
+                      diretriz: currentProtocolDef.name,
+                      referencia: currentProtocolDef.reference,
+                      framework: currentProtocolDef.defaultFramework,
+                    })
+                  : texto
+              if (alvoEfetivo.valorAtual && !window.confirm(confirmacao)) return
+              alvoEfetivo.aplicar(resolvido)
+            }
+          : undefined,
     }
   }
 
@@ -431,7 +452,7 @@ export function ProtocolPage(): JSX.Element {
       setCurrentVersion(proto.current_version || null)
       setScopeStamp(proto.scope_stamp || null)
       setSearchStrategies(proto.search_strategies || [])
-      setSearchExecutions(proto.search_executions || [])
+      setSearchExecutions(proto.latest_executions || [])
 
       setLastUpdatedAt(proto.updated_at ? new Date(proto.updated_at).toISOString() : null)
       setObjective(proto.objective || '')
@@ -789,10 +810,41 @@ export function ProtocolPage(): JSX.Element {
       setSaving(true)
       setErrorMessage('')
 
-      const cleanDescriptors = {
+      let cleanDescriptors = {
         pt: descriptors.pt.map((d) => d.trim()).filter(Boolean),
         en: descriptors.en.map((d) => d.trim()).filter(Boolean),
         es: descriptors.es.map((d) => d.trim()).filter(Boolean),
+      }
+
+      // Se cleanDescriptors estiver vazio, derivar dos blocos da estratégia canônica
+      const totalPairs = cleanDescriptors.pt.length + cleanDescriptors.en.length + cleanDescriptors.es.length
+      if (totalPairs === 0) {
+        const canonical = searchStrategies.find((s) => s.kind === 'canonica')
+        if (canonical?.blocks && canonical.blocks.length >= 1) {
+          const termsA = (canonical.blocks[0]?.terms || []).filter((t: string) => t && t.trim())
+          const termsB = (canonical.blocks[1]?.terms || []).filter((t: string) => t && t.trim())
+          const derived: string[] = []
+          if (termsA.length > 0 && termsB.length > 0) {
+            for (const a of termsA) {
+              for (const b of termsB) {
+                const qa = a.includes(' ') && !a.startsWith('"') ? `"${a.trim()}"` : a.trim()
+                const qb = b.includes(' ') && !b.startsWith('"') ? `"${b.trim()}"` : b.trim()
+                derived.push(`${qa} AND ${qb}`)
+                if (derived.length >= 5) break
+              }
+              if (derived.length >= 5) break
+            }
+          } else if (termsA.length > 0) {
+            derived.push(...termsA.slice(0, 5).map((t: string) => (t.includes(' ') && !t.startsWith('"') ? `"${t.trim()}"` : t.trim())))
+          }
+          if (derived.length > 0) {
+            cleanDescriptors = {
+              pt: derived,
+              en: [],
+              es: [],
+            }
+          }
+        }
       }
 
       const cleanCriteria = criteria
@@ -1270,8 +1322,35 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
           onSearchStrategySaved={(strat) => {
             const next = searchStrategies.filter((s) => s.id !== strat.id)
             setSearchStrategies([...next, strat])
+            // Sincronizar pares de descritores caso descriptors.pt esteja vazio
+            if (strat.blocks && strat.blocks.length >= 1) {
+              const termsA = (strat.blocks[0]?.terms || []).filter((t: string) => t && t.trim())
+              const termsB = (strat.blocks[1]?.terms || []).filter((t: string) => t && t.trim())
+              const derived: string[] = []
+              if (termsA.length > 0 && termsB.length > 0) {
+                for (const a of termsA) {
+                  for (const b of termsB) {
+                    const qa = a.includes(' ') && !a.startsWith('"') ? `"${a.trim()}"` : a.trim()
+                    const qb = b.includes(' ') && !b.startsWith('"') ? `"${b.trim()}"` : b.trim()
+                    derived.push(`${qa} AND ${qb}`)
+                    if (derived.length >= 5) break
+                  }
+                  if (derived.length >= 5) break
+                }
+              } else if (termsA.length > 0) {
+                derived.push(...termsA.slice(0, 5).map((t: string) => (t.includes(' ') && !t.startsWith('"') ? `"${t.trim()}"` : t.trim())))
+              }
+              if (derived.length > 0) {
+                setDescriptors((prev) => ({
+                  ...prev,
+                  pt: prev.pt.filter(Boolean).length > 0 ? prev.pt : derived,
+                }))
+              }
+            }
             handleRefreshReadiness()
           }}
+          descriptors={descriptors}
+          onDescriptorsChange={setDescriptors}
           infoSources={manuscript.info_sources || ''}
           onInfoSourcesChange={(val) => updateManuscriptField('info_sources', val)}
           criteria={criteria}
@@ -1281,6 +1360,15 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
           searchExecutions={searchExecutions}
           dedupNotes={manuscript.search_strategy_notes || ''}
           onDedupNotesChange={(val) => updateManuscriptField('search_strategy_notes', val)}
+          apoio={{
+            montarGuia,
+            ajuda: getFieldGuideline,
+            contexto: getFullProtocolContext,
+            projeto: {
+              titulo: activeProject?.title,
+              metodologia: activeProject?.methodology,
+            },
+          }}
         />
       ) : (
         /* Modo Completo: Studio Navigation Tabs with Clear Temporal Phase Grouping */
@@ -2388,6 +2476,7 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
                 }}
               />
             }
+            guia={montarGuia('extraction_questions', 'dataItems')}
           >
 
 
@@ -3051,6 +3140,12 @@ ${manuscript.funding || 'Nenhum financiamento a declarar.'}
         projectId={id || ''}
         open={isVersionDialogOpen}
         onOpenChange={setIsVersionDialogOpen}
+        apoio={{
+          montarGuia,
+          ajuda: getFieldGuideline,
+          contexto: getFullProtocolContext,
+          projeto: { titulo: activeProject?.title, metodologia: activeProject?.methodology },
+        }}
         currentVersion={currentVersion}
         protocolStatus={protocolStatus}
         onVersionChanged={() => {

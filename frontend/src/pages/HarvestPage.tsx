@@ -463,7 +463,47 @@ export function HarvestPage(): JSX.Element {
   const allDescriptors: string[] = []
   if (protocol?.search_descriptors) {
     for (const [, list] of Object.entries(protocol.search_descriptors)) {
-      allDescriptors.push(...list)
+      if (Array.isArray(list)) {
+        allDescriptors.push(...list.filter((x) => x && x.trim()))
+      }
+    }
+  }
+
+  // Fallback resiliente: derivar da estratégia canônica do estúdio ou framework
+  if (allDescriptors.length === 0 && protocol?.search_strategies) {
+    const canonical = protocol.search_strategies.find((s) => s.kind === 'canonica')
+    if (canonical?.blocks && canonical.blocks.length >= 1) {
+      const termsA = (canonical.blocks[0]?.terms || []).filter((t: string) => t && t.trim())
+      const termsB = (canonical.blocks[1]?.terms || []).filter((t: string) => t && t.trim())
+      if (termsA.length > 0 && termsB.length > 0) {
+        for (const a of termsA) {
+          for (const b of termsB) {
+            const qa = a.includes(' ') && !a.startsWith('"') ? `"${a.trim()}"` : a.trim()
+            const qb = b.includes(' ') && !b.startsWith('"') ? `"${b.trim()}"` : b.trim()
+            allDescriptors.push(`${qa} AND ${qb}`)
+            if (allDescriptors.length >= 5) break
+          }
+          if (allDescriptors.length >= 5) break
+        }
+      } else if (termsA.length > 0) {
+        allDescriptors.push(
+          ...termsA.slice(0, 5).map((t: string) => (t.includes(' ') && !t.startsWith('"') ? `"${t.trim()}"` : t.trim()))
+        )
+      }
+    }
+  }
+
+  if (allDescriptors.length === 0 && protocol?.pico_framework) {
+    const pop = protocol.pico_framework.population?.trim()
+    const con = (protocol.pico_framework.intervention || (protocol.pico_framework as any).concept || '').trim()
+    if (pop && con) {
+      const qp = pop.includes(' ') && !pop.startsWith('"') ? `"${pop}"` : pop
+      const qc = con.includes(' ') && !con.startsWith('"') ? `"${con}"` : con
+      allDescriptors.push(`${qp} AND ${qc}`)
+    } else if (pop) {
+      allDescriptors.push(pop.includes(' ') && !pop.startsWith('"') ? `"${pop}"` : pop)
+    } else if (con) {
+      allDescriptors.push(con.includes(' ') && !con.startsWith('"') ? `"${con}"` : con)
     }
   }
 

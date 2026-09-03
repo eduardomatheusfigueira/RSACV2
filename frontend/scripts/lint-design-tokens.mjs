@@ -113,6 +113,28 @@ const REGRAS = [
     dica: 'despache pelo registro de comandos (useRibbonStore)',
   },
   {
+    id: 'R9',
+    nome: 'medida ou cor literal em style inline',
+    // Aberta em 01/09/2026 com dívida conhecida.
+    //
+    // As regras R1 e R2a–e só varrem `.css`, então `style={{ fontSize: '11px',
+    // padding: '6px', color: '#f59e0b' }}` no JSX passava por baixo de todas
+    // elas. Foi por essa fresta que os painéis de bibliometria nasceram com
+    // uma escala de espaçamento e uma paleta paralelas às do doc 24 — 151
+    // blocos inline no levantamento que abriu esta regra.
+    //
+    // Dívida declarada: 12 blocos fora da bibliometria — 8 na tela de
+    // "Conectando aos Serviços" (App.tsx), 3 em ProjectsPage e 1 em
+    // SettingsPage. Os 74 dos painéis de bibliometria foram migrados em
+    // 01/09/2026. O teto só desce.
+    teto: 12,
+    arquivos: /\.tsx$/,
+    // Dentro de `style={{ ... }}`: qualquer px/rem cru ou cor literal. `var(`
+    // continua válido — é assim que o JSX consome um token quando precisa.
+    padrao: /style=\{\{[^}]*?(?:'\d+(?:\.\d+)?(?:px|rem)'|"\d+(?:\.\d+)?(?:px|rem)"|#[0-9a-fA-F]{3,8})[^}]*?\}\}/g,
+    dica: 'mova para o .css do componente e use var(--space-*|--text-*|--color-*)',
+  },
+  {
     id: 'R7',
     nome: 'diretriz metodológica fixa no JSX',
     // Fechada em 18/08/2026. Os cinco modelos de texto que citavam PRISMA-P/ScR

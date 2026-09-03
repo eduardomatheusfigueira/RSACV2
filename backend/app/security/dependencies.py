@@ -26,6 +26,7 @@ from starlette.requests import HTTPConnection
 from app.api.deps import get_db
 from app.config import settings
 from app.infrastructure.persistence.models import ProjectMemberModel, ProjectModel, UserModel
+from app.security import bilhete_de_canal
 from app.security.local_token import matches_local_token
 from app.security.sessions import SESSION_COOKIE, resolve_session
 
@@ -174,13 +175,32 @@ async def require_websocket_session(websocket: WebSocket, db: Session) -> Option
     A checagem de `Origin` é feita antes, pela rota, via
     `origem_do_websocket_e_permitida`.
     """
+    # 1. Bilhete de uso único — o caminho que funciona em qualquer arranjo.
+    #    Ver `bilhete_de_canal.py`: é pedido por uma requisição HTTP comum, que
+    #    carrega cookie ou token conforme houver, e vale por instantes. É o que
+    #    resolve a aba sem token em `sessionStorage` servida de outra origem,
+    #    onde o cookie `SameSite=strict` também não chega.
+    user_id = bilhete_de_canal.resgatar(websocket.query_params.get("ticket"))
+    if user_id:
+        usuario = (
+            db.query(UserModel)
+            .filter(UserModel.id == user_id, UserModel.is_active == True)  # noqa: E712
+            .first()
+        )
+        if usuario:
+            return usuario
+
+    # 2. Token de sessão na query — quando a aba tem um.
     token = websocket.query_params.get("token")
+    if token in ("null", "undefined", ""):
+        token = None
     if not token:
-        cookie = websocket.cookies.get(SESSION_COOKIE)
-        token = cookie
-    usuario = resolve_session(db, token)
-    if usuario:
-        return usuario
+        # 3. Cookie — só chega quando interface e API estão na mesma origem.
+        token = websocket.cookies.get(SESSION_COOKIE)
+    if token:
+        usuario = resolve_session(db, token)
+        if usuario:
+            return usuario
 
     if matches_local_token(websocket.query_params.get("local_token")):
         return (

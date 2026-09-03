@@ -808,8 +808,13 @@ do outro lado.
 
 Registrado para não ser reaberto a cada revisão de escopo:
 
-- **Grupo de pesquisa durável** entre projetos (D-02). A tabela de participação
-  aceita um `group_id` depois, sem migração destrutiva.
+- ~~**Grupo de pesquisa durável** entre projetos (D-02). A tabela de participação
+  aceita um `group_id` depois, sem migração destrutiva.~~
+  **Reaberto em 01/09/2026** por [`50_PLANO_ESPACO_DE_EQUIPE.md`](./50_PLANO_ESPACO_DE_EQUIPE.md):
+  a D-02 foi decidida ao contrário e o grupo durável passa a existir como
+  entidade própria (`equipes`). A previsão de "um `group_id` depois, sem
+  migração destrutiva" se confirmou — o pertencimento entrou como
+  `projects.equipe_id` anulável, e nada desta especificação mudou.
 - **Coleta individual por revisor** (D-01). Se for decidido ao contrário,
   entra como fase própria: escopo por revisor em `papers`, deduplicação entre
   corpora, e um passo de união no funil.

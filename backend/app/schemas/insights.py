@@ -5,6 +5,8 @@
 
 from pydantic import BaseModel
 
+from app.schemas.bibliometria import Proveniencia
+
 
 class CriterionFunnelItem(BaseModel):
     criterion_id: str
@@ -63,6 +65,17 @@ class ProjectInsights(BaseModel):
     top_journals: list[NameCount]
     top_authors: list[NameCount]
     top_institutions: list[NameCount]
+    #: Denominador do ranking acima. As bases de coleta não fornecem afiliação
+    #: — o campo traz o nome do próprio coletor em 99,7% dos registros
+    #: (doc 47 §B-01) —, então o ranking cobre uma fração pequena do acervo e
+    #: precisa dizer qual (doc 48 §6.4).
+    institutions_coverage: dict[str, int]
+    #: Sobre que corpus estes números foram calculados (doc 48 §14.4).
+    #:
+    #: `None` quando a consulta não citou instantâneo — e nesse caso os
+    #: agregados descrevem o acervo de agora, que muda todo dia. É o que a
+    #: tela precisa dizer em vez de deixar subentendido.
+    provenance: Proveniencia | None = None
     pdf_health: PdfHealth
     ai_provenance: AiProvenance
     filters_applied: InsightsFiltersApplied

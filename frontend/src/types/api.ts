@@ -906,6 +906,20 @@ export interface PrismaFlowData {
     sources_breakdown: Record<string, number>
   }
   screening: {
+    /**
+     * Quantos registros entraram na fila de triagem — o denominador.
+     *
+     * Sem ele, `records_screened` sozinho é lido como se a triagem estivesse
+     * terminada.
+     */
+    records_to_screen?: number
+    /**
+     * Quantos já foram triados: os que têm decisão.
+     *
+     * Já significou "todos os registros do projeto", o que declarava triagem
+     * que não aconteceu — 16.578 onde eram 454, e 65.955 onde eram 209
+     * (medido em 01/09/2026).
+     */
     records_screened: number
     records_excluded: number
     records_pending?: number
@@ -965,6 +979,14 @@ export interface AiProvenance {
 }
 
 export interface ProjectInsights {
+  /**
+   * Sobre que corpus estes números foram calculados.
+   *
+   * `null` quando a consulta não citou instantâneo — e aí eles descrevem o
+   * acervo de agora, que muda todo dia. É o que a tela precisa dizer, em vez
+   * de deixar subentendido (doc 47 §B-05).
+   */
+  provenance: ProveniencaDeIndicador | null
   prisma: PrismaFlowData
   criteria_funnel: CriterionFunnelItem[]
   composition_by_decision: Record<string, number>
@@ -974,6 +996,16 @@ export interface ProjectInsights {
   top_journals: NameCount[]
   top_authors: NameCount[]
   top_institutions: NameCount[]
+  /**
+   * Denominador de `top_institutions`.
+   *
+   * As bases de coleta não fornecem afiliação: o campo traz o nome do próprio
+   * coletor em 99,7% dos registros do acervo medido (doc 47 §B-01). O ranking
+   * cobre a fração pequena que sobra, e precisa dizer qual — sem isso, uma
+   * lista construída sobre duzentos registros é lida como se descrevesse
+   * oitenta e sete mil.
+   */
+  institutions_coverage: { with_affiliation: number; total: number }
   pdf_health: PdfHealth
   ai_provenance: AiProvenance
   filters_applied: InsightsFiltersApplied
@@ -984,7 +1016,631 @@ export interface InsightsFilters {
   source?: string
   year_from?: number
   year_to?: number
+  /** Id do instantâneo: calcula sobre o corpus congelado (doc 48 §3). */
+  instantaneo?: string
 }
+
+// ── Bibliometria: instantâneo do corpus (docs 47–49) ──────────────────
+
+/**
+ * O corpus congelado sobre o qual um indicador foi calculado.
+ *
+ * `corpus_hash` é a identidade do conjunto: dois instantâneos com o mesmo
+ * hash descrevem exatamente os mesmos documentos, com o mesmo conteúdo.
+ */
+export interface Instantaneo {
+  id: string
+  project_id: string
+  label: string
+  scope: { decision?: string | null; source?: string | null; year_from?: number | null; year_to?: number | null }
+  n_documents: number
+  corpus_hash: string
+  engine_version: string
+  created_at: string | null
+}
+
+/**
+ * O que mudou no acervo desde o congelamento (doc 48 §3.3).
+ *
+ * Os três estados são informação. O que não pode acontecer — e era o
+ * comportamento anterior — é a tela mostrar um número diferente do de ontem
+ * sem dizer que o corpus mudou.
+ */
+export interface ConferenciaDoInstantaneo {
+  estado: 'identico' | 'conteudo_alterado' | 'conjunto_alterado'
+  confiavel: boolean
+  documentos_alterados: string[]
+  documentos_adicionados: string[]
+  documentos_removidos: string[]
+}
+
+/** O carimbo que acompanha todo número derivado (doc 48 §14.4). */
+export interface ProveniencaDeIndicador {
+  snapshot_id: string
+  corpus_hash: string
+  n_documents: number
+  scope: Instantaneo['scope']
+  engine_version: string
+  frozen_at: string | null
+}
+
+export interface UltimoEnriquecimento {
+  id: string
+  provider: string
+  started_at: string | null
+  completed_at: string | null
+  n_consulted: number
+  n_found: number
+  status: string
+}
+
+export interface SituacaoEnriquecimento {
+  project_id: string
+  total_papers: number
+  papers_with_doi: number
+  papers_enriched: number
+  papers_pending: number
+  coverage_pct: number
+  last_enrichment: UltimoEnriquecimento | null
+}
+
+// ── Indicadores Bibliométricos Nível 0 e 1 (docs 48 §7, 49 Fase 3) ───
+
+export interface ProducaoAnoItem {
+  year: number
+  count: number
+  growth_yoy_pct?: number | null
+}
+
+export interface ProducaoTemporalMetrics {
+  series: ProducaoAnoItem[]
+  cagr_pct: number | null
+  year_start: number | null
+  year_end: number | null
+  total_period: number
+}
+
+export interface BradfordPeriodicoItem {
+  name: string
+  count: number
+}
+
+export interface BradfordZone {
+  zone: number
+  name: string
+  journals: BradfordPeriodicoItem[]
+  total_articles: number
+  n_journals: number
+  pct_articles?: number | null
+}
+
+export interface BradfordMetrics {
+  total_journals: number
+  total_articles: number
+  zones: BradfordZone[]
+  k_multiplier: number | null
+  formula_ratio: string
+
+  /**
+   * `false` quando o recorte não tem periódicos suficientes para as três
+   * zonas. Sem esta marca, um único periódico era apresentado como
+   * "Zona 1: 100%" e razão "1 : 0 : 0", com aparência de resultado.
+   */
+  confiavel?: boolean
+  /** Por que a partição não foi feita — texto pronto para a tela. */
+  motivo?: string
+}
+
+export interface LotkaDistribuicaoItem {
+  articles: number
+  authors_observed: number
+  authors_expected: number
+  pct_observed: number
+  pct_expected: number
+}
+
+export interface LotkaMetrics {
+  n_authors: number
+  alpha: number | null
+  c_constant: number | null
+  d_ks: number | null
+  d_critical: number | null
+  /** `null` quando a amostra não decide — ver `sample_ok`. */
+  is_adherent: boolean | null
+  p_verdict: string
+  distribution: LotkaDistribuicaoItem[]
+
+  /** A amostra atinge o piso para o teste de aderência (50 autores). */
+  sample_ok?: boolean
+}
+
+export interface CoautoriaDistribuicaoItem {
+  num_authors: number
+  count: number
+  pct: number
+}
+
+export interface ColaboracaoMetrics {
+  total_articles: number
+  single_author_articles: number
+  multi_author_articles: number
+  no_author_articles: number
+  subramanyam_index: number | null
+  avg_authors_per_paper: number
+  max_authors: number
+  distribution: CoautoriaDistribuicaoItem[]
+}
+
+export interface ConcentracaoMetrics {
+  gini_authors: number | null
+  gini_journals: number | null
+  hhi_journals: number | null
+}
+
+export interface MultiSourceDistribuicaoItem {
+  num_sources: number
+  count: number
+  pct: number
+}
+
+export interface SobreposicaoMetrics {
+  sources: string[]
+  exclusive_counts: Record<string, number>
+  overlap_matrix: Record<string, Record<string, number>>
+  multi_source_distribution: MultiSourceDistribuicaoItem[]
+  total_papers: number
+}
+
+export interface CitationBandItem {
+  label: string
+  min: number
+  max: number | null
+  count: number
+  pct: number
+}
+
+export interface CitacoesMetrics {
+  total_citations: number
+  mean_citations: number
+  median_citations: number
+  h_index: number
+  max_citations: number
+  citation_bands: CitationBandItem[]
+  papers_with_citation_data: number
+}
+
+export interface OpenAccessStatusItem {
+  status: string
+  count: number
+  pct: number
+}
+
+export interface AcessoAbertoMetrics {
+  total_evaluated: number
+  open_access_count: number
+  open_access_pct: number
+  by_status: OpenAccessStatusItem[]
+}
+
+export interface PaisItem {
+  country: string
+  count: number
+}
+
+export interface IndicadoresBibliometricos {
+  project_id: string
+  total_papers: number
+  provenance: ProveniencaDeIndicador | null
+  production_temporal: ProducaoTemporalMetrics
+  bradford: BradfordMetrics
+  lotka: LotkaMetrics
+  collaboration: ColaboracaoMetrics
+  concentration: ConcentracaoMetrics
+  source_overlap: SobreposicaoMetrics
+  citations: CitacoesMetrics
+  open_access: AcessoAbertoMetrics
+  countries: PaisItem[]
+}
+
+// ── Camada de Texto e Tesauro (Fase 4, doc 48 §5, §12) ──────────────────
+
+export interface SecaoItem {
+  name: string
+  canonical_type: string
+  start_page: number
+  end_page: number
+  char_offset: number
+  char_length: number
+}
+
+export interface BibTextoInfo {
+  paper_id: string
+  pipeline_version: string
+  pdf_sha256?: string | null
+  n_pages: number
+  n_words: number
+  sections: SecaoItem[]
+  extracted_at?: string | null
+}
+
+export interface TesauroInfo {
+  id: string
+  project_id: string
+  name: string
+  description: string
+  created_by?: string | null
+  created_at?: string | null
+}
+
+export interface TesauroEntryInfo {
+  id: string
+  thesaurus_id: string
+  preferred_term: string
+  variants: string[]
+  scope: string
+  proposed_by: string
+  approved_by?: string | null
+  approved_at?: string | null
+  created_at?: string | null
+}
+
+export interface TesauroEntryCreatePayload {
+  preferred_term: string
+  variants?: string[]
+  scope?: string
+}
+
+// ── Instrumentos de Medida e Evidências (Fase 5, doc 48 §6, §12) ─────────
+
+export interface TermoInclusao {
+  forma: string
+  tipo?: string
+  idioma?: string
+}
+
+export interface TermoExclusao {
+  forma: string
+  motivo: string
+}
+
+export interface LexicoPayload {
+  conceito: string
+  definicao?: string
+  modo: 'lema' | 'literal' | 'regex'
+  incluir: TermoInclusao[]
+  excluir: TermoExclusao[]
+  janela_de_coocorrencia?: number
+}
+
+export interface SugerirLexicoResponse {
+  concept: string
+  definition: string
+  lexicon: LexicoPayload
+  proposed_by: string
+  model_used?: string | null
+  prompt_hash?: string | null
+}
+
+export interface InstrumentoInfo {
+  id: string
+  project_id: string
+  concept: string
+  definition: string
+  lexicon: LexicoPayload
+  version: string
+  status: 'rascunho' | 'aprovado' | 'arquivado'
+  proposed_by: string
+  model_used?: string | null
+  prompt_hash?: string | null
+  approved_by?: string | null
+  approved_at?: string | null
+  estimated_precision?: number | null
+  precision_ci?: [number, number] | null
+  created_at?: string | null
+}
+
+export interface InstrumentoCreatePayload {
+  concept: string
+  definition?: string
+  lexicon: LexicoPayload
+  proposed_by?: string
+  model_used?: string | null
+  prompt_hash?: string | null
+}
+
+export interface MedidaResultado {
+  frequencia_bruta: number
+  frequencia_relativa_por_mil: number
+  frequencia_documental: number
+  frequencia_documental_pct: number
+  distribuicao_por_secao: Record<string, number>
+  n_documents: number
+  n_documents_with_text: number
+  n_documents_without_text: number
+  total_words_analyzed: number
+  is_preview: boolean
+  measurement_id?: string | null
+}
+
+export interface MedidaInfo {
+  id: string
+  snapshot_id?: string | null
+  instrument_id: string
+  instrument_version: string
+  result: MedidaResultado
+  n_documents: number
+  n_documents_with_text: number
+  executed_at?: string | null
+}
+
+export interface OcorrenciaInfo {
+  id?: number | null
+  paper_id: string
+  section: string
+  page: number
+  char_start: number
+  char_end: number
+  matched_form: string
+  context_snippet: string
+}
+
+// ── Grafos e Análise Estrutural (Fase 6, doc 48 §8, §12) ─────────────────
+
+/**
+ * Os quatro tipos de rede, no vocabulário que a API entende.
+ *
+ * Nomeado e exportado de propósito: enquanto a tela mantinha apelidos próprios
+ * ('termos', 'acoplamento'), dois dos quatro respondiam HTTP 400 "Tipo de rede
+ * desconhecido" e metade do seletor estava quebrada sem nada acusar.
+ */
+export type TipoDeRede =
+  | 'coautoria'
+  | 'coocorrencia_termos'
+  | 'acoplamento_bibliografico'
+  | 'cocitacao'
+
+export interface GerarGrafoPayload {
+  network_type: TipoDeRede
+  snapshot_id?: string | null
+  normalizacao?: 'association_strength' | 'jaccard' | 'cosine'
+  corte_minimo?: number
+  max_nos?: number
+  resolucao_louvain?: number
+  semente?: number
+  iteracoes_fr?: number
+}
+
+export interface NoGrafo {
+  id: string
+  label: string
+  size: number
+  degree: number
+  cluster: number
+  color: string
+  x: number
+  y: number
+}
+
+export interface ArestaGrafo {
+  source: string
+  target: string
+  weight: number
+  count: number
+}
+
+export interface ClusterGrafo {
+  count: number
+  nodes: string[]
+  color: string
+}
+
+export interface GrafoInfo {
+  id: string
+  project_id: string
+  snapshot_id?: string | null
+  network_type: string
+  parameters: Record<string, any>
+  nodes: NoGrafo[]
+  edges: ArestaGrafo[]
+  coordinates: Record<string, { x: number; y: number }>
+  clusters: Record<string, ClusterGrafo>
+  seed: number
+  calculated_at?: string | null
+}
+
+// ── Estatística Sob Demanda (Fase 7, doc 48 §9, §12) ─────────────────────
+
+export interface FiltroEspecificacao {
+  campo: string
+  op: string
+  valor: any
+}
+
+export interface EspecificacaoEstatistica {
+  medida: 'contagem' | 'distintos' | 'soma' | 'media' | 'mediana' | 'quantil' | 'taxa' | 'desvio_padrao'
+  campo?: string | null
+  por: string[]
+  onde?: FiltroEspecificacao[]
+  ordenar_por?: 'grupo' | 'valor' | 'valor_desc'
+  limite?: number
+  quantil_p?: number
+  snapshot_id?: string | null
+}
+
+export interface InterpretarPerguntaResponse {
+  supported: boolean
+  question: string
+  specification?: EspecificacaoEstatistica | null
+  explanation: string
+  supported_vocabulary?: Record<string, any> | null
+}
+
+export interface LinhaResultadoEstatistica {
+  grupo: Record<string, any>
+  valor: number | null
+  n_docs: number
+}
+
+export interface ExecutarEspecificacaoResponse {
+  specification: EspecificacaoEstatistica
+  results: LinhaResultadoEstatistica[]
+  total_documents_analyzed: number
+  provenance: Record<string, any>
+}
+
+export interface AnaliseSalvaInfo {
+  id: string
+  project_id: string
+  question: string
+  specification: EspecificacaoEstatistica
+  created_by?: string | null
+  created_at?: string | null
+}
+
+// ── Indicadores de Vanguarda e Sensibilidade (Fase 8, doc 48 §7.4, §10, §12) ──
+
+export interface ItemDiagramaEstrategico {
+  cluster_id: number
+  label: string
+  centralidade: number
+  densidade: number
+  quadrante: 'motor' | 'basico' | 'especializado' | 'emergente_declinio'
+  tamanho: number
+  palavras_chave: string[]
+}
+
+export interface DiagramaEstrategicoResponse {
+  items: ItemDiagramaEstrategico[]
+  centralidade_media: number
+  densidade_media: number
+  provenance: Record<string, any>
+}
+
+export interface RajadaTermo {
+  termo: string
+  peso_rajada: number
+  ano_inicio: string
+  ano_fim: string
+  frequencia_pico: number
+  crescimento_pct: number
+}
+
+export interface RajadasResponse {
+  rajadas: RajadaTermo[]
+  parametros: Record<string, any>
+  provenance: Record<string, any>
+}
+
+export interface ItemRankingBootstrap {
+  posicao: number
+  rotulo: string
+  valor_estimado: number
+  ic_95: [number, number]
+  empate_com: number[]
+  indistinguivel: boolean
+}
+
+export interface BootstrapRankingsResponse {
+  tipo_ranking: string
+  items: ItemRankingBootstrap[]
+  n_bootstrap: number
+  seed: number
+  tem_empates_tecnicos: boolean
+  aviso_empates?: string | null
+  provenance: Record<string, any>
+}
+
+export interface SensibilidadeResolucaoItem {
+  resolucao: number
+  n_clusters: number
+  ari_vs_vigente?: number | null
+  is_vigente: boolean
+}
+
+export interface SensibilidadeParametrosResponse {
+  parametro: string
+  valor_vigente: number
+  varredura: SensibilidadeResolucaoItem[]
+  diagnostico: string
+  provenance: Record<string, any>
+}
+
+export interface SubtemaCobertura {
+  topico: string
+  campo: string
+  n_estudos_no_corpus: number
+  score_medio: number
+  status_cobertura: 'robusto' | 'moderado' | 'ralo'
+}
+
+export interface CoberturaCampoResponse {
+  total_topicos_identificados: number
+  topicos_robustos: SubtemaCobertura[]
+  topicos_ralos: SubtemaCobertura[]
+  taxa_cobertura_ampla_pct: number
+  diagnostico_metodologico: string
+  provenance: Record<string, any>
+}
+
+// ── Pré-Registro e Relatório BIBLIO (Fase 9, doc 48 §11, §12) ─────────────
+
+export interface EmendaProtocolo {
+  id: string
+  from_version: string
+  to_version: string
+  section: string
+  reason: string
+  created_at: string | null
+}
+
+export interface PlanoBibliometrico {
+  indicadores_previstos: string[]
+  unidade_analise: string
+  janela_temporal: string
+  justificativa_janela: string
+  cortes_declarados: Record<string, any>
+  tesauro_obrigatorio: boolean
+  status_protocolo: string
+  versao_protocolo: string
+  emendas: EmendaProtocolo[]
+}
+
+export interface AtualizarPlanoBibliometricoRequest {
+  indicadores_previstos: string[]
+  unidade_analise: string
+  janela_temporal: string
+  justificativa_janela: string
+  cortes_declarados: Record<string, any>
+  tesauro_obrigatorio: boolean
+}
+
+export interface ItemConformidadeBiblio {
+  numero: number
+  secao: string
+  item: string
+  descricao: string
+  responsabilidade: 'sistema' | 'autor'
+  status: 'conforme' | 'pendente' | 'nao_aplicavel'
+  evidencia: string
+}
+
+export interface RelatorioConformidadeBiblioResponse {
+  total_itens: number
+  itens_conformes: number
+  itens_do_sistema: number
+  itens_do_autor: number
+  secoes: string[]
+  itens: ItemConformidadeBiblio[]
+  resumo_executivo: string
+  provenance: Record<string, any>
+}
+
+
+
+
+
+
+
 
 // ── Stats ─────────────────────────────────────────────────────────────
 
@@ -993,6 +1649,10 @@ export interface ProjectStats {
   included_papers: number
   excluded_papers: number
   pending_papers: number
+  /** Pendentes que a triagem assistida alcança (têm resumo utilizável). */
+  pending_triaveis?: number
+  /** Pendentes sem resumo utilizável: fora da fila da assistência, dentro do acervo. */
+  pending_sem_resumo?: number
   total_harvest_runs: number
   sources: Record<string, number>
 }
@@ -1079,4 +1739,42 @@ declare global {
   interface Window {
     rsacAPI: RsacAPI
   }
+}
+
+/**
+ * Um estudo dentro de um lote de triagem, com a sua situação.
+ *
+ * Substitui o antigo "feed de recém-triados": a janela precisa responder quais
+ * estudos entraram no lote, quais faltam e o que deu em cada um — e isso é uma
+ * relação com estado, não uma fila de eventos que passaram.
+ */
+export interface ItemDoLote {
+  id: string
+  title: string
+  authors?: string
+  year?: string
+  /**
+   * `nao_triado` é o estudo que o provedor recusou em todas as passadas da
+   * rodada. Ele segue pendente no acervo e entra no próximo lote — mas precisa
+   * aparecer como tal: enquanto era descartado em silêncio, a relação mostrava
+   * um item eternamente "na fila" e o contador parava a um estudo do fim.
+   */
+  status: 'na_fila' | 'em_analise' | 'concluido' | 'nao_triado'
+  decision?: string | null
+  confidence?: number | null
+  justification?: string | null
+}
+
+/**
+ * Onde o lote se acomodou.
+ *
+ * `paralelismo` é o valor vigente, ajustado sozinho pelo servidor entre 1 e
+ * `teto`; `pausa` é o intervalo atual entre disparos. A tela mostra isso para
+ * que o pesquisador veja o sistema reagindo — e entenda por que a velocidade
+ * muda ao longo de um mesmo lote.
+ */
+export interface RitmoDoLote {
+  paralelismo: number
+  teto: number
+  pausa: number
 }

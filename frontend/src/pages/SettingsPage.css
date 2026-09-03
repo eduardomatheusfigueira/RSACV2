@@ -187,7 +187,7 @@
 
 .provider-privacy-notice.local-privacy {
   border-left-color: var(--color-success);
-  background: rgba(16, 185, 129, 0.08);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
 }
 
 /* Models Catalog List */
@@ -781,10 +781,10 @@
 }
 
 .settings-tab-content {
-  animation: fadeIn 0.15s ease-in-out;
+  animation: settings-fade-in var(--motion-base) var(--ease-out);
 }
 
-@keyframes fadeIn {
+@keyframes settings-fade-in {
   from {
     opacity: 0;
     transform: translateY(3px);

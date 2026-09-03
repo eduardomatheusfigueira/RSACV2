@@ -261,6 +261,13 @@
   --z-dialog: 500;      /* modal e seu véu */
   --z-toast: 600;       /* notificações */
   --z-splash: 700;      /* splash de inicialização */
+  /* O Modo Trilho conduz o pesquisador POR CIMA da tela que ele está usando:
+     a barra do tutor precisa continuar visível sobre o próprio modal que ela
+     mandou abrir, e a bifurcação do trilho sobre a barra. Daí serem os dois
+     últimos degraus — e estarem aqui, e não como 900/1000 soltos dentro de
+     `Trilho.css`, que é o que a escala existe para evitar. */
+  --z-tutor: 800;       /* barra do tutor do Modo Trilho */
+  --z-tutor-dialog: 900; /* bifurcação de decisão do trilho */
 
   /* ── Dimensões de Layout ─────────────────────────────────────────── */
   --sidebar-width: 256px;

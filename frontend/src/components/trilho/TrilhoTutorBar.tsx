@@ -164,7 +164,7 @@ export function TrilhoTutorBar(): JSX.Element | null {
         {/* Corpo com Instrução e Racional */}
         <div className="trilho-tutor-body">
           <div className="trilho-instruction-section">
-            <span className="text-3xs uppercase font-bold tracking-wider text-muted-foreground" style={{ fontSize: 'var(--text-3xs)', fontWeight: 'var(--weight-bold)', letterSpacing: '0.05em', color: 'var(--color-text-tertiary)' }}>
+            <span className="trilho-section-label">
               O que fazer agora
             </span>
             <p className="trilho-instruction-text">{currentNode.instruction}</p>
@@ -174,7 +174,7 @@ export function TrilhoTutorBar(): JSX.Element | null {
             <span className="trilho-rationale-label">Por que fazer assim?</span>
             <p className="trilho-rationale-text">{currentNode.rationale}</p>
             <div className="trilho-guideline-tag">
-              <BookOpen size={10} style={{ display: 'inline', marginRight: '4px' }} />
+              <BookOpen size={10} aria-hidden="true" />
               <span>{currentNode.guidelineReference}</span>
             </div>
           </div>
@@ -182,7 +182,7 @@ export function TrilhoTutorBar(): JSX.Element | null {
 
         {/* Rodapé com Navegação e Ação Contextual */}
         <div className="trilho-tutor-footer">
-          <div className="flex items-center gap-2">
+          <div className="trilho-footer-nav">
             <Button
               variant="outline"
               size="xs"

@@ -16,6 +16,7 @@ from app.api.v1.extraction import (
     router as extraction_router,
 )
 from app.api.v1.harvest import router as harvest_router
+from app.api.v1.bibliometria import router as bibliometria_router
 from app.api.v1.insights import router as insights_router
 from app.api.v1.invites import router as invites_router
 from app.api.v1.me import router as me_router
@@ -75,6 +76,7 @@ api_router.include_router(extraction_router)
 api_router.include_router(project_extraction_router)
 api_router.include_router(export_router)
 api_router.include_router(insights_router)
+api_router.include_router(bibliometria_router)
 api_router.include_router(profile_router)
 api_router.include_router(protocol_catalog_router)
 

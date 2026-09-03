@@ -129,10 +129,12 @@ async def start_batch_screening(
             project_id,
             limit=data.limit,
             concurrency=data.concurrency,
+            pausa_entre_estudos=data.pausa_entre_estudos,
             actor=AuditActor(user_id=usuario.id, username=usuario.username),
         ),
         limit=data.limit,
         concurrency=data.concurrency,
+        pausa_entre_estudos=data.pausa_entre_estudos,
     )
 
     return {
@@ -184,12 +186,25 @@ def get_batch_screening_status(project_id: str):
     correndo no servidor.
     """
     if not batch_job_manager.is_job_running(project_id):
-        return {"is_running": False, "progress": None}
+        # Sem lote correndo, devolve o DESFECHO do último — não `None`. Quem
+        # acompanha pela consulta periódica descobre o fim justamente por esta
+        # resposta, e um `null` aqui deixava a tela congelada no penúltimo
+        # estudo, como se o último tivesse travado.
+        return {
+            "is_running": False,
+            "progress": screening_service.get_batch_state(project_id),
+            "ouvintes_do_canal": len(ws_manager.active_connections.get(project_id, ())),
+        }
 
     return {
         "is_running": True,
         "progress": screening_service.get_batch_state(project_id),
         "job": batch_job_manager.get_job_info(project_id),
+        # Quantas telas estão de fato escutando o canal deste projeto. Sem este
+        # número não há como distinguir "o lote não anda" de "o lote anda e
+        # ninguém está ouvindo" — que foram dois problemas diferentes com o
+        # mesmo sintoma: a barra parada em 0%.
+        "ouvintes_do_canal": len(ws_manager.active_connections.get(project_id, ())),
     }
 
 

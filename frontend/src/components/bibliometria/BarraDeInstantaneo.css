@@ -1,0 +1,87 @@
+/* Revsist — Barra de instantâneo (doc 48 §14.2)
+   Tokens do doc 24; nenhum literal. */
+
+.barra-instantaneo {
+  display: grid;
+  grid-template-columns: minmax(16rem, 2fr) minmax(0, 3fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+}
+
+.barra-instantaneo__escolha {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.barra-instantaneo__rotulo {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.barra-instantaneo__estado {
+  min-width: 0;
+}
+
+.barra-instantaneo__selo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+/* Verde, âmbar e vermelho não decoram: são os três desfechos da conferência,
+   e cada um pede uma decisão diferente de quem está lendo o número. */
+.barra-instantaneo__selo.is-ok {
+  color: var(--color-success-on-surface);
+}
+
+.barra-instantaneo__selo.is-atencao {
+  color: var(--color-warning-on-surface);
+}
+
+.barra-instantaneo__selo.is-grave {
+  color: var(--color-error-on-surface);
+}
+
+.barra-instantaneo__selo svg {
+  flex-shrink: 0;
+  margin-top: var(--space-px);
+}
+
+.barra-instantaneo__aviso {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-text-tertiary);
+}
+
+.barra-instantaneo__proveniencia {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-3xs);
+  color: var(--color-text-tertiary);
+}
+
+@media (max-width: 900px) {
+  .barra-instantaneo {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .barra-instantaneo__escolha {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+}

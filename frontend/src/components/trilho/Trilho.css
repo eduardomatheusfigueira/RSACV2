@@ -14,7 +14,7 @@
   transform: translateX(-50%);
   width: calc(100% - var(--space-8));
   max-width: 960px;
-  z-index: 900;
+  z-index: var(--z-tutor);
   pointer-events: none;
   transition: transform var(--motion-base) ease, opacity var(--motion-base) ease;
 }
@@ -24,7 +24,7 @@
   background: var(--color-bg-elevated);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15), var(--shadow-neo-raised);
+  box-shadow: 0 8px 30px var(--bevel-shadow), var(--shadow-neo-raised);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -228,9 +228,9 @@
 .trilho-decision-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--color-overlay);
   backdrop-filter: blur(3px);
-  z-index: 1000;
+  z-index: var(--z-tutor-dialog);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -289,7 +289,7 @@
 .trilho-options-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-3-5);
+  gap: var(--space-4);
 }
 
 @media (min-width: 680px) {
@@ -364,16 +364,16 @@
 .trilho-spotlight-active {
   outline: 2px solid var(--color-accent) !important;
   outline-offset: 3px !important;
-  box-shadow: 0 0 0 4px rgba(45, 90, 39, 0.15) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 15%, transparent) !important;
   animation: trilho-pulse var(--motion-loop) ease-in-out infinite;
 }
 
 @keyframes trilho-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 3px rgba(45, 90, 39, 0.12);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 12%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 7px rgba(45, 90, 39, 0.24);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-accent) 24%, transparent);
   }
 }
 
@@ -391,4 +391,66 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   4. PEÇAS MENORES — o que estava em `style={{}}` no JSX
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Rótulo de seção do corpo do tutor: "O que fazer agora". */
+.trilho-section-label {
+  font-size: var(--text-3xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-tertiary);
+}
+
+/* O ícone da diretriz acompanha a linha de texto, em vez de quebrá-la. */
+.trilho-guideline-tag svg {
+  display: inline;
+  margin-right: var(--space-1);
+  vertical-align: -1px;
+}
+
+/* Lado esquerdo do rodapé: navegação entre as etapas. */
+.trilho-footer-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Contexto de ajuda logo abaixo da pergunta da bifurcação. */
+.trilho-decision-help {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-text-tertiary);
+}
+
+/* Chamada final do cartão de opção: "Escolher este caminho →". */
+.trilho-option-cta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-on-surface);
+}
+
+/* Rótulo dentro do exemplo e da consequência ("Exemplo:", "Consequência:"). */
+.trilho-option-label {
+  font-weight: var(--weight-semibold);
+  font-style: normal;
+  color: var(--color-text-secondary);
+}
+
+/* Procedência da orientação, no rodapé do modal de decisão. */
+.trilho-decision-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
 }

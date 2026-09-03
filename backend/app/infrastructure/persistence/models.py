@@ -17,6 +17,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -1072,3 +1073,442 @@ class ProcessingRecordModel(Base):
     # que não sai do Revsist.
     recipient: Mapped[str | None] = mapped_column(String(64), nullable=True)
     international: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Bibliometria — Instantâneo do corpus (doc 48 §3)
+# ─────────────────────────────────────────────────────────────────────
+
+class BibSnapshotModel(Base):
+    """O corpus congelado sobre o qual um indicador foi calculado.
+
+    Um indicador bibliométrico é uma afirmação sobre um conjunto. O acervo
+    muda todo dia — coleta, deduplicação, triagem, resolução de conflito —,
+    então um número obtido na terça não é reproduzível na quinta, e nada na
+    tela registrava sobre que corpus ele havia sido obtido (doc 47 §B-05).
+
+    O instantâneo **não copia o acervo**: copiar dezenas de milhares de linhas
+    por análise seria inviável e desnecessário. Ele guarda um manifesto —
+    para cada documento no escopo, o par `(paper_id, hash_do_conteúdo)` — e o
+    hash do manifesto inteiro. Ao reabrir a análise, recomputa-se e compara-se:
+    idêntico, conteúdo alterado, ou conjunto alterado. Os três desfechos são
+    informação, e nenhum deles recomputa em silêncio.
+    """
+
+    __tablename__ = "bib_snapshots"
+    __table_args__ = (
+        Index("ix_bib_snapshots_project", "project_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+
+    #: Como a pessoa reconhece este instantâneo depois ("Análise principal").
+    label: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+    #: Filtros que definiram o corpus, em JSON — os mesmos da aba de
+    #: Indicadores (doc 32 §3.2). É o que permite recriar o escopo.
+    scope: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+
+    n_documents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    #: sha256 do manifesto ordenado. A identidade do corpus.
+    corpus_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    #: Manifesto comprimido: `paper_id\x1fconteudo_hash` por linha, ordenado
+    #: por `paper_id`. Guardado para poder dizer QUAIS documentos mudaram, e
+    #: não apenas que algo mudou.
+    manifest: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+
+    #: Versão do código que calcula indicadores. Entra na proveniência de toda
+    #: figura, porque uma mudança aqui pode mudar um número.
+    engine_version: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Bibliometria — Enriquecimento externo (doc 48 §4, doc 49 Fase 2)
+# ─────────────────────────────────────────────────────────────────────
+
+class BibEnrichmentModel(Base):
+    """Sessão de enriquecimento externo de um projeto."""
+
+    __tablename__ = "bib_enrichments"
+    __table_args__ = (
+        Index("ix_bib_enrichments_project", "project_id", "started_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    provider: Mapped[str] = mapped_column(String(50), default="openalex", nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    n_consulted: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    n_found: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="em_andamento", nullable=False)
+    created_by_user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+
+class BibWorkMetaModel(Base):
+    """Metadados estendidos da obra (OpenAlex / Crossref)."""
+
+    __tablename__ = "bib_work_meta"
+    __table_args__ = (
+        Index("ix_bib_work_meta_external_id", "external_id"),
+    )
+
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), primary_key=True
+    )
+    enrichment_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("bib_enrichments.id", ondelete="SET NULL"), nullable=True
+    )
+    provider: Mapped[str] = mapped_column(String(50), default="openalex", nullable=False)
+    external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cited_by_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    referenced_works_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    doc_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    is_oa: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    oa_status: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    raw: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    obtained_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
+class BibReferenceModel(Base):
+    """Referências citadas por cada documento (fecha B-03)."""
+
+    __tablename__ = "bib_references"
+    __table_args__ = (
+        Index("ix_bib_references_citing", "citing_paper_id"),
+        Index("ix_bib_references_cited_external", "cited_external_id"),
+        Index("ix_bib_references_cited_doi", "cited_doi"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    citing_paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    cited_external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cited_doi: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class BibAuthorshipModel(Base):
+    """Afiliação e autoria resolvida institucionalmente com ROR (fecha B-01)."""
+
+    __tablename__ = "bib_authorships"
+    __table_args__ = (
+        Index("ix_bib_authorships_paper", "paper_id"),
+        Index("ix_bib_authorships_ror", "institution_ror"),
+        Index("ix_bib_authorships_author", "author_external_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    author_external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    author_name: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    institution_ror: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    institution_name: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    country: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+
+class BibTopicModel(Base):
+    """Tópicos temáticos com scores de relevância (OpenAlex)."""
+
+    __tablename__ = "bib_topics"
+    __table_args__ = (
+        Index("ix_bib_topics_paper", "paper_id"),
+        Index("ix_bib_topics_topic", "topic_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    topic_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    topic_name: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    score: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+
+class BibKeywordModel(Base):
+    """Palavras-chave com procedência declarada (fecha B-02)."""
+
+    __tablename__ = "bib_keywords"
+    __table_args__ = (
+        Index("ix_bib_keywords_paper", "paper_id"),
+        Index("ix_bib_keywords_term", "term"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    term: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    source: Mapped[str] = mapped_column(String(50), default="openalex", nullable=False)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+# ── Camada de Texto e Tesauro (Fase 4, doc 48 §5, §12) ──────────────────
+
+
+class BibTextoModel(Base):
+    """Texto limpo extraído do PDF com mapa de seções IMRaD e contagem (fecha B-04)."""
+
+    __tablename__ = "bib_textos"
+    __table_args__ = (
+        Index("ix_bib_textos_pipeline_version", "pipeline_version"),
+    )
+
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), primary_key=True
+    )
+    pipeline_version: Mapped[str] = mapped_column(String(32), default="2.0.0", nullable=False)
+    pdf_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    n_pages: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    n_words: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    text_clean: Mapped[str] = mapped_column(Text, nullable=False)
+    sections: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON com lista de seções
+    extracted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+class BibThesaurusModel(Base):
+    """Tesauros e vocabulários controlados por projeto (fecha B-06)."""
+
+    __tablename__ = "bib_thesauri"
+    __table_args__ = (
+        Index("ix_bib_thesauri_project_id", "project_id"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_by: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+class BibThesaurusEntryModel(Base):
+    """Entradas do tesauro mapeando termo preferido e variantes aprovadas (doc 48 §6.1)."""
+
+    __tablename__ = "bib_thesaurus_entries"
+    __table_args__ = (
+        Index("ix_bib_thesaurus_entries_thesaurus_id", "thesaurus_id"),
+        Index("ix_bib_thesaurus_entries_preferred_term", "preferred_term"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    thesaurus_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("bib_thesauri.id", ondelete="CASCADE"), nullable=False
+    )
+    preferred_term: Mapped[str] = mapped_column(String(255), nullable=False)
+    variants: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON com lista de strings
+    scope: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    proposed_by: Mapped[str] = mapped_column(String(128), default="manual", nullable=False)  # "ai" ou user_id
+    approved_by: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+# ── Instrumentos de Medida e Evidências (Fase 5, doc 48 §6, §12) ─────────
+
+
+class BibInstrumentoModel(Base):
+    """Instrumento conceitual com léxico e porta de aprovação humana (fecha B-07)."""
+
+    __tablename__ = "bib_instrumentos"
+    __table_args__ = (
+        Index("ix_bib_instrumentos_project_id", "project_id"),
+        Index("ix_bib_instrumentos_concept", "concept"),
+        Index("ix_bib_instrumentos_status", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    concept: Mapped[str] = mapped_column(String(255), nullable=False)
+    definition: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    lexicon: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON com modo, incluir, excluir, janela
+    version: Mapped[str] = mapped_column(String(32), default="1.0", nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="rascunho", nullable=False)  # rascunho / aprovado / arquivado
+    proposed_by: Mapped[str] = mapped_column(String(128), default="manual", nullable=False)
+    model_used: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    prompt_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    estimated_precision: Mapped[float | None] = mapped_column(Float, nullable=True)
+    precision_ci: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON [lower, upper]
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+class BibMedidaModel(Base):
+    """Execução de contagem determinística oficial sobre corpus/instantâneo com denominador."""
+
+    __tablename__ = "bib_medidas"
+    __table_args__ = (
+        Index("ix_bib_medidas_instrument_id", "instrument_id"),
+        Index("ix_bib_medidas_snapshot_id", "snapshot_id"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    snapshot_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("bib_snapshots.id", ondelete="SET NULL"), nullable=True
+    )
+    instrument_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("bib_instrumentos.id", ondelete="CASCADE"), nullable=False
+    )
+    instrument_version: Mapped[str] = mapped_column(String(32), default="1.0", nullable=False)
+    result: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON com frequências e distribuição
+    n_documents: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    n_documents_with_text: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    executed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+class BibOcorrenciaModel(Base):
+    """Ocorrência textual ancorada em documento, seção IMRaD, página e offset (doc 48 §6.6)."""
+
+    __tablename__ = "bib_ocorrencias"
+    __table_args__ = (
+        Index("ix_bib_ocorrencias_measurement_id", "measurement_id"),
+        Index("ix_bib_ocorrencias_paper_id", "paper_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    measurement_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("bib_medidas.id", ondelete="CASCADE"), nullable=False
+    )
+    paper_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+    )
+    section: Mapped[str] = mapped_column(String(100), default="", nullable=False)
+    page: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    char_start: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    char_end: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    matched_form: Mapped[str] = mapped_column(Text, nullable=False)
+    context_snippet: Mapped[str] = mapped_column(Text, default="", nullable=False)
+
+
+# ── Grafos e Análise Estrutural (Fase 6, doc 48 §8, §12) ─────────────────
+
+
+class BibGrafoModel(Base):
+    """Grafo bibliométrico determinístico com layout espacial e comunidades Louvain (fecha B-08)."""
+
+    __tablename__ = "bib_grafos"
+    __table_args__ = (
+        Index("ix_bib_grafos_project_id", "project_id"),
+        Index("ix_bib_grafos_snapshot_id", "snapshot_id"),
+        Index("ix_bib_grafos_network_type", "network_type"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    snapshot_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("bib_snapshots.id", ondelete="SET NULL"), nullable=True
+    )
+    network_type: Mapped[str] = mapped_column(String(50), nullable=False)  # coautoria / coocorrencia_termos / acoplamento_bibliografico / cocitacao
+    parameters: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # normalizacao, resolucao, corte, semente, iteracoes
+    nodes: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON lista de nós
+    edges: Mapped[str] = mapped_column(Text, default="[]", nullable=False)  # JSON lista de arestas
+    coordinates: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON coordenadas { node_id: {x, y} }
+    clusters: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON metadados de clusters
+    seed: Mapped[int] = mapped_column(Integer, default=42, nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+# ── Estatística Sob Demanda (Fase 7, doc 48 §9, §12) ─────────────────────
+
+
+class BibAnaliseModel(Base):
+    """Análise estatística sob demanda salva e reexecutável (doc 48 §9.3)."""
+
+    __tablename__ = "bib_analises"
+    __table_args__ = (
+        Index("ix_bib_analises_project_id", "project_id"),
+    )
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    specification: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON validado contra esquema fechado
+    created_by: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+
+
+
+

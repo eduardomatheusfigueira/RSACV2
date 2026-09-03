@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════════════════════════════════
-   Revsist — INSIGHTS PAGE STYLES (B.I. e Bibliometria, doc 32 §5)
+   Revsist — INSIGHTS & BIBLIOMETRICS PAGE STYLES (Contemporary Neo-Retro)
    ═════════════════════════════════════════════════════════════════════ */
 
 .insights-page {
@@ -8,28 +8,145 @@
   min-height: calc(100vh - var(--header-height) - var(--statusbar-height) - 32px);
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: var(--space-8);
+}
+
+/* ── Barra de Escopo e Proveniência Unificada (Topo) ─────────────────── */
+.insights-escopo-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+/* ── Navegação em 5 Abas Principais (Workbench Style) ─────────────────── */
+.insights-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: var(--space-0-5) solid var(--color-border);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+  overflow-x: auto;
+}
+
+.insights-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised);
+  transition: all var(--motion-fast) ease-in-out;
+  white-space: nowrap;
+}
+
+.insights-tab-btn:hover {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-focus);
+  transform: translateY(-1px);
+}
+
+.insights-tab-btn--active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--shadow-neo-pressed);
+  transform: translateY(1px);
+}
+
+.insights-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  padding: var(--space-px) var(--space-1-5);
+  border-radius: var(--radius-full);
+  background: var(--color-overlay);
+  color: inherit;
+}
+
+/* ── Barra de Métricas Rápidas (KPIs) ────────────────────────────────── */
+.insights-kpis-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3);
 }
 
-.insights-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .insights-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 900px) {
+  .insights-kpis-bar {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
+.insights-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-neo-raised);
+}
+
+.insights-kpi-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-accent);
+}
+
+.insights-kpi-card__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.insights-kpi-card__val {
+  font-size: var(--font-size-xl);
+  font-weight: var(--weight-bold);
+  font-family: var(--font-mono);
+  color: var(--color-text-primary);
+  line-height: 1.1;
+}
+
+.insights-kpi-card__lbl {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── Barra de Filtros ────────────────────────────────────────────────── */
 .insights-filtros {
   padding: var(--space-3) var(--space-4);
   display: flex;
   align-items: flex-end;
   gap: var(--space-4);
   flex-wrap: wrap;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
 .insights-filtros .rsac-form-group {
@@ -47,6 +164,20 @@
   margin: 0;
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
+}
+
+/* ── Grade de Blocos de Gráficos ─────────────────────────────────────── */
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .insights-bloco {
@@ -72,7 +203,7 @@
 .insights-bloco__subtitulo {
   margin: 0;
   padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: var(--space-px) solid var(--color-border-subtle);
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-secondary);
@@ -83,7 +214,7 @@
   gap: var(--space-6);
   margin: 0;
   padding-top: var(--space-2);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: var(--space-px) solid var(--color-border-subtle);
 }
 
 .insights-metricas-secundarias dt {
@@ -99,13 +230,7 @@
   margin: 0;
 }
 
-/*
- * Tabela alternativa acessível (doc 32 §5.3): mesmo dado do gráfico, sempre
- * presente no DOM para navegação por teclado/leitor de tela. Escondida
- * visualmente pela técnica padrão de "clip" — width/height em px são a
- * própria técnica de ocultação, não ritmo de espaçamento (R2d só cobre
- * padding/margin/gap).
- */
+/* Tabela alternativa acessível */
 .insights-tabela-acessivel,
 .rsac-visually-hidden {
   position: absolute;
@@ -196,7 +321,7 @@
 .insights-contingency-table td {
   padding: var(--space-2) var(--space-3);
   text-align: left;
-  border-bottom: 1px solid var(--color-border-subtle);
+  border-bottom: var(--space-px) solid var(--color-border-subtle);
 }
 
 .insights-contingency-table th {
@@ -210,3 +335,11 @@
 .dot-included { color: var(--color-included-on-surface); }
 .dot-excluded { color: var(--color-excluded-on-surface); }
 .dot-divergent { color: var(--color-warning-on-surface); }
+
+/* Painel de aba: a coluna de blocos de cada visão.
+   Estava como `style` inline no JSX, fora do alcance do linter de tokens. */
+.insights-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

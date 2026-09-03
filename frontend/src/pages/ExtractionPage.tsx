@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  ArrowUpDown,
   Download,
   FileCheck,
   FileX,
@@ -109,8 +110,9 @@ export function ExtractionPage(): JSX.Element {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
-  // Search & Navigation in Included Papers
+  // Search, Sorting & Navigation in Included Papers
   const [searchTerm, setSearchTerm] = useState('')
+  const [sortBy, setSortBy] = useState<string>('year_desc')
   const [mobileTab, setMobileTab] = useState<'document' | 'questions' | 'queue'>('document')
   const queueScrollRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -141,7 +143,7 @@ export function ExtractionPage(): JSX.Element {
 
       const [protoRes, papersRes] = await Promise.all([
         api.getProtocol(projectId),
-        api.listPapers(projectId, { decision: 'Incluído', page_size: 200 }),
+        api.listPapers(projectId, { decision: 'Incluído', page_size: 200, sort_by: 'year_desc' }),
       ])
 
       setProtocol(protoRes)
@@ -440,15 +442,38 @@ export function ExtractionPage(): JSX.Element {
   const questions = protocol?.extraction_questions || []
 
   const filteredPapers = useMemo(() => {
-    if (!searchTerm.trim()) return papers
-    const term = searchTerm.toLowerCase()
-    return papers.filter(
-      (p) =>
-        p.title.toLowerCase().includes(term) ||
-        (p.authors && p.authors.toLowerCase().includes(term)) ||
-        (p.doi && p.doi.toLowerCase().includes(term))
-    )
-  }, [papers, searchTerm])
+    let result = [...papers]
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase()
+      result = result.filter(
+        (p) =>
+          p.title.toLowerCase().includes(term) ||
+          (p.authors && p.authors.toLowerCase().includes(term)) ||
+          (p.doi && p.doi.toLowerCase().includes(term))
+      )
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === 'year_asc') {
+        const ya = parseInt(a.year || '9999', 10) || 9999
+        const yb = parseInt(b.year || '9999', 10) || 9999
+        return ya - yb
+      }
+      if (sortBy === 'title_asc') return (a.title || '').localeCompare(b.title || '')
+      if (sortBy === 'title_desc') return (b.title || '').localeCompare(a.title || '')
+      if (sortBy === 'authors_asc') return (a.authors || '').localeCompare(b.authors || '')
+      if (sortBy === 'authors_desc') return (b.authors || '').localeCompare(a.authors || '')
+      if (sortBy === 'confidence_desc') return (b.ai_confidence || 0) - (a.ai_confidence || 0)
+      if (sortBy === 'confidence_asc') return (a.ai_confidence || 0) - (b.ai_confidence || 0)
+      if (sortBy === 'updated_desc') return new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()
+      // Padrão: year_desc (anos mais recentes primeiro, sem ano por último)
+      const ya = a.year ? (parseInt(a.year, 10) || 0) : -1
+      const yb = b.year ? (parseInt(b.year, 10) || 0) : -1
+      return yb - ya
+    })
+
+    return result
+  }, [papers, searchTerm, sortBy])
 
   const selectedIndex = filteredPapers.findIndex((p) => p.id === selectedPaper?.id)
 
@@ -659,6 +684,27 @@ export function ExtractionPage(): JSX.Element {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+
+          <div className="queue-sort-wrapper">
+            <ArrowUpDown size={13} className="sort-icon" />
+            <select
+              className="queue-sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              title="Critério de ordenação dos estudos na fila de extração"
+              aria-label="Critério de ordenação dos estudos"
+            >
+              <option value="year_desc">📅 Publicação: Mais recentes primeiro</option>
+              <option value="year_asc">📅 Publicação: Mais antigos primeiro</option>
+              <option value="title_asc">🔤 Título: A → Z</option>
+              <option value="title_desc">🔤 Título: Z → A</option>
+              <option value="authors_asc">👤 Autor: A → Z</option>
+              <option value="authors_desc">👤 Autor: Z → A</option>
+              <option value="confidence_desc">⚡ Confiança da IA: Maior primeiro</option>
+              <option value="confidence_asc">⚡ Confiança da IA: Menor primeiro</option>
+              <option value="updated_desc">🕒 Modificação mais recente</option>
+            </select>
           </div>
 
           <div className="queue-counter-inline">

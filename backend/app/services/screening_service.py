@@ -15,15 +15,18 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 
 import json
 from app.database import SessionLocal
 from app.domain.collaboration import politica_de
 from app.domain.entities import Decision, Methodology, Paper, Protocol
-from app.infrastructure.ai.base import BaseAIClient, ScreeningResult
+from app.infrastructure.ai.base import BaseAIClient, ProvedorIndisponivel, ScreeningResult
 from app.infrastructure.ai.factory import AIFactory
 from app.infrastructure.ai.prompts import build_screening_prompt
+from app.domain.triabilidade import filtro_com_resumo
+from app.services.acelerador import AceleradorAdaptativo
 from app.infrastructure.persistence.models import (
     AuditLogModel,
     CriterionModel,
@@ -179,7 +182,19 @@ class ScreeningService:
         self._batch_state: Dict[str, dict] = {}
 
     def get_batch_state(self, project_id: str) -> Optional[dict]:
-        """Contadores do lote em andamento no projeto, ou `None` se não há lote."""
+        """Situação do lote do projeto — em andamento **ou recém-encerrado**.
+
+        O estado era descartado no instante em que o lote terminava, e isso
+        quebrava a tela de quem acompanhava pela consulta periódica em vez do
+        canal ao vivo: a última consulta antes do fim mostrava N-1 de N, a
+        seguinte encontrava `null`, e o último estudo ficava eternamente
+        "analisando". Era o relato de que "o último do lote sempre trava" —
+        e o lote tinha terminado, só ninguém conseguia mais saber disso.
+
+        Guardar o desfecho custa um dicionário por projeto, substituído no lote
+        seguinte, e é o que permite fechar o quadro: N de N, com a decisão de
+        cada estudo.
+        """
         return self._batch_state.get(project_id)
 
     def _get_client(self, db: Session, user_id: Optional[str] = None) -> BaseAIClient:
@@ -365,15 +380,44 @@ class ScreeningService:
         self,
         project_id: str,
         limit: int = 50,
-        concurrency: int = 3,
+        concurrency: int = 1,
+        pausa_entre_estudos: float = 4.0,
         actor: Optional["AuditActor"] = None,
     ):
-        """Executa a triagem em lote em segundo plano com controle de concorrência."""
+        """
+        Executa a triagem em lote em segundo plano, com concorrência e ritmo.
+
+        `concurrency` é o **teto** do paralelismo, e `pausa_entre_estudos` o
+        ritmo inicial. Onde o lote se acomoda abaixo disso não é escolhido: o
+        acelerador sobe enquanto o provedor aceita e recua assim que ele recusa
+        (ver `acelerador.py`).
+
+        Isso substitui o número fixo que o pesquisador escolhia antes de
+        começar e que ninguém tinha como acertar — o limite real depende do
+        plano, do modelo, de quantas chaves estão cadastradas e da hora do dia.
+        Alto demais derrubava o lote em recusas; baixo demais desperdiçava
+        minutos de espera à toa.
+        """
         db = SessionLocal()
         try:
+            # Duplicatas ficam de fora, pelo mesmo critério da fila de triagem
+            # (`papers.py`) e do contador do projeto (`projects.py /stats`). Sem
+            # este filtro o lote tria registros que o pesquisador já removeu do
+            # acervo: gasta cota do provedor, não muda nada na tela — porque
+            # aqueles registros não estão nela — e faz o lote parecer inerte.
             pending_papers = (
                 db.query(PaperModel.id, PaperModel.title, PaperModel.authors, PaperModel.year)
-                .filter(PaperModel.project_id == project_id, PaperModel.decision == "Pendente")
+                .filter(
+                    PaperModel.project_id == project_id,
+                    PaperModel.decision == "Pendente",
+                    or_(PaperModel.is_duplicate == False, PaperModel.is_duplicate.is_(None)),  # noqa: E712
+                    # Sem resumo não há triagem por título e resumo. Mandar o
+                    # registro assim mesmo não gera uma decisão ruim: gera uma
+                    # decisão sobre nada, com a mesma aparência de confiança de
+                    # uma decisão real — e gasta cota do provedor para isso.
+                    filtro_com_resumo(PaperModel),
+                )
+                .order_by(func.nullif(PaperModel.year, "").desc().nullslast(), PaperModel.created_at.desc())
                 .limit(limit)
                 .all()
             )
@@ -386,22 +430,24 @@ class ScreeningService:
                 )
                 return
 
-            logger.info(f"[BatchScreening] Iniciando triagem de {total_papers} artigos para o projeto {project_id}...")
-
-            await ws_manager.broadcast(
-                project_id,
+            # A relação do lote, na ordem em que os estudos serão triados.
+            # Nasce inteira e com todos "na fila": é o que permite à janela
+            # mostrar o conjunto desde o primeiro segundo, em vez de revelá-lo
+            # aos poucos conforme os eventos chegam.
+            itens = [
                 {
-                    "type": "batch_screening_started",
-                    "total": total_papers,
-                    "message": f"Iniciando triagem com IA para {total_papers} artigos pendentes...",
-                },
-            )
-
-            semaphore = asyncio.Semaphore(concurrency)
-            processed_count = 0
-            included_count = 0
-            excluded_count = 0
-            pending_count = 0
+                    "id": pid,
+                    "title": ptitle or "Sem título",
+                    "authors": pauthors or "",
+                    "year": str(pyear or ""),
+                    "status": "na_fila",
+                    "decision": None,
+                    "confidence": None,
+                    "justification": None,
+                }
+                for pid, ptitle, pauthors, pyear in pending_papers
+            ]
+            indice_do_item = {item["id"]: item for item in itens}
 
             estado = {
                 "processed": 0,
@@ -411,8 +457,97 @@ class ScreeningService:
                 "excluded": 0,
                 "pending": total_papers,
                 "current_paper_title": "",
+                "current_paper_id": "",
+                "current_paper_authors": "",
+                "current_paper_year": "",
+                "itens": itens,
+                "ritmo": None,
             }
             self._batch_state[project_id] = estado
+
+            logger.info(f"[BatchScreening] Iniciando triagem de {total_papers} artigos para o projeto {project_id}...")
+
+            await ws_manager.broadcast(
+                project_id,
+                {
+                    "type": "batch_screening_started",
+                    "total": total_papers,
+                    "message": f"Iniciando triagem com IA para {total_papers} artigos pendentes...",
+                    # A relação vai junto: a janela mostra o lote inteiro antes
+                    # de a primeira resposta chegar, em vez de um vazio com
+                    # "aguardando os primeiros estudos".
+                    #
+                    # Cópia, e não a lista viva: os itens são mutados conforme o
+                    # lote anda, e mandar a referência faria a mensagem de
+                    # INÍCIO descrever um estado futuro para qualquer receptor
+                    # que a serialize depois — um registro de auditoria, um
+                    # teste, um cliente lento.
+                    "itens": [dict(item) for item in itens],
+                },
+            )
+
+            # Recusa do provedor tem dois sabores, e o lote precisa separar.
+            #
+            # Passageira — o limite de taxa de um minuto — é o caso normal de
+            # uma triagem em lote: o cliente do provedor já espera e repete
+            # sozinho, e o artigo seguinte costuma passar. Desistir do lote aí
+            # seria interromper um trabalho que ia terminar.
+            #
+            # Persistente — chave sem cota, credencial errada, provedor fora do
+            # ar — vale para todos os artigos. Insistir transforma 100 estudos
+            # em 100 falhas e faz o lote terminar "com sucesso" sem ter decidido
+            # nada, que foi exatamente o que se via.
+            #
+            # A distinção é feita por recusas consecutivas em estudos
+            # DIFERENTES: com o cliente já esperando entre as tentativas, três
+            # estudos distintos recusados em sequência, sem nenhum sucesso
+            # entre eles, não são mais um soluço de limite.
+            #
+            # A exigência de que sejam distintos não é detalhe. Desde que um
+            # estudo recusado volta para uma passada seguinte, um único estudo
+            # teimoso — mal formatado, resumo que dispara um filtro do provedor
+            # — produziria sozinho as três recusas e condenaria um lote em que
+            # todo o resto estava passando.
+            # Recusas persistentes que justificam interromper o lote inteiro:
+            # - Cota DIÁRIA esgotada em todas as chaves (não volta hoje)
+            # - Credencial ou chave inválida / revogada
+            # - Falha consecutiva nas primeiras 5 tentativas sem nenhum sucesso inicial
+            provedor_caiu: dict = {"motivo": None, "recusados_seguidos": set()}
+
+            # Uma recusa isolada ou limite de taxa por minuto (RPM / 429) não é motivo
+            # para derrubar o lote. O estudo recusado é adiado para a próxima passada,
+            # o acelerador reduz o ritmo e aguarda o alívio da janela.
+            PASSADAS_ATE_DESISTIR = 4
+            adiados: List[tuple] = []
+
+            acelerador = AceleradorAdaptativo(
+                teto=max(1, concurrency),
+                pausa_inicial=max(0.0, float(pausa_entre_estudos or 0.0)),
+                deve_parar=lambda: bool(provedor_caiu["motivo"]),
+            )
+            estado["ritmo"] = acelerador.situacao()
+
+            processed_count = 0
+            included_count = 0
+            excluded_count = 0
+            pending_count = 0
+
+            def _registrar_recente(pid, titulo, decisao, confianca, justificativa):
+                """Fecha o item na relação do lote.
+
+                A justificativa é recortada de propósito: a relação inteira é
+                serializada a cada consulta de situação, e um lote de 500
+                estudos com o texto completo de cada um viraria uma resposta de
+                centenas de milhares de caracteres. O texto integral fica no
+                estudo, que é onde ele é lido com calma.
+                """
+                item = indice_do_item.get(pid)
+                if item is None:
+                    return
+                item["status"] = "concluido"
+                item["decision"] = decisao
+                item["confidence"] = confianca
+                item["justification"] = (justificativa or "")[:400]
 
             def _atualizar_estado():
                 estado["processed"] = processed_count
@@ -424,7 +559,11 @@ class ScreeningService:
             async def process_one(paper_info):
                 nonlocal processed_count, included_count, excluded_count, pending_count
                 pid, ptitle, pauthors, pyear = paper_info
-                async with semaphore:
+                if provedor_caiu["motivo"]:
+                    return
+                async with acelerador:
+                    if provedor_caiu["motivo"]:
+                        return
                     # Notificar início da análise deste estudo específico
                     await ws_manager.broadcast(
                         project_id,
@@ -438,10 +577,18 @@ class ScreeningService:
                         },
                     )
                     estado["current_paper_title"] = ptitle or "Sem título"
+                    estado["current_paper_id"] = pid
+                    estado["current_paper_authors"] = pauthors or ""
+                    estado["current_paper_year"] = str(pyear or "")
+                    if pid in indice_do_item:
+                        indice_do_item[pid]["status"] = "em_analise"
 
                     task_db = SessionLocal()
                     try:
                         res = await self.screen_single_paper(task_db, project_id, pid, actor=actor)
+                        provedor_caiu["recusados_seguidos"].clear()
+                        acelerador.registrar_sucesso()
+                        estado["ritmo"] = acelerador.situacao()
                         processed_count += 1
                         if res.decision == "Incluído":
                             included_count += 1
@@ -451,6 +598,7 @@ class ScreeningService:
                             pending_count += 1
 
                         _atualizar_estado()
+                        _registrar_recente(pid, ptitle, res.decision, res.confidence, res.justification)
                         await ws_manager.broadcast(
                             project_id,
                             {
@@ -466,13 +614,60 @@ class ScreeningService:
                                 "included_count": included_count,
                                 "excluded_count": excluded_count,
                                 "pending_count": total_papers - processed_count,
+                                "ritmo": acelerador.situacao(),
                             },
                         )
+                    except ProvedorIndisponivel as e:
+                        # Não é falha deste estudo: é o provedor recusando. O
+                        # artigo não é contado como processado — continua
+                        # pendente para a próxima passada se for limite temporário.
+                        provedor_caiu["recusados_seguidos"].add(pid)
+                        acelerador.registrar_recusa()
+                        estado["ritmo"] = acelerador.situacao()
+
+                        e_msg = str(e)
+                        e_msg_upper = e_msg.upper()
+                        e_fatal = (
+                            ("DIÁRIA" in e_msg_upper or "DIARIA" in e_msg_upper)
+                            or "NENHUMA" in e_msg_upper
+                            or "INVÁLID" in e_msg_upper
+                            or "INVALID" in e_msg_upper
+                            or "REVOKED" in e_msg_upper
+                            or "UNAUTHENTICATED" in e_msg_upper
+                            or "PERMISSION_DENIED" in e_msg_upper
+                        )
+                        # Limite de taxa por minuto ou momentâneo NÃO é fatal (é passageiro):
+                        if (
+                            "POR MINUTO" in e_msg_upper
+                            or "MOMENTÂNEO" in e_msg_upper
+                            or "MOMENTANEO" in e_msg_upper
+                            or ("LIMITE DE TAXA" in e_msg_upper and "DIÁRIA" not in e_msg_upper and "DIARIA" not in e_msg_upper)
+                        ):
+                            e_fatal = False
+
+                        # Se for erro fatal de cota diária ou se falhou consecutivamente sem nenhum sucesso:
+                        if e_fatal or (processed_count == 0 and len(provedor_caiu["recusados_seguidos"]) >= 5):
+                            provedor_caiu["motivo"] = e_msg
+                            logger.warning(
+                                f"[BatchScreening] Provedor indisponível definitivamente no lote: {e_msg}"
+                            )
+                        else:
+                            adiados.append(paper_info)
+                            if pid in indice_do_item:
+                                indice_do_item[pid]["status"] = "na_fila"
+                            logger.warning(
+                                f"[BatchScreening] Limite de taxa temporário no paper {pid}. "
+                                f"Adiado para próxima passada (total adiados: {len(adiados)})."
+                            )
+                        return
                     except Exception as e:
                         logger.error(f"[BatchScreening] Erro no paper {pid}: {e}")
                         processed_count += 1
                         pending_count += 1
                         _atualizar_estado()
+                        _registrar_recente(
+                            pid, ptitle, "Pendente", 0.0, f"Falha na análise: {e}"
+                        )
                         await ws_manager.broadcast(
                             project_id,
                             {
@@ -494,8 +689,67 @@ class ScreeningService:
                     finally:
                         task_db.close()
 
-            tasks = [process_one(p_info) for p_info in pending_papers]
-            await asyncio.gather(*tasks)
+            # A cada passada o acelerador já recuou uma vez por recusa, então
+            # a repetição chega mais devagar que a tentativa que falhou.
+            a_triar = list(pending_papers)
+            for _passada in range(PASSADAS_ATE_DESISTIR):
+                if not a_triar or provedor_caiu["motivo"]:
+                    break
+                if _passada > 0 and a_triar and (pausa_entre_estudos or 0.0) > 0:
+                    # Pausa de recuperação da janela de 1 minuto antes de reprocessar os adiados
+                    espera_janela = min(12.0, 4.0 * _passada)
+                    logger.info(
+                        f"[BatchScreening] Passada {_passada + 1}/{PASSADAS_ATE_DESISTIR}: "
+                        f"Aguardando {espera_janela:.0f}s para alívio de limite de taxa antes de "
+                        f"processar {len(a_triar)} estudo(s) adiado(s)..."
+                    )
+                    await asyncio.sleep(espera_janela)
+
+                adiados = []
+                await asyncio.gather(*[process_one(p_info) for p_info in a_triar])
+                a_triar = adiados
+
+            # O que não passou nem após todas as passadas é registrado como não triado.
+            # Continua pendente no acervo e entra no próximo lote.
+            concluidos_ids = {it["id"] for it in itens if it.get("status") == "concluido"}
+            nao_triados = [p for p in pending_papers if p[0] not in concluidos_ids]
+            for pid_n, ptitle_n, _autores_n, _ano_n in nao_triados:
+                item = indice_do_item.get(pid_n)
+                if item is not None:
+                    item["status"] = "nao_triado"
+                    item["justification"] = (
+                        "O provedor de IA recusou as tentativas desta rodada por limite de uso. "
+                        "O estudo segue pendente e entrará no próximo lote."
+                    )
+                await ws_manager.broadcast(
+                    project_id,
+                    {
+                        "type": "batch_screening_item_skipped",
+                        "paper_id": pid_n,
+                        "paper_title": ptitle_n or "Sem título",
+                        "message": "Não foi possível triar agora; segue pendente.",
+                    },
+                )
+
+            if provedor_caiu["motivo"]:
+                logger.warning(
+                    f"[BatchScreening] Lote do projeto {project_id} interrompido pelo provedor "
+                    f"após {processed_count} de {total_papers}."
+                )
+                await ws_manager.broadcast(
+                    project_id,
+                    {
+                        "type": "batch_screening_failed",
+                        "message": (
+                            f"{provedor_caiu['motivo']} "
+                            f"{processed_count} de {total_papers} estudos foram triados antes da "
+                            "interrupção; os demais continuam pendentes."
+                        ),
+                        "processed": processed_count,
+                        "total": total_papers,
+                    },
+                )
+                return
 
             logger.info(f"[BatchScreening] Finalizada triagem em lote do projeto {project_id}.")
             await ws_manager.broadcast(
@@ -506,6 +760,15 @@ class ScreeningService:
                     "included": included_count,
                     "excluded": excluded_count,
                     "pending": total_papers - processed_count,
+                    "nao_triados": len(nao_triados),
+                    "message": (
+                        f"{processed_count} de {total_papers} estudos triados."
+                        + (
+                            f" {len(nao_triados)} não puderam ser triados agora e seguem pendentes."
+                            if nao_triados
+                            else ""
+                        )
+                    ),
                 },
             )
 
@@ -528,5 +791,17 @@ class ScreeningService:
                 },
             )
         finally:
-            self._batch_state.pop(project_id, None)
+            # O estado NÃO é descartado: vira o registro do desfecho, que a
+            # tela lê para fechar o quadro. Some sozinho quando outro lote
+            # começa no mesmo projeto.
+            encerramento = self._batch_state.get(project_id)
+            if encerramento is not None:
+                encerramento["encerrado"] = True
+                encerramento["current_paper_title"] = ""
+                encerramento["current_paper_id"] = ""
+                # Nenhum estudo fica "em análise" depois que o lote acabou: o
+                # que não chegou a ser decidido volta a constar como na fila.
+                for item in encerramento.get("itens") or []:
+                    if item.get("status") == "em_analise":
+                        item["status"] = "na_fila"
             db.close()

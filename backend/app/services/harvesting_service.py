@@ -31,6 +31,7 @@ from app.infrastructure.persistence.models import (
     HarvestRunModel,
     ProtocolModel,
     ProjectModel,
+    SearchStrategyModel,
     SourceCredentialModel,
 )
 from app.services.dedup_service import DeduplicationService
@@ -133,17 +134,63 @@ class ConnectionManager:
                 del self.active_connections[project_id]
                 self.presence.pop(project_id, None)
 
+    # Tempo máximo que UMA conexão pode segurar uma transmissão. Um socket
+    # saudável entrega em milissegundos; passar disso significa que o outro
+    # lado sumiu sem fechar — e nenhuma tela vale travar quem produz o evento.
+    TIMEOUT_DE_ENVIO = 5.0
+
     async def broadcast(self, project_id: str, message: dict):
-        if project_id in self.active_connections:
-            dead = set()
-            for ws in list(self.active_connections[project_id]):
-                try:
-                    await ws.send_json(message)
-                except Exception:
-                    dead.add(ws)
-            for d in dead:
-                self.active_connections[project_id].discard(d)
-                self.ws_meta.pop(d, None)
+        """
+        Envia a todos, sem deixar ninguém segurar o produtor.
+
+        A versão anterior fazia `await ws.send_json(...)` em série e sem prazo.
+        Um cliente que some sem fechar a conexão — aba encerrada à força, queda
+        de rede, servidor reiniciado pelo `--reload` — deixa o objeto do socket
+        vivo aqui dentro: o `send` não levanta exceção, ele escreve no buffer
+        do transporte e fica esperando o outro lado confirmar. Quando o buffer
+        enche, o `await` simplesmente não volta.
+
+        Quem pagava por isso era a triagem em lote, que transmite duas vezes por
+        artigo: anunciava o início e travava no primeiro estudo, sem erro no
+        log e sem nada na tela. A triagem individual seguia funcionando porque
+        responde pelo próprio HTTP, sem passar por aqui — foi essa assimetria
+        que escondeu a causa.
+
+        Agora cada envio tem prazo, e todos correm em paralelo: uma conexão
+        ruim é descartada em vez de contaminar as outras.
+        """
+        conexoes = list(self.active_connections.get(project_id, ()))
+        if not conexoes:
+            return
+
+        async def _enviar(ws):
+            try:
+                await asyncio.wait_for(ws.send_json(message), timeout=self.TIMEOUT_DE_ENVIO)
+                return None
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "[WS] Conexão do projeto %s não recebeu em %.0fs; descartada.",
+                    project_id, self.TIMEOUT_DE_ENVIO,
+                )
+                return ws
+            except Exception:
+                return ws
+
+        resultados = await asyncio.gather(*(_enviar(ws) for ws in conexoes))
+
+        for morto in filter(None, resultados):
+            self.active_connections.get(project_id, set()).discard(morto)
+            self.ws_meta.pop(morto, None)
+            # Fechar libera o socket do lado do servidor; sem isto o descarte
+            # tira da lista mas deixa o recurso pendurado.
+            try:
+                await morto.close(code=1011)
+            except Exception:
+                pass
+
+        if project_id in self.active_connections and not self.active_connections[project_id]:
+            del self.active_connections[project_id]
+            self.presence.pop(project_id, None)
 
 
 ws_manager = ConnectionManager()
@@ -428,6 +475,37 @@ class HarvestingService:
                         descriptors.extend([p.strip() for p in pairs if p.strip()])
                 except Exception:
                     pass
+
+            # Fallback 1: Buscar da estratégia canônica salva no estúdio (SearchStrategyModel)
+            if not descriptors:
+                strat = db.query(SearchStrategyModel).filter(
+                    SearchStrategyModel.protocol_id == protocol.id,
+                    SearchStrategyModel.kind == "canonica",
+                ).first()
+                if strat and strat.blocks:
+                    try:
+                        from app.services.search_strategy_service import render_bdtd_decomposition
+                        blocks = json.loads(strat.blocks)
+                        pairs, _ = render_bdtd_decomposition(blocks, max_pairs=10)
+                        descriptors.extend([p.strip() for p in pairs if p.strip()])
+                    except Exception as e:
+                        logger.warning(f"[Harvesting] Falha ao extrair descritores da estratégia: {e}")
+
+            # Fallback 2: Se ainda vazio, sintetizar dos componentes da pergunta (PCC / PICO)
+            if not descriptors and protocol.pico_framework:
+                try:
+                    from app.services.search_strategy_service import _quote_term
+                    pico_dict = json.loads(protocol.pico_framework)
+                    pop = pico_dict.get("population", "").strip()
+                    con = (pico_dict.get("intervention") or pico_dict.get("concept", "")).strip()
+                    if pop and con:
+                        descriptors.append(f"{_quote_term(pop)} AND {_quote_term(con)}")
+                    elif pop:
+                        descriptors.append(_quote_term(pop))
+                    elif con:
+                        descriptors.append(_quote_term(con))
+                except Exception as e:
+                    logger.warning(f"[Harvesting] Falha ao extrair descritores do framework PICO/PCC: {e}")
 
             if not descriptors:
                 logger.warning(f"[Harvesting] Nenhum descritor configurado para o projeto {project_id}")

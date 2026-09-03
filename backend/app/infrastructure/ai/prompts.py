@@ -190,6 +190,7 @@ def build_protocol_suggestion_prompt(title: str, methodology: str, initial_descr
     respeitando as regras Revsist e a metodologia selecionada (PRISMA 2020, PRISMA-ScR / Scoping Reviews - Tricco et al. 2018):
     - No máximo 5 pares de descritores por idioma (PT, EN, ES)
     - Cada expressão em no máximo 2 termos combinados ("termo1" AND "termo2") para compatibilidade BDTD/VuFind
+    - Extensões estritamente calibradas para cada campo de destino
     """
     is_scoping = "ScR" in methodology or "Scoping" in methodology
 
@@ -203,7 +204,7 @@ def build_protocol_suggestion_prompt(title: str, methodology: str, initial_descr
 
     return f"""Você é um especialista sênior em metodologia de Revisões Acadêmicas ({methodology}) nas áreas de Ciências Sociais Aplicadas, Economia, Políticas Públicas e Desenvolvimento Regional.
 {framework_instructions}
-Elabore uma proposta de protocolo completa e estruturada para a revisão descrita abaixo.
+Elabore uma proposta de protocolo completa, rigorosa e estruturada para a revisão descrita abaixo.
 
 TÍTULO DA REVISÃO:
 {title}
@@ -211,21 +212,21 @@ TÍTULO DA REVISÃO:
 DESCRIÇÃO / ESCOPO INICIAL:
 {initial_description or "Revisão acadêmica em Ciências Sociais Aplicadas / Desenvolvimento Regional."}
 
-==================== REGRAS OBRIGATÓRIAS DE DESCRITORES ====================
-1. ESTRUTURA EM PARES: Cada descritor DEVE ter no máximo 2 termos combinados com AND.
-   Exemplo correto: '"desenvolvimento regional" AND "arranjos produtivos"'
-   Exemplo proibido: '"termo 1" AND "termo 2" AND "termo 3"' (NÃO use mais de 2 termos!)
-2. LIMITE POR IDIOMA: Forneça NO MÁXIMO 5 pares de descritores por idioma (Português, Inglês, Espanhol).
-3. ESPECIFICIDADE EQUILIBRADA: Evite termos excessivamente genéricos ou excessivamente restritos.
+==================== REGRAS OBRIGATÓRIAS DE EXTENSÃO E FORMATO ====================
+1. CAMPOS DE DECOMPOSIÇÃO (PCC/PICO): Devem ser ESTRITAMENTE CONCISOS (1 expressão curta ou frase nominal de 5 a 15 palavras). NUNCA gere parágrafos dissertativos ou resumos inteiros nestes campos.
+2. OBJETIVO GERAL: 2 a 3 frases claras (pergunta norteadora + objetivo no infinitivo, máximo 50 palavras).
+3. CRITÉRIOS DE ELEGIBILIDADE: 3 a 5 critérios objetivos de inclusão e 3 a 5 de exclusão (1 frase direta por critério, 10 a 20 palavras cada).
+4. DESCRITORES EM PARES: Cada descritor DEVE ter no máximo 2 termos combinados com AND (ex: '"desenvolvimento regional" AND "arranjos produtivos"'). Forneça NO MÁXIMO 5 pares por idioma (PT, EN, ES).
+5. PERGUNTAS DE EXTRAÇÃO: 4 a 6 perguntas diretas de mapeamento de dados (1 frase por pergunta).
 
 Responda OBRIGATORIAMENTE em formato JSON puro, sem textos adicionais:
 
 {{
-  "objective": "Objetivo geral claro e conciso da revisão...",
-  "pico_population": "População, atores sociais, organizações ou territórios de interesse...",
-  "pico_intervention": "Conceito Central / Política Pública / Instrumento avaliado...",
-  "pico_comparison": "Contexto Territorial / Cenário Comparativo / Padrão de referência...",
-  "pico_outcome": "Mapeamento de resultados / Desfechos socioeconômicos ou institucionais analisados...",
+  "objective": "Pergunta central e objetivo geral concisos (2-3 frases curtas, máx. 50 palavras)...",
+  "pico_population": "Expressão nominal curta da população/atores/organizações (5 a 15 palavras)...",
+  "pico_intervention": "Expressão nominal curta do conceito central/política pública (5 a 15 palavras)...",
+  "pico_comparison": "Expressão nominal curta do contexto territorial/cenário comparativo (5 a 15 palavras)...",
+  "pico_outcome": "Expressão nominal curta do desfecho/variáveis mapeadas (5 a 15 palavras)...",
   "descriptors_pt": [
     "\"termo1\" AND \"termo2\"",
     "\"termo3\" AND \"termo4\""
@@ -238,16 +239,16 @@ Responda OBRIGATORIAMENTE em formato JSON puro, sem textos adicionais:
     "\"termino1\" AND \"termino2\""
   ],
   "inclusion_criteria": [
-    "Critério de inclusão 1...",
-    "Critério de inclusão 2..."
+    "Critério de inclusão conciso em 1 frase (10-20 palavras)...",
+    "Critério de inclusão conciso em 1 frase (10-20 palavras)..."
   ],
   "exclusion_criteria": [
-    "Critério de exclusão 1...",
-    "Critério de exclusão 2..."
+    "Critério de exclusão conciso em 1 frase (10-20 palavras)...",
+    "Critério de exclusão conciso em 1 frase (10-20 palavras)..."
   ],
   "extraction_questions": [
-    "Pergunta de extração / mapeamento de dados 1...",
-    "Pergunta de extração / mapeamento de dados 2..."
+    "Pergunta pontual de extração de dados 1...",
+    "Pergunta pontual de extração de dados 2..."
   ]
 }}
 """
@@ -262,17 +263,28 @@ CONTEXT_FIELD_LABELS = {
     "objective": "OBJETIVO GERAL DA REVISÃO (ITEM 4)",
     "pico_population": "POPULAÇÃO / ATORES SOCIAIS (PCC/PICO)",
     "pcc_population": "POPULAÇÃO / ATORES SOCIAIS (PCC/PICO)",
+    "population": "POPULAÇÃO / ATORES SOCIAIS (PCC/PICO)",
     "pico_intervention": "CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO (PCC/PICO)",
     "pcc_concept": "CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO (PCC/PICO)",
+    "pcc_intervention": "CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO (PCC/PICO)",
+    "intervention": "CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO (PCC/PICO)",
+    "concept": "CONCEITO CENTRAL / POLÍTICA / INTERVENÇÃO (PCC/PICO)",
     "pico_comparison": "CONTEXTO COMPARATIVO / TERRITORIAL (PCC/PICO)",
     "pcc_context": "CONTEXTO COMPARATIVO / TERRITORIAL (PCC/PICO)",
+    "pcc_comparison": "CONTEXTO COMPARATIVO / TERRITORIAL (PCC/PICO)",
+    "comparison": "CONTEXTO COMPARATIVO / TERRITORIAL (PCC/PICO)",
+    "context": "CONTEXTO COMPARATIVO / TERRITORIAL (PCC/PICO)",
     "pico_outcome": "DESFECHOS / RESULTADOS ESPERADOS (PCC/PICO)",
+    "outcome": "DESFECHOS / RESULTADOS ESPERADOS (PCC/PICO)",
     "descriptors_pt": "DESCRITORES DE BUSCA (PORTUGUÊS)",
     "descriptors_en": "DESCRITORES DE BUSCA (INGLÊS)",
     "descriptors_es": "DESCRITORES DE BUSCA (ESPANHOL)",
+    "criteria": "CRITÉRIOS DE ELEGIBILIDADE",
     "inclusion_criteria": "CRITÉRIOS DE INCLUSÃO DE ESTUDOS",
     "exclusion_criteria": "CRITÉRIOS DE EXCLUSÃO DE ESTUDOS",
     "extraction_questions": "PERGUNTAS DE EXTRAÇÃO / VARIÁVEIS DE MAPEAMENTO",
+    "info_sources": "MÉTODOS COMPLEMENTARES E LITERATURA CINZENTA",
+    "dedup_notes": "NOTAS DE DEDUPLICAÇÃO",
     "rationale": "JUSTIFICATIVA TEÓRICA / CONTEXTUALIZAÇÃO (ITEM 3)",
     "selection_process": "PROCESSO DE SELEÇÃO E CALIBRAÇÃO (ITEM 9)",
     "data_charting_process": "PROCESSO DE EXTRAÇÃO DE DADOS (ITEM 10)",
@@ -285,6 +297,297 @@ CONTEXT_FIELD_LABELS = {
 }
 
 
+FIELD_CALIBRATION_SPECS: dict[str, dict] = {
+    # ── Componentes de Framework / PCC / PICO (Campos Curtos / Linha Única) ──
+    "pico_population": {
+        "categoria": "Componente do Framework (População / Atores Sociais / Participantes)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Termos diretos e delimitados, prontos para gerar termos de busca. NUNCA gere parágrafos dissertativos, introduções conceituais ou textos do tamanho de um resumo acadêmico.",
+        "exemplo_adequado": "Arranjos Produtivos Locais (APLs), cooperativas e micro e pequenas empresas industriais",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos, introduções teóricas, listas enumeradas ou textos com extensão de resumo.",
+    },
+    "pcc_population": {
+        "categoria": "Componente do Framework (População / Atores Sociais / Participantes)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Termos diretos e delimitados, prontos para gerar termos de busca. NUNCA gere parágrafos dissertativos, introduções conceituais ou textos do tamanho de um resumo acadêmico.",
+        "exemplo_adequado": "Arranjos Produtivos Locais (APLs), cooperativas e micro e pequenas empresas industriais",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos, introduções teóricas, listas enumeradas ou textos com extensão de resumo.",
+    },
+    "population": {
+        "categoria": "Componente do Framework (População / Atores Sociais / Participantes)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Termos diretos e delimitados, prontos para gerar termos de busca. NUNCA gere parágrafos dissertativos, introduções conceituais ou textos do tamanho de um resumo acadêmico.",
+        "exemplo_adequado": "Arranjos Produtivos Locais (APLs), cooperativas e micro e pequenas empresas industriais",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos, introduções teóricas, listas enumeradas ou textos com extensão de resumo.",
+    },
+    "pico_intervention": {
+        "categoria": "Componente do Framework (Conceito Central / Política Pública / Intervenção)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Conceito, política ou intervenção delimitada de forma sucinta.",
+        "exemplo_adequado": "Políticas públicas de fomento à inovação socioeconômica e governança territorial",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "pcc_concept": {
+        "categoria": "Componente do Framework (Conceito Central / Fenômeno Investigado)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Conceito ou fenômeno central delimitado de forma sucinta.",
+        "exemplo_adequado": "Mecanismos de governança territorial e inovação socioeconômica",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "pcc_intervention": {
+        "categoria": "Componente do Framework (Conceito Central / Intervenção)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Conceito ou intervenção delimitada de forma sucinta.",
+        "exemplo_adequado": "Políticas de desenvolvimento regional e instrumentos de incentivo econômico",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "intervention": {
+        "categoria": "Componente do Framework (Conceito Central / Intervenção)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Conceito ou intervenção delimitada de forma sucinta.",
+        "exemplo_adequado": "Políticas de desenvolvimento regional e instrumentos de incentivo econômico",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "concept": {
+        "categoria": "Componente do Framework (Conceito Central)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Conceito central delimitado de forma sucinta.",
+        "exemplo_adequado": "Governança regional e sustentabilidade em cadeias de valor",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "pico_comparison": {
+        "categoria": "Componente do Framework (Contexto Territorial / Cenário Comparativo / Padrão)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Recorte territorial ou cenário comparativo delimitado.",
+        "exemplo_adequado": "Regiões periféricas, municípios de médio porte e estados do Sul e Nordeste do Brasil",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "pcc_context": {
+        "categoria": "Componente do Framework (Contexto Territorial / Cenário Geográfico)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Recorte territorial ou contexto socioespacial delimitado.",
+        "exemplo_adequado": "Territórios e regiões em desenvolvimento na América Latina e Brasil",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "pcc_comparison": {
+        "categoria": "Componente do Framework (Contexto / Comparador)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Recorte territorial ou comparador delimitado de forma sucinta.",
+        "exemplo_adequado": "Cenários de referência regional e economias subnacionais",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "comparison": {
+        "categoria": "Componente do Framework (Contexto / Comparador)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Recorte territorial ou comparador delimitado de forma sucinta.",
+        "exemplo_adequado": "Cenários de referência regional e economias subnacionais",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "context": {
+        "categoria": "Componente do Framework (Contexto Territorial)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Recorte territorial delimitado de forma sucinta.",
+        "exemplo_adequado": "Brasil e América Latina com ênfase em dinâmicas regionais",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "pico_outcome": {
+        "categoria": "Componente do Framework (Desfecho / Resultados Mapeados)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Desfechos socioeconômicos ou variáveis esperadas delimitadas.",
+        "exemplo_adequado": "Impactos no desenvolvimento territorial, geração de emprego e competitividade regional",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+    "outcome": {
+        "categoria": "Componente do Framework (Desfecho / Resultados)",
+        "extensao_recomendada": "1 expressão nominal ou termos-chave concisos (5 a 20 palavras / 1 a 2 linhas)",
+        "formato_alvo": "Desfechos ou variáveis mapeadas de forma sucinta.",
+        "exemplo_adequado": "Desempenho socioeconômico, fortalecimento institucional e coesão regional",
+        "proibicoes": "PROIBIDO gerar parágrafos dissertativos ou resumos longos.",
+    },
+
+    # ── Título Provisório ──
+    "manuscript_title": {
+        "categoria": "Título Provisório do Manuscrito / Protocolo (S1)",
+        "extensao_recomendada": "1 única linha contendo o título acadêmico (10 a 25 palavras)",
+        "formato_alvo": "Título acadêmico formal e direto. Sem ponto final, sem aspas e sem parágrafos.",
+        "exemplo_adequado": "Políticas públicas territoriais e inovação em arranjos produtivos locais: protocolo de revisão de escopo",
+        "proibicoes": "PROIBIDO gerar parágrafos de texto, introduções ou justificativas.",
+    },
+    "title": {
+        "categoria": "Título Provisório do Manuscrito / Protocolo (S1)",
+        "extensao_recomendada": "1 única linha contendo o título acadêmico (10 a 25 palavras)",
+        "formato_alvo": "Título acadêmico formal e direto. Sem ponto final, sem aspas e sem parágrafos.",
+        "exemplo_adequado": "Políticas públicas territoriais e inovação em arranjos produtivos locais: protocolo de revisão de escopo",
+        "proibicoes": "PROIBIDO gerar parágrafos de texto, introduções ou justificativas.",
+    },
+
+    # ── Pergunta Principal e Objetivo Geral ──
+    "objective": {
+        "categoria": "Pergunta Principal e Objetivo Geral (S2 / Item 4)",
+        "extensao_recomendada": "2 a 4 frases concisas e diretas (35 a 70 palavras / 1 parágrafo curto)",
+        "formato_alvo": "Pergunta norteadora clara e respondível, seguida do objetivo geral com verbo no infinitivo.",
+        "exemplo_adequado": "Quais mecanismos de governança e instrumentos de fomento estão documentados na literatura sobre arranjos produtivos locais no Brasil? O objetivo desta revisão de escopo é mapear e caracterizar as evidências empíricas sobre a governança territorial e inovação em APLs entre 2015 e 2025.",
+        "proibicoes": "PROIBIDO gerar resumos inteiros de artigos, introduções bibliográficas longas ou textos dissertativos de mais de 100 palavras.",
+    },
+
+    # ── Critérios de Elegibilidade ──
+    "criteria": {
+        "categoria": "Critérios de Elegibilidade (S10: Inclusão e Exclusão)",
+        "extensao_recomendada": "Lista de 3 a 5 critérios de inclusão e 3 a 5 de exclusão (1 frase curta por linha, 10 a 25 palavras cada)",
+        "formato_alvo": "Texto estruturado em linhas onde cada linha começa com 'INC: ' para inclusão ou 'EXC: ' para exclusão.",
+        "exemplo_adequado": "INC: Estudos empíricos que analisem políticas públicas voltadas a arranjos produtivos locais.\nINC: Publicações com foco no território brasileiro ou latino-americano.\nINC: Artigos revisados por pares, teses ou dissertações publicados a partir de 2015.\nEXC: Estudos estritamente laboratoriais ou sem abordagem socioeconômica territorial.\nEXC: Trabalhos que não apresentem dados primários ou secundários sobre governança regional.",
+        "proibicoes": "PROIBIDO gerar parágrafos corridos sem quebras de linha ou sem os prefixos INC: e EXC:.",
+    },
+    "inclusion_criteria": {
+        "categoria": "Critérios de Inclusão (Item 6)",
+        "extensao_recomendada": "Lista de 3 a 5 critérios de inclusão (1 frase por linha, 10 a 25 palavras cada)",
+        "formato_alvo": "Linhas com prefixo 'INC: ' ou itens diretos em lista.",
+        "exemplo_adequado": "INC: Estudos empíricos sobre governança em arranjos produtivos locais.\nINC: Publicações com recorte territorial no Brasil ou América Latina.\nINC: Artigos, teses e dissertações publicados a partir de 2015.",
+        "proibicoes": "PROIBIDO gerar justificativas longas para cada critério.",
+    },
+    "exclusion_criteria": {
+        "categoria": "Critérios de Exclusão (Item 6)",
+        "extensao_recomendada": "Lista de 3 a 5 critérios de exclusão (1 frase por linha, 10 a 25 palavras cada)",
+        "formato_alvo": "Linhas com prefixo 'EXC: ' ou itens diretos em lista.",
+        "exemplo_adequado": "EXC: Estudos sem foco em políticas públicas territoriais ou desenvolvimento regional.\nEXC: Ensaios de opinião sem base empírica ou metodologia declarada.\nEXC: Resumos de eventos sem texto completo disponível.",
+        "proibicoes": "PROIBIDO gerar justificativas longas para cada critério.",
+    },
+
+    # ── Métodos Complementares e Literatura Cinzenta ──
+    "info_sources": {
+        "categoria": "Métodos Complementares e Literatura Cinzenta (S9)",
+        "extensao_recomendada": "1 a 2 parágrafos curtos e objetivos (40 a 90 palavras)",
+        "formato_alvo": "Texto conciso descrevendo fontes complementares (anais, repositórios institucionais, busca reversa).",
+        "exemplo_adequado": "A busca será complementada por consultas manuais aos anais dos encontros da ANPUR, repositório de publicações do IPEA e teses e dissertações da BDTD. Adicionalmente, será realizada busca regressiva nas referências dos estudos incluídos e contato com pesquisadores da área quando necessário.",
+        "proibicoes": "PROIBIDO gerar dissertações históricas longas sobre repositórios.",
+    },
+
+    # ── Perguntas de Extração / Variáveis de Mapeamento ──
+    "extraction_questions": {
+        "categoria": "Perguntas de Extração / Variáveis de Mapeamento (S11)",
+        "extensao_recomendada": "Lista de 4 a 8 perguntas pontuais e diretas (1 linha por pergunta, 10 a 20 palavras cada)",
+        "formato_alvo": "Uma pergunta de extração por linha, prefixada com 'Q1: ', 'Q2: ' ou traço.",
+        "exemplo_adequado": "Q1: Qual o recorte territorial e estado/região investigado?\nQ2: Qual o setor produtivo ou cadeia de valor do APL analisado?\nQ3: Quais instrumentos de política pública ou financiamento foram identificados?\nQ4: Quais foram os principais impactos socioeconômicos reportados?",
+        "proibicoes": "PROIBIDO gerar parágrafos explicativos em vez de perguntas objetivas de extração.",
+    },
+
+    # ── Notas de Deduplicação ──
+    "dedup_notes": {
+        "categoria": "Notas de Deduplicação (S14)",
+        "extensao_recomendada": "1 a 2 frases concisas (20 a 50 palavras)",
+        "formato_alvo": "Registro direto do método de deduplicação e conferência.",
+        "exemplo_adequado": "Deduplicação automática baseada em DOI e normalização estrita de títulos, seguida de conferência manual de registros limítrofes.",
+        "proibicoes": "PROIBIDO gerar parágrafos longos.",
+    },
+
+    # ── Seções Discursivas / Manuscrito do Protocolo Completo ──
+    "rationale": {
+        "categoria": "Justificativa Teórica e Contextualização (Item 3)",
+        "extensao_recomendada": "2 a 3 parágrafos fundamentados (120 a 220 palavras)",
+        "formato_alvo": "Contextualização teórica do tema, justificativa da necessidade da revisão e lacuna de literatura identificada.",
+        "exemplo_adequado": "O desenvolvimento regional no Brasil depende crescentemente de arranjos colaborativos e políticas de fomento local...",
+        "proibicoes": "PROIBIDO gerar textos de menos de 50 palavras ou com mais de 350 palavras.",
+    },
+    "selection_process": {
+        "categoria": "Processo de Seleção e Calibração (Item 9)",
+        "extensao_recomendada": "1 a 2 parágrafos metodológicos (70 a 140 palavras)",
+        "formato_alvo": "Descrição clara dos estágios de triagem (título/resumo e texto completo), cegueira e resolução de divergências.",
+        "exemplo_adequado": "A seleção dos estudos será conduzida em duas etapas consecutivas por dois revisores independentes...",
+        "proibicoes": "PROIBIDO gerar textos extensos com mais de 200 palavras.",
+    },
+    "data_charting_process": {
+        "categoria": "Processo de Extração de Dados (Item 10)",
+        "extensao_recomendada": "1 a 2 parágrafos metodológicos (70 a 140 palavras)",
+        "formato_alvo": "Descrição do instrumento de extração, calibração prévia e resolução de dúvidas.",
+        "exemplo_adequado": "Os dados serão extraídos mediante formulário estruturado e padronizado no Revsist...",
+        "proibicoes": "PROIBIDO gerar textos extensos com mais de 200 palavras.",
+    },
+    "critical_appraisal": {
+        "categoria": "Avaliação Crítica de Qualidade / Risco de Viés (Item 12)",
+        "extensao_recomendada": "1 parágrafo objetivo (40 a 90 palavras)",
+        "formato_alvo": "Declaração clara do instrumento de avaliação crítica adotado ou justificativa de dispensa (no caso de PRISMA-ScR).",
+        "exemplo_adequado": "Em conformidade com a extensão PRISMA-ScR (Tricco et al., 2018), a avaliação crítica de risco de viés é opcional em revisões de escopo...",
+        "proibicoes": "PROIBIDO gerar textos extensos com mais de 150 palavras.",
+    },
+    "synthesis_methods": {
+        "categoria": "Métodos de Síntese e Mapeamento (Item 14)",
+        "extensao_recomendada": "1 a 2 parágrafos estruturados (70 a 140 palavras)",
+        "formato_alvo": "Descrição de tabelas temáticas, gráficos e análise narrativa de agrupamento.",
+        "exemplo_adequado": "Os resultados serão sintetizados através de mapeamento narrativo e matrizes temáticas agrupando estudos por território...",
+        "proibicoes": "PROIBIDO gerar textos excessivos.",
+    },
+    "summary_evidence": {
+        "categoria": "Síntese Geral das Evidências (Item 24)",
+        "extensao_recomendada": "1 a 2 parágrafos estruturados (70 a 140 palavras)",
+        "formato_alvo": "Síntese das principais evidências mapeadas.",
+        "exemplo_adequado": "As evidências sintetizadas indicam convergência quanto à importância da governança multinível...",
+        "proibicoes": "PROIBIDO gerar textos excessivos.",
+    },
+    "limitations": {
+        "categoria": "Limitações da Revisão (Item 25)",
+        "extensao_recomendada": "1 a 2 parágrafos objetivos (70 a 140 palavras)",
+        "formato_alvo": "Discussão honesta dos limites de busca, idiomas e recorte.",
+        "exemplo_adequado": "Como principais limitações, destaca-se o recorte linguístico focado em português, inglês e espanhol...",
+        "proibicoes": "PROIBIDO gerar textos excessivos.",
+    },
+    "conclusions": {
+        "categoria": "Conclusões e Lacunas de Conhecimento (Item 26)",
+        "extensao_recomendada": "1 a 2 parágrafos concisos (70 a 140 palavras)",
+        "formato_alvo": "Síntese dos impactos esperados e agenda de pesquisas futuras.",
+        "exemplo_adequado": "A presente revisão de escopo subsidiará a formulação de políticas públicas territoriais...",
+        "proibicoes": "PROIBIDO gerar textos excessivos.",
+    },
+    "funding": {
+        "categoria": "Financiamento e Declaração de Conflitos (Item 27)",
+        "extensao_recomendada": "1 parágrafo curto (20 a 50 palavras)",
+        "formato_alvo": "Declaração de fontes de financiamento institucional e ausência de conflitos de interesse.",
+        "exemplo_adequado": "Os autores declaram que a presente pesquisa foi conduzida com apoio institucional e não possui conflitos de interesse.",
+        "proibicoes": "PROIBIDO gerar textos longos.",
+    },
+}
+
+
+def get_field_calibration(field_id: str, field_label: str) -> dict:
+    """Recupera a especificação de calibração de extensão e formato do campo."""
+    fid = (field_id or "").strip().lower()
+    if fid in FIELD_CALIBRATION_SPECS:
+        return FIELD_CALIBRATION_SPECS[fid]
+
+    # Fallback por correspondência de rótulo
+    flabel = (field_label or "").strip().lower()
+    if any(k in flabel for k in ["popula", "participante", "amostra"]):
+        return FIELD_CALIBRATION_SPECS["pico_population"]
+    if any(k in flabel for k in ["conceito", "interven", "política", "fenômeno", "exposição"]):
+        return FIELD_CALIBRATION_SPECS["pico_intervention"]
+    if any(k in flabel for k in ["contexto", "comparador", "cenário", "mecanismo"]):
+        return FIELD_CALIBRATION_SPECS["pico_comparison"]
+    if any(k in flabel for k in ["desfecho", "resultado", "variáveis"]):
+        return FIELD_CALIBRATION_SPECS["pico_outcome"]
+    if any(k in flabel for k in ["título", "title"]):
+        return FIELD_CALIBRATION_SPECS["manuscript_title"]
+    if any(k in flabel for k in ["objetivo", "pergunta"]):
+        return FIELD_CALIBRATION_SPECS["objective"]
+    if any(k in flabel for k in ["critério", "elegibilidade"]):
+        return FIELD_CALIBRATION_SPECS["criteria"]
+    if any(k in flabel for k in ["extração", "pergunta"]):
+        return FIELD_CALIBRATION_SPECS["extraction_questions"]
+    if any(k in flabel for k in ["complementar", "cinzenta", "fontes"]):
+        return FIELD_CALIBRATION_SPECS["info_sources"]
+    if any(k in flabel for k in ["deduplica"]):
+        return FIELD_CALIBRATION_SPECS["dedup_notes"]
+    if any(k in flabel for k in ["justificativa", "contextualização"]):
+        return FIELD_CALIBRATION_SPECS["rationale"]
+
+    # Especificação padrão equilibrada
+    return {
+        "categoria": "Item do Protocolo Acadêmico",
+        "extensao_recomendada": "1 a 2 parágrafos concisos e objetivos (50 a 120 palavras)",
+        "formato_alvo": "Texto acadêmico claro e metodologicamente estruturado.",
+        "exemplo_adequado": "Texto conciso ajustado ao item solicitado.",
+        "proibicoes": "PROIBIDO gerar parágrafos excessivamente longos ou resumos não solicitados.",
+    }
+
+
 def build_field_assist_prompt(
     field_label: str,
     field_guidelines: str = "",
@@ -294,11 +597,15 @@ def build_field_assist_prompt(
     project_context: dict = None,
     action: str = "generate",
     custom_instruction: str = "",
+    field_id: str = "",
 ) -> str:
     """
     Constrói prompt ultra-específico e contextualizado para preenchimento, correção ou aprimoramento
     de um campo específico do protocolo ou artigo, utilizando todos os dados já preenchidos
     (título, resumo, objetivos, critérios, descritores, seções) como base primária de coerência.
+
+    Calibra rigorosamente a extensão da resposta conforme a natureza do campo (evitando que
+    campos curtos de framework como 'população' ou 'conceito' recebam textos do tamanho de resumos).
     """
     ctx = project_context or {}
     context_summary = []
@@ -315,29 +622,32 @@ def build_field_assist_prompt(
 
     context_block = "\n".join(context_summary) if context_summary else "Nenhum outro campo preenchido previamente. Utilize os conceitos fornecidos na instrução."
 
+    calib = get_field_calibration(field_id=field_id, field_label=field_label)
+
     action_instructions = {
         "generate": (
             "Sua tarefa é REDIGIR UMA PROPOSTA COMPLETA, RIGOROSA E ACADÊMICA para este campo, "
-            "com base estrita no contexto dos dados já preenchidos no projeto e nas diretrizes metodológicas."
+            "com base estrita no contexto dos dados já preenchidos no projeto e nas diretrizes metodológicas, "
+            "respeitando RIGOROSAMENTE a extensão e o formato calibrados para este tipo de campo."
         ),
         "improve": (
             "Sua tarefa é APERFEIÇOAR O TEXTO EXISTENTE fornecido pelo pesquisador, melhorando a clareza, coesão, "
             "precisão terminológica e conformidade estrita com o checklist metodológico, preservando o sentido e as teses centrais do autor "
-            "e alinhando-o perfeitamente aos demais campos do projeto."
+            "e ajustando a extensão ao tamanho adequado do campo."
         ),
         "grammar": (
             "Sua tarefa é REVISAR E CORRIGIR A GRAMÁTICA, PONTUAÇÃO, CONCORDÂNCIA E ESTILO ACADÊMICO do texto, "
-            "tornando a escrita fluida, formal e sem erros, sem alterar o conteúdo técnico."
+            "tornando a escrita fluida, formal e sem erros, sem alterar o conteúdo técnico nem inflar a extensão."
         ),
         "expand": (
-            "Sua tarefa é EXPANDIR O CONTEÚDO com maior fundamentação teórica, detalhamento metodológico e contextualização, "
-            "mantendo rigor, relevância técnica e sinergia com os outros itens do protocolo."
+            "Sua tarefa é EXPANDIR O CONTEÚDO com maior fundamentação teórica ou detalhamento técnico, "
+            "porém MANTENDO A EXTENSÃO COMPATÍVEL com o campo de destino (não transforme campos de linha única em redações dissertativas)."
         ),
         "shorten": (
             "Sua tarefa é SINTETIZAR E TORNAR O TEXTO MAIS CONCISO E DIRETO, eliminando redundâncias "
             "sem perder nenhuma informação metodológica essencial."
         ),
-    }.get(action, "Sua tarefa é redigir ou aprimorar o conteúdo com o mais alto padrão acadêmico.")
+    }.get(action, "Sua tarefa é redigir ou aprimorar o conteúdo com o mais alto padrão acadêmico e extensão calibrada.")
 
     return f"""Você é um redator acadêmico sênior e metodologista especializado em Revisões Sistemáticas e de Escopo ({methodology}) nas áreas de Ciências Sociais Aplicadas, Políticas Públicas, Economia e Desenvolvimento Regional.
 
@@ -345,10 +655,19 @@ def build_field_assist_prompt(
 {context_block}
 
 ==================== CAMPO A SER TRABALHADO AGORA ====================
-ITEM / CAMPO: {field_label}
+ITEM / CAMPO: {field_label} (ID: {field_id or "não especificado"})
+CATEGORIA: {calib['categoria']}
 DIRETRIZES E ESTRUTURA RECOMENDADA DO ITEM:
 {field_guidelines or "Estruture de forma clara, objetiva e metodologicamente rigorosa conforme os padrões acadêmicos internacionais."}
 
+==================== CALIBRAÇÃO OBRIGATÓRIA DE EXTENSÃO E FORMATO DO CAMPO ====================
+• EXTENSÃO MÁXIMA PERMITIDA: {calib['extensao_recomendada']}
+• FORMATO ALVO: {calib['formato_alvo']}
+• PROIBIÇÕES ESTRITAS: {calib['proibicoes']}
+• EXEMPLO DE RESPOSTA NO TAMANHO E ESTILO CORRETOS:
+  "{calib['exemplo_adequado']}"
+
+==================== TEXTO ATUAL E INSTRUÇÕES ====================
 TEXTO ATUAL DO CAMPO (fornecido pelo pesquisador):
 {current_value.strip() if current_value.strip() else "(Campo atualmente vazio - redigir proposta completa a partir do contexto acima)"}
 
@@ -366,12 +685,14 @@ OBJETIVO DA AÇÃO:
 2. DOMÍNIO TEMÁTICO: Mantenha terminologia e abordagem nas Ciências Sociais Aplicadas e Desenvolvimento Regional (Políticas Públicas Territoriais, APLs, Governança Regional, Sustentabilidade Socioeconômica, Dinâmicas Territoriais). Não use termos clínicos/médicos.
 3. SE FOR CAMPO DE DESCRITORES/BUSCA: Formule ESTRITAMENTE em pares combinados com AND (ex: "termo_1" AND "termo_2"), no máximo 2 termos por expressão e no máximo 5 pares por idioma, compatível com a BDTD (motor VuFind).
 4. RIGOR E ZERO ALUCINAÇÃO: Forneça texto acadêmico substancial, elegante, metodologicamente preciso e pronto para publicação.
+5. RESPEITO ABSOLUTO À EXTENSÃO: O tamanho do texto sugerido DEVE ser estritamente apropriado para o campo. Um campo de população/conceito/contexto NUNCA deve receber um parágrafo longo de resumo.
 
 ==================== FORMATO DE RESPOSTA (JSON PURO) ====================
 Responda OBRIGATORIAMENTE em JSON puro, sem blocos de código adicionais:
 {{
-  "suggested_text": "Texto completo sugerido ou aprimorado para o campo...",
+  "suggested_text": "Texto completo sugerido ou aprimorado para o campo (rigorosamente ajustado à extensão do campo)...",
   "explanation": "Breve justificativa técnica (1-2 frases) de como o texto foi formulado/harmonizado com base no título, resumo e contexto do protocolo."
 }}
 """
+
 

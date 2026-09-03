@@ -1,0 +1,376 @@
+.secao-biblio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+/* ── Navegação dos 4 Módulos da Bibliometria ── */
+.secao-biblio__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--space-px) solid var(--color-border);
+  overflow-x: auto;
+}
+
+.secao-biblio__tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--shadow-neo-raised));
+  transition: all var(--motion-fast) ease;
+  white-space: nowrap;
+}
+
+.secao-biblio__tab-btn:hover {
+  background: var(--color-bg-hover));
+  color: var(--color-text-primary);
+  border-color: var(--color-border));
+}
+
+.secao-biblio__tab-btn--active {
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-neo-pressed));
+}
+
+.secao-biblio__tab-btn--active:hover {
+  background: var(--color-accent-hover);
+  color: var(--color-text-on-accent);
+}
+
+.secao-biblio--loading {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secao-biblio__carimbo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.secao-biblio__carimbo-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.secao-biblio__carimbo-texto {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.secao-biblio__carimbo-texto code {
+  font-family: monospace;
+  background: var(--color-bg-elevated);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-xl);
+}
+
+.secao-biblio__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: var(--space-5);
+}
+
+.secao-biblio__card {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.secao-biblio__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.secao-biblio__card-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.secao-biblio__card-titulo h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.secao-biblio__card-desc {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.secao-biblio__badge-destaque {
+  font-size: var(--text-sm);
+  padding: var(--space-0-5) var(--space-2);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-text-primary);
+}
+
+.secao-biblio__badge-hindex {
+  font-size: var(--text-md);
+  padding: var(--space-1) var(--space-2-5);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+/* Bradford */
+.secao-biblio__bradford-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.secao-biblio__bradford-zonas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.secao-biblio__bradford-zona {
+  border-left: var(--space-1) solid;
+  background: var(--color-bg-elevated);
+  padding: var(--space-2) var(--space-2-5);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+.secao-biblio__bradford-zona-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.secao-biblio__bradford-zona-num {
+  color: var(--color-text-on-accent);
+  padding: var(--space-px) var(--space-1-5);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-2xs);
+  font-weight: bold;
+}
+
+.secao-biblio__bradford-zona-stats {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text-secondary);
+}
+
+.secao-biblio__bradford-nucleo h4 {
+  margin: 0 0 var(--space-1-5) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.secao-biblio__lista-nucleo {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+.secao-biblio__lista-nucleo li {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-1-5);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+}
+
+.secao-biblio__journal-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+  color: var(--color-text-primary);
+}
+
+.secao-biblio__journal-count {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* Lotka */
+.secao-biblio__lotka-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.secao-biblio__lotka-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-2-5);
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+  font-size: var(--text-xs);
+}
+
+.secao-biblio__lotka-badge.is-ok {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.secao-biblio__lotka-badge.is-rejected {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.secao-biblio__lotka-subtext {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* Métricas em caixas */
+.secao-biblio__metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--space-2);
+}
+
+.secao-biblio__metrica-box {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.secao-biblio__metrica-rotulo {
+  font-size: var(--text-2xs);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.secao-biblio__metrica-valor {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+
+.secao-biblio__metrica-sub {
+  font-size: var(--text-3xs);
+  color: var(--color-text-secondary);
+}
+
+/* Acesso Aberto e Países */
+.secao-biblio__oa-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.secao-biblio__oa-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.secao-biblio__oa-item {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--space-1) var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  flex: 1 1 calc(50% - 8px);
+}
+
+.secao-biblio__oa-item-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.secao-biblio__oa-status-nome {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.secao-biblio__paises-box h4 {
+  margin: 0 0 var(--space-1-5) 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.secao-biblio__paises-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+.secao-biblio__pais-chip {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-subtle);
+  padding: var(--space-0-5) var(--space-1-5);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 768px) {
+  .secao-biblio__grid {
+    grid-template-columns: 1fr;
+  }
+  .secao-biblio__bradford-zonas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Terceiro estado do selo de Lotka: a amostra não decide.
+   Tom de atenção, e não de erro — não há resultado ruim, há resultado ausente. */
+.secao-biblio__lotka-badge.is-indeterminado {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-on-surface);
+  border-color: var(--color-warning);
+}

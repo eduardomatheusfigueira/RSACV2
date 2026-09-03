@@ -19,9 +19,12 @@ from collections import Counter
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from app.domain.afiliacao import filtrar_afiliacoes
 from app.domain.enums import Decision
 from app.infrastructure.persistence.models import (
     AuditLogModel,
+    BibAuthorshipModel,
+    BibSnapshotModel,
     CriterionModel,
     ExtractionAnswerModel,
     ExtractionQuestionModel,
@@ -31,6 +34,10 @@ from app.infrastructure.persistence.models import (
     ProtocolModel,
 )
 from app.services.export_service import ExportService
+from app.services.bibliometria.instantaneo import (
+    ler_manifesto,
+    proveniencia as montar_proveniencia,
+)
 
 # Ações de `AuditLogModel` que representam uma decisão de triagem tomada —
 # manual (`app/api/v1/papers.py`) ou assistida (`app/services/screening_service.py`).
@@ -357,11 +364,52 @@ def get_project_insights(
     source: str | None = None,
     year_from: int | None = None,
     year_to: int | None = None,
+    snapshot_id: str | None = None,
 ) -> dict:
-    """Monta o payload completo da aba de Indicadores (doc 32 §3.1)."""
+    """Monta o payload completo da aba de Indicadores (doc 32 §3.1).
+
+    Com `snapshot_id`, os agregados de conteúdo passam a descrever o corpus
+    congelado, e não o acervo de agora — é o que torna o número reproduzível
+    (doc 48 §3). Os agregados de processo seguem descrevendo o projeto
+    inteiro: a pergunta "como o funil chegou a esse tamanho" é sobre o
+    projeto, não sobre um recorte dele.
+    """
     conteudo = _base_query_conteudo(
         db, project_id, decision=decision, source=source, year_from=year_from, year_to=year_to
     ).all()
+
+    proveniencia = None
+    if snapshot_id:
+        instantaneo = (
+            db.query(BibSnapshotModel)
+            .filter(
+                BibSnapshotModel.id == snapshot_id,
+                BibSnapshotModel.project_id == project_id,
+            )
+            .first()
+        )
+        if instantaneo is not None:
+            do_instantaneo = set(ler_manifesto(instantaneo.manifest))
+            conteudo = [p for p in conteudo if p.id in do_instantaneo]
+            proveniencia = montar_proveniencia(instantaneo)
+
+    # Se houver afiliações enriquecidas em bib_authorships (doc 48 §4.3, fecha B-01):
+    pids_conteudo = [p.id for p in conteudo]
+    authorships_enriquecidas = (
+        db.query(BibAuthorshipModel.institution_name)
+        .filter(
+            BibAuthorshipModel.paper_id.in_(pids_conteudo),
+            BibAuthorshipModel.institution_name != "",
+            BibAuthorshipModel.institution_name.isnot(None),
+        )
+        .all()
+        if pids_conteudo
+        else []
+    )
+    if authorships_enriquecidas:
+        afiliacoes = [inst for (inst,) in authorships_enriquecidas if inst]
+    else:
+        afiliacoes = filtrar_afiliacoes([p.institution for p in conteudo])
 
     by_year = Counter(p.year for p in conteudo if p.year)
     by_research_type = Counter(p.research_type for p in conteudo if p.research_type)
@@ -380,9 +428,20 @@ def get_project_insights(
         ],
         "top_journals": _ranking([p.journal for p in conteudo]),
         "top_authors": _ranking([nome for p in conteudo for nome in _dividir_autores(p.authors)]),
-        "top_institutions": _ranking([p.institution for p in conteudo]),
+        # O campo `institution` traz o nome do COLETOR em 99,7% dos registros
+        # (doc 47 §B-01). O ranking lê primariamente `bib_authorships` (onde
+        # a instituição é resolvida por ROR) e, na sua ausência, o que sobrevive
+        # ao filtro — sempre acompanhado da cobertura.
+        "top_institutions": _ranking(afiliacoes),
+        "institutions_coverage": {
+            "with_affiliation": len(afiliacoes),
+            "total": len(conteudo),
+        },
         "pdf_health": _pdf_health(db, project_id, [p.id for p in conteudo]),
         "ai_provenance": _proveniencia_ia(db, project_id),
+        # Sem instantâneo é `None`, e a tela diz que os números descrevem o
+        # acervo de agora — que é verdade, e é o que faltava dizer.
+        "provenance": proveniencia,
         "filters_applied": {
             "decision": decision,
             "source": source,
