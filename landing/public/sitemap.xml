@@ -25,6 +25,12 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://revsist.com/blog/checklist-prisma-2020-explicado/</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://revsist.com/blog/como-escrever-um-protocolo-de-revisao-sistematica/</loc>
     <lastmod>2026-09-02</lastmod>
     <changefreq>monthly</changefreq>
@@ -32,6 +38,12 @@
   </url>
   <url>
     <loc>https://revsist.com/blog/quanto-tempo-leva-uma-revisao-sistematica/</loc>
+    <lastmod>2026-09-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://revsist.com/blog/scoping-review-vs-revisao-sistematica/</loc>
     <lastmod>2026-09-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

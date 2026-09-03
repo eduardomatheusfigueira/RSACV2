@@ -80,6 +80,49 @@ function escaparXml(str) {
     .replace(/'/g, '&apos;')
 }
 
+function slugificar(texto) {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
+function processarHtmlDoPost(body) {
+  // Remove eventual h1 redundante no início do markdown para garantir h1 único (G9 / SEO)
+  const bodyLimpo = body.trimStart().replace(/^#\s+[^\r\n]+(?:\r?\n)+/, '')
+  let html = md.render(bodyLimpo)
+  const secoes = []
+
+  html = html.replace(/<h2>(.*?)<\/h2>/g, (match, inner) => {
+    const textoLimpo = inner.replace(/<[^>]+>/g, '').trim()
+    const id = slugificar(textoLimpo)
+    secoes.push({ titulo: textoLimpo, id })
+    return `<h2 id="${id}">${inner}</h2>`
+  })
+
+  let tocHtml = ''
+  if (secoes.length >= 3) {
+    tocHtml = `
+      <nav class="article-toc" aria-label="Sumário do artigo">
+        <p class="toc-title">Neste artigo</p>
+        <ol class="toc-list">
+          ${secoes.map((s) => `<li><a href="#${s.id}">${escaparXml(s.titulo)}</a></li>`).join('\n')}
+        </ol>
+      </nav>
+    `
+    // Inserir sumário antes do primeiro <h2>
+    const primeiroH2Idx = html.indexOf('<h2 ')
+    if (primeiroH2Idx !== -1) {
+      html = html.slice(0, primeiroH2Idx) + tocHtml + html.slice(primeiroH2Idx)
+    }
+  }
+
+  return { htmlBody: html, secoes }
+}
+
 function renderizarCabecalho(caminhoRaiz = '/') {
   return `
     <header class="site-header" id="topo">
@@ -192,12 +235,13 @@ export function gerarBlog() {
       continue
     }
 
-    const htmlBody = md.render(body)
+    const { htmlBody, secoes } = processarHtmlDoPost(body)
     const tempoLeitura = calcularTempoLeitura(body)
 
     posts.push({
       ...data,
       htmlBody,
+      secoes,
       tempoLeitura,
       tags: Array.isArray(data.tags) ? data.tags : [],
     })
@@ -245,6 +289,12 @@ export function gerarBlog() {
         '@type': 'Person',
         name: post.autor || 'Eduardo Matheus Figueira',
       },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Revsist',
+        url: 'https://revsist.com',
+      },
+      keywords: post.tags.join(', '),
       inLanguage: 'pt-BR',
       mainEntityOfPage: `https://revsist.com/blog/${post.slug}/`,
     }

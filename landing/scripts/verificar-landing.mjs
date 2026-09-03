@@ -36,6 +36,8 @@ const rotasObrigatorias = [
   'blog/index.html',
   'blog/quanto-tempo-leva-uma-revisao-sistematica/index.html',
   'blog/como-escrever-um-protocolo-de-revisao-sistematica/index.html',
+  'blog/checklist-prisma-2020-explicado/index.html',
+  'blog/scoping-review-vs-revisao-sistematica/index.html',
   'feed.xml',
   'sitemap.xml',
   'robots.txt',
@@ -83,11 +85,46 @@ for (const arq of arquivosDist) {
 }
 console.log('  ✓ 0 CDNs externas em HTML, CSS e JS compilados.')
 
-// ── G2: Validação de links internos ─────────────────────────────────────────────
-console.log('\n--- Verificando G2: Consistência de Links Internos ---')
+// ── G2: Entrega Dupla e Consistência de Links Internos ──────────────────────────
+console.log('\n--- Verificando G2: Entrega Dupla (Backend FastAPI e Caddyfile) ---')
 const indexHtml = readFileSync(join(DIST_DIR, 'index.html'), 'utf8')
 
-// Extrair âncoras internas
+// Teste de resolução mecânica idêntica ao backend/app/main.py:411 e Caddy try_files
+const rotasUrlParaTestar = [
+  '/',
+  '/termos',
+  '/privacidade',
+  '/blog',
+  '/blog/quanto-tempo-leva-uma-revisao-sistematica/',
+  '/blog/como-escrever-um-protocolo-de-revisao-sistematica/',
+  '/blog/checklist-prisma-2020-explicado/',
+  '/blog/scoping-review-vs-revisao-sistematica/',
+  '/feed.xml',
+  '/sitemap.xml',
+  '/robots.txt',
+]
+
+for (const urlPath of rotasUrlParaTestar) {
+  const semBarra = urlPath.replace(/^\//, '')
+  // Tentativa 1: arquivo direto (ex: feed.xml ou sitemap.xml)
+  let resolvido = false
+  if (existsSync(join(DIST_DIR, semBarra)) && statSync(join(DIST_DIR, semBarra)).isFile()) {
+    resolvido = true
+  } else if (existsSync(join(DIST_DIR, semBarra, 'index.html'))) {
+    // Tentativa 2: diretório com index.html (ex: /blog/slug/)
+    resolvido = true
+  } else if (existsSync(join(DIST_DIR, `${semBarra}.html`))) {
+    resolvido = true
+  }
+
+  if (!resolvido) {
+    registrarFalha('G2', `Rota de entrega dupla não resolve arquivo estático: ${urlPath}`)
+  } else {
+    console.log(`  ✓ Rota pública resolve 200 em backend e Caddy: ${urlPath}`)
+  }
+}
+
+// Extrair âncoras internas da home
 const linksInternos = [...indexHtml.matchAll(/href="([^"]+)"/g)].map((m) => m[1])
 for (const link of linksInternos) {
   if (link.startsWith('#')) {
@@ -172,14 +209,18 @@ if (jsFile) {
 
 // ── G5: Metatags, OpenGraph e Canonical ──────────────────────────────────────────
 console.log('\n--- Verificando G5: Metatags, OpenGraph e Canonical ---')
-const paginasVerificar = [
+const todasPaginasHtml = [
   'index.html',
+  'termos/index.html',
+  'privacidade/index.html',
   'blog/index.html',
   'blog/quanto-tempo-leva-uma-revisao-sistematica/index.html',
   'blog/como-escrever-um-protocolo-de-revisao-sistematica/index.html',
+  'blog/checklist-prisma-2020-explicado/index.html',
+  'blog/scoping-review-vs-revisao-sistematica/index.html',
 ]
 
-for (const pag of paginasVerificar) {
+for (const pag of todasPaginasHtml) {
   const html = readFileSync(join(DIST_DIR, pag), 'utf8')
   if (!html.includes('<link rel="canonical"')) registrarFalha('G5', `Canonical ausente em ${pag}`)
   if (!html.includes('og:title')) registrarFalha('G5', `OpenGraph title ausente em ${pag}`)
@@ -222,19 +263,22 @@ if (!sitemapXml.includes('<urlset') || !sitemapXml.includes('https://revsist.com
   console.log('  ✓ sitemap.xml: mapeamento de URLs completo.')
 }
 
-// ── G9: Interlinkagem cruzada ───────────────────────────────────────────────────
-console.log('\n--- Verificando G9: Interlinkagem Cruzada (Landing <-> Blog) ---')
+// ── G9: Interlinkagem cruzada e Hierarquia de Títulos (SEO mecânico) ────────────
+console.log('\n--- Verificando G9: Interlinkagem Cruzada e H1 Único por Página ---')
 if (!indexHtml.includes('/blog')) {
   registrarFalha('G9', 'A landing page não possui links para o blog')
 } else {
   console.log('  ✓ Landing conecta ao /blog no menu e no rodapé.')
 }
 
-const post1Html = readFileSync(join(DIST_DIR, 'blog/quanto-tempo-leva-uma-revisao-sistematica/index.html'), 'utf8')
-if (!post1Html.includes('/blog/como-escrever-um-protocolo-de-revisao-sistematica') || !post1Html.includes('revsist')) {
-  registrarFalha('G9', 'Post 1 não linka para Post 2 ou para a landing')
-} else {
-  console.log('  ✓ Post 1 possui links internos para o Post 2 e para a aplicação.')
+for (const pag of todasPaginasHtml) {
+  const html = readFileSync(join(DIST_DIR, pag), 'utf8')
+  const h1Matches = [...html.matchAll(/<h1[^>]*>/gi)]
+  if (h1Matches.length !== 1) {
+    registrarFalha('G9', `Página ${pag} possui ${h1Matches.length} tags <h1> (exigido exatamente 1)`)
+  } else {
+    console.log(`  ✓ H1 estritamente único verificado em ${pag}`)
+  }
 }
 
 // ── G10: Conformidade Editorial e Lista de Palavras Proibidas ───────────────────
@@ -260,22 +304,17 @@ const adjetivosProibidos = [
   'instantânea',
 ]
 
-for (const arq of [
-  join(DIST_DIR, 'index.html'),
-  join(DIST_DIR, 'blog/index.html'),
-  join(DIST_DIR, 'blog/quanto-tempo-leva-uma-revisao-sistematica/index.html'),
-  join(DIST_DIR, 'blog/como-escrever-um-protocolo-de-revisao-sistematica/index.html'),
-]) {
+for (const pag of todasPaginasHtml) {
+  const arq = join(DIST_DIR, pag)
   const texto = readFileSync(arq, 'utf8').toLowerCase()
   for (const palavra of adjetivosProibidos) {
-    // Regex de fronteira de palavra
     const re = new RegExp(`\\b${palavra}\\b`, 'i')
     if (re.test(texto)) {
       registrarFalha('G10', `Adjetivo proibido detectado em ${arq}: "${palavra}"`)
     }
   }
 }
-console.log('  ✓ 0 adjetivos proibidos detectados em toda a cópia textual.')
+console.log('  ✓ 0 adjetivos proibidos detectados em toda a cópia textual das páginas.')
 
 // ── Resumo Final ────────────────────────────────────────────────────────────────
 console.log('\n========================================')

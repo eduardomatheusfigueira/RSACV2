@@ -5,8 +5,16 @@
     <link>https://revsist.com/blog</link>
     <description>Artigos metodológicos e orientações técnicas sobre condução de revisões sistemáticas e de escopo.</description>
     <language>pt-BR</language>
-    <lastBuildDate>Thu, 03 Sep 2026 01:33:42 GMT</lastBuildDate>
+    <lastBuildDate>Thu, 03 Sep 2026 01:42:05 GMT</lastBuildDate>
     <atom:link href="https://revsist.com/feed.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Checklist PRISMA 2020 explicado item a item, em português</title>
+      <link>https://revsist.com/blog/checklist-prisma-2020-explicado/</link>
+      <guid isPermaLink="true">https://revsist.com/blog/checklist-prisma-2020-explicado/</guid>
+      <description>A declaração PRISMA 2020 é a diretriz internacional de referência para relatar revisões sistemáticas. Conheça a organização dos 27 itens do checklist e como aplicá-los com rigor metodológico.</description>
+      <pubDate>Wed, 02 Sep 2026 00:00:00 GMT</pubDate>
+      <author>contato@revsist.org (Eduardo Matheus Figueira)</author>
+    </item>
     <item>
       <title>Como escrever um protocolo de revisão sistemática (com exemplo preenchido)</title>
       <link>https://revsist.com/blog/como-escrever-um-protocolo-de-revisao-sistematica/</link>
@@ -20,6 +28,14 @@
       <link>https://revsist.com/blog/quanto-tempo-leva-uma-revisao-sistematica/</link>
       <guid isPermaLink="true">https://revsist.com/blog/quanto-tempo-leva-uma-revisao-sistematica/</guid>
       <description>A literatura metodológica já mediu o desgaste real: uma revisão sistemática média demanda mais de 1.100 horas de trabalho e leva cerca de 15 meses do protocolo à publicação. Compreenda os números e os gargalos do fluxo.</description>
+      <pubDate>Wed, 02 Sep 2026 00:00:00 GMT</pubDate>
+      <author>contato@revsist.org (Eduardo Matheus Figueira)</author>
+    </item>
+    <item>
+      <title>Scoping review vs. revisão sistemática: quando escolher qual</title>
+      <link>https://revsist.com/blog/scoping-review-vs-revisao-sistematica/</link>
+      <guid isPermaLink="true">https://revsist.com/blog/scoping-review-vs-revisao-sistematica/</guid>
+      <description>Escolher entre uma revisão de escopo e uma revisão sistemática tradicional define todo o desenho metodológico da pesquisa. Entenda as distinções de pergunta, critérios de síntese e diretrizes aplicáveis.</description>
       <pubDate>Wed, 02 Sep 2026 00:00:00 GMT</pubDate>
       <author>contato@revsist.org (Eduardo Matheus Figueira)</author>
     </item>
