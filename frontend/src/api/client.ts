@@ -876,6 +876,21 @@ class APIClient {
     })
   }
 
+  /** Acrescenta chaves às já guardadas do provedor. Repetidas são ignoradas. */
+  async addProviderKeys(provider: 'gemini' | 'qwen' | 'local', keys: string[]): Promise<AISettings> {
+    return this.request<AISettings>(`/ai/settings/keys/${provider}`, {
+      method: 'POST',
+      body: JSON.stringify({ keys }),
+    })
+  }
+
+  /** Remove uma chave, pela posição na lista de máscaras (`*_key_previews`). */
+  async deleteProviderKey(provider: 'gemini' | 'qwen' | 'local', index: number): Promise<AISettings> {
+    return this.request<AISettings>(`/ai/settings/keys/${provider}/${index}`, {
+      method: 'DELETE',
+    })
+  }
+
   async testAIConnection(): Promise<any> {
     return this.request<any>('/ai/test', {
       method: 'POST',

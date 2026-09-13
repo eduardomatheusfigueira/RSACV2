@@ -19,6 +19,7 @@ from app.schemas.ai import (
     FieldAssistRequest,
     FieldAssistResponse,
     ProtocolSuggestRequest,
+    ProviderKeysAdd,
 )
 from app.security import mask_secret_list
 from app.security.dependencies import require_session
@@ -191,6 +192,92 @@ def update_ai_settings(
     return _build_settings_response(settings)
 
 
+PROVEDORES = ("gemini", "qwen", "local")
+
+
+def _provedor_valido(provider: str) -> str:
+    target = provider.lower()
+    if target not in PROVEDORES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Provedor '{provider}' não é suportado. Use gemini, qwen ou local.",
+        )
+    return target
+
+
+# ── Chaves uma a uma ──────────────────────────────────────────────────
+#
+# O PUT substitui a lista inteira, e a interface não tem como mostrar as
+# chaves guardadas (só a máscara): substituir obrigava a redigitar todas para
+# acrescentar uma. Estas duas rotas tornam a gestão aditiva — acrescentar uma
+# chave e remover uma chave, sem tocar nas demais.
+#
+# As duas partem de `_keys_by_provider`, que já inclui o fallback do campo
+# legado: partir da coluna crua perderia as chaves que só existem lá.
+
+
+@router.post("/settings/keys/{provider}", response_model=AISettingsResponse)
+def add_provider_keys(
+    provider: str,
+    data: ProviderKeysAdd,
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """Acrescenta chaves ao provedor, mantendo as que já estão guardadas."""
+    target = _provedor_valido(provider)
+    settings = _obter_ou_criar_settings(db, usuario)
+
+    atuais = _keys_by_provider(settings)[target]
+    novas = [chave for chave in data.keys if chave not in atuais]
+    setattr(settings, f"{target}_api_keys_encrypted", json.dumps(atuais + novas))
+
+    db.commit()
+    db.refresh(settings)
+    logger.info(
+        "[AI] %d chave(s) acrescentada(s) ao provedor '%s' (%d repetida(s) ignorada(s)).",
+        len(novas),
+        target,
+        len(data.keys) - len(novas),
+    )
+    return _build_settings_response(settings)
+
+
+@router.delete("/settings/keys/{provider}/{index}", response_model=AISettingsResponse)
+def delete_provider_key(
+    provider: str,
+    index: int,
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """
+    Remove uma chave do provedor, pela posição na lista de máscaras.
+
+    A posição é a mesma de `*_key_previews` na resposta de GET /ai/settings —
+    é a única referência que a interface tem, já que a chave não sai do
+    servidor.
+    """
+    target = _provedor_valido(provider)
+    settings = _settings_do_usuario(db, usuario)
+    if not settings:
+        raise HTTPException(status_code=404, detail="Nenhuma configuração de IA cadastrada.")
+
+    atuais = _keys_by_provider(settings)[target]
+    if index < 0 or index >= len(atuais):
+        raise HTTPException(status_code=404, detail="Chave não encontrada. Atualize a página e tente de novo.")
+
+    restantes = atuais[:index] + atuais[index + 1 :]
+    setattr(settings, f"{target}_api_keys_encrypted", json.dumps(restantes))
+    # Sem chave nenhuma, o campo legado voltaria pelo fallback — limpa junto,
+    # como na remoção de todas.
+    if not restantes and (settings.provider or "").lower() == target:
+        settings.api_keys_encrypted = "[]"
+
+    db.commit()
+    db.refresh(settings)
+    logger.info("[AI] Uma chave do provedor '%s' removida a pedido do usuário.", target)
+    return _build_settings_response(settings)
+
+
 @router.delete("/settings/keys/{provider}", response_model=AISettingsResponse)
 def delete_provider_keys(
     provider: str,
@@ -203,12 +290,7 @@ def delete_provider_keys(
     Contrapartida da regra write-only: como o PUT deixou de apagar chave por
     lista vazia, a remoção precisa de um verbo próprio e intencional.
     """
-    target = provider.lower()
-    if target not in ("gemini", "qwen", "local"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Provedor '{provider}' não é suportado. Use gemini, qwen ou local.",
-        )
+    target = _provedor_valido(provider)
 
     settings = _settings_do_usuario(db, usuario)
     if not settings:

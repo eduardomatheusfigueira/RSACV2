@@ -233,3 +233,83 @@ async def test_delete_explicito_apaga_chaves(async_client):
 
     res_invalido = await async_client.delete("/api/v1/ai/settings/keys/inexistente")
     assert res_invalido.status_code == 400
+
+
+# ── Gestão aditiva: acrescentar e remover uma chave ───────────────────
+
+
+@pytest.mark.anyio
+async def test_acrescentar_chave_mantem_as_existentes(async_client):
+    """Guardar uma chave nova não pode exigir redigitar as outras."""
+    await _configurar_credenciais(async_client)
+
+    nova = "AIzaSyCHAVE_DE_TESTE_GEMINI_0003"
+    res = await async_client.post("/api/v1/ai/settings/keys/gemini", json={"keys": [nova]})
+    assert res.status_code == 200
+    corpo = res.json()
+    assert corpo["gemini_keys_count"] == 3
+    assert corpo["gemini_key_previews"][-1].endswith(nova[-4:])
+    # Os outros provedores ficam como estavam, e a resposta segue mascarada.
+    assert corpo["qwen_keys_count"] == 1
+    assert not _contem_segredo(res.text)
+
+
+@pytest.mark.anyio
+async def test_acrescentar_chave_repetida_nao_duplica(async_client):
+    await _configurar_credenciais(async_client)
+
+    res = await async_client.post(
+        "/api/v1/ai/settings/keys/gemini",
+        json={"keys": [CHAVES["gemini"][0], "  ", CHAVES["gemini"][0]]},
+    )
+    assert res.status_code == 200
+    assert res.json()["gemini_keys_count"] == 2
+
+
+@pytest.mark.anyio
+async def test_acrescentar_sem_configuracao_previa_cria(researcher_client):
+    res = await researcher_client.post("/api/v1/ai/settings/keys/qwen", json={"keys": [CHAVES["qwen"][0]]})
+    assert res.status_code == 200
+    assert res.json()["qwen_keys_count"] == 1
+
+
+@pytest.mark.anyio
+async def test_acrescentar_valida_entrada(async_client):
+    assert (await async_client.post("/api/v1/ai/settings/keys/gemini", json={"keys": ["", "  "]})).status_code == 422
+    assert (await async_client.post("/api/v1/ai/settings/keys/gemini", json={"keys": []})).status_code == 422
+    assert (await async_client.post("/api/v1/ai/settings/keys/outro", json={"keys": ["x" * 20]})).status_code == 400
+
+
+@pytest.mark.anyio
+async def test_remover_uma_chave_pela_posicao(async_client):
+    await _configurar_credenciais(async_client)
+
+    res = await async_client.delete("/api/v1/ai/settings/keys/gemini/0")
+    assert res.status_code == 200
+    corpo = res.json()
+    assert corpo["gemini_keys_count"] == 1
+    # Sobrou a segunda chave, e não a primeira.
+    assert corpo["gemini_key_previews"][0].endswith(CHAVES["gemini"][1][-4:])
+
+    assert (await async_client.delete("/api/v1/ai/settings/keys/gemini/5")).status_code == 404
+    assert (await async_client.delete("/api/v1/ai/settings/keys/gemini/-1")).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_remover_a_ultima_chave_nao_ressuscita_o_campo_legado(async_client):
+    """O campo legado espelha o provedor ativo; sem limpá-lo, a chave voltaria."""
+    await async_client.put(
+        "/api/v1/ai/settings",
+        json={
+            "ai_enabled": True,
+            "provider": "gemini",
+            "model": "gemini-3.6-flash",
+            "api_keys": [CHAVES["gemini"][0]],
+            "temperature": 0.2,
+            "max_tokens": 4096,
+        },
+    )
+    res = await async_client.delete("/api/v1/ai/settings/keys/gemini/0")
+    assert res.status_code == 200
+    assert res.json()["gemini_keys_count"] == 0
+    assert (await async_client.get("/api/v1/ai/settings")).json()["gemini_keys_count"] == 0

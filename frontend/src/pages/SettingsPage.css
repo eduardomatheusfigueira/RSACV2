@@ -377,6 +377,22 @@
   min-width: 200px;
 }
 
+/* Campo de adicionar: separado das guardadas por um filete, para ficar claro
+   que ele soma à lista de cima em vez de substituí-la. */
+.keys-stored-count {
+  margin: var(--space-1-5) 0 0;
+}
+
+.keys-add {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+.keys-add-hint {
+  margin: var(--space-1) 0 0;
+}
+
 .key-input-row input[readonly] {
   font-family: var(--font-mono);
   letter-spacing: 0.08em;

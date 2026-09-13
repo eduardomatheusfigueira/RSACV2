@@ -801,8 +801,8 @@ export interface RegisterWithInvitePayload {
  * Estado das configurações de Assistência vindo do backend.
  *
  * As chaves NÃO trafegam mais em texto claro: o que chega são máscaras
- * (`••••••••abcd`) e contagens. Para trocar uma chave envia-se a nova por
- * inteiro; para apagar, `deleteProviderKeys`.
+ * (`••••••••abcd`) e contagens. Chaves se acrescentam com `addProviderKeys` e
+ * se removem uma a uma com `deleteProviderKey` (ou todas, `deleteProviderKeys`).
  */
 export interface AISettings {
   ai_enabled: boolean
