@@ -1133,7 +1133,6 @@ export function ExtractionPage(): JSX.Element {
           {/* ── COLUNA DA DIREITA: FORMULÁRIO DE EXTRAÇÃO COM ASSISTÊNCIA INDIVIDUAL ── */}
           <div
             className={`extraction-form-pane mobile-tab-view ${mobileTab === 'questions' ? 'mobile-show' : ''}`}
-            data-trilho-target="extraction-matrix-table"
           >
             <div className="form-pane-header">
               <div className="form-pane-title-group">

@@ -1,227 +1,255 @@
 /**
- * Revsist — Script da landing page.
+ * Revsist — Comportamento do site público.
  *
- * Quatro tarefas, todas opcionais: a página é inteira legível e navegável com
- * o JavaScript desligado (doc 41, item 5.14).
+ * Sete módulos pequenos, sem dependências e sem manipuladores inline:
+ *   1. Menu de navegação em telas estreitas.
+ *   2. Abas das seis etapas metodológicas.
+ *   3. Alternador entre captura real e rastro técnico, por etapa.
+ *   4. Ampliação de capturas de tela.
+ *   5. Acordeão das perguntas frequentes.
+ *   6. Laços de vídeo: tocam ao entrar na tela, param ao sair, e param de
+ *      vez quando o visitante pede — ou quando o sistema pede menos movimento.
+ *   7. Blocos do "Por que existe": entram ao aparecer na tela.
  *
- *   1. Alternador de tema claro / escuro, com a escolha guardada no navegador.
- *   2. Menu de seções em tela estreita.
- *   3. Marcação da seção corrente na navegação.
- *   4. Ajuste dos botões de acesso ao que a instalação realmente oferece.
- *
- * A tarefa 4 é a única que fala com a rede, e só com a própria origem:
- * `GET /api/v1/auth/status` diz se a entrada com Google está configurada e se
- * quem está lendo já tem sessão aberta. Sem essa consulta — página servida
- * fora do backend, rede fora do ar, requisição barrada — os botões ficam como
- * estão no HTML, apontando para `/app`, que funciona em qualquer instalação.
+ * Tudo é progressivo: sem JavaScript a primeira etapa continua visível, as
+ * capturas continuam legíveis, as respostas do FAQ ficam no HTML e os vídeos
+ * continuam com os seus pôsteres.
  */
+
+import { instalarAceite } from './aceite.js';
+
+// Antes de qualquer comportamento da página: se o aceite não veio, é ele que
+// aparece. Os módulos abaixo seguem instalados de todo jeito — quando o véu
+// sair, a página já está pronta por baixo.
+instalarAceite();
 
 (function () {
   'use strict';
 
-  var root = document.documentElement;
-  // A landing page opera exclusivamente no tema institucional claro (Platinum & Dusk Blue)
-  root.removeAttribute('data-theme');
+  var pt = function (sel, raiz) {
+    return (raiz || document).querySelector(sel);
+  };
+  var pts = function (sel, raiz) {
+    return Array.prototype.slice.call((raiz || document).querySelectorAll(sel));
+  };
 
-  // ── 1. Menu de seções em tela estreita ─────────────────────────────────
-  var navToggleBtn = document.getElementById('nav-toggle-btn');
-  var navLinks = document.getElementById('nav-links');
+  /* ── 1. Menu de navegação ───────────────────────────────────────────── */
 
-  function fecharMenu() {
-    if (!navLinks || !navToggleBtn) return;
-    navLinks.classList.remove('is-open');
-    navToggleBtn.setAttribute('aria-expanded', 'false');
-    navToggleBtn.setAttribute('aria-label', 'Abrir menu de seções');
-  }
+  var botaoMenu = pt('#nav-toggle');
+  var menu = pt('#main-nav');
 
-  if (navToggleBtn && navLinks) {
-    navToggleBtn.addEventListener('click', function () {
-      var aberto = navLinks.classList.toggle('is-open');
-      navToggleBtn.setAttribute('aria-expanded', aberto ? 'true' : 'false');
-      navToggleBtn.setAttribute('aria-label', aberto ? 'Fechar menu de seções' : 'Abrir menu de seções');
+  if (botaoMenu && menu) {
+    botaoMenu.addEventListener('click', function () {
+      var aberto = menu.classList.toggle('aberto');
+      botaoMenu.setAttribute('aria-expanded', String(aberto));
+      botaoMenu.setAttribute('aria-label', aberto ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
     });
 
-    // Ir para uma seção fecha o menu — senão o painel cobre o destino.
-    navLinks.addEventListener('click', function (evento) {
-      if (evento.target.closest('a')) fecharMenu();
-    });
-
-    document.addEventListener('keydown', function (evento) {
-      if (evento.key === 'Escape' && navLinks.classList.contains('is-open')) {
-        fecharMenu();
-        navToggleBtn.focus();
+    menu.addEventListener('click', function (evento) {
+      if (evento.target.closest('a')) {
+        menu.classList.remove('aberto');
+        botaoMenu.setAttribute('aria-expanded', 'false');
       }
     });
+  }
 
-    document.addEventListener('click', function (evento) {
-      if (!navLinks.classList.contains('is-open')) return;
-      if (navLinks.contains(evento.target) || navToggleBtn.contains(evento.target)) return;
-      fecharMenu();
+  /* ── 2. Abas das etapas metodológicas ───────────────────────────────── */
+
+  var abas = pts('.etapa-aba');
+
+  function selecionarEtapa(indice, moverFoco) {
+    abas.forEach(function (aba, i) {
+      var ativa = i === indice;
+      var painel = pt('#' + aba.getAttribute('aria-controls'));
+      aba.setAttribute('aria-selected', String(ativa));
+      aba.tabIndex = ativa ? 0 : -1;
+      if (painel) painel.hidden = !ativa;
+    });
+    if (moverFoco && abas[indice]) abas[indice].focus();
+  }
+
+  abas.forEach(function (aba, i) {
+    aba.tabIndex = aba.getAttribute('aria-selected') === 'true' ? 0 : -1;
+
+    aba.addEventListener('click', function () {
+      selecionarEtapa(i, false);
+    });
+
+    // Navegação por setas, conforme o padrão de abas do WAI-ARIA.
+    aba.addEventListener('keydown', function (evento) {
+      var destino = null;
+      if (evento.key === 'ArrowRight') destino = (i + 1) % abas.length;
+      if (evento.key === 'ArrowLeft') destino = (i - 1 + abas.length) % abas.length;
+      if (evento.key === 'Home') destino = 0;
+      if (evento.key === 'End') destino = abas.length - 1;
+      if (destino === null) return;
+      evento.preventDefault();
+      selecionarEtapa(destino, true);
+    });
+  });
+
+  /* ── 3. Captura real x rastro técnico ───────────────────────────────── */
+
+  pts('.alternador').forEach(function (grupo) {
+    var painel = grupo.closest('.etapa-painel');
+    if (!painel) return;
+
+    grupo.addEventListener('click', function (evento) {
+      var botao = evento.target.closest('button[data-modo]');
+      if (!botao) return;
+
+      var modo = botao.getAttribute('data-modo');
+      pts('button[data-modo]', grupo).forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b === botao));
+      });
+      pts('.vista', painel).forEach(function (vista) {
+        vista.hidden = !vista.classList.contains('vista-' + modo);
+      });
+    });
+  });
+
+  /* ── 4. Ampliação de capturas ───────────────────────────────────────── */
+
+  var lightbox = pt('#lightbox');
+  var lightboxImg = pt('#lightbox-img');
+  var lightboxLegenda = pt('#lightbox-legenda');
+  var origemDoFoco = null;
+
+  function abrirLightbox(img) {
+    if (!lightbox || !lightboxImg) return;
+    lightboxImg.src = img.src;
+    lightboxImg.alt = img.alt;
+    if (lightboxLegenda) {
+      lightboxLegenda.textContent = img.getAttribute('data-legenda') || img.alt;
+    }
+    origemDoFoco = img;
+    lightbox.classList.add('aberto');
+    document.body.style.overflow = 'hidden';
+    var fechar = pt('#lightbox-fechar');
+    if (fechar) fechar.focus();
+  }
+
+  function fecharLightbox() {
+    if (!lightbox) return;
+    lightbox.classList.remove('aberto');
+    document.body.style.overflow = '';
+    if (origemDoFoco) origemDoFoco.focus();
+  }
+
+  pts('.captura img').forEach(function (img) {
+    img.addEventListener('click', function () {
+      abrirLightbox(img);
+    });
+  });
+
+  if (lightbox) {
+    lightbox.addEventListener('click', function (evento) {
+      if (evento.target === lightbox || evento.target.closest('#lightbox-fechar')) {
+        fecharLightbox();
+      }
     });
   }
 
-  // ── 3. Revelação ao rolar e seção corrente ─────────────────────────────
-  var movimentoReduzido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var reveladores = document.querySelectorAll('.reveal-on-scroll');
+  document.addEventListener('keydown', function (evento) {
+    if (evento.key === 'Escape' && lightbox && lightbox.classList.contains('aberto')) {
+      fecharLightbox();
+    }
+  });
 
-  function revelarTudo() {
-    reveladores.forEach(function (el) {
-      el.classList.add('is-visible');
+  /* ── 5. Perguntas frequentes ────────────────────────────────────────── */
+
+  pts('.faq-pergunta').forEach(function (pergunta) {
+    pergunta.addEventListener('click', function () {
+      var resposta = pt('#' + pergunta.getAttribute('aria-controls'));
+      var aberta = pergunta.getAttribute('aria-expanded') === 'true';
+      pergunta.setAttribute('aria-expanded', String(!aberta));
+      if (resposta) resposta.hidden = aberta;
     });
-  }
+  });
 
-  if (!movimentoReduzido && 'IntersectionObserver' in window) {
-    var observador = new IntersectionObserver(
-      function (entradas, obs) {
-        entradas.forEach(function (entrada) {
-          if (entrada.isIntersecting) {
-            entrada.target.classList.add('is-visible');
-            obs.unobserve(entrada.target);
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-    );
-    reveladores.forEach(function (el) {
-      observador.observe(el);
-    });
+  /* ── 6. Laços de vídeo ──────────────────────────────────────────────── */
 
-    // Rede de segurança. O estado inicial de `.reveal-on-scroll` é
-    // `opacity: 0`, e quem o desfaz é o observador — que só roda quando o
-    // navegador está desenhando. Numa aba de fundo, num renderizador
-    // estrangulado ou num rastreador que não compõe quadros, o texto ficaria
-    // invisível. Passados dois segundos, a animação deixa de valer a pena e o
-    // conteúdo aparece de qualquer jeito: nada aqui pode depender dela.
-    window.setTimeout(revelarTudo, 2000);
-  } else {
-    // Movimento reduzido, ou navegador sem o observador: mostra tudo de uma vez.
-    revelarTudo();
-  }
+  var menosMovimento = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-  if ('IntersectionObserver' in window) {
-    var linksPorId = {};
-    var alvos = [];
+  pts('[data-laco]').forEach(function (video) {
+    var caixa = video.closest('.laco');
+    var botao = caixa ? pt('[data-laco-pausa]', caixa) : null;
+    var icone = botao ? pt('use', botao) : null;
+    // Pausa pedida no botão: manda o observador não religar o vídeo sozinho.
+    var pausadoPeloUsuario = menosMovimento.matches;
 
-    document.querySelectorAll('.nav-link[href^="#"]').forEach(function (link) {
-      var id = link.getAttribute('href').slice(1);
-      var secao = document.getElementById(id);
-      if (!secao) return;
-      linksPorId[id] = link;
-      alvos.push(secao);
-    });
+    function tocar() {
+      var promessa = video.play();
+      if (promessa && promessa.catch) promessa.catch(function () {});
+    }
 
-    if (alvos.length) {
-      var visiveis = new Set();
+    function refletirEstado() {
+      if (!botao) return;
+      var tocando = !video.paused;
+      if (icone) icone.setAttribute('href', tocando ? '#i-pausa' : '#i-play');
+      botao.setAttribute('aria-label', tocando ? 'Pausar a animação' : 'Reproduzir a animação');
+    }
 
-      var marcador = new IntersectionObserver(
-        function (entradas) {
-          entradas.forEach(function (entrada) {
-            if (entrada.isIntersecting) visiveis.add(entrada.target.id);
-            else visiveis.delete(entrada.target.id);
-          });
+    // Quem pede menos movimento recebe o pôster parado, e não o laço.
+    if (menosMovimento.matches) {
+      video.autoplay = false;
+      video.removeAttribute('autoplay');
+      video.pause();
+    }
 
-          // A seção corrente é a primeira visível na ordem do documento, e não
-          // a última a disparar o evento: com duas na tela, a de cima manda.
-          var corrente = null;
-          for (var i = 0; i < alvos.length; i += 1) {
-            if (visiveis.has(alvos[i].id)) {
-              corrente = alvos[i].id;
-              break;
-            }
-          }
-
-          Object.keys(linksPorId).forEach(function (id) {
-            if (id === corrente) linksPorId[id].setAttribute('aria-current', 'true');
-            else linksPorId[id].removeAttribute('aria-current');
-          });
-        },
-        { rootMargin: '-72px 0px -55% 0px', threshold: 0 }
-      );
-
-      alvos.forEach(function (secao) {
-        marcador.observe(secao);
+    if (botao) {
+      botao.addEventListener('click', function () {
+        pausadoPeloUsuario = !video.paused;
+        if (video.paused) tocar();
+        else video.pause();
       });
     }
-  }
 
-  // ── 4. Ajustar os botões de acesso ao que a instalação oferece ─────────
-  //
-  // O HTML entregue aponta para `/app`, que serve em qualquer caso: a tela de
-  // entrada do app oferece senha e código de convite, e o botão do Google
-  // quando ele existe. O que a consulta abaixo acrescenta é o atalho — mandar
-  // direto ao Google quando ele está configurado, e trocar "Entrar" por
-  // "Abrir meus projetos" para quem já tem sessão. Nada disso é necessário
-  // para usar a página; por isso qualquer falha é silenciosa.
-  var protocoloServido = window.location.protocol === 'http:' || window.location.protocol === 'https:';
-  if (!protocoloServido || typeof fetch !== 'function') return;
+    video.addEventListener('play', refletirEstado);
+    video.addEventListener('pause', refletirEstado);
+    refletirEstado();
 
-  function definirCta(elemento, texto, destino) {
-    if (!elemento) return;
-    elemento.textContent = texto;
-    elemento.setAttribute('href', destino);
-  }
+    // Vídeo fora da tela não precisa rodar: economiza bateria e banda, e é o
+    // que o próprio Chrome já faz com vídeo mudo — aqui só ficamos explícitos,
+    // porque nem todo navegador faz.
+    if (!('IntersectionObserver' in window)) return;
 
-  fetch('/api/v1/auth/status', {
-    credentials: 'same-origin',
-    headers: { Accept: 'application/json' },
-  })
-    .then(function (resposta) {
-      if (!resposta.ok) throw new Error('status indisponível');
-      return resposta.json();
-    })
-    .then(function (estado) {
-      var ctaCabecalho = document.getElementById('cta-header');
-      var ctaHero = document.getElementById('cta-hero');
-      var ctaLgpd = document.getElementById('cta-lgpd');
-      var nota = document.getElementById('cta-hero-note');
+    var observador = new IntersectionObserver(
+      function (entradas) {
+        entradas.forEach(function (entrada) {
+          if (pausadoPeloUsuario) return;
+          if (entrada.isIntersecting) tocar();
+          else video.pause();
+        });
+      },
+      { threshold: 0.25 }
+    );
+    observador.observe(video);
+  });
 
-      if (estado.authenticated) {
-        definirCta(ctaCabecalho, 'Meus projetos', '/app');
-        definirCta(ctaHero, 'Abrir meus projetos', '/app');
-        definirCta(ctaLgpd, 'Abrir meus projetos', '/app');
-        if (nota) {
-          nota.textContent =
-            'Você já está com sessão aberta' +
-            (estado.user && estado.user.username ? ' como ' + estado.user.username : '') +
-            '.';
-        }
-        return;
-      }
+  /* ── 7. Blocos do "Por que existe" ──────────────────────────────────── */
 
-      if (estado.google_login_enabled) {
-        var google = '/api/v1/auth/google/start';
-        definirCta(ctaCabecalho, 'Entrar com Google', google);
-        definirCta(ctaHero, 'Entrar com Google', google);
-        definirCta(ctaLgpd, 'Entrar com Google', google);
-        if (nota) {
-          nota.textContent =
-            'Entre com sua conta Google, ou use um código de convite na tela de acesso. ' +
-            'Nenhum cartão, nenhum plano pago.';
-        }
-      } else if (nota) {
-        // Sem Google configurado, prometer o botão dele seria mandar o
-        // visitante a um 503.
-        nota.textContent =
-          'Acesso por usuário e senha ou por código de convite. Nenhum cartão, nenhum plano pago.';
-      }
-    })
-    .catch(function () {
-      /* Página servida fora do backend, ou backend fora do ar: fica como está. */
+  // Cada bloco entra quando aparece na tela, e só então as fichas do vai e
+  // vem começam a acender. Sem observador, a classe nem é posta e tudo fica
+  // visível e parado.
+  var dores = pt('[data-dores]');
+
+  if (dores && 'IntersectionObserver' in window) {
+    dores.classList.add('dores--animadas');
+
+    var observadorDores = new IntersectionObserver(
+      function (entradas) {
+        entradas.forEach(function (entrada) {
+          if (!entrada.isIntersecting) return;
+          entrada.target.classList.add('visivel');
+          observadorDores.unobserve(entrada.target);
+        });
+      },
+      { threshold: 0.2, rootMargin: '0px 0px -6% 0px' }
+    );
+
+    pts('.dor', dores).forEach(function (dor) {
+      observadorDores.observe(dor);
     });
-
-  // Versão real do servidor no rodapé, quando houver um respondendo.
-  fetch('/health', { headers: { Accept: 'application/json' } })
-    .then(function (resposta) {
-      if (!resposta.ok) throw new Error('sem health');
-      return resposta.json();
-    })
-    .then(function (saude) {
-      var rodape = document.getElementById('footer-version');
-      if (rodape && saude && saude.version) {
-        rodape.textContent = 'Versão ' + saude.version + ' · BETA';
-      }
-    })
-    .catch(function () {
-      /* mantém a versão escrita no HTML */
-    });
+  }
 })();

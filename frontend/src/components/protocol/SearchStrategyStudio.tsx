@@ -235,7 +235,7 @@ export function SearchStrategyStudio({
         </div>
 
         <div className="search-strategy__actions">
-          <Button variant="outline" size="sm" onClick={handleRunPressAudit} data-trilho-target="search-press-btn">
+          <Button variant="outline" size="sm" onClick={handleRunPressAudit}>
             <Sparkles size={13} />
             <span>Revisão PRESS</span>
           </Button>
@@ -254,7 +254,7 @@ export function SearchStrategyStudio({
         </div>
       </div>
 
-      <div className="search-strategy__blocks" data-trilho-target="search-blocks-container">
+      <div className="search-strategy__blocks">
         {blocks.map((block, bIdx) => (
           <div key={block.key} className="strategy-block">
             <div className="strategy-block__head">
@@ -349,7 +349,7 @@ export function SearchStrategyStudio({
         )}
       </div>
 
-      <div className="strategy-preview" data-trilho-target="search-preview">
+      <div className="strategy-preview">
         <div className="strategy-preview__head">
           <span className="strategy-preview__label">
             <Layers size={13} />

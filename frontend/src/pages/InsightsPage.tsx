@@ -506,7 +506,7 @@ export function InsightsPage(): JSX.Element {
             funil de critérios e o volume por base continuam sobre o projeto inteiro.
           </p>
 
-          <div className="insights-grid" data-trilho-target="prisma-flowchart">
+          <div className="insights-grid">
             {/* ── Funil PRISMA ──────────────────────────────────────────── */}
             <Bloco
               titulo="Funil de identificação e triagem"

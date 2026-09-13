@@ -21,7 +21,7 @@ services:
       - "443:443/udp" # HTTP/3 QUIC
     environment:
       - RSAC_PUBLIC_DOMAIN=${RSAC_PUBLIC_DOMAIN:-revsist.com}
-      - RSAC_CONTACT_EMAIL=${RSAC_CONTACT_EMAIL:-contato@revsist.org}
+      - RSAC_CONTACT_EMAIL=${RSAC_CONTACT_EMAIL:-eduardomatheusfigueira@gmail.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

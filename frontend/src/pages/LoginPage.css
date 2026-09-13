@@ -2,18 +2,42 @@
  * Revsist — Tela de Acesso e Registro com Convite
  */
 
+/* A página é o próprio contêiner de rolagem. `html`, `body` e `#root` têm
+   altura travada e `overflow: hidden` — é o que faz o aplicativo rolar só por
+   dentro da área de trabalho, sem a janela inteira deslizar. Mas esta tela
+   fica fora desse layout, e sem rolagem própria tudo o que passava da altura
+   da tela simplesmente sumia: no celular, o botão "Enviar Pedido de Convite"
+   ficava 300px abaixo do fim da tela, inalcançável.
+
+   A centralização saiu do contêiner e foi para a margem automática do
+   cartão. `align-items: center` num contêiner rolável centraliza também o
+   que transborda, e a parte de cima do cartão ficaria cortada *acima* do
+   início da rolagem — tão inalcançável quanto antes, só que do outro lado.
+   `margin: auto` centraliza quando cabe e encosta no topo quando não cabe. */
 .login-page {
-  min-height: 100vh;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   padding: var(--space-6);
   background: var(--color-bg-primary);
 }
 
 .login-card {
+  margin: auto;
+  flex-shrink: 0;
   width: 100%;
-  max-width: 440px;
+  /* 520px, e não 440, porque a barra passou a ter três abas: com o valor
+     antigo cada uma recebia 124px para um rótulo que mede 144, e os três
+     apareciam truncados com reticências. A folga sobrando é de propósito —
+     com a largura no limite exato, qualquer fonte um pouco mais larga que a
+     medida traria as reticências de volta. */
+  max-width: 520px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -55,6 +79,7 @@
 /* ── Abas de Seleção (Login / Convite) ─────────────────────────── */
 .login-tabs {
   display: flex;
+  flex-wrap: wrap;
   background: var(--color-bg-tertiary);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
@@ -64,12 +89,13 @@
 }
 
 .login-tab {
-  flex: 1;
+  flex: 1 1 118px;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-1);
+  padding: var(--space-2);
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
@@ -79,6 +105,12 @@
   cursor: pointer;
   transition: background-color var(--motion-base) var(--ease-standard),
     color var(--motion-base) var(--ease-standard);
+}
+
+.login-tab span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .login-tab:hover {
@@ -192,11 +224,14 @@
     grid-template-columns: 1fr;
   }
 
-  /* `dvh` porque a barra de endereço do navegador móvel muda de altura
-     durante a rolagem: com `vh` o cartão nascia cortado embaixo. */
+  /* No celular o cartão encosta no topo em vez de centralizar: com o teclado
+     aberto a altura útil cai pela metade, e um cartão centralizado pularia de
+     lugar a cada campo tocado. */
+  .login-card {
+    margin-top: 0;
+  }
+
   .login-page {
-    min-height: 100dvh;
-    align-items: flex-start;
     padding: calc(var(--space-4) + var(--rsac-safe-top, 0)) var(--space-3)
       calc(var(--space-6) + var(--rsac-safe-bottom, 0));
   }
@@ -206,13 +241,18 @@
     padding: var(--space-5) var(--space-4);
   }
 
-  /* As duas abas não cabem lado a lado com o rótulo inteiro em 375px —
+  /* As três abas não cabem lado a lado com o rótulo inteiro em 375px —
      empilhadas, cada uma vira um alvo de toque cheio. */
   .login-tabs {
     flex-direction: column;
   }
 
   .login-tab {
+    /* Empilhada, a direção principal é a vertical, e a base de 118px que
+       reserva a largura no desktop passaria a reservar *altura*: cada aba
+       viraria um bloco de 118px. Aqui a altura volta a ser a do conteúdo,
+       com `min-height` garantindo o alvo de toque. */
+    flex: 0 0 auto;
     justify-content: flex-start;
     min-height: 44px;
     font-size: var(--text-sm);
@@ -318,4 +358,53 @@
   line-height: var(--leading-relaxed);
   color: var(--color-text-tertiary);
   text-align: center;
+}
+
+
+/* -- Pedido de Convite (para quem ainda não tem código) -------- */
+.request-privacy-note {
+  margin: 0;
+  font-size: var(--text-2xs, 0.6875rem);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+}
+
+/* A confirmação ocupa o lugar do formulário: quem enviou não tem o que
+   fazer ali, e deixar os campos preenchidos na tela só convida a reenviar. */
+.request-sent-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.request-sent-icon {
+  color: var(--color-success);
+}
+
+.request-sent-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.request-sent-text {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.request-sent-text--muted {
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border-subtle);
+  width: 100%;
 }

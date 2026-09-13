@@ -18,7 +18,7 @@
     mais o CSP servido pelo Caddy e pelo backend.
   -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" />
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';" />
 
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="Revsist" />
@@ -33,118 +33,155 @@
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="../src/styles/landing.css" />
+  <link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin />
+  <script>
+    /* Aceite de termos: marca o documento antes da primeira pintura. O véu e o
+       texto vêm de src/scripts/aceite.js; aqui só se decide se a página nasce
+       bloqueada, porque essa decisão não pode esperar o módulo carregar. */
+    (function () {
+      try {
+        var p = location.pathname.replace(/\/+$/, '') || '/';
+        if (p === '/termos' || p === '/privacidade') return;
+        var b = localStorage.getItem('rsac_aceite_termos');
+        if (b && JSON.parse(b).versao === '2026-09') return;
+      } catch (e) { return; }
+      document.documentElement.setAttribute('data-aceite', 'pendente');
+    })();
+  </script>
+  <link rel="stylesheet" href="/src/styles/landing.css" />
   <noscript><link rel="stylesheet" href="/styles/nojs.css" /></noscript>
 </head>
 <body>
 
   <a class="skip-link" href="#conteudo">Ir direto ao conteúdo</a>
 
-  <header class="site-header" role="banner">
-    <div class="container header-inner">
-      <a href="/" class="brand-link" aria-label="Revsist — página inicial">
-        <svg class="brand-mark" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Biblioteca central de ícones SVG compartilhada com a landing page -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-marca" viewBox="0 0 80 100">
+        <g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
           <path d="M 7 7 V 93" />
           <circle cx="32" cy="32" r="25" />
-          <path d="M 45.946 52.749 L 73 93" />
-        </svg>
+          <path d="M 45.946 52.749 L 73 93" stroke="var(--marca-cabo, currentColor)" />
+        </g>
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+      <symbol id="i-seta" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" /></symbol>
+    </defs>
+  </svg>
+
+  <header class="site-header" id="topo">
+    <div class="header-container">
+      <a href="/" class="brand-logo" aria-label="Revsist — página inicial">
+        <svg class="brand-mark-svg" viewBox="0 0 80 100" aria-hidden="true" focusable="false"><use href="#i-marca" /></svg>
         <span class="brand-name">Revsist</span>
-        <span class="badge-beta">v2.0 BETA</span>
+        <span class="badge badge-beta">v2.0 beta</span>
       </a>
 
-      <nav class="nav-links" id="nav-links" aria-label="Documentos e seções">
-        <a href="/" class="nav-link">Início</a>
-        <a href="/termos" class="nav-link">Termos de uso</a>
-        <a href="/#dados" class="nav-link">Privacidade na prática</a>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menu de navegação">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+
+      <nav class="main-nav" id="main-nav" aria-label="Navegação principal">
+        <ul class="nav-list">
+          <li><a href="/#como-funciona" class="nav-link">Como funciona</a></li>
+          <li><a href="/#registro" class="nav-link">O que fica guardado</a></li>
+          <li><a href="/#diretrizes" class="nav-link">Roteiros</a></li>
+          <li><a href="/termos" class="nav-link">Termos de uso</a></li>
+          <li><a href="/privacidade" class="nav-link is-active">Privacidade</a></li>
+          <li><a href="/blog" class="nav-link">Blog</a></li>
+        </ul>
+        <div class="nav-actions">
+          <a href="/app" class="btn btn-chrome btn-sm">Entrar no Revsist</a>
+        </div>
       </nav>
-
-      <div class="header-actions">
-        <a href="/app" class="btn btn-primary btn-sm">Entrar</a>
-
-        <button id="nav-toggle-btn" class="btn-nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Abrir menu de seções">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-      </div>
     </div>
   </header>
 
   <main id="conteudo" class="legal-main">
     <div class="container">
       <article class="legal-doc">
-        <h1>Aviso de Privacidade e Tratamento de Dados Pessoais</h1>
+        <h1>Aviso de Privacidade do Revsist</h1>
 
         <p class="legal-meta">
-          VERSÃO 1.0<br />
-          VIGÊNCIA: 29 DE AGOSTO DE 2026<br />
-          ÚLTIMA ATUALIZAÇÃO: 29 DE AGOSTO DE 2026
+          VERSÃO 2.0<br />
+          VIGÊNCIA: 12 DE SETEMBRO DE 2026<br />
+          ÚLTIMA ATUALIZAÇÃO: 12 DE SETEMBRO DE 2026
         </p>
 
         <p>
-          Este aviso descreve como a plataforma <strong>Revsist</strong> (“Revsist”, “nós” ou
-          “sistema”) coleta, armazena, utiliza, compartilha e descarta dados pessoais de
-          pesquisadores e usuários cadastrados (“titulares” ou “você”), em conformidade com a
-          <strong>Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD)</strong>.
+          Este aviso explica quais dados pessoais o <strong>Revsist</strong> trata, por quê, com
+          que base legal, por quanto tempo e o que você pode exigir a respeito. Ele cumpre o dever
+          de informação do art. 9º da Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018)
+          e integra os <a href="/termos">Termos de Uso</a>.
         </p>
 
         <div class="legal-callout">
           <p>
-            <strong>Aviso de estágio.</strong> O Revsist está em BETA aberto. Os campos marcados
-            como <span class="legal-pending">a preencher</span> identificam a qualificação formal do
-            controlador, que será publicada antes do encerramento do beta. Até lá, o canal de
-            atendimento ao titular indicado na seção 1 permanece válido e operante.
+            <strong>O resumo honesto.</strong> Não há publicidade, rastreador, pixel nem métrica de
+            terceiros. O único cookie é técnico e serve para manter você conectado. O seu conteúdo
+            de pesquisa é seu: não treinamos modelos com ele, não o vendemos e não o divulgamos.
+            O que sai da plataforma para fora sai por decisão sua — quando você liga uma chave de
+            IA ou consulta uma base científica.
           </p>
         </div>
 
         <nav class="legal-toc" aria-label="Índice do documento">
           <h2>Neste documento</h2>
           <ol>
-            <li><a href="#controlador">Identificação do controlador e do encarregado</a></li>
-            <li><a href="#dados-coletados">Dados coletados, origem e finalidades</a></li>
-            <li><a href="#transferencia">Transferência internacional de dados</a></li>
+            <li><a href="#controlador">Controlador e encarregado</a></li>
+            <li><a href="#quem">A quem este aviso se aplica</a></li>
+            <li><a href="#dados">Dados tratados, origem e finalidade</a></li>
+            <li><a href="#convite">Quem pede convite e não vira usuário</a></li>
+            <li><a href="#ia">Decisões assistidas por IA e revisão humana</a></li>
+            <li><a href="#compartilhamento">Com quem compartilhamos</a></li>
+            <li><a href="#internacional">Transferência internacional</a></li>
+            <li><a href="#navegador">Cookies e armazenamento no navegador</a></li>
+            <li><a href="#seguranca">Segurança da informação</a></li>
+            <li><a href="#incidentes">Incidentes de segurança</a></li>
             <li><a href="#retencao">Retenção e descarte</a></li>
-            <li><a href="#direitos">Direitos do titular e canais de atendimento</a></li>
-            <li><a href="#cookies">Cookies</a></li>
+            <li><a href="#direitos">Seus direitos e como exercê-los</a></li>
+            <li><a href="#menores">Crianças e adolescentes</a></li>
+            <li><a href="#ropa">Registro das operações de tratamento</a></li>
             <li><a href="#alteracoes">Alterações neste aviso</a></li>
           </ol>
         </nav>
 
-        <h2 id="controlador">1. Identificação do controlador e do encarregado (DPO)</h2>
+        <h2 id="controlador">1. Controlador e encarregado</h2>
         <ul>
-          <li>
-            <strong>Controlador do tratamento:</strong>
-            <span class="legal-pending">razão social a preencher</span>
-          </li>
-          <li>
-            <strong>CNPJ ou identificador institucional:</strong>
-            <span class="legal-pending">a preencher</span>
-          </li>
-          <li>
-            <strong>Endereço / sede:</strong>
-            <span class="legal-pending">a preencher</span>
-          </li>
-          <li>
-            <strong>Canal de atendimento ao titular e ao encarregado (DPO):</strong>
-            <a href="mailto:privacidade@revsist.com">privacidade@revsist.com</a>
-          </li>
-          <li>
-            <strong>Canal de requisição de direitos:</strong> disponível na própria interface da
-            plataforma, na seção de conta, e pelo e-mail acima.
-          </li>
+          <li><strong>Controlador:</strong> Eduardo Matheus Figueira, pessoa natural, na condição de mantenedor do projeto acadêmico Revsist.</li>
+          <li><strong>Inscrição:</strong> CPF <span class="legal-pending">a preencher</span>.</li>
+          <li><strong>Endereço para contato:</strong> <span class="legal-pending">a preencher</span>.</li>
+          <li><strong>Encarregado pelo tratamento (DPO):</strong> o próprio controlador, acumulando a função na forma do art. 41 da LGPD.</li>
+          <li><strong>Canal de atendimento ao titular:</strong> <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a>, e a seção de conta da própria plataforma, onde vários direitos são exercidos sem intermediação.</li>
         </ul>
         <p>
-          <em>Nota sobre agente de tratamento de pequeno porte:</em> caso aplicável o enquadramento
-          na Resolução CD/ANPD nº 2/2022, o Revsist mantém canal formal de atendimento eletrônico ao
-          titular para o exercício dos direitos do art. 18 da LGPD.
+          <strong>Agente de tratamento de pequeno porte.</strong> O Revsist se enquadra, em
+          princípio, na Resolução CD/ANPD nº 2/2022, e adota o regime simplificado ali previsto —
+          mantendo, ainda assim, canal formal de atendimento eletrônico para o exercício dos
+          direitos do art. 18.
         </p>
 
-        <h2 id="dados-coletados">2. Dados coletados, origem e finalidades</h2>
+        <h2 id="quem">2. A quem este aviso se aplica</h2>
+        <ol>
+          <li><strong>Visitantes do site.</strong> Quem apenas navega em revsist.com, sem criar conta.</li>
+          <li><strong>Solicitantes de convite.</strong> Quem preenche o pedido de acesso na tela de entrada, tenha ou não sido aprovado.</li>
+          <li><strong>Pesquisadores cadastrados.</strong> Quem tem conta na plataforma.</li>
+          <li><strong>Membros de equipe.</strong> Pesquisadores convidados para projetos de outros.</li>
+        </ol>
         <p>
-          O Revsist adota o princípio da minimização (art. 6º, III), restringindo o tratamento ao
-          estritamente necessário para as funcionalidades da ferramenta.
+          Este aviso <em>não</em> se aplica aos dados de autores de artigos científicos coletados
+          nas bases públicas. Esses metadados são informação bibliográfica pública, tratada para
+          finalidade acadêmica, e permanecem sujeitos às condições de uso de cada base de origem.
+        </p>
+
+        <h2 id="dados">3. Dados tratados, origem e finalidade</h2>
+        <p>
+          Adotamos o princípio da minimização (art. 6º, III): tratamos o estritamente necessário
+          para que a ferramenta funcione.
         </p>
 
         <div class="legal-table-wrap">
@@ -160,150 +197,412 @@
             </thead>
             <tbody>
               <tr>
-                <td><strong>Identificação e contato</strong></td>
-                <td>Nome de exibição, endereço de e-mail</td>
-                <td>Cadastro direto ou Google OAuth</td>
-                <td>Identificação de autoria nas decisões da revisão, comunicação e acesso</td>
-                <td>V (execução de contrato) / I (consentimento)</td>
+                <td>Identificação e contato</td>
+                <td>Nome, nome de exibição, endereço de e-mail</td>
+                <td>Cadastro direto ou entrada com Google</td>
+                <td>Identificar a autoria das decisões da revisão, comunicar e dar acesso</td>
+                <td>V (execução de contrato)</td>
               </tr>
               <tr>
-                <td><strong>Credenciais e acesso</strong></td>
-                <td>Hash Argon2id da senha, identificador <code>sub</code> do Google, tokens de sessão</td>
+                <td>Perfil acadêmico</td>
+                <td>Telefone, instituição, titulação, curso ou programa, profissão, área de pesquisa</td>
+                <td>Informado por você no cadastro</td>
+                <td>Adequar a ferramenta ao seu contexto de pesquisa e dimensionar o público atendido</td>
+                <td>I (consentimento) — campos opcionais</td>
+              </tr>
+              <tr>
+                <td>Pedido de convite</td>
+                <td>Nome, e-mail, telefone, instituição, como conheceu a plataforma</td>
+                <td>Formulário público da tela de entrada</td>
+                <td>Avaliar e responder ao pedido de acesso</td>
+                <td>I (consentimento)</td>
+              </tr>
+              <tr>
+                <td>Credenciais e acesso</td>
+                <td>Hash Argon2id da senha, identificador <code>sub</code> do Google, tokens de sessão (guardados como hash)</td>
                 <td>Cadastro e autenticação</td>
-                <td>Autenticação, controle de sessão e prevenção a acesso não autorizado</td>
-                <td>V (execução de contrato) / II (segurança)</td>
+                <td>Autenticar, controlar sessão e impedir acesso não autorizado</td>
+                <td>V (execução de contrato)</td>
               </tr>
               <tr>
-                <td><strong>Conexão e segurança</strong></td>
-                <td>Endereço IP de tentativas de login, data e hora</td>
+                <td>Conexão e segurança</td>
+                <td>Endereço IP e horário de tentativas de login, agente de usuário</td>
                 <td>Cabeçalhos HTTP durante a autenticação</td>
-                <td>Prevenção a força bruta, auditoria técnica e resposta a incidente</td>
-                <td>IX (legítimo interesse) / Marco Civil da Internet</td>
+                <td>Conter ataque de força bruta, auditar e responder a incidente</td>
+                <td>IX (legítimo interesse)</td>
               </tr>
               <tr>
-                <td><strong>Conteúdo de pesquisa</strong></td>
-                <td>Protocolos, critérios, referências bibliográficas, extrações e anotações</td>
-                <td>Inserção pelo pesquisador ou coleta em bases públicas (BDTD, SciELO, Scopus, PubMed, OpenAlex)</td>
-                <td>Gestão, triagem e extração de síntese de evidências</td>
+                <td>Conteúdo de pesquisa</td>
+                <td>Protocolos, critérios, referências, decisões de triagem com motivo, extrações, anotações e sínteses</td>
+                <td>Inserido por você ou coletado em bases públicas</td>
+                <td>Executar a revisão sistemática e preservar o rastro metodológico</td>
                 <td>V (execução de contrato)</td>
               </tr>
               <tr>
-                <td><strong>Credenciais de terceiros (BYOK)</strong></td>
-                <td>Chaves de API de provedores de IA e de bases científicas</td>
-                <td>Inserção explícita pelo titular</td>
-                <td>Habilitação de consultas externas autorizadas pelo próprio pesquisador</td>
+                <td>Arquivos</td>
+                <td>PDFs de textos integrais adquiridos por você</td>
+                <td>Aquisição pelo pesquisador, por vias de acesso aberto ou assinatura institucional</td>
+                <td>Leitura e extração de dados do estudo</td>
                 <td>V (execução de contrato)</td>
+              </tr>
+              <tr>
+                <td>Credenciais de terceiros (BYOK)</td>
+                <td>Chaves de API de provedores de IA e de bases científicas, cifradas em repouso</td>
+                <td>Inseridas explicitamente por você</td>
+                <td>Habilitar consultas externas que você autorizou</td>
+                <td>V (execução de contrato)</td>
+              </tr>
+              <tr>
+                <td>Colaboração</td>
+                <td>Vínculo entre conta e projeto, papel exercido, convites emitidos e aceitos. Membros de um mesmo projeto veem nome, usuário e e-mail uns dos outros</td>
+                <td>Gerado pelo uso da plataforma</td>
+                <td>Operar o trabalho em equipe e atribuir autoria das decisões</td>
+                <td>V (execução de contrato)</td>
+              </tr>
+              <tr>
+                <td>Rastro de assistência</td>
+                <td>Provedor, modelo, hash SHA-256 do contexto enviado, quem confirmou a decisão</td>
+                <td>Gerado quando você usa a assistência</td>
+                <td>Auditar como cada decisão assistida foi tomada</td>
+                <td>V (execução de contrato)</td>
+              </tr>
+              <tr>
+                <td>Consentimento e aceite</td>
+                <td>Versão dos documentos aceitos e data do aceite</td>
+                <td>Registrado no cadastro e no navegador</td>
+                <td>Comprovar o aceite dos Termos e deste Aviso</td>
+                <td>II (obrigação legal) e VI (exercício de direitos)</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="legal-callout">
-          <p>
-            <strong>Minimização no uso de inteligência artificial.</strong> O Revsist
-            <strong>não envia nomes de autores</strong> de artigos científicos a provedores de IA
-            durante a triagem assistida. São enviados apenas o título, o resumo e os critérios
-            metodológicos do seu protocolo.
-          </p>
+        <p>
+          <strong>Minimização no uso de inteligência artificial.</strong> Na triagem assistida, o
+          Revsist <strong>não envia nomes de autores</strong> dos artigos aos provedores de IA. São
+          enviados apenas o título, o resumo e os critérios metodológicos do seu protocolo.
+        </p>
+
+        <h2 id="convite">4. Quem pede convite e não vira usuário</h2>
+        <p>
+          O formulário de pedido de acesso é a única situação em que alguém sem conta grava dados
+          pessoais na plataforma. Por isso ele merece regra própria:
+        </p>
+        <ol>
+          <li><strong>O que guardamos:</strong> nome, e-mail, telefone, instituição e como você conheceu a plataforma — apenas o que foi digitado, sem enriquecimento com outras fontes.</li>
+          <li><strong>Para quê:</strong> avaliar o pedido e responder a você. Nada além disso.</li>
+          <li><strong>Como chega a quem decide:</strong> os dados do pedido são enviados por e-mail ao controlador, para que ele possa avaliá-lo e decidir diretamente da caixa de entrada. Responder esse aviso fala com você, pelo e-mail que você informou.</li>
+          <li><strong>Base legal:</strong> seu consentimento, manifestado ao enviar o formulário, revogável a qualquer momento.</li>
+          <li><strong>Por quanto tempo:</strong> enquanto o pedido estiver pendente e, depois de respondido, por até 12 meses — prazo que permite reavaliar um pedido recusado e evitar pedir os mesmos dados de novo. Findo o prazo, o registro é eliminado.</li>
+          <li><strong>Como apagar antes disso:</strong> escreva para <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a> pedindo a exclusão do seu pedido. A eliminação é definitiva e não depende de justificativa.</li>
+          <li><strong>O que não fazemos:</strong> não usamos esses contatos para divulgação, não os cedemos a terceiros e não os cruzamos com outras bases.</li>
+        </ol>
+
+        <h2 id="ia">5. Decisões assistidas por IA e revisão humana</h2>
+        <p>
+          A plataforma pode sugerir a inclusão ou exclusão de um estudo com apoio de modelos de
+          linguagem. Sobre isso, três garantias:
+        </p>
+        <ol>
+          <li><strong>Nenhuma decisão é automatizada de fato.</strong> A sugestão só produz efeito depois da confirmação de uma pessoa. Não há triagem que se conclua sozinha.</li>
+          <li><strong>A assistência é opcional.</strong> É possível operar em modo inteiramente manual, sem nenhuma chamada a provedor de IA.</li>
+          <li><strong>Direito à revisão (art. 20).</strong> Ainda assim, e por precaução, asseguramos o direito de solicitar revisão de qualquer decisão apoiada por tratamento automatizado, bem como informações claras sobre os critérios utilizados — observados o segredo comercial e industrial dos provedores dos modelos, que não controlamos.</li>
+        </ol>
+
+        <h2 id="compartilhamento">6. Com quem compartilhamos</h2>
+        <p>Não vendemos dados pessoais. O compartilhamento se limita ao necessário para operar:</p>
+        <ol>
+          <li><strong>Provedores de IA que você habilitar</strong> (Google Gemini, Alibaba Qwen): recebem título, resumo e critérios do protocolo, por meio da <em>sua</em> chave. Modelos locais não enviam nada para fora.</li>
+          <li><strong>Bases científicas</strong> (BDTD, SciELO, Scopus, PubMed, OpenAlex, Crossref, Unpaywall): recebem os termos da sua busca e, em algumas delas, um endereço de e-mail de contato técnico exigido pela própria API para identificação do sistema requisitante.</li>
+          <li><strong>Serviço de e-mail</strong> (Google, via SMTP): transporta as mensagens operacionais que enviamos a você, como a aprovação do pedido de convite.</li>
+          <li><strong>Infraestrutura de rede</strong> (Cloudflare): intermedia o tráfego entre o seu navegador e o servidor, tratando dados de conexão nessa passagem.</li>
+          <li><strong>Autoridades</strong>: somente mediante requisição legal válida, e apenas na extensão exigida.</li>
+        </ol>
+        <p>
+          Outros pesquisadores só acessam o seu conteúdo quando você os convida para um projeto, e
+          limitado àquele projeto.
+        </p>
+
+        <h2 id="internacional">7. Transferência internacional (art. 33)</h2>
+        <ol>
+          <li><strong>Provedores de IA no modelo BYOK.</strong> O Google Gemini processa em servidores da Google LLC nos Estados Unidos; o Alibaba Qwen, na região que você configurar. O envio ocorre pela sua chave de API e por sua decisão explícita de habilitá-la, o que atende ao art. 33, VIII e IX.</li>
+          <li><strong>Modelos locais.</strong> Ollama e LM Studio processam integralmente no seu ambiente. Não há transferência.</li>
+          <li><strong>Serviço de e-mail e rede.</strong> Google e Cloudflare operam infraestrutura fora do Brasil. A transferência se limita ao necessário para entregar a mensagem e servir a página, e ocorre para a execução do contrato com você (art. 33, II, “e”).</li>
+          <li><strong>Bases científicas.</strong> Parte delas está sediada no exterior. O que trafega são os termos da busca e metadados bibliográficos públicos.</li>
+          <li><strong>Como evitar.</strong> Usar exclusivamente modelos locais e bases nacionais mantém o tratamento inteiramente no seu ambiente e no território brasileiro.</li>
+        </ol>
+
+        <h2 id="navegador">8. Cookies e armazenamento no navegador</h2>
+        <p>
+          O Revsist usa <strong>um único cookie</strong>, estritamente necessário, e nenhum de
+          rastreio:
+        </p>
+        <div class="legal-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Para quê</th>
+                <th scope="col">Duração</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>rsac_session</code></td>
+                <td>Cookie <code>HttpOnly</code>, <code>SameSite=Strict</code>, <code>Secure</code></td>
+                <td>Manter você autenticado entre as telas</td>
+                <td>Até o fim da sessão ou o logout</td>
+              </tr>
+              <tr>
+                <td><code>rsac_aceite_termos</code></td>
+                <td>Armazenamento local</td>
+                <td>Lembrar que você aceitou os documentos, para não perguntar de novo</td>
+                <td>Até a próxima versão dos documentos</td>
+              </tr>
+              <tr>
+                <td><code>rsac_boas_vindas</code></td>
+                <td>Armazenamento local</td>
+                <td>Lembrar que a apresentação inicial já foi exibida</td>
+                <td>Até você limpar os dados do navegador</td>
+              </tr>
+              <tr>
+                <td><code>rsac-v2-settings</code>, <code>rsac_settings_tab</code></td>
+                <td>Armazenamento local</td>
+                <td>Preferências de interface: tema, projeto ativo, aba aberta nas configurações</td>
+                <td>Até você limpar os dados do navegador</td>
+              </tr>
+              <tr>
+                <td><code>rsac_session_token</code>, <code>rsac_api_url</code></td>
+                <td>Armazenamento de sessão</td>
+                <td>Sustentar a sessão e o endereço do servidor enquanto a aba está aberta</td>
+                <td>Apagados ao fechar a aba</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-
-        <h2 id="transferencia">3. Transferência internacional de dados (art. 33)</h2>
-        <ol>
-          <li>
-            <strong>Provedores de IA no modelo BYOK.</strong>
-            <ul>
-              <li>
-                <strong>Google Gemini:</strong> o envio de títulos e resumos ocorre mediante chave de
-                API configurada pelo próprio pesquisador, com processamento em servidores da Google
-                LLC nos <strong>Estados Unidos</strong>.
-              </li>
-              <li>
-                <strong>Alibaba Qwen:</strong> o processamento ocorre na região configurada pelo
-                usuário.
-              </li>
-              <li>
-                <strong>Modelos locais (Ollama, LM Studio):</strong> não há transferência externa; o
-                processamento ocorre integralmente no ambiente do próprio pesquisador.
-              </li>
-            </ul>
-          </li>
-          <li>
-            <strong>Salvaguardas.</strong> As transferências de metadados de estudos ocorrem por
-            decisão explícita do titular ao habilitar suas chaves de API, atendendo ao art. 33,
-            VIII e IX.
-          </li>
-        </ol>
-
-        <h2 id="retencao">4. Retenção e descarte (arts. 15 e 16)</h2>
-        <ul>
-          <li><strong>Tentativas de login e registros de IP:</strong> até <strong>90 dias</strong>, com expurgo automático.</li>
-          <li><strong>Tokens temporários de OAuth (PKCE):</strong> no máximo <strong>10 minutos</strong>, com expurgo após o uso.</li>
-          <li><strong>Sessões encerradas ou expiradas:</strong> eliminadas continuamente do banco.</li>
-          <li><strong>Backups cifrados:</strong> retidos por até <strong>30 dias</strong>, sobrescritos ciclicamente.</li>
-          <li><strong>Registros de ROPA:</strong> retidos pelo prazo prescricional de <strong>5 anos</strong> (art. 37 c/c art. 16, I), contendo apenas metadados operacionais — sem conteúdo pessoal ou acadêmico.</li>
-        </ul>
-
-        <h2 id="direitos">5. Direitos do titular e canais de atendimento (arts. 18 e 19)</h2>
         <p>
-          Você pode exercer seus direitos a qualquer momento pela própria interface da aplicação ou
-          pelo contato com o encarregado.
+          Os itens de armazenamento local e de sessão ficam <strong>apenas no seu navegador</strong>: não são enviados ao
+          servidor nem legíveis por outro site. Não há cookie de rastreio publicitário, métrica
+          comportamental de terceiro nem pixel de telemetria — nada que acompanhe você por outros
+          sites.
         </p>
-        <ol>
-          <li>
-            <strong>Confirmação e acesso</strong> — obtenha confirmação do tratamento e a declaração
-            detalhada de origens, finalidades e histórico de operações.
-          </li>
-          <li>
-            <strong>Correção e retificação</strong> — altere seu nome de exibição e o e-mail
-            cadastrado.
-          </li>
-          <li>
-            <strong>Portabilidade</strong> — exporte projetos, protocolos, referências, extrações,
-            rastro de decisões e configurações em formato estruturado e interoperável.
-          </li>
-          <li>
-            <strong>Eliminação definitiva da conta</strong> — com <strong>prazo de arrependimento de
-            7 dias</strong> (desativação prévia) ou eliminação imediata e definitiva. A eliminação
-            definitiva apaga os registros do banco e remove fisicamente os arquivos PDF associados
-            aos seus projetos no disco do servidor.
-          </li>
-        </ol>
-
-        <h2 id="cookies">6. Cookies</h2>
         <p>
-          O Revsist usa exclusivamente cookies <strong>estritamente necessários</strong> à
-          autenticação e à segurança da sessão (<code>rsac_session</code>), com as diretivas
-          <code>HttpOnly</code>, <code>SameSite=Strict</code> e <code>Secure</code> em conexões
-          HTTPS. Não há cookie de rastreio publicitário, métrica comportamental de terceiro nem
-          pixel de telemetria — por isso não existe banner de cookies nesta página.
+          <strong>Sobre a tela de aceite.</strong> Ao abrir o site pela primeira vez, informamos
+          esse uso e pedimos o aceite deste Aviso e dos Termos. Ela <strong>não é um banner de
+          consentimento de cookies</strong> no sentido usual, e a distinção é deliberada: cookie
+          estritamente necessário dispensa consentimento (art. 7º, V e IX), e oferecer um botão
+          &ldquo;recusar&rdquo; que não desligaria nada seria apresentar como escolha o que não é.
+          O que a tela pede é o aceite dos documentos; o que ela informa é qual cookie existe e para
+          quê.
         </p>
 
-        <h2 id="alteracoes">7. Alterações neste aviso</h2>
+        <h2 id="seguranca">9. Segurança da informação (art. 46)</h2>
+        <p>Medidas técnicas efetivamente adotadas:</p>
+        <ol>
+          <li><strong>Senhas</strong> guardadas como hash Argon2id, com mínimo de 12 caracteres. Em nenhum momento a senha em claro é gravada.</li>
+          <li><strong>Sessões com estado no servidor</strong>, guardadas como hash: um vazamento do banco não entrega sessões utilizáveis, e o logout invalida o acesso na hora.</li>
+          <li><strong>Segredos cifrados em repouso</strong> — chaves de API e credenciais de bases — com cifra autenticada e rotação de chave mestra.</li>
+          <li><strong>Transporte cifrado</strong> por TLS, com HSTS no ambiente publicado.</li>
+          <li><strong>Limite de tentativas de login</strong> com estado persistente, que sobrevive ao reinício do servidor.</li>
+          <li><strong>Limite de taxa</strong> por sessão e por origem, para conter abuso e sobrecarga.</li>
+          <li><strong>Autenticação exigida por padrão</strong> em toda a API: uma rota nova nasce protegida, e a lista de exceções públicas é curta, explícita e verificada por teste automatizado a cada alteração.</li>
+          <li><strong>Guarda de saída</strong> que valida o destino das requisições externas, impedindo que a plataforma seja usada para alcançar a rede interna.</li>
+          <li><strong>Mascaramento em registros técnicos</strong>: credenciais reconhecíveis — chaves de API e tokens — são substituídas por máscara antes de chegar aos logs, e os avisos de envio de e-mail registram o endereço abreviado.</li>
+          <li><strong>Descarte automático</strong> dos dados cujo prazo de retenção venceu, conforme a seção 11.</li>
+        </ol>
+        <p>
+          Nenhuma medida elimina risco por completo. Se você identificar uma falha de segurança,
+          escreva para <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a> — o
+          relato responsável é bem-vindo e não será tratado como uso indevido.
+        </p>
+
+        <h2 id="incidentes">10. Incidentes de segurança (art. 48)</h2>
+        <p>
+          Diante de incidente que possa acarretar risco ou dano relevante, comunicaremos a ANPD e os
+          titulares afetados em prazo razoável, informando a natureza dos dados envolvidos, os
+          titulares atingidos, as medidas técnicas de proteção empregadas, os riscos e as medidas
+          adotadas para reverter ou mitigar o efeito. A comunicação ao titular é feita pelo e-mail
+          cadastrado e por aviso destacado na interface.
+        </p>
+
+        <h2 id="retencao">11. Retenção e descarte (arts. 15 e 16)</h2>
+        <div class="legal-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Dado</th>
+                <th scope="col">Prazo</th>
+                <th scope="col">Por quê</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Conteúdo de pesquisa e arquivos</td>
+                <td>Enquanto a conta existir</td>
+                <td>É o objeto do serviço</td>
+              </tr>
+              <tr>
+                <td>Pedidos de convite respondidos</td>
+                <td>Até 12 meses</td>
+                <td>Permitir reavaliação sem pedir os dados de novo</td>
+              </tr>
+              <tr>
+                <td>Tentativas de login e IP</td>
+                <td>Até 90 dias</td>
+                <td>Conter força bruta e apurar incidente</td>
+              </tr>
+              <tr>
+                <td>Logs técnicos do servidor</td>
+                <td>Rotação por volume: até 5 arquivos de 10 MB, o mais antigo descartado primeiro</td>
+                <td>Diagnóstico de falhas. Credenciais são mascaradas antes da gravação</td>
+              </tr>
+              <tr>
+                <td>Estado temporário de OAuth (PKCE)</td>
+                <td>Até 10 minutos</td>
+                <td>Uso único; apagado ao ser consumido, e os abandonados pela rotina de descarte</td>
+              </tr>
+              <tr>
+                <td>Sessões encerradas ou expiradas</td>
+                <td>Encerradas: na hora. Expiradas: pela rotina de descarte</td>
+                <td>Não há razão para manter</td>
+              </tr>
+
+              <tr>
+                <td>Registro de operações (ROPA)</td>
+                <td>5 anos</td>
+                <td>Prestação de contas (art. 37 c/c art. 16, I). Guarda apenas metadados — nunca o conteúdo tratado</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          O descarte é automático: uma rotina roda na partida do servidor e, depois, periodicamente,
+          eliminando o que venceu. A eliminação da conta apaga os registros do banco e remove
+          fisicamente do disco os PDFs associados aos seus projetos.
+        </p>
+
+        <h2 id="direitos">12. Seus direitos e como exercê-los (arts. 18 e 19)</h2>
+        <p>
+          Vários direitos são exercidos por você mesmo, na seção de conta, sem precisar pedir nada a
+          ninguém:
+        </p>
+        <ol>
+          <li><strong>Confirmação e acesso.</strong> Declaração detalhada das origens, finalidades e do histórico de operações sobre os seus dados.</li>
+          <li><strong>Correção.</strong> Alteração do nome de exibição, do e-mail e dos dados de perfil acadêmico.</li>
+          <li><strong>Portabilidade.</strong> Exportação de projetos, protocolos, referências, extrações, rastro de decisões e configurações em formato estruturado e interoperável.</li>
+          <li><strong>Eliminação.</strong> Exclusão da conta com prazo de arrependimento de 7 dias (desativação prévia) ou eliminação imediata e definitiva.</li>
+          <li><strong>Revogação do consentimento.</strong> Para os campos opcionais de perfil e para o pedido de convite, a qualquer momento.</li>
+          <li><strong>Informação sobre compartilhamento.</strong> A relação de destinatários está na seção 6 e é mantida atualizada.</li>
+          <li><strong>Oposição</strong> a tratamento fundado em legítimo interesse, com análise do caso concreto.</li>
+        </ol>
+        <p>
+          Para o que não estiver na interface, escreva para
+          <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a>. Respondemos em até
+          15 dias. Podemos pedir informação adicional para confirmar sua identidade — o que protege
+          você contra pedidos feitos por terceiros em seu nome.
+        </p>
+        <p>
+          <strong>Reclamação.</strong> Você pode peticionar à Autoridade Nacional de Proteção de
+          Dados a qualquer momento, inclusive sem nos procurar antes.
+        </p>
+
+        <h2 id="menores">13. Crianças e adolescentes (art. 14)</h2>
+        <p>
+          A plataforma se destina a maiores de 18 anos e não é dirigida a crianças ou adolescentes.
+          Não coletamos conscientemente dados de menores. Se identificarmos um cadastro nessa
+          situação, a conta é encerrada e os dados eliminados. Se você é responsável legal e
+          suspeita que um menor criou conta, escreva para
+          <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a>.
+        </p>
+
+        <h2 id="ropa">14. Registro das operações de tratamento</h2>
+        <p>
+          Mantemos um registro interno das operações realizadas, conforme o art. 37. Ele guarda
+          <strong>a categoria do dado, nunca o dado</strong>: anota que houve um login, uma
+          exportação ou um envio à IA, com a finalidade e a base legal — jamais o e-mail, o nome ou
+          o conteúdo envolvido. Essa restrição é imposta pelo próprio código, que recusa qualquer
+          valor no lugar de uma categoria prevista.
+        </p>
+        <p>
+          O registro sobrevive à eliminação da conta, porque é o que permite prestar contas de que o
+          tratamento ocorreu de forma regular. Como não contém dado pessoal identificável, mantê-lo
+          não frustra o seu direito à eliminação.
+        </p>
+
+        <h2 id="alteracoes">15. Alterações neste aviso</h2>
         <p>
           Este documento pode ser atualizado para refletir mudanças no sistema ou exigências
-          regulatórias da ANPD. Alterações relevantes serão anunciadas na interface do usuário, com
-          indicação destacada da nova versão e da data de vigência.
+          regulatórias. Alterações relevantes são anunciadas na interface, com indicação destacada
+          da nova versão e da data de vigência, e o aceite volta a ser solicitado na entrada da
+          plataforma. O histórico de versões fica disponível mediante pedido ao canal de
+          atendimento.
         </p>
 
-        <p>
-          Documento relacionado: <a href="/termos">Termos de uso</a>.
-        </p>
+        <p>Documento relacionado: <a href="/termos">Termos de Uso</a>.</p>
       </article>
     </div>
   </main>
 
   <footer class="site-footer" role="contentinfo">
-    <div class="container">
+    <div class="footer-container">
+      <div class="footer-top">
+        <div>
+          <div class="footer-brand-header">
+            <svg class="brand-mark-svg" viewBox="0 0 80 100" aria-hidden="true" focusable="false"><use href="#i-marca" /></svg>
+            <span class="brand-name">Revsist</span>
+            <span class="badge badge-beta">v2.0 beta</span>
+          </div>
+          <p class="footer-tagline">
+            Programa gratuito e de código aberto para fazer revisão sistemática e revisão de escopo,
+            pensado para quem pesquisa no Brasil.
+          </p>
+        </div>
+
+        <div>
+          <p class="footer-heading">O programa</p>
+          <ul class="footer-links">
+            <li><a href="/#como-funciona">Como funciona</a></li>
+            <li><a href="/#registro">O que fica guardado</a></li>
+            <li><a href="/#diagrama">O diagrama final</a></li>
+            <li><a href="/#diretrizes">Roteiros disponíveis</a></li>
+            <li><a href="/#limites">O que ele não faz</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-heading">Aprender</p>
+          <ul class="footer-links">
+            <li><a href="/blog">Blog</a></li>
+            <li><a href="/blog/como-escrever-um-protocolo-de-revisao-sistematica/">Escrever o plano</a></li>
+            <li><a href="/blog/checklist-prisma-2020-explicado/">Checklist PRISMA 2020</a></li>
+            <li><a href="/blog/quanto-tempo-leva-uma-revisao-sistematica/">Quanto tempo leva</a></li>
+            <li><a href="/#perguntas">Dúvidas comuns</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-heading">Transparência</p>
+          <ul class="footer-links">
+            <li><a href="/termos">Termos de uso</a></li>
+            <li><a href="/privacidade">Privacidade</a></li>
+            <li><a href="/feed.xml">Feed RSS</a></li>
+            <li><a href="/#para-quem">Para quem é</a></li>
+          </ul>
+        </div>
+      </div>
+
       <div class="footer-bottom">
-        <p>
-          © 2026 Revsist. Distribuído sob
-          <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">licença MIT</a>.
-        </p>
-        <p class="footer-meta" id="footer-version">Versão 2.0.0 · BETA</p>
+        <span>© 2026 Revsist · Eduardo Matheus Figueira · Licença MIT</span>
+        <span class="footer-estado">
+          <span>Beta aberta</span>
+          <span>Grátis</span>
+          <span>Sem rastreadores</span>
+        </span>
       </div>
     </div>
   </footer>
 
-  <script src="../src/scripts/landing.js" type="module"></script>
+  <script src="/src/scripts/landing.js" type="module"></script>
 </body>
 </html>

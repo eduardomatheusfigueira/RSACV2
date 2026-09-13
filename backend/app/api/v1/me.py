@@ -28,6 +28,7 @@ from app.api.deps import get_db
 from app.config import settings
 from app.infrastructure.persistence.models import (
     AISettingsModel,
+    FeedbackModel,
     PaperModel,
     ProcessingRecordModel,
     ProjectModel,
@@ -118,6 +119,11 @@ def executar_eliminacao_completa_usuario(db: Session, user_id: str) -> None:
         synchronize_session=False
     )
     db.query(SourceCredentialModel).filter(SourceCredentialModel.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    # Feedbacks do beta: identificam quem escreveu pela conta, e sem ela não
+    # há a quem responder nem por que guardar.
+    db.query(FeedbackModel).filter(FeedbackModel.user_id == user_id).delete(
         synchronize_session=False
     )
 
@@ -227,6 +233,12 @@ def obter_declaracao_completa(
             "categorias": ["conteudo_de_pesquisa", "referencia_bibliografica"],
             "descricao": "Envio restrito a título e resumo para o provedor de IA configurado pelo usuário.",
         },
+        {
+            "finalidade": "Feedback do beta enviado pelo botão do aplicativo",
+            "base_legal": "Art. 7º, I (Consentimento)",
+            "categorias": ["identificacao", "contato", "conexao"],
+            "descricao": "Mensagem, tela, versão e navegador, lidos pelo administrador para corrigir problemas e responder a quem escreveu.",
+        },
     ]
 
     destinatarios = [
@@ -245,6 +257,7 @@ def obter_declaracao_completa(
     politica_retencao = [
         {"dado": "Projetos, artigos e extrações", "prazo": "Até exclusão solicitada pelo titular"},
         {"dado": "Sessões e tokens", "prazo": "Eliminados após expiração ou logout"},
+        {"dado": "Feedback do beta", "prazo": "Até exclusão pelo administrador ou da conta"},
         {"dado": "Tentativas de login (IPs)", "prazo": "Expurgo automático após 90 dias"},
         {"dado": "Registro de Operações (ROPA)", "prazo": "5 anos para prestação de contas (Art. 6º, X e Art. 37)"},
     ]

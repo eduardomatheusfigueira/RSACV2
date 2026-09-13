@@ -9,6 +9,7 @@ from app.api.v1.auth import public_auth_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.deduplication import router as deduplication_router
 from app.api.v1.export import router as export_router
+from app.api.v1.feedback import router as feedback_router
 from app.api.v1.extraction import (
     project_extraction_router,
 )
@@ -61,6 +62,7 @@ public_router.include_router(public_auth_router)
 # Incluir sub-routers
 api_router.include_router(auth_router)
 api_router.include_router(invites_router)
+api_router.include_router(feedback_router)
 api_router.include_router(me_router)
 api_router.include_router(projects_router)
 api_router.include_router(team_router)

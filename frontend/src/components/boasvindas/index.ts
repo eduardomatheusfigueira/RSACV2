@@ -1,0 +1,1 @@
+export { BoasVindas } from './BoasVindas'

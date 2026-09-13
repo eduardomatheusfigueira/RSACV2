@@ -7,14 +7,50 @@
  * apresentação enfraqueceria a proteção contra injeção de conteúdo.
  *
  * O critério de aceite do doc 41 (item 5.14) é que a página funcione inteira
- * sem JS. O que este arquivo faz é remover os dois controles que dependem de
- * script e devolver ao conteúdo o estado visível.
+ * sem JS. A estratégia aqui é sempre a mesma: esconder o controle que ficaria
+ * morto e devolver ao conteúdo que ele governava o estado visível.
  */
 
-/* Botões que não fariam nada sem script. */
-.btn-theme-toggle,
-.btn-nav-toggle {
+/* ── Controles que não fariam nada sem script ─────────────────────────── */
+
+.nav-toggle,
+.etapas-abas,
+.alternador,
+.laco-pausa {
   display: none !important;
+}
+
+/* Sem script, a captura não abre em tamanho maior: não prometa o zoom. */
+.captura img {
+  cursor: default !important;
+}
+
+.captura:hover img {
+  transform: none !important;
+}
+
+/* ── Conteúdo que o script revelaria ──────────────────────────────────── */
+
+/* As seis etapas viram uma sequência única, em vez de cinco painéis
+   inalcançáveis. O mesmo vale para as respostas do FAQ. */
+.etapa-painel[hidden],
+.faq-resposta[hidden] {
+  display: block !important;
+}
+
+.etapa-painel + .etapa-painel {
+  margin-top: 3rem;
+  padding-top: 3rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Sem o acordeão, o sinal de "abrir" e o efeito de clique só confundiriam. */
+.faq-pergunta {
+  cursor: default;
+}
+
+.faq-pergunta .icone {
+  display: none;
 }
 
 /* A revelação ao rolar depende do IntersectionObserver: sem ele, o conteúdo
@@ -25,10 +61,16 @@
   transition: none !important;
 }
 
+/* ── Navegação em telas estreitas ─────────────────────────────────────── */
+
 /* Sem o botão de menu, os links de seção viram uma faixa que quebra linha
    logo abaixo da marca, em vez de um painel que ninguém consegue abrir. */
-@media (max-width: 1080px) {
-  .header-inner {
+@media (max-width: 780px) {
+  .site-header {
+    height: auto;
+  }
+
+  .header-container {
     height: auto;
     flex-wrap: wrap;
     padding-top: 0.75rem;
@@ -36,26 +78,39 @@
     row-gap: 0.5rem;
   }
 
-  .nav-links {
+  .main-nav {
     position: static;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
+    align-items: center;
     order: 3;
     width: 100%;
     gap: 0.35rem 1.1rem;
     padding: 0.75rem 0 0;
-    border-top: 1px solid var(--border-subtle);
+    border-top: 1px solid rgba(254, 250, 224, 0.14);
     border-bottom: none;
     box-shadow: none;
     background: none;
-    max-height: none;
-    overflow: visible;
+  }
+
+  .nav-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.1rem;
   }
 
   .nav-link {
     padding: 0;
     font-size: 0.85rem;
     border-bottom: none;
+  }
+
+  .nav-actions {
+    margin-top: 0;
+  }
+
+  .nav-actions .btn {
+    width: auto;
   }
 }

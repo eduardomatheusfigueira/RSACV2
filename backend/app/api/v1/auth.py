@@ -21,7 +21,7 @@ import secrets
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -29,6 +29,7 @@ from app.api.deps import get_db
 from app.config import settings
 from app.infrastructure.persistence.models import (
     InviteCodeModel,
+    InviteRequestModel,
     ProjectInvitationModel,
     ProjectMemberModel,
     ProjectModel,
@@ -50,6 +51,8 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.schemas.invites import (
+    InviteRequestCreate,
+    InviteRequestPublicResponse,
     RegisterWithInviteRequest,
     ValidateInviteRequest,
     ValidateInviteResponse,
@@ -80,6 +83,8 @@ from app.security.sessions import (
     revoke_session,
 )
 from app.services import ropa_service
+from app.services import convite_admin
+from app.services.retencao import aplicar_retencao_se_devido
 
 logger = logging.getLogger(__name__)
 
@@ -435,6 +440,92 @@ def validar_convite(
 
 
 @public_auth_router.post(
+    "/invite/request",
+    response_model=InviteRequestPublicResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Solicita um convite de acesso (rota pública da tela de login)",
+)
+def solicitar_convite(
+    payload: InviteRequestCreate,
+    tarefas: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """
+    Registra o pedido de acesso de quem ainda não tem convite.
+
+    A rota é pública por necessidade — quem pede ainda não tem conta —, e é
+    por isso que ela não devolve nada além da confirmação: repetir o que foi
+    gravado, ou dizer que aquele e-mail já pediu, faria do formulário um
+    oráculo sobre quem procurou o Revsist. Por isso um pedido repetido do
+    mesmo e-mail responde exatamente como o primeiro, apenas sem criar uma
+    segunda linha na fila do administrador.
+
+    O limite de taxa por origem é o da família `auth` (§29.7), aplicado no
+    middleware; aqui cuida-se só da duplicação.
+    """
+    aplicar_retencao_se_devido(db)
+
+    agora = utcnow()
+    mensagem = (
+        "Pedido registrado. Assim que for avaliado, você receberá o código "
+        "de convite no e-mail informado."
+    )
+
+    pendente = (
+        db.query(InviteRequestModel)
+        .filter(
+            InviteRequestModel.email == payload.email,
+            InviteRequestModel.status == "pendente",
+        )
+        .first()
+    )
+    if pendente:
+        logger.info("[Convites] Pedido repetido ignorado (já há um pendente para o mesmo e-mail).")
+        return InviteRequestPublicResponse(received=True, message=mensagem)
+
+    solicitacao = InviteRequestModel(
+        nome=payload.nome,
+        email=payload.email,
+        telefone=payload.telefone,
+        onde_conheceu=payload.onde_conheceu,
+        instituicao=payload.instituicao or "",
+        status="pendente",
+        created_at=agora,
+    )
+    db.add(solicitacao)
+    db.commit()
+
+    ropa_service.registrar(
+        db,
+        operation="invite_requested",
+        legal_basis="art7_I_consentimento",
+        purpose="Avaliação de pedido de acesso à plataforma enviado pelo próprio interessado",
+        data_categories=["identificacao", "contato"],
+        commit=True,
+    )
+
+    logger.info("[Convites] Novo pedido de convite registrado (id=%s).", solicitacao.id)
+
+    # Aviso ao administrador, com os botões de aprovar e recusar. Em segundo
+    # plano: quem pediu acesso recebe a confirmação na hora, sem esperar o
+    # servidor de e-mail — e sem ver erro nenhum se ele estiver fora. Pedido
+    # repetido não chega aqui, então não gera aviso duplicado.
+    tarefas.add_task(
+        convite_admin.enviar_aviso_ao_admin,
+        convite_admin.DadosDoPedido(
+            id=solicitacao.id,
+            nome=solicitacao.nome,
+            email=solicitacao.email,
+            telefone=solicitacao.telefone,
+            instituicao=solicitacao.instituicao or "",
+            onde_conheceu=solicitacao.onde_conheceu,
+            recebido_em=agora,
+        ),
+    )
+    return InviteRequestPublicResponse(received=True, message=mensagem)
+
+
+@public_auth_router.post(
     "/register-with-invite",
     response_model=LoginResponse,
     status_code=status.HTTP_201_CREATED,
@@ -562,7 +653,9 @@ def registrar_com_convite(
         research_area=payload.research_area.strip(),
         auth_provider="password",
         terms_accepted_at=agora,
-        terms_version="2026-08-29",
+        # A versão aceita é a vigente na configuração. Uma data fixa aqui
+        # registraria o aceite do texto antigo mesmo depois de ele mudar.
+        terms_version=settings.terms_version,
     )
     db.add(novo_usuario)
     db.flush()

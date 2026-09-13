@@ -803,6 +803,22 @@ class APIClient {
     })
   }
 
+  /**
+   * Envia um pedido de convite a partir da tela de login.
+   *
+   * Rota pública: não há sessão nem token para mandar junto, e a resposta é a
+   * mesma para pedido novo e repetido — a tela não tem como (nem por que)
+   * distinguir os dois.
+   */
+  async requestInvite(
+    payload: import('@/types/api').InviteRequestPayload
+  ): Promise<import('@/types/api').InviteRequestAck> {
+    return this.request<import('@/types/api').InviteRequestAck>('/auth/invite/request', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
   async registerWithInvite(
     payload: import('@/types/api').RegisterWithInvitePayload
   ): Promise<import('@/types/api').LoginResponse> {
@@ -856,6 +872,21 @@ class APIClient {
    */
   async deleteProviderKeys(provider: 'gemini' | 'qwen' | 'local'): Promise<AISettings> {
     return this.request<AISettings>(`/ai/settings/keys/${provider}`, {
+      method: 'DELETE',
+    })
+  }
+
+  /** Acrescenta chaves às já guardadas do provedor. Repetidas são ignoradas. */
+  async addProviderKeys(provider: 'gemini' | 'qwen' | 'local', keys: string[]): Promise<AISettings> {
+    return this.request<AISettings>(`/ai/settings/keys/${provider}`, {
+      method: 'POST',
+      body: JSON.stringify({ keys }),
+    })
+  }
+
+  /** Remove uma chave, pela posição na lista de máscaras (`*_key_previews`). */
+  async deleteProviderKey(provider: 'gemini' | 'qwen' | 'local', index: number): Promise<AISettings> {
+    return this.request<AISettings>(`/ai/settings/keys/${provider}/${index}`, {
       method: 'DELETE',
     })
   }
@@ -1532,6 +1563,73 @@ class APIClient {
       method: 'POST',
       body: JSON.stringify(data || {}),
     })
+  }
+
+  // ── Fila de solicitações vindas da tela de login ──────────────────
+
+  async listInviteRequests(
+    status?: 'pendente' | 'aprovado' | 'recusado'
+  ): Promise<import('@/types/api').InviteRequestListResponse> {
+    const query = status ? `?status_filtro=${encodeURIComponent(status)}` : ''
+    return this.request<import('@/types/api').InviteRequestListResponse>(
+      `/invites/requests${query}`
+    )
+  }
+
+  async approveInviteRequest(
+    requestId: string,
+    data?: { expires_in_days?: number | null; note?: string }
+  ): Promise<import('@/types/api').InviteRequestApproveResult> {
+    return this.request<import('@/types/api').InviteRequestApproveResult>(
+      `/invites/requests/${requestId}/approve`,
+      { method: 'POST', body: JSON.stringify(data || {}) }
+    )
+  }
+
+  async updateInviteRequest(
+    requestId: string,
+    data: { status?: 'pendente' | 'aprovado' | 'recusado'; admin_notes?: string }
+  ): Promise<import('@/types/api').InviteRequestItem> {
+    return this.request<import('@/types/api').InviteRequestItem>(
+      `/invites/requests/${requestId}`,
+      { method: 'PATCH', body: JSON.stringify(data) }
+    )
+  }
+
+  async deleteInviteRequest(requestId: string): Promise<void> {
+    await this.request<void>(`/invites/requests/${requestId}`, { method: 'DELETE' })
+  }
+
+  // ── Feedback do beta ──────────────────────────────────────────────
+
+  async sendFeedback(
+    payload: import('@/types/api').FeedbackPayload
+  ): Promise<import('@/types/api').FeedbackAck> {
+    return this.request<import('@/types/api').FeedbackAck>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  async listFeedback(
+    status?: import('@/types/api').FeedbackStatus
+  ): Promise<import('@/types/api').FeedbackListResponse> {
+    const query = status ? `?status_filtro=${encodeURIComponent(status)}` : ''
+    return this.request<import('@/types/api').FeedbackListResponse>(`/feedback${query}`)
+  }
+
+  async updateFeedback(
+    feedbackId: string,
+    data: { status?: import('@/types/api').FeedbackStatus; admin_notes?: string }
+  ): Promise<import('@/types/api').FeedbackItem> {
+    return this.request<import('@/types/api').FeedbackItem>(`/feedback/${feedbackId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteFeedback(feedbackId: string): Promise<void> {
+    await this.request<void>(`/feedback/${feedbackId}`, { method: 'DELETE' })
   }
 
   async revokeInvite(inviteId: string): Promise<{ success: boolean; message: string }> {

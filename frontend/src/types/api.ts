@@ -697,6 +697,88 @@ export interface ValidateInviteResponse {
   expires_at?: string | null
 }
 
+/** Pedido de convite enviado da tela de login por quem ainda não tem acesso. */
+export interface InviteRequestPayload {
+  nome: string
+  email: string
+  telefone: string
+  onde_conheceu: string
+  instituicao?: string
+}
+
+export interface InviteRequestAck {
+  received: boolean
+  message: string
+}
+
+export interface InviteRequestItem {
+  id: string
+  nome: string
+  email: string
+  telefone: string
+  onde_conheceu: string
+  instituicao?: string
+  status: 'pendente' | 'aprovado' | 'recusado'
+  created_at: string
+  responded_at?: string | null
+  invite_code_generated?: string | null
+  admin_notes?: string
+}
+
+/** O que a aprovação devolve além do convite: o estado do aviso enviado. */
+export interface InviteRequestApproveResult {
+  request: InviteRequestItem
+  invite: { id: string; code: string; expires_at?: string | null }
+  link_direto: string
+  whatsapp_url: string
+  email_enviado: boolean
+  email_detalhe: string
+}
+
+export interface InviteRequestListResponse {
+  requests: InviteRequestItem[]
+  total: number
+  pendentes: number
+}
+
+// ── Feedback do beta ──────────────────────────────────────────────────
+
+export type FeedbackTipo = 'problema' | 'sugestao' | 'elogio' | 'outro'
+export type FeedbackStatus = 'novo' | 'em_andamento' | 'resolvido' | 'arquivado'
+
+export interface FeedbackPayload {
+  tipo: FeedbackTipo
+  mensagem: string
+  pagina?: string
+}
+
+export interface FeedbackAck {
+  received: boolean
+  message: string
+}
+
+export interface FeedbackItem {
+  id: string
+  tipo: FeedbackTipo
+  mensagem: string
+  pagina: string
+  navegador: string
+  versao: string
+  status: FeedbackStatus
+  created_at: string
+  responded_at?: string | null
+  admin_notes: string
+  autor_nome: string
+  autor_usuario: string
+  autor_email: string
+}
+
+export interface FeedbackListResponse {
+  items: FeedbackItem[]
+  total: number
+  novos: number
+}
+
 export interface RegisterWithInvitePayload {
   invite_code: string
   username: string
@@ -719,8 +801,8 @@ export interface RegisterWithInvitePayload {
  * Estado das configurações de Assistência vindo do backend.
  *
  * As chaves NÃO trafegam mais em texto claro: o que chega são máscaras
- * (`••••••••abcd`) e contagens. Para trocar uma chave envia-se a nova por
- * inteiro; para apagar, `deleteProviderKeys`.
+ * (`••••••••abcd`) e contagens. Chaves se acrescentam com `addProviderKeys` e
+ * se removem uma a uma com `deleteProviderKey` (ou todas, `deleteProviderKeys`).
  */
 export interface AISettings {
   ai_enabled: boolean

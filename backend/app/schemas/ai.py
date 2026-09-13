@@ -4,7 +4,7 @@
 """Revsist — Schemas de Inteligência Artificial."""
 
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AISettingsUpdate(BaseModel):
@@ -23,6 +23,34 @@ class AISettingsUpdate(BaseModel):
     endpoint: Optional[str] = Field(None, description="URL do endpoint local (Ollama/vLLM) ou DashScope/OpenRouter")
     temperature: float = Field(default=0.2, ge=0.0, le=1.0)
     max_tokens: int = Field(default=4096, ge=256, le=32768)
+
+
+class ProviderKeysAdd(BaseModel):
+    """
+    Chaves a **acrescentar** às que o provedor já tem.
+
+    É o caminho do dia a dia: guardar uma chave nova sem precisar redigitar as
+    outras, que a interface nem tem como mostrar — o backend só devolve a
+    máscara. Chave repetida é ignorada, não duplicada.
+    """
+
+    keys: List[str] = Field(..., min_length=1, max_length=50)
+
+    @field_validator("keys")
+    @classmethod
+    def limpar(cls, valores: List[str]) -> List[str]:
+        limpas: List[str] = []
+        for valor in valores:
+            chave = (valor or "").strip()
+            if not chave:
+                continue
+            if len(chave) > 512:
+                raise ValueError("Chave longa demais (máximo de 512 caracteres).")
+            if chave not in limpas:
+                limpas.append(chave)
+        if not limpas:
+            raise ValueError("Informe ao menos uma chave.")
+        return limpas
 
 
 class AISettingsResponse(BaseModel):

@@ -33,7 +33,10 @@ class ValidateInviteResponse(BaseModel):
 class RegisterWithInviteRequest(BaseModel):
     invite_code: str = Field(..., min_length=4, max_length=64)
     username: str = Field(..., min_length=3, max_length=64)
-    password: str = Field(..., min_length=8, max_length=128)
+    # 12, e não 8: é o mínimo de `security.passwords`, que roda depois. Com 8
+    # aqui, uma senha de 9 caracteres passava na validação do formulário,
+    # a pessoa preenchia o cadastro inteiro e só então era recusada.
+    password: str = Field(..., min_length=12, max_length=128)
     full_name: str = Field(..., min_length=2, max_length=200)
     email: str = Field(..., min_length=5, max_length=320)
     phone: Optional[str] = Field("", max_length=50)
@@ -127,3 +130,116 @@ class InviteResponse(BaseModel):
 class InviteListResponse(BaseModel):
     invites: list[InviteResponse]
     total: int
+
+
+# ── Solicitações públicas de convite (página de login) ────────────────
+#
+# Quem chega ao Revsist sem convite precisa de um caminho que não seja
+# "procure o administrador por fora". Estes schemas descrevem esse caminho:
+# o formulário público de pedido e a visão administrativa da fila.
+
+STATUS_SOLICITACAO = ("pendente", "aprovado", "recusado")
+
+
+class InviteRequestCreate(BaseModel):
+    """Pedido de convite enviado da página de login, sem sessão."""
+
+    nome: str = Field(..., min_length=3, max_length=120)
+    email: str = Field(..., min_length=5, max_length=255)
+    telefone: str = Field(..., min_length=8, max_length=50)
+    onde_conheceu: str = Field(..., min_length=2, max_length=255)
+    instituicao: Optional[str] = Field("", max_length=255)
+
+    @field_validator("nome", "telefone", "onde_conheceu", mode="before")
+    @classmethod
+    def limpar_obrigatorios(cls, v: any) -> str:
+        return str(v or "").strip()
+
+    @field_validator("instituicao", mode="before")
+    @classmethod
+    def limpar_instituicao(cls, v: any) -> str:
+        return str(v or "").strip()
+
+    @field_validator("email")
+    @classmethod
+    def validar_email(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not EMAIL_REGEX.match(v):
+            raise ValueError("Endereço de e-mail inválido.")
+        return v
+
+
+class InviteRequestPublicResponse(BaseModel):
+    """
+    Confirmação devolvida a quem enviou o pedido.
+
+    Deliberadamente magra: não devolve o registro, porque a rota é pública e
+    ecoar o que foi gravado transformaria o formulário em consulta de quem já
+    pediu acesso.
+    """
+
+    received: bool = True
+    message: str
+
+
+class InviteRequestResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    nome: str
+    email: str
+    telefone: str
+    onde_conheceu: str
+    instituicao: Optional[str] = ""
+    status: str
+    created_at: datetime
+    responded_at: Optional[datetime] = None
+    invite_code_generated: Optional[str] = None
+    admin_notes: Optional[str] = ""
+
+
+class InviteRequestListResponse(BaseModel):
+    requests: list[InviteRequestResponse]
+    total: int
+    pendentes: int
+
+
+class InviteRequestUpdate(BaseModel):
+    """Mudança de status ou anotação interna sobre um pedido."""
+
+    status: Optional[str] = Field(None, max_length=20)
+    admin_notes: Optional[str] = Field(None, max_length=2000)
+
+    @field_validator("status")
+    @classmethod
+    def validar_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        v = v.strip().lower()
+        if v not in STATUS_SOLICITACAO:
+            raise ValueError(
+                f"Status inválido. Use um de: {', '.join(STATUS_SOLICITACAO)}."
+            )
+        return v
+
+
+class InviteRequestApprove(BaseModel):
+    """Aprovação: emite um convite de uso único ligado ao pedido."""
+
+    expires_in_days: Optional[int] = Field(14, ge=1, le=365)
+    note: Optional[str] = Field(None, max_length=255)
+
+
+class InviteRequestApproveResponse(BaseModel):
+    request: InviteRequestResponse
+    invite: InviteResponse
+    # ── O aviso a quem foi aprovado ──────────────────────────────────
+    #
+    # Estes campos descrevem o que aconteceu com o aviso, e são separados do
+    # resultado da aprovação de propósito: a concessão de acesso vale mesmo
+    # que o e-mail não tenha saído. O painel lê `email_enviado` para dizer o
+    # que falta fazer à mão, em vez de deixar o administrador supondo.
+    link_direto: str = ""
+    whatsapp_url: str = ""
+    email_enviado: bool = False
+    email_detalhe: str = ""

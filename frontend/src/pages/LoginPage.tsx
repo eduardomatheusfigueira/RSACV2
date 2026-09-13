@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   AlertCircle,
   Award,
@@ -16,7 +17,9 @@ import {
   KeyRound,
   LogIn,
   Mail,
+  MailQuestion,
   Phone,
+  Send,
   ShieldCheck,
   Ticket,
   User,
@@ -30,8 +33,9 @@ import './LoginPage.css'
 
 export function LoginPage(): JSX.Element {
   const { login, registerWithInvite, error, submitting, status, setError } = useAuthStore()
+  const location = useLocation()
 
-  const [activeTab, setActiveTab] = useState<'login' | 'invite'>('login')
+  const [activeTab, setActiveTab] = useState<'login' | 'invite' | 'request'>('login')
 
   // Estado do formulário de Login
   const [username, setUsername] = useState('')
@@ -40,6 +44,8 @@ export function LoginPage(): JSX.Element {
 
   // Estado do fluxo de Convite
   const [inviteStep, setInviteStep] = useState<'validate' | 'form'>('validate')
+  // Convite chegou por link (`/c/CODIGO`) em vez de digitado?
+  const [veioPorLink, setVeioPorLink] = useState(false)
   const [inviteCodeInput, setInviteCodeInput] = useState('')
   const [validatingInvite, setValidatingInvite] = useState(false)
   const [inviteNote, setInviteNote] = useState('')
@@ -60,13 +66,73 @@ export function LoginPage(): JSX.Element {
   const [regPasswordConfirm, setRegPasswordConfirm] = useState('')
   const [regTermsAccepted, setRegTermsAccepted] = useState(false)
 
+  // Estado do pedido de convite (para quem ainda não tem código)
+  const [reqName, setReqName] = useState('')
+  const [reqEmail, setReqEmail] = useState('')
+  const [reqPhone, setReqPhone] = useState('')
+  const [reqInstitution, setReqInstitution] = useState('')
+  const [reqSource, setReqSource] = useState('')
+  const [reqSourceDetail, setReqSourceDetail] = useState('')
+  const [sendingRequest, setSendingRequest] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
+  const reqNameRef = useRef<HTMLInputElement>(null)
+
+  /**
+   * Convite que chegou pronto no endereço.
+   *
+   * O backend redireciona `revsist.com/c/RSAC-XXXX` para `#/convite/RSAC-XXXX`,
+   * e é aqui que esse caminho vira tela: o código é validado sozinho e, dando
+   * certo, a pessoa cai direto no formulário de cadastro. O ponto do link é
+   * não pedir que ninguém copie, cole ou digite o código — parar num campo
+   * preenchido esperando um clique em "Validar" desperdiçaria metade disso.
+   *
+   * Se a validação falhar — convite revogado, expirado, já usado —, a tela
+   * fica no passo do código com o erro explicado. Nesse caso o campo
+   * preenchido ajuda: a pessoa vê qual código foi recusado.
+   */
+  useEffect(() => {
+    const m = location.pathname.match(/^\/convite\/([A-Za-z0-9-]{4,32})$/)
+    if (!m) return
+
+    const codigo = m[1].toUpperCase()
+    setActiveTab('invite')
+    setInviteCodeInput(codigo)
+    setVeioPorLink(true)
+
+    let cancelado = false
+    const validar = async () => {
+      setValidatingInvite(true)
+      setError(null)
+      try {
+        const res = await api.validateInvite(codigo)
+        if (cancelado) return
+        if (res.valid) {
+          setInviteNote(res.note || 'Convite válido.')
+          setInviteStep('form')
+        }
+      } catch (err: any) {
+        if (cancelado) return
+        setError(err?.message || 'Este convite não é mais válido.')
+        setInviteStep('validate')
+      } finally {
+        if (!cancelado) setValidatingInvite(false)
+      }
+    }
+    void validar()
+    return () => {
+      cancelado = true
+    }
+  }, [location.pathname])
+
   useEffect(() => {
     if (activeTab === 'login') {
       usuarioRef.current?.focus()
-    } else if (inviteStep === 'validate') {
+    } else if (activeTab === 'request') {
+      reqNameRef.current?.focus()
+    } else if (inviteStep === 'validate' && !veioPorLink) {
       inviteCodeRef.current?.focus()
     }
-  }, [activeTab, inviteStep])
+  }, [activeTab, inviteStep, veioPorLink])
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,6 +167,50 @@ export function LoginPage(): JSX.Element {
     }
   }
 
+  const handleRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    if (reqName.trim().length < 3) {
+      setError('Informe seu nome completo.')
+      return
+    }
+    if (!reqEmail.trim().includes('@')) {
+      setError('Informe um endereço de e-mail válido — é por ele que o convite chega.')
+      return
+    }
+    if (reqPhone.trim().length < 8) {
+      setError('Informe um telefone de contato.')
+      return
+    }
+    if (!reqSource) {
+      setError('Conte como você chegou até o Revsist.')
+      return
+    }
+
+    // O campo aberto complementa a escolha em vez de substituí-la: "Outro" sem
+    // detalhe não diria nada a quem avalia o pedido.
+    const origem = reqSourceDetail.trim()
+      ? `${reqSource} — ${reqSourceDetail.trim()}`
+      : reqSource
+
+    setSendingRequest(true)
+    try {
+      await api.requestInvite({
+        nome: reqName.trim(),
+        email: reqEmail.trim().toLowerCase(),
+        telefone: reqPhone.trim(),
+        onde_conheceu: origem.slice(0, 255),
+        instituicao: reqInstitution.trim(),
+      })
+      setRequestSent(true)
+    } catch (err: any) {
+      setError(err?.message || 'Não foi possível enviar o pedido. Tente novamente em instantes.')
+    } finally {
+      setSendingRequest(false)
+    }
+  }
+
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -117,8 +227,8 @@ export function LoginPage(): JSX.Element {
       setError('Escolha um nome de usuário para login.')
       return
     }
-    if (!regPassword || regPassword.length < 8) {
-      setError('A senha deve conter no mínimo 8 caracteres.')
+    if (!regPassword || regPassword.length < 12) {
+      setError('A senha deve conter no mínimo 12 caracteres.')
       return
     }
     if (regPassword !== regPasswordConfirm) {
@@ -207,6 +317,20 @@ export function LoginPage(): JSX.Element {
                 <Ticket size={15} />
                 <span>Tenho um convite</span>
               </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'request'}
+                className={`login-tab ${activeTab === 'request' ? 'login-tab--active' : ''}`}
+                onClick={() => {
+                  setActiveTab('request')
+                  setError(null)
+                }}
+              >
+                <MailQuestion size={15} />
+                <span>Quero um convite</span>
+              </button>
             </div>
 
             {/* Mensagem de Erro Geral */}
@@ -266,8 +390,9 @@ export function LoginPage(): JSX.Element {
                   <form className="login-form" onSubmit={handleValidateInvite}>
                     <div className="invite-intro">
                       <p>
-                        O registro no Revsist é realizado exclusivamente mediante convite de uso único.
-                        Insira o código fornecido pelo orientador ou administrador:
+                        {veioPorLink
+                          ? 'Este é o código que veio no seu link. Confira se é o mesmo da mensagem que você recebeu e tente novamente.'
+                          : 'O registro no Revsist é realizado exclusivamente mediante convite de uso único. Insira o código fornecido pelo orientador ou administrador:'}
                       </p>
                     </div>
 
@@ -299,7 +424,17 @@ export function LoginPage(): JSX.Element {
                   <form className="login-form registration-grid-form" onSubmit={handleRegisterSubmit}>
                     <div className="invite-badge-success">
                       <CheckCircle2 size={16} />
-                      <span>Convite Validado: <strong>{inviteCodeInput}</strong> {inviteNote && `(${inviteNote})`}</span>
+                      <span>
+                        {veioPorLink ? 'Convite reconhecido pelo seu link: ' : 'Convite Validado: '}
+                        <strong>{inviteCodeInput}</strong>
+                        {/* A nota é rótulo interno do administrador, e a nota
+                            de um convite aprovado carrega o nome e o e-mail de
+                            quem pediu. Ela ajuda quem digitou o código a
+                            confirmar que é o seu; num link encaminhado, só
+                            entregaria o contato do destinatário original a
+                            quem recebeu o encaminhamento. */}
+                        {!veioPorLink && inviteNote && ` (${inviteNote})`}
+                      </span>
                     </div>
 
                     <div className="reg-section-title">1. Dados Pessoais e Institucionais</div>
@@ -348,7 +483,7 @@ export function LoginPage(): JSX.Element {
                           id="reg-inst"
                           value={regInstitution}
                           onChange={(e) => setRegInstitution(e.target.value)}
-                          placeholder="ex: UFRGS, USP, IBICT..."
+                          placeholder="ex: UFRGS, USP, IBICT…"
                           leftIcon={<Building2 size={14} />}
                           disabled={submitting}
                         />
@@ -441,7 +576,7 @@ export function LoginPage(): JSX.Element {
                         />
                       </FormGroup>
 
-                      <FormGroup label="Senha (mín. 8 dígitos) *" htmlFor="reg-pass">
+                      <FormGroup label="Senha (mín. 12 caracteres) *" htmlFor="reg-pass">
                         <Input
                           id="reg-pass"
                           type="password"
@@ -507,6 +642,148 @@ export function LoginPage(): JSX.Element {
                   </form>
                 )}
               </>
+            )}
+
+            {/* ABA 3: PEDIDO DE CONVITE */}
+            {activeTab === 'request' && (
+              requestSent ? (
+                <div className="request-sent-box" role="status">
+                  <CheckCircle2 size={34} className="request-sent-icon" />
+                  <h2 className="request-sent-title">Pedido enviado</h2>
+                  <p className="request-sent-text">
+                    Seu pedido chegou à coordenação do Revsist. A avaliação é manual,
+                    e a resposta — com o código de convite, se aprovado — vai para{' '}
+                    <strong>{reqEmail.trim().toLowerCase()}</strong>.
+                  </p>
+                  <p className="request-sent-text request-sent-text--muted">
+                    Já tem um código em mãos? Use a aba <strong>Tenho um convite</strong> para concluir o cadastro.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    onClick={() => {
+                      setActiveTab('login')
+                      setRequestSent(false)
+                    }}
+                  >
+                    Voltar ao acesso
+                  </Button>
+                </div>
+              ) : (
+                <form className="login-form" onSubmit={handleRequestSubmit}>
+                  <div className="invite-intro">
+                    <p>
+                      Ainda não tem um convite? Deixe seus dados abaixo. A coordenação
+                      avalia cada pedido e envia o código de acesso por e-mail.
+                    </p>
+                  </div>
+
+                  <FormGroup label="Nome Completo *" htmlFor="req-name">
+                    <Input
+                      id="req-name"
+                      ref={reqNameRef}
+                      value={reqName}
+                      onChange={(e) => setReqName(e.target.value)}
+                      placeholder="Maria Silva"
+                      leftIcon={<User size={15} />}
+                      disabled={sendingRequest}
+                      autoComplete="name"
+                      required
+                    />
+                  </FormGroup>
+
+                  <div className="reg-grid-2">
+                    <FormGroup label="E-mail *" htmlFor="req-email">
+                      <Input
+                        id="req-email"
+                        type="email"
+                        value={reqEmail}
+                        onChange={(e) => setReqEmail(e.target.value)}
+                        placeholder="pesquisador@universidade.edu.br"
+                        leftIcon={<Mail size={15} />}
+                        disabled={sendingRequest}
+                        autoComplete="email"
+                        required
+                      />
+                    </FormGroup>
+
+                    <FormGroup label="Telefone / WhatsApp *" htmlFor="req-phone">
+                      <Input
+                        id="req-phone"
+                        value={reqPhone}
+                        onChange={(e) => setReqPhone(e.target.value)}
+                        placeholder="(51) 99999-8888"
+                        leftIcon={<Phone size={15} />}
+                        disabled={sendingRequest}
+                        autoComplete="tel"
+                        required
+                      />
+                    </FormGroup>
+                  </div>
+
+                  <FormGroup label="Universidade / Instituição" htmlFor="req-inst">
+                    <Input
+                      id="req-inst"
+                      value={reqInstitution}
+                      onChange={(e) => setReqInstitution(e.target.value)}
+                      placeholder="ex: UFRGS, USP, IBICT…"
+                      leftIcon={<Building2 size={15} />}
+                      disabled={sendingRequest}
+                    />
+                  </FormGroup>
+
+                  <FormGroup label="Como você ficou sabendo do Revsist? *" htmlFor="req-source">
+                    <div className="select-wrapper">
+                      <MailQuestion size={14} className="select-left-icon" />
+                      <select
+                        id="req-source"
+                        className="rsac-custom-select"
+                        value={reqSource}
+                        onChange={(e) => setReqSource(e.target.value)}
+                        disabled={sendingRequest}
+                        required
+                      >
+                        <option value="">Selecione…</option>
+                        <option value="Indicação de orientador(a) ou colega">Indicação de orientador(a) ou colega</option>
+                        <option value="Apresentação em aula, evento ou congresso">Apresentação em aula, evento ou congresso</option>
+                        <option value="Programa de pós-graduação">Programa de pós-graduação</option>
+                        <option value="Busca na internet">Busca na internet</option>
+                        <option value="Redes sociais">Redes sociais</option>
+                        <option value="Artigo ou publicação">Artigo ou publicação</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
+                  </FormGroup>
+
+                  <FormGroup label="Detalhe (opcional)" htmlFor="req-source-detail">
+                    <Input
+                      id="req-source-detail"
+                      value={reqSourceDetail}
+                      onChange={(e) => setReqSourceDetail(e.target.value)}
+                      placeholder="ex: nome de quem indicou, evento, perfil…"
+                      disabled={sendingRequest}
+                    />
+                  </FormGroup>
+
+                  <p className="request-privacy-note">
+                    Estes dados são usados apenas para avaliar e responder ao seu pedido de
+                    acesso. Se o pedido for recusado, você pode solicitar a exclusão do
+                    registro a qualquer momento.
+                  </p>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    loading={sendingRequest}
+                    leftIcon={<Send size={16} />}
+                    className="login-submit"
+                  >
+                    {sendingRequest ? 'Enviando…' : 'Enviar Pedido de Convite'}
+                  </Button>
+                </form>
+              )
             )}
           </>
         )}

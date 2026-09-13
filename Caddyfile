@@ -17,7 +17,7 @@
 {
     # Configurações globais
     admin off
-    email {$RSAC_CONTACT_EMAIL:contato@revsist.org}
+    email {$RSAC_CONTACT_EMAIL:eduardomatheusfigueira@gmail.com}
     log {
         output stdout
         format json

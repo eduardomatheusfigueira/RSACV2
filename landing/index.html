@@ -3,43 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Revsist — Revisão sistemática com rastro</title>
-  <meta name="description" content="Software acadêmico para conduzir revisão sistemática do protocolo à exportação com rastro auditável de decisões, 11 diretrizes metodológicas e bases nacionais e internacionais." />
-  <meta name="keywords" content="revisão sistemática, PRISMA 2020, PRISMA-ScR, JBI, Cochrane, BDTD, SciELO, síntese de evidências, scoping review, pós-graduação" />
+  <title>Revsist — faça sua revisão sistemática do começo ao fim, sem planilha</title>
+  <meta name="description" content="Programa gratuito para revisão sistemática e revisão de escopo: busca em cinco bases de uma vez, ajuda a decidir artigo por artigo, guarda o motivo de cada escolha e monta o diagrama PRISMA no fim." />
+  <meta name="keywords" content="revisão sistemática, revisão de escopo, scoping review, PRISMA 2020, PRISMA-ScR, JBI, BDTD, SciELO, Scopus, OpenAlex, PubMed, pós-graduação, dissertação, tese" />
   <meta name="author" content="Eduardo Matheus Figueira" />
   <meta name="robots" content="index, follow" />
-  <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#e7ecef" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0d1b2a" media="(prefers-color-scheme: dark)" />
+  <meta name="color-scheme" content="light" />
+  <meta name="theme-color" content="#274c77" />
   <link rel="canonical" href="https://revsist.com/" />
   <link rel="alternate" type="application/rss+xml" title="Feed RSS do Blog Revsist" href="/feed.xml" />
 
-  <!-- Preload da fonte tipográfica principal auto-hospedada (zero requisições a terceiros) -->
+  <!-- Preload da fonte tipográfica principal auto-hospedada (zero CDN) -->
   <link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin />
 
   <!-- Política de segurança de conteúdo estrita (CSP) -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" />
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';" />
 
   <!-- Open Graph / Redes Sociais -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Revsist" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:url" content="https://revsist.com/" />
-  <meta property="og:title" content="Revsist — Revisão sistemática com rastro" />
-  <meta property="og:description" content="Software acadêmico para conduzir revisão sistemática com rastro auditável, 11 diretrizes metodológicas e bases nacionais e globais." />
+  <meta property="og:title" content="Revsist — revisão sistemática do começo ao fim" />
+  <meta property="og:description" content="Busque em cinco bases de uma vez, decida artigo por artigo e baixe o diagrama PRISMA pronto. Grátis e de código aberto." />
   <meta property="og:image" content="https://revsist.com/og-image.png" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Monograma R-lupa do Revsist sobre fundo azul-escuro com o nome Revsist e o selo v2.0 BETA." />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Revsist — Revisão sistemática com rastro" />
-  <meta name="twitter:description" content="Software acadêmico para conduzir revisão sistemática com rastro auditável e conformidade metodológica." />
+  <meta name="twitter:title" content="Revsist — revisão sistemática do começo ao fim" />
+  <meta name="twitter:description" content="Busque em cinco bases de uma vez, decida artigo por artigo e baixe o diagrama PRISMA pronto. Grátis e de código aberto." />
   <meta name="twitter:image" content="https://revsist.com/og-image.png" />
-  <meta name="twitter:image:alt" content="Monograma R-lupa do Revsist com o nome Revsist e o selo v2.0 BETA." />
 
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -53,7 +50,7 @@
     "name": "Revsist",
     "url": "https://revsist.com/",
     "applicationCategory": "EducationalApplication",
-    "applicationSubCategory": "Síntese de evidências e revisão sistemática de literatura",
+    "applicationSubCategory": "Revisão sistemática e revisão de escopo de literatura",
     "operatingSystem": "Web, Windows, Linux, macOS",
     "inLanguage": "pt-BR",
     "offers": {
@@ -61,12 +58,10 @@
       "price": "0",
       "priceCurrency": "BRL"
     },
-    "description": "Sistema para conduzir revisão sistemática do protocolo à exportação com rastro auditável de decisões, integração com BDTD, SciELO, PubMed, Scopus e OpenAlex, e conformidade com 11 diretrizes metodológicas.",
+    "description": "Programa para conduzir uma revisão sistemática do começo ao fim: busca simultânea em BDTD, SciELO, Scopus, OpenAlex e PubMed, leitura com dois revisores, registro do motivo de cada decisão e diagrama PRISMA 2020 gerado automaticamente.",
     "softwareVersion": "2.0.0-beta",
-    "releaseNotes": "Versão beta aberta.",
     "license": "https://opensource.org/licenses/MIT",
     "isAccessibleForFree": true,
-    "codeRepository": "https://github.com/eduardomatheusfigueira/RSACV2",
     "author": {
       "@type": "Person",
       "name": "Eduardo Matheus Figueira"
@@ -74,7 +69,69 @@
   }
   </script>
 
-  <!-- Folha de estilo principal da landing -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Preciso entender de metodologia para usar o Revsist?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ajuda, mas o programa vai conduzindo. Você escolhe um dos onze roteiros já cadastrados (PRISMA 2020, PRISMA-ScR, JBI e outros) e ele mostra, etapa por etapa, o que precisa ser preenchido e o que ainda falta. O blog do Revsist tem textos explicando cada etapa em português."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "A inteligência artificial decide por mim quais artigos entram?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Não. A IA lê o resumo, compara com os critérios que você escreveu e dá uma opinião. Quem inclui ou exclui é você, e fica registrado que houve opinião da IA, qual modelo respondeu e o que ele disse. Sem a sua confirmação, nada é decidido."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Em quais bases o Revsist procura?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "BDTD (teses e dissertações brasileiras), SciELO, Scopus, OpenAlex e PubMed, todas na mesma busca. Você também pode subir um arquivo RIS ou BibTeX exportado do Zotero, do Mendeley ou de qualquer outra base."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Serve para revisão de escopo (scoping review)?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Serve. Estão cadastrados os roteiros PRISMA-ScR e JBI Scoping Review, com o esquema PCC (população, conceito, contexto) e as listas de conferência próprias de revisão de escopo."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quanto custa, e os meus dados ficam com vocês?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Não custa nada e não pede cartão. O código é aberto sob licença MIT, então você pode rodar o Revsist no seu próprio computador ou servidor. Se usar a ajuda da IA, a chave do serviço é sua — inclusive de um modelo instalado na sua máquina."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <script>
+    /* Aceite de termos: marca o documento antes da primeira pintura. O véu e o
+       texto vêm de src/scripts/aceite.js; aqui só se decide se a página nasce
+       bloqueada, porque essa decisão não pode esperar o módulo carregar. */
+    (function () {
+      try {
+        var p = location.pathname.replace(/\/+$/, '') || '/';
+        if (p === '/termos' || p === '/privacidade') return;
+        var b = localStorage.getItem('rsac_aceite_termos');
+        if (b && JSON.parse(b).versao === '2026-09') return;
+      } catch (e) { return; }
+      document.documentElement.setAttribute('data-aceite', 'pendente');
+    })();
+  </script>
   <link rel="stylesheet" href="./src/styles/landing.css" />
   <noscript><link rel="stylesheet" href="/styles/nojs.css" /></noscript>
 </head>
@@ -82,521 +139,1168 @@
 
   <a class="skip-link" href="#conteudo">Ir direto ao conteúdo</a>
 
-  <!-- ── Topo / Cabeçalho de Navegação ──────────────────────────────────────── -->
-  <header class="site-header" role="banner">
-    <div class="container header-inner">
-      <a href="/" class="brand-link" aria-label="Revsist — página inicial">
-        <svg class="brand-mark" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- ── BIBLIOTECA DE ÍCONES SVG ─────────────────────────────────────────
+       Um único sprite, sem fontes de ícone e sem emoji. Todos herdam a cor do
+       contexto e a espessura definida em .icone.
+
+       `i-marca` é o monograma oficial "R-Lupa", copiado de brand/svg/rsac-mark.svg:
+       a haste e a lente pegam a cor do texto e o cabo da lupa recebe o acento por
+       `--marca-cabo` — variável, porque é a única forma de pintar por dentro de um
+       <use>. Não redesenhe: brand/IDENTIDADE_VISUAL.md deriva essas coordenadas
+       por construção geométrica, e mexer nelas quebra a junção haste-lente. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-marca" viewBox="0 0 80 100">
+        <g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
           <path d="M 7 7 V 93" />
           <circle cx="32" cy="32" r="25" />
-          <path d="M 45.946 52.749 L 73 93" />
-        </svg>
+          <path d="M 45.946 52.749 L 73 93" stroke="var(--marca-cabo, currentColor)" />
+        </g>
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+      <symbol id="i-escudo" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6l-8-3Z" /><path d="m9 12 2 2 4-4" /></symbol>
+      <symbol id="i-lista" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11" /><path d="m3 6 1.2 1.2L6.5 5M3 12l1.2 1.2L6.5 11M3 18l1.2 1.2L6.5 16" /></symbol>
+      <symbol id="i-globo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9S14.5 18.3 12 21c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z" /></symbol>
+      <symbol id="i-base" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" /><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" /></symbol>
+      <symbol id="i-camadas" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></symbol>
+      <symbol id="i-documento" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></symbol>
+      <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16" /><path d="M8 20v-6M13 20V8M18 20v-9" /></symbol>
+      <symbol id="i-pessoas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" /><path d="M16 5.5a3.2 3.2 0 0 1 0 6M18 14.8c2 .8 3.4 2.6 3.4 5.2" /></symbol>
+      <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-seta" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" /></symbol>
+      <symbol id="i-codigo" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" /></symbol>
+      <symbol id="i-imagem" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.6" /><path d="m4 17 5-4.5 4 3.2 3-2.4 4 3.4" /></symbol>
+      <symbol id="i-pausa" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5-13-7.5Z" /></symbol>
+    </defs>
+  </svg>
+
+  <!-- ── CABEÇALHO ────────────────────────────────────────────────────────── -->
+  <header class="site-header" id="topo">
+    <div class="header-container">
+      <a href="/" class="brand-logo" aria-label="Revsist — página inicial">
+        <svg class="brand-mark-svg" viewBox="0 0 80 100" aria-hidden="true" focusable="false"><use href="#i-marca" /></svg>
         <span class="brand-name">Revsist</span>
-        <span class="badge-beta">v2.0 BETA</span>
+        <span class="badge badge-beta">v2.0 beta</span>
       </a>
 
-      <nav class="nav-links" id="nav-links" aria-label="Navegação principal">
-        <a href="#como-funciona" class="nav-link">Como funciona</a>
-        <a href="#diretrizes" class="nav-link">Diretrizes</a>
-        <a href="/blog" class="nav-link">Blog</a>
-      </nav>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menu de navegação">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
 
-      <div class="header-actions">
-        <a href="/app" class="btn btn-sm btn-primary" id="cta-header">Entrar no Revsist</a>
-        <button type="button" class="btn-nav-toggle" id="nav-toggle-btn" aria-expanded="false" aria-controls="nav-links" aria-label="Abrir menu de navegação">
-          <span class="nav-toggle-bar"></span>
-          <span class="nav-toggle-bar"></span>
-          <span class="nav-toggle-bar"></span>
-        </button>
-      </div>
+      <nav class="main-nav" id="main-nav" aria-label="Navegação principal">
+        <ul class="nav-list">
+          <li><a href="#como-funciona" class="nav-link">Como funciona</a></li>
+          <li><a href="#registro" class="nav-link">O que fica guardado</a></li>
+          <li><a href="#diretrizes" class="nav-link">Roteiros</a></li>
+          <li><a href="#perguntas" class="nav-link">Dúvidas</a></li>
+          <li><a href="/blog" class="nav-link">Blog</a></li>
+        </ul>
+        <div class="nav-actions">
+          <a href="/app" class="btn btn-chrome btn-sm">Entrar no Revsist</a>
+        </div>
+      </nav>
     </div>
   </header>
 
-  <!-- ── Conteúdo Principal ─────────────────────────────────────────────────── -->
   <main id="conteudo">
 
-    <!-- ── Dobra 0: Hero com Print LCP ────────────────────────────────────── -->
-    <section class="hero-section" aria-labelledby="hero-title">
-      <div class="container hero-container">
-        <div class="hero-header-block">
-          <div class="hero-badge-wrap">
-            <span class="badge badge-accent">BETA · Plataforma em desenvolvimento ativo</span>
+    <!-- ── HERO ───────────────────────────────────────────────────────────── -->
+    <section class="hero" aria-labelledby="hero-titulo">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-texto">
+            <p class="hero-status">
+              <span class="ponto-vivo" aria-hidden="true"></span>
+              Grátis · beta aberta · código aberto
+            </p>
+
+            <h1 id="hero-titulo" class="hero-titulo">
+              Sua revisão sistemática do começo ao fim, <span class="destaque">sem planilha</span>.
+            </h1>
+
+            <p class="hero-descricao">
+              Busque em cinco bases de uma vez, decida artigo por artigo com um colega conferindo e
+              baixe no fim o diagrama que a revista pede. O Revsist anota cada escolha sua — para
+              quando alguém perguntar por que aquele artigo ficou de fora.
+            </p>
+
+            <div class="hero-acoes">
+              <a href="/app" class="btn btn-accent btn-lg">
+                Começar agora, de graça
+                <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-seta" /></svg>
+              </a>
+              <a href="#como-funciona" class="btn btn-secondary btn-lg">Ver como funciona</a>
+            </div>
+
+            <ul class="hero-provas">
+              <li class="hero-prova">
+                <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg>
+                <span>Não pede <strong>cartão</strong></span>
+              </li>
+              <li class="hero-prova">
+                <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg>
+                <span>Roda no <strong>navegador</strong></span>
+              </li>
+              <li class="hero-prova">
+                <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg>
+                <span>Inclui as <strong>bases brasileiras</strong></span>
+              </li>
+            </ul>
           </div>
-          <h1 id="hero-title" class="hero-title">
-            Software para conduzir revisão sistemática do protocolo à exportação.
-          </h1>
-          <p class="hero-desc">
-            Desenvolvido para pós-graduação e grupos de pesquisa acadêmica. Integra bases de dados bibliográficas nacionais e internacionais, com registro auditável de cada decisão metodológica e pareceres assistidos por modelos de linguagem.
+
+          <!-- Laço de demonstração renderizado em Remotion: sem moldura de
+               navegador, sem barra de transporte, dissolvido na página. -->
+          <div class="hero-video laco">
+            <video
+              class="laco-video"
+              data-laco
+              width="1440"
+              height="810"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              poster="/videos/revsist-hero-poster.jpg"
+              aria-label="Demonstração do Revsist em uso: escrever a pergunta da pesquisa, buscar em cinco bases, decidir artigo por artigo, preencher a ficha de cada estudo e baixar o diagrama no fim."
+            >
+              <source src="/videos/revsist-hero.mp4" type="video/mp4" />
+            </video>
+            <button type="button" class="laco-pausa" data-laco-pausa aria-label="Pausar a animação">
+              <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pausa" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FAIXA DE BASES ─────────────────────────────────────────────────── -->
+    <section class="faixa-bases" aria-label="Bases em que o Revsist procura">
+      <div class="container">
+        <span class="faixa-rotulo">Uma busca, cinco bases</span>
+        <span class="faixa-base"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-base" /></svg> BDTD</span>
+        <span class="faixa-base"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-base" /></svg> SciELO</span>
+        <span class="faixa-base"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-globo" /></svg> Scopus</span>
+        <span class="faixa-base"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-globo" /></svg> OpenAlex</span>
+        <span class="faixa-base"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-globo" /></svg> PubMed</span>
+      </div>
+    </section>
+
+    <!-- ── O PROBLEMA ─────────────────────────────────────────────────────── -->
+    <section class="secao secao--contorno secao--dores" aria-labelledby="problema-titulo">
+      <div class="container">
+        <div class="cabecalho-secao">
+          <p class="kicker">Por que existe</p>
+          <h2 id="problema-titulo" class="titulo-secao">O tempo da revisão some entre abas e planilhas</h2>
+          <p class="lead">
+            O site de cada base, várias abas abertas, PDF baixando e a planilha do lado. Numa
+            revisão feita à mão, boa parte do tempo vai em copiar, colar e lembrar onde você parou,
+            e não em ler e decidir.
           </p>
-          <p class="hero-signature">Revisão sistemática com rastro.</p>
+        </div>
+      </div>
 
-          <div class="hero-cta-group">
-            <a href="/app" class="btn btn-primary" id="cta-hero">Entrar no Revsist</a>
-            <a href="#como-funciona" class="btn btn-secondary">Ver como funciona</a>
-          </div>
+      <!-- Faixa ultralarga: a mesma revisão, na mão e no Revsist. Sangra de
+           borda a borda da janela; as réguas de cima e de baixo são CSS puro. -->
+      <figure class="faixa-clipe laco">
+        <div class="container faixa-clipe-topo">
+          <span class="faixa-clipe-etiqueta">A mesma revisão, de dois jeitos</span>
+        </div>
+        <div class="faixa-clipe-rolagem">
+        <video
+          class="faixa-clipe-video"
+          data-laco
+          width="1920"
+          height="480"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="none"
+          poster="/videos/revsist-faixa-poster.jpg"
+          aria-label="Animação em faixa. Primeiro, na mão: cinco sites de bases, uma planilha e uma pilha de PDFs, com o cursor indo de um para o outro copiando e colando. Depois, no Revsist: um caminho só, com plano da pesquisa, busca nas cinco bases, títulos e resumos, texto completo e ficha, marcando o que fazer agora e o que vem em seguida."
+        >
+          <source src="/videos/revsist-faixa.mp4" type="video/mp4" />
+        </video>
+        </div>
+        <button type="button" class="laco-pausa" data-laco-pausa aria-label="Pausar a animação">
+          <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pausa" /></svg>
+        </button>
+      </figure>
 
-          <p class="hero-access-note" id="cta-hero-note">
-            Acesso acadêmico livre. Projetos salvos na nuvem ou no seu computador local.
+      <div class="container">
+        <ol class="dores" data-dores>
+          <li class="dor dor--trilho">
+            <div class="dor-lado">
+              <div class="dor-cabeca">
+                <span class="dor-icone"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-seta" /></svg></span>
+                <span class="dor-num" aria-hidden="true">01</span>
+              </div>
+              <h3 class="dor-titulo">Qual é o próximo passo?</h3>
+              <p class="dor-texto">
+                Buscar, ler, decidir, anotar: no meio de tanta etapa, é fácil perder o fio e não
+                saber o que falta.
+              </p>
+              <p class="dor-rotulo">Na mão</p>
+              <ul class="dor-vaivem">
+                <li><span>abrir a planilha</span></li>
+                <li><span>procurar onde parou</span></li>
+                <li><span>adivinhar o que falta</span></li>
+              </ul>
+            </div>
+
+            <div class="dor-painel">
+              <p class="trilho-mini-estado">
+                <span><b>Agora</b> Títulos e resumos</span>
+                <span><b>Em seguida</b> Texto completo</span>
+              </p>
+              <ol class="trilho-mini" aria-label="Exemplo de andamento de uma revisão no Revsist">
+                <li class="trilho-mini-passo is-feito"><span class="trilho-mini-no"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-check" /></svg></span><span class="trilho-mini-nome">Plano da pesquisa</span></li>
+                <li class="trilho-mini-passo is-feito"><span class="trilho-mini-no"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-check" /></svg></span><span class="trilho-mini-nome">Busca</span></li>
+                <li class="trilho-mini-passo is-agora" aria-current="step"><span class="trilho-mini-no"></span><span class="trilho-mini-nome">Títulos e resumos</span></li>
+                <li class="trilho-mini-passo"><span class="trilho-mini-no"></span><span class="trilho-mini-nome">Texto completo</span></li>
+                <li class="trilho-mini-passo"><span class="trilho-mini-no"></span><span class="trilho-mini-nome">Ficha</span></li>
+              </ol>
+              <p class="dor-solucao">
+                <span class="dor-selo">No Revsist</span>
+                Você vê o que fazer agora, o que vem em seguida e o que já está pronto.
+              </p>
+            </div>
+          </li>
+
+          <li class="dor">
+            <div class="dor-cabeca">
+              <span class="dor-icone"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-base" /></svg></span>
+              <span class="dor-num" aria-hidden="true">02</span>
+            </div>
+            <h3 class="dor-titulo">A mesma busca, montada de novo em cada base</h3>
+            <p class="dor-rotulo">Na mão</p>
+            <ul class="dor-vaivem">
+              <li><span>abrir o site</span></li>
+              <li><span>reescrever a busca</span></li>
+              <li><span>exportar</span></li>
+              <li><span>em cada base</span></li>
+            </ul>
+            <p class="dor-solucao">
+              <span class="dor-selo">No Revsist</span>
+              Você define o plano da pesquisa uma vez e ele busca em todas as bases do estudo.
+            </p>
+          </li>
+
+          <li class="dor">
+            <div class="dor-cabeca">
+              <span class="dor-icone"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-camadas" /></svg></span>
+              <span class="dor-num" aria-hidden="true">03</span>
+            </div>
+            <h3 class="dor-titulo">Ler títulos e resumos pulando entre abas</h3>
+            <p class="dor-rotulo">Na mão</p>
+            <ul class="dor-vaivem">
+              <li><span>abrir o artigo</span></li>
+              <li><span>copiar o resumo</span></li>
+              <li><span>colar na planilha</span></li>
+              <li><span>voltar ao site</span></li>
+            </ul>
+            <p class="dor-solucao">
+              <span class="dor-selo">No Revsist</span>
+              Os artigos de todas as bases chegam numa fila só, e você lê e decide na mesma tela.
+            </p>
+          </li>
+
+          <li class="dor">
+            <div class="dor-cabeca">
+              <span class="dor-icone"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-documento" /></svg></span>
+              <span class="dor-num" aria-hidden="true">04</span>
+            </div>
+            <h3 class="dor-titulo">Caçar o PDF de cada artigo</h3>
+            <p class="dor-rotulo">Na mão</p>
+            <ul class="dor-vaivem">
+              <li><span>entrar no site</span></li>
+              <li><span>achar o link</span></li>
+              <li><span>esperar baixar</span></li>
+              <li><span>o próximo artigo</span></li>
+            </ul>
+            <p class="dor-solucao">
+              <span class="dor-selo">No Revsist</span>
+              O texto completo é procurado sozinho e o PDF abre no programa. Quando não é
+              encontrado, você vê onde procurar e anexa o arquivo.
+            </p>
+          </li>
+
+          <li class="dor">
+            <div class="dor-cabeca">
+              <span class="dor-icone"><svg class="icone" aria-hidden="true" focusable="false"><use href="#i-lista" /></svg></span>
+              <span class="dor-num" aria-hidden="true">05</span>
+            </div>
+            <h3 class="dor-titulo">Montar a planilha coluna por coluna</h3>
+            <p class="dor-rotulo">Na mão</p>
+            <ul class="dor-vaivem">
+              <li><span>criar as colunas</span></li>
+              <li><span>abrir o PDF</span></li>
+              <li><span>copiar o trecho</span></li>
+              <li><span>colar na célula</span></li>
+            </ul>
+            <p class="dor-solucao">
+              <span class="dor-selo">No Revsist</span>
+              As perguntas da ficha ficam no plano da pesquisa, definidas uma vez, e você responde
+              com o artigo aberto na mesma tela.
+            </p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ── COMO FUNCIONA: 6 ETAPAS ────────────────────────────────────────── -->
+    <section class="secao secao--tinta" id="como-funciona" aria-labelledby="etapas-titulo">
+      <div class="container">
+        <div class="cabecalho-secao">
+          <p class="kicker">Como funciona</p>
+          <h2 id="etapas-titulo" class="titulo-secao">Seis etapas, na ordem em que você vai fazer</h2>
+          <p class="lead">
+            Clique em cada etapa para ver a tela do programa. Se quiser espiar por dentro, o segundo
+            botão mostra o que fica gravado naquele momento.
           </p>
         </div>
 
-        <div class="hero-meta-summary" aria-label="Indicadores da plataforma">
-          <div class="meta-item">
-            <span class="meta-label">11 diretrizes</span>
-            <span class="meta-value">PRISMA 2020, JBI, Cochrane e mais 8</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">5 bases</span>
-            <span class="meta-value">BDTD, SciELO, Scopus, PubMed e OpenAlex</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Rastreabilidade</span>
-            <span class="meta-value">Autor, data, parecer de IA e hash SHA-256</span>
+        <div class="etapas-abas" role="tablist" aria-label="Etapas do trabalho">
+          <button class="etapa-aba" role="tab" id="aba-1" aria-controls="painel-1" aria-selected="true"><span class="num">01</span> Definir</button>
+          <button class="etapa-aba" role="tab" id="aba-2" aria-controls="painel-2" aria-selected="false"><span class="num">02</span> Buscar</button>
+          <button class="etapa-aba" role="tab" id="aba-3" aria-controls="painel-3" aria-selected="false"><span class="num">03</span> Limpar</button>
+          <button class="etapa-aba" role="tab" id="aba-4" aria-controls="painel-4" aria-selected="false"><span class="num">04</span> Decidir</button>
+          <button class="etapa-aba" role="tab" id="aba-5" aria-controls="painel-5" aria-selected="false"><span class="num">05</span> Anotar</button>
+          <button class="etapa-aba" role="tab" id="aba-6" aria-controls="painel-6" aria-selected="false"><span class="num">06</span> Exportar</button>
+        </div>
+
+        <!-- Etapa 01 -->
+        <div class="etapa-painel" id="painel-1" role="tabpanel" aria-labelledby="aba-1">
+          <div class="etapa-grade">
+            <div>
+              <p class="etapa-numero">Etapa 1 de 6</p>
+              <h3 class="etapa-titulo">Diga o que você está procurando</h3>
+              <p class="etapa-descricao">
+                Você escreve a pergunta da pesquisa, escolhe o roteiro metodológico da sua área e
+                lista o que faz um artigo entrar ou sair. Depois disso o Revsist tranca essa lista:
+                é ela que vale até o fim.
+              </p>
+              <ul class="lista-checa">
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Onze roteiros prontos, entre eles PRISMA 2020, PRISMA-ScR e JBI</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Os critérios travam quando a leitura começa — ninguém muda a régua no meio</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Uma barra mostra o que ainda falta preencher antes de seguir</li>
+              </ul>
+            </div>
+            <div>
+              <div class="alternador" role="group" aria-label="Modo de visualização da etapa 1">
+                <button type="button" data-modo="captura" aria-pressed="true"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-imagem" /></svg> Tela do programa</button>
+                <button type="button" data-modo="rastro" aria-pressed="false"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-codigo" /></svg> O que fica gravado</button>
+              </div>
+              <figure class="vista vista-captura">
+                <div class="captura">
+                  <img src="./src/imagens/telas/02-protocolo-1280.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Tela do Revsist para escrever a pergunta da pesquisa, escolher o roteiro metodológico e listar os critérios de inclusão e exclusão" data-legenda="Aqui você escreve a pergunta, escolhe o roteiro e lista os critérios." />
+                </div>
+                <figcaption class="captura-legenda">Aqui você escreve a pergunta, escolhe o roteiro e lista os critérios.</figcaption>
+              </figure>
+              <div class="vista vista-rastro" hidden>
+                <p class="nota-tecnica">O plano que você escreveu fica salvo assim — e trancado:</p>
+                <div class="bloco-codigo">
+<pre><code>{
+  "plano_da_revisao": {
+    "titulo": "Governança e dinâmica territorial em APLs do semiárido",
+    "roteiro": "PRISMA-ScR",
+    "esquema_da_pergunta": "PCC",
+    "termos_de_busca": [
+      ["arranjos produtivos locais", "desenvolvimento regional"],
+      ["governanca territorial", "semiarido brasileiro"]
+    ],
+    "entra_se": ["trata de governança territorial", "trata do semiárido"],
+    "sai_se": ["é ensaio de laboratório"],
+    "situacao": "TRANCADO",
+    "trancado_em": "2026-09-10T18:02:11Z"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Print 1 (LCP Hero) em WebP em duas larguras -->
-        <figure class="figura-tela figura-hero">
-          <picture>
-            <source type="image/webp" srcset="./src/imagens/telas/01-triagem-640.webp 640w, ./src/imagens/telas/01-triagem-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-            <img src="./src/imagens/telas/01-triagem-1280.webp" width="1280" height="800" alt="Interface de triagem do Revsist dividida em duas colunas: à esquerda, título, autores e resumo de um estudo científico com botões de decisão Incluído e Excluído; à direita, checklist interativo com quatro critérios de elegibilidade metodológica." class="img-tela" fetchpriority="high" />
-          </picture>
-          <figcaption>Ambiente de avaliação de títulos e resumos com metadados do estudo, checklist de critérios de inclusão e histórico do revisor.</figcaption>
-        </figure>
+        <!-- Etapa 02 -->
+        <div class="etapa-painel" id="painel-2" role="tabpanel" aria-labelledby="aba-2" hidden>
+          <div class="etapa-grade">
+            <div>
+              <p class="etapa-numero">Etapa 2 de 6</p>
+              <h3 class="etapa-titulo">Busque em cinco bases de uma vez</h3>
+              <p class="etapa-descricao">
+                Você escreve os termos uma vez só e o Revsist procura em BDTD, SciELO, Scopus,
+                OpenAlex e PubMed ao mesmo tempo. Se já tiver um arquivo do Zotero ou do Mendeley,
+                dá para subir também.
+              </p>
+              <ul class="lista-checa">
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Inclui as teses e dissertações da BDTD, que a maioria das ferramentas ignora</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Fica registrado o dia, a hora e quantos resultados cada base devolveu</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Aceita arquivos RIS e BibTeX de qualquer gerenciador de referências</li>
+              </ul>
+            </div>
+            <div>
+              <div class="alternador" role="group" aria-label="Modo de visualização da etapa 2">
+                <button type="button" data-modo="captura" aria-pressed="true"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-imagem" /></svg> Tela do programa</button>
+                <button type="button" data-modo="rastro" aria-pressed="false"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-codigo" /></svg> O que fica gravado</button>
+              </div>
+              <figure class="vista vista-captura">
+                <div class="captura">
+                  <img src="./src/imagens/telas/03-coleta-1280.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Tela de busca do Revsist mostrando as cinco bases sendo consultadas ao mesmo tempo e a lista de artigos que vai chegando" data-legenda="As cinco bases respondem ao mesmo tempo e os artigos vão aparecendo na lista." />
+                </div>
+                <figcaption class="captura-legenda">As cinco bases respondem ao mesmo tempo e os artigos vão aparecendo na lista.</figcaption>
+              </figure>
+              <div class="vista vista-rastro" hidden>
+                <p class="nota-tecnica">De cada busca fica guardado o que foi pedido e o que cada base respondeu:</p>
+                <div class="bloco-codigo">
+<pre><code>{
+  "busca": {
+    "termos": "\"arranjos produtivos locais\" E \"desenvolvimento regional\"",
+    "quando": "2026-09-10T19:40:12Z",
+    "bases": [
+      { "base": "BDTD",     "resultados": 142, "resposta": "ok" },
+      { "base": "SciELO",   "resultados": 89,  "resposta": "ok" },
+      { "base": "OpenAlex", "resultados": 0,   "resposta": "ok" }
+    ],
+    "total_encontrado": 231
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Etapa 03 -->
+        <div class="etapa-painel" id="painel-3" role="tabpanel" aria-labelledby="aba-3" hidden>
+          <div class="etapa-grade">
+            <div>
+              <p class="etapa-numero">Etapa 3 de 6</p>
+              <h3 class="etapa-titulo">Os repetidos somem sozinhos</h3>
+              <p class="etapa-descricao">
+                O mesmo artigo costuma aparecer em duas ou três bases. O Revsist junta essas cópias
+                numa só, continua sabendo de onde cada uma veio e mostra quantas foram — esse número
+                vai direto para o diagrama do final.
+              </p>
+              <ul class="lista-checa">
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Junta pelo DOI e, quando não tem DOI, comparando título e ano</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Nada é apagado: as cópias continuam guardadas com a base de origem</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Você vê a lista do que foi unido e pode conferir caso a caso</li>
+              </ul>
+            </div>
+            <div>
+              <div class="alternador" role="group" aria-label="Modo de visualização da etapa 3">
+                <button type="button" data-modo="captura" aria-pressed="true"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-imagem" /></svg> Tela do programa</button>
+                <button type="button" data-modo="rastro" aria-pressed="false"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-codigo" /></svg> O que fica gravado</button>
+              </div>
+              <figure class="vista vista-captura">
+                <div class="captura">
+                  <img src="./src/imagens/telas/04-rastro-1280.webp" width="1280" height="645" loading="lazy" decoding="async" alt="Relatório do Revsist mostrando quais artigos foram identificados como repetidos e por qual critério" data-legenda="O relatório mostra o que foi unido e por qual critério." />
+                </div>
+                <figcaption class="captura-legenda">O relatório mostra o que foi unido e por qual critério.</figcaption>
+              </figure>
+              <div class="vista vista-rastro" hidden>
+                <p class="nota-tecnica">A limpeza fecha uma conta que precisa aparecer no diagrama final:</p>
+                <div class="bloco-codigo">
+<pre><code>{
+  "limpeza_de_repetidos": {
+    "artigos_recebidos": 231,
+    "mesmo_DOI": 18,
+    "mesmo_titulo_e_ano": 9,
+    "repetidos_no_total": 27,
+    "artigos_unicos": 204
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Etapa 04 -->
+        <div class="etapa-painel" id="painel-4" role="tabpanel" aria-labelledby="aba-4" hidden>
+          <div class="etapa-grade">
+            <div>
+              <p class="etapa-numero">Etapa 4 de 6</p>
+              <h3 class="etapa-titulo">Leia e decida, um por um</h3>
+              <p class="etapa-descricao">
+                Aparece o título e o resumo com os seus critérios do lado. Você inclui ou exclui e
+                explica em uma linha. Dois autores podem decidir separadamente, sem ver a resposta um
+                do outro, e comparar no fim.
+              </p>
+              <ul class="lista-checa">
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Atalhos de teclado: dá para passar por centenas de artigos numa sessão</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> A IA pode opinar sobre o resumo, mas quem decide é você</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Onde os dois revisores discordarem, o Revsist marca para vocês resolverem</li>
+              </ul>
+            </div>
+            <div>
+              <div class="alternador" role="group" aria-label="Modo de visualização da etapa 4">
+                <button type="button" data-modo="captura" aria-pressed="true"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-imagem" /></svg> Tela do programa</button>
+                <button type="button" data-modo="rastro" aria-pressed="false"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-codigo" /></svg> O que fica gravado</button>
+              </div>
+              <figure class="vista vista-captura">
+                <div class="captura">
+                  <img src="./src/imagens/telas/01-triagem-1280.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Tela de leitura do Revsist com o resumo do artigo à esquerda e a lista de critérios de inclusão à direita" data-legenda="Resumo de um lado, seus critérios do outro, e os botões de incluir ou excluir." />
+                </div>
+                <figcaption class="captura-legenda">Resumo de um lado, seus critérios do outro, e os botões de incluir ou excluir.</figcaption>
+              </figure>
+              <div class="vista vista-rastro" hidden>
+                <p class="nota-tecnica">Cada decisão sua vira um registro como este:</p>
+                <div class="bloco-codigo">
+<pre><code>{
+  "decisao": {
+    "artigo": "Dinâmica territorial e governança no APL de fruticultura",
+    "resultado": "INCLUÍDO",
+    "criterios_atendidos": ["governança territorial", "recorte semiárido"],
+    "quem_decidiu": "Eduardo",
+    "quando": "2026-09-10T20:15:32Z",
+    "houve_opiniao_de_ia": true,
+    "modelo_consultado": "qwen2.5 (rodando no computador do revisor)"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Etapa 05 -->
+        <div class="etapa-painel" id="painel-5" role="tabpanel" aria-labelledby="aba-5" hidden>
+          <div class="etapa-grade">
+            <div>
+              <p class="etapa-numero">Etapa 5 de 6</p>
+              <h3 class="etapa-titulo">Anote o que interessa de cada artigo</h3>
+              <p class="etapa-descricao">
+                Para os artigos que sobraram, você preenche uma ficha igual para todos: o que foi
+                estudado, onde, com que método, que resultado deu. Cada resposta pode ficar ligada ao
+                trecho do texto que a comprova.
+              </p>
+              <ul class="lista-checa">
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> As perguntas da ficha saem do plano que você escreveu na etapa 1</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Dá para colar o trecho do PDF que embasa cada resposta</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> No fim, tudo vira uma tabela comparando os artigos lado a lado</li>
+              </ul>
+            </div>
+            <div>
+              <div class="alternador" role="group" aria-label="Modo de visualização da etapa 5">
+                <button type="button" data-modo="captura" aria-pressed="true"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-imagem" /></svg> Tela do programa</button>
+                <button type="button" data-modo="rastro" aria-pressed="false"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-codigo" /></svg> O que fica gravado</button>
+              </div>
+              <figure class="vista vista-captura">
+                <div class="captura">
+                  <img src="./src/imagens/telas/05-extracao-1280.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Ficha de anotação do Revsist com as perguntas definidas no plano e o campo de resposta para cada artigo incluído" data-legenda="A mesma ficha para todos os artigos, com as perguntas que você definiu." />
+                </div>
+                <figcaption class="captura-legenda">A mesma ficha para todos os artigos, com as perguntas que você definiu.</figcaption>
+              </figure>
+              <div class="vista vista-rastro" hidden>
+                <p class="nota-tecnica">O que você anota de cada artigo fica assim, pronto para virar tabela:</p>
+                <div class="bloco-codigo">
+<pre><code>{
+  "ficha_do_artigo": {
+    "artigo": "Dinâmica territorial e governança no APL de fruticultura",
+    "onde_foi_estudado": "Polo Juazeiro-Petrolina",
+    "escala": "Municipal",
+    "forma_de_organizacao": "Consórcio intermunicipal e cooperativas",
+    "indicadores_usados": ["PIB agrícola", "emprego formal"],
+    "trecho_que_comprova": "página 84"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Etapa 06 -->
+        <div class="etapa-painel" id="painel-6" role="tabpanel" aria-labelledby="aba-6" hidden>
+          <div class="etapa-grade">
+            <div>
+              <p class="etapa-numero">Etapa 6 de 6</p>
+              <h3 class="etapa-titulo">Baixe tudo pronto para escrever</h3>
+              <p class="etapa-descricao">
+                No fim você baixa o diagrama que a revista exige, a tabela com tudo o que anotou e a
+                bibliografia no formato do seu gerenciador de referências. É o material que entra na
+                dissertação.
+              </p>
+              <ul class="lista-checa">
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Diagrama PRISMA em imagem, com os números tirados do que você fez</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Referências em RIS e BibTeX, para Zotero, Mendeley ou LaTeX</li>
+                <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Planilha com todas as fichas preenchidas, artigo por artigo</li>
+              </ul>
+            </div>
+            <div>
+              <div class="alternador" role="group" aria-label="Modo de visualização da etapa 6">
+                <button type="button" data-modo="captura" aria-pressed="true"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-imagem" /></svg> Tela do programa</button>
+                <button type="button" data-modo="rastro" aria-pressed="false"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-codigo" /></svg> O que fica gravado</button>
+              </div>
+              <figure class="vista vista-captura">
+                <div class="captura">
+                  <img src="./src/imagens/telas/06-exportacao-1280.webp" width="1280" height="800" loading="lazy" decoding="async" alt="Tela de exportação do Revsist com o diagrama PRISMA montado e os botões para baixar planilha, referências e relatório" data-legenda="O diagrama já montado e os arquivos prontos para baixar." />
+                </div>
+                <figcaption class="captura-legenda">O diagrama já montado e os arquivos prontos para baixar.</figcaption>
+              </figure>
+              <div class="vista vista-rastro" hidden>
+                <p class="nota-tecnica">Os números do diagrama não são digitados: são a contagem do seu próprio trabalho.</p>
+                <div class="bloco-codigo">
+<pre><code>{
+  "numeros_do_diagrama": {
+    "encontrados_nas_bases": 231,
+    "repetidos_removidos": 27,
+    "lidos_por_titulo_e_resumo": 204,
+    "lidos_por_inteiro": 48,
+    "incluidos_na_revisao": 24
+  },
+  "formatos_para_baixar": ["PNG", "SVG", "RIS", "BibTeX", "XLSX"]
+}</code></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- ── Seção 1: Como funciona (Fluxo Metodológico) ──────────────────────── -->
-    <section class="section section-flow" id="como-funciona" aria-labelledby="flow-title">
+    <!-- ── O QUE FICA GUARDADO ────────────────────────────────────────────── -->
+    <section class="secao secao--grade" id="registro" aria-labelledby="registro-titulo">
       <div class="container">
-        <header class="section-header reveal-on-scroll">
-          <p class="section-tag">01 · Fluxo Metodológico</p>
-          <h2 id="flow-title" class="section-title">Como funciona</h2>
-          <p class="section-subtitle">O fluxo metodológico do protocolo à síntese final, tela por tela.</p>
-        </header>
-
-        <!-- Diagrama SVG inline com o encadeamento das 6 etapas -->
-        <div class="flow-diagram-wrapper reveal-on-scroll" aria-label="Diagrama do fluxo de trabalho metodológico do Revsist">
-          <svg class="flow-diagram-svg" viewBox="0 0 940 100" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagrama com 6 etapas: Protocolo, Coleta, Deduplicação, Triagem, Extração e Síntese">
-            <line x1="120" y1="50" x2="820" y2="50" class="flow-rail" stroke-width="2" />
-
-            <g class="flow-step" transform="translate(60, 50)">
-              <circle cx="0" cy="0" r="24" class="flow-node" stroke-width="2" />
-              <text x="0" y="-32" text-anchor="middle" class="flow-label">1. Protocolo</text>
-              <text x="0" y="4" text-anchor="middle" class="flow-sublabel">PICO / PCC</text>
-            </g>
-
-            <line x1="84" y1="50" x2="200" y2="50" class="flow-arrow" stroke-width="2" marker-end="url(#arrowhead)" />
-
-            <g class="flow-step" transform="translate(224, 50)">
-              <circle cx="0" cy="0" r="24" class="flow-node" stroke-width="2" />
-              <text x="0" y="-32" text-anchor="middle" class="flow-label">2. Coleta</text>
-              <text x="0" y="4" text-anchor="middle" class="flow-sublabel">5 bases</text>
-            </g>
-
-            <line x1="248" y1="50" x2="364" y2="50" class="flow-arrow" stroke-width="2" marker-end="url(#arrowhead)" />
-
-            <g class="flow-step" transform="translate(388, 50)">
-              <circle cx="0" cy="0" r="24" class="flow-node" stroke-width="2" />
-              <text x="0" y="-32" text-anchor="middle" class="flow-label">3. Deduplicação</text>
-              <text x="0" y="4" text-anchor="middle" class="flow-sublabel">DOI / Título</text>
-            </g>
-
-            <line x1="412" y1="50" x2="528" y2="50" class="flow-arrow" stroke-width="2" marker-end="url(#arrowhead)" />
-
-            <g class="flow-step" transform="translate(552, 50)">
-              <circle cx="0" cy="0" r="24" class="flow-node" stroke-width="2" />
-              <text x="0" y="-32" text-anchor="middle" class="flow-label">4. Triagem</text>
-              <text x="0" y="4" text-anchor="middle" class="flow-sublabel">Dupla cega</text>
-            </g>
-
-            <line x1="576" y1="50" x2="692" y2="50" class="flow-arrow" stroke-width="2" marker-end="url(#arrowhead)" />
-
-            <g class="flow-step" transform="translate(716, 50)">
-              <circle cx="0" cy="0" r="24" class="flow-node" stroke-width="2" />
-              <text x="0" y="-32" text-anchor="middle" class="flow-label">5. Extração</text>
-              <text x="0" y="4" text-anchor="middle" class="flow-sublabel">Variáveis</text>
-            </g>
-
-            <line x1="740" y1="50" x2="856" y2="50" class="flow-arrow" stroke-width="2" marker-end="url(#arrowhead)" />
-
-            <g class="flow-step" transform="translate(880, 50)">
-              <circle cx="0" cy="0" r="24" class="flow-node-final" stroke-width="2" />
-              <text x="0" y="-32" text-anchor="middle" class="flow-label">6. Síntese</text>
-              <text x="0" y="4" text-anchor="middle" class="flow-sublabel-inverse">PRISMA</text>
-            </g>
-
-            <defs>
-              <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                <polygon points="0 0, 6 3, 0 6" fill="var(--accent-primary, #274c77)" />
-              </marker>
-            </defs>
-          </svg>
-        </div>
-
-        <!-- 6 Blocos Estruturados com Prints Reais e Texto Factual de Proveniência -->
-        <div class="fluxo-blocos-lista">
-
-          <!-- Bloco 1: Protocolo -->
-          <article class="fluxo-bloco-card reveal-on-scroll">
-            <header class="fluxo-bloco-header">
-              <p class="fluxo-bloco-etapa">Etapa 1 de 6</p>
-              <h3 class="fluxo-bloco-titulo">1. Protocolo de Pesquisa</h3>
-              <p class="fluxo-bloco-desc">
-                Defina e versione a pergunta condutora, o framework conceitual (PICO, PICOS ou PCC) e os critérios de inclusão e exclusão antes de iniciar as buscas. O sistema vincula o projeto a uma das 11 diretrizes metodológicas disponíveis e bloqueia alterações retroativas nos critérios após o início da triagem, assegurando a conformidade exigida por periódicos e comitês de ética.
-              </p>
-            </header>
-            <figure class="figura-tela">
-              <picture>
-                <source type="image/webp" srcset="./src/imagens/telas/02-protocolo-640.webp 640w, ./src/imagens/telas/02-protocolo-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-                <img src="./src/imagens/telas/02-protocolo-1280.webp" width="1280" height="800" alt="Formulário de edição do protocolo de revisão com campos estruturados para objetivo, estratégia PICO, descritores de busca e lista de 11 diretrizes metodológicas selecionáveis." class="img-tela" loading="lazy" decoding="async" />
-              </picture>
-              <figcaption>Edição estruturada do protocolo com parâmetros conceituais, critérios de elegibilidade e versionamento formal.</figcaption>
-            </figure>
-          </article>
-
-          <!-- Bloco 2: Coleta -->
-          <article class="fluxo-bloco-card reveal-on-scroll">
-            <header class="fluxo-bloco-header">
-              <p class="fluxo-bloco-etapa">Etapa 2 de 6</p>
-              <h3 class="fluxo-bloco-titulo">2. Coleta Bibliográfica</h3>
-              <p class="fluxo-bloco-desc">
-                Execute a busca de maneira federada ou importe arquivos nos formatos RIS, BibTeX, CSV e XLSX. Os conectores consultam diretamente as APIs oficiais da BDTD (teses e dissertações brasileiras), SciELO, PubMed/MEDLINE, Scopus e OpenAlex, armazenando a data exata da consulta, os parâmetros de busca utilizados e a quantidade bruta de registros retornados por base.
-              </p>
-            </header>
-            <figure class="figura-tela">
-              <picture>
-                <source type="image/webp" srcset="./src/imagens/telas/03-coleta-640.webp 640w, ./src/imagens/telas/03-coleta-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-                <img src="./src/imagens/telas/03-coleta-1280.webp" width="1280" height="800" alt="Painel de coleta federada exibindo campo para string de busca booleana e cartões de conexão simultânea com BDTD, SciELO, PubMed, Scopus e OpenAlex, indicando registros recuperados." class="img-tela" loading="lazy" decoding="async" />
-              </picture>
-              <figcaption>Busca federada em bases bibliográficas nacionais e internacionais com contagem de registros e controle de deduplicação.</figcaption>
-            </figure>
-          </article>
-
-          <!-- Bloco 3: Deduplicação -->
-          <article class="fluxo-bloco-card reveal-on-scroll">
-            <header class="fluxo-bloco-header">
-              <p class="fluxo-bloco-etapa">Etapa 3 de 6</p>
-              <h3 class="fluxo-bloco-titulo">3. Deduplicação de Registros</h3>
-              <p class="fluxo-bloco-desc">
-                Identifique registros repetidos entre bases distintas por correspondência exata de identificadores persistentes (DOI) e por similaridade textual normalizada de título e autores. O algoritmo apresenta os pares candidatos para conferência manual, registra qual registro foi preservado e quais foram mesclados, e contabiliza as exclusões para o bloco correspondente do fluxograma PRISMA.
-              </p>
-            </header>
-          </article>
-
-          <!-- Bloco 4: Triagem -->
-          <article class="fluxo-bloco-card reveal-on-scroll">
-            <header class="fluxo-bloco-header">
-              <p class="fluxo-bloco-etapa">Etapa 4 de 6</p>
-              <h3 class="fluxo-bloco-titulo">4. Triagem de Títulos e Resumos</h3>
-              <p class="fluxo-bloco-desc">
-                Avalie cada estudo individualmente ou em regime de dupla cega com distribuição balanceada entre revisores. A interface apresenta o texto do resumo, os critérios de elegibilidade cadastrados no protocolo e um parecer preliminar gerado por modelo de linguagem, com os trechos que fundamentaram a sugestão devidamente destacados. Toda decisão exige confirmação humana e justificativa obrigatória em caso de exclusão.
-              </p>
-            </header>
-            <figure class="figura-tela">
-              <picture>
-                <source type="image/webp" srcset="./src/imagens/telas/01-triagem-640.webp 640w, ./src/imagens/telas/01-triagem-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-                <img src="./src/imagens/telas/01-triagem-1280.webp" width="1280" height="800" alt="Interface de triagem do Revsist dividida em duas colunas: à esquerda, título, autores e resumo de um estudo científico com botões de decisão Incluído e Excluído; à direita, checklist interativo com quatro critérios de elegibilidade metodológica." class="img-tela" loading="lazy" decoding="async" />
-              </picture>
-              <figcaption>Ambiente de avaliação de títulos e resumos com metadados do estudo, checklist de critérios de inclusão e histórico do revisor.</figcaption>
-            </figure>
-          </article>
-
-          <!-- Bloco 5: Extração -->
-          <article class="fluxo-bloco-card reveal-on-scroll">
-            <header class="fluxo-bloco-header">
-              <p class="fluxo-bloco-etapa">Etapa 5 de 6</p>
-              <h3 class="fluxo-bloco-titulo">5. Extração de Dados</h3>
-              <p class="fluxo-bloco-desc">
-                Construa formulários padronizados com campos tipados (texto, numérico, múltipla escolha ou escala) correspondentes às variáveis definidas no protocolo. O pesquisador preenche os dados ao lado do texto completo do artigo e vincula a evidência textual a cada resposta, permitindo que coautores e auditores verifiquem a fonte primária de cada variável extraída.
-              </p>
-            </header>
-            <figure class="figura-tela">
-              <picture>
-                <source type="image/webp" srcset="./src/imagens/telas/05-extracao-640.webp 640w, ./src/imagens/telas/05-extracao-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-                <img src="./src/imagens/telas/05-extracao-1280.webp" width="1280" height="800" alt="Tabela e formulário de extração estruturada de dados contendo perguntas metodológicas sobre desenho de estudo, instrumentos identificados e escala territorial, com campos de evidência textual preenchidos." class="img-tela" loading="lazy" decoding="async" />
-              </picture>
-              <figcaption>Formulário padronizado de extração com perguntas vinculadas ao protocolo e matriz de evidências por artigo.</figcaption>
-            </figure>
-          </article>
-
-          <!-- Bloco 6: Síntese e Exportação -->
-          <article class="fluxo-bloco-card reveal-on-scroll">
-            <header class="fluxo-bloco-header">
-              <p class="fluxo-bloco-etapa">Etapa 6 de 6</p>
-              <h3 class="fluxo-bloco-titulo">6. Síntese e Exportação</h3>
-              <p class="fluxo-bloco-desc">
-                Exporte o relatório completo da revisão contendo o fluxograma PRISMA 2020 preenchido com as contagens exatas de cada fase, a matriz de extração tabular e o arquivo de referências bibliográficas. Os dados podem ser baixados nos formatos CSV, XLSX, RIS, BibTeX e JSON, viabilizando análises estatísticas em softwares externos como R, Stata e Python.
-              </p>
-            </header>
-            <figure class="figura-tela">
-              <picture>
-                <source type="image/webp" srcset="./src/imagens/telas/06-exportacao-640.webp 640w, ./src/imagens/telas/06-exportacao-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-                <img src="./src/imagens/telas/06-exportacao-1280.webp" width="1280" height="800" alt="Visualização do fluxograma PRISMA oficial gerado a partir dos dados do projeto, acompanhado de botões para download do acervo nos formatos RIS, BibTeX, CSV e XLSX." class="img-tela" loading="lazy" decoding="async" />
-              </picture>
-              <figcaption>Fluxograma PRISMA gerado automaticamente do banco de dados e opções para exportação padronizada dos estudos.</figcaption>
-            </figure>
-          </article>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Seção 2: O Rastro e Auditoria Metodológica ───────────────────────── -->
-    <section class="section section-trace" id="rastro" aria-labelledby="trace-title">
-      <div class="container">
-        <header class="section-header reveal-on-scroll">
-          <p class="section-tag">02 · Reprodutibilidade e Auditoria</p>
-          <h2 id="trace-title" class="section-title">Rastro e Proveniência Metodológica</h2>
-        </header>
-
-        <div class="rastro-destaque-box reveal-on-scroll">
-          <p class="rastro-texto-prosa">
-            Cada decisão registrada no sistema armazena a autoria da avaliação, o carimbo de data e hora, o parecer sugerido pela inteligência artificial, o provedor, o modelo utilizado e o hash SHA-256 do contexto submetido. A proveniência das etapas permanece transparente e verificável, permitindo auditoria técnica por comitês, bancas e pareceristas.
+        <div class="cabecalho-secao">
+          <p class="kicker">Quando alguém perguntar</p>
+          <h2 id="registro-titulo" class="titulo-secao">Você não precisa lembrar: está tudo guardado</h2>
+          <p class="lead">
+            Cada vez que você inclui ou exclui um artigo, o Revsist guarda quatro coisas. Meses
+            depois, quando a banca perguntar por que aquele estudo ficou de fora, a resposta está
+            lá — com data e hora.
           </p>
-
-          <figure class="figura-tela">
-            <picture>
-              <source type="image/webp" srcset="./src/imagens/telas/04-rastro-640.webp 640w, ./src/imagens/telas/04-rastro-1280.webp 1280w" sizes="(max-width: 768px) 100vw, 1200px" />
-              <img src="./src/imagens/telas/04-rastro-1280.webp" width="1280" height="645" alt="Painel de auditoria metodológica evidenciando a decisão tomada pelo pesquisador, carimbo temporal, modelo de linguagem utilizado, parecer técnico emitido e hash SHA-256 do contexto analisado." class="img-tela" loading="lazy" decoding="async" />
-            </picture>
-            <figcaption>Registro auditável de proveniência de cada decisão de triagem, associando autor, parecer assistido e hash do texto.</figcaption>
-          </figure>
         </div>
       </div>
-    </section>
 
-    <!-- ── Seção 3: Diretrizes, Bases e o que o app não faz ────────────────── -->
-    <section class="section section-guidelines" id="diretrizes" aria-labelledby="guidelines-title">
+      <!-- Faixa ultralarga, no mesmo formato da seção "Por que existe": a
+           decisão vira registro e, meses depois, responde à pergunta. -->
+      <figure class="faixa-clipe laco">
+        <div class="container faixa-clipe-topo">
+          <span class="faixa-clipe-etiqueta">A mesma decisão, meses depois</span>
+        </div>
+        <div class="faixa-clipe-rolagem">
+        <video
+          class="faixa-clipe-video"
+          data-laco
+          width="1920"
+          height="480"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="none"
+          poster="/videos/revsist-registro-faixa-poster.jpg"
+          aria-label="Animação em faixa. Primeiro, você inclui um artigo e as quatro coisas que o Revsist guarda entram no registro da decisão: qual era o artigo, o que foi conferido, quem decidiu e quando; o registro é selado com um código. Depois, meses mais tarde, a banca pergunta por que o estudo entrou na revisão, a resposta sai do registro e o selo confere com o original."
+        >
+          <source src="/videos/revsist-registro-faixa.mp4" type="video/mp4" />
+        </video>
+        </div>
+        <button type="button" class="laco-pausa" data-laco-pausa aria-label="Pausar a animação">
+          <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pausa" /></svg>
+        </button>
+      </figure>
+
       <div class="container">
-        <header class="section-header reveal-on-scroll">
-          <p class="section-tag">03 · Escopo e Limites</p>
-          <h2 id="guidelines-title" class="section-title">Diretrizes Metodológicas e Limites Operacionais</h2>
-          <p class="section-subtitle">Critérios formais atendidos, fontes bibliográficas suportadas e delimitação explícita do escopo.</p>
-        </header>
+        <ol class="passos-registro">
+          <li class="passo">
+            <span class="passo-icone"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-documento" /></svg></span>
+            <p class="passo-titulo">Qual era o artigo</p>
+            <p class="passo-texto">Título, autores, ano e de qual base ele veio.</p>
+          </li>
+          <li class="passo">
+            <span class="passo-icone"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-lista" /></svg></span>
+            <p class="passo-titulo">O que foi conferido</p>
+            <p class="passo-texto">Quais dos seus critérios o artigo atendeu, e quais não.</p>
+          </li>
+          <li class="passo">
+            <span class="passo-icone"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pessoas" /></svg></span>
+            <p class="passo-titulo">Quem decidiu, e quando</p>
+            <p class="passo-texto">O nome do revisor, o do segundo conferente e a data com a hora.</p>
+          </li>
+          <li class="passo passo--selo">
+            <span class="passo-icone"><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-escudo" /></svg></span>
+            <p class="passo-titulo">Um selo de que nada mudou</p>
+            <p class="passo-texto">
+              Um código calculado a partir do que foi avaliado. Se alguém alterar qualquer coisa,
+              ele muda — e é assim que se prova que o registro é o original.
+            </p>
+            <code class="hash">9c3b4f51e0892acb7102e35a9812e4f01488c9f5d1a8e2074d2b9911e8c4a17b</code>
+          </li>
+        </ol>
 
-        <div class="escopo-denso-layout reveal-on-scroll">
-
-          <!-- Coluna 1: 11 Diretrizes catalogadas -->
-          <div class="escopo-col">
-            <header class="escopo-col-header">
-              <p class="escopo-col-tag">Metodologia</p>
-              <h3 class="escopo-col-title">11 Diretrizes Catalogadas</h3>
-            </header>
-            <ul class="escopo-lista">
-              <li class="escopo-item">
-                <span class="escopo-item-nome">PRISMA 2020 <code>v2020</code></span>
-                <span class="escopo-item-desc">Revisões sistemáticas com e sem meta-análise (27 itens do checklist).</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">PRISMA-ScR <code>v2018</code></span>
-                <span class="escopo-item-desc">Revisões de escopo (Scoping Reviews, 20 itens essenciais e 2 opcionais).</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">PRISMA-P <code>v2015</code></span>
-                <span class="escopo-item-desc">Elaboração e registro prévio de protocolos de revisão (17 itens).</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">JBI 2020 <code>v2020</code></span>
-                <span class="escopo-item-desc">Manual de síntese de evidências do Joanna Briggs Institute.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">Cochrane MECIR <code>v2023</code></span>
-                <span class="escopo-item-desc">Padrões metodológicos de conduta para revisões de intervenção.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">Campbell MECCIR <code>v2019</code></span>
-                <span class="escopo-item-desc">Padrões para revisões nas ciências sociais, econômicas e educação.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">CEE / ROSES <code>v2018</code></span>
-                <span class="escopo-item-desc">Sínteses sistemáticas em gestão ambiental e ecologia aplicada.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">EBSE (Kitchenham) <code>v2007</code></span>
-                <span class="escopo-item-desc">Engenharia de software e computação baseadas em evidências.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">PRIOR <code>v2022</code></span>
-                <span class="escopo-item-desc">Diretrizes formais para atualização de revisões sistemáticas prévias.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">Methodi Ordinatio <code>v2015</code></span>
-                <span class="escopo-item-desc">Ranqueamento de relevância por fator de impacto, citações e ano.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">Protocolo Customizado <code>Livre</code></span>
-                <span class="escopo-item-desc">Configuração livre de checklists e critérios adaptados ao projeto.</span>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Coluna 2: 5 Bases e Importação -->
-          <div class="escopo-col">
-            <header class="escopo-col-header">
-              <p class="escopo-col-tag">Fontes de Dados</p>
-              <h3 class="escopo-col-title">5 Bases e Importação Livre</h3>
-            </header>
-            <ul class="escopo-lista">
-              <li class="escopo-item">
-                <span class="escopo-item-nome">BDTD (IBICT / CAPES) <code>API Oficial</code></span>
-                <span class="escopo-item-desc">Catálogo nacional de teses e dissertações brasileiras defendidas em programas de pós-graduação.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">SciELO <code>API Oficial</code></span>
-                <span class="escopo-item-desc">Coleção de periódicos científicos de acesso aberto da América Latina, Caribe, Espanha e Portugal.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">PubMed / MEDLINE <code>Entrez API</code></span>
-                <span class="escopo-item-desc">Acervo biomédico e de saúde pública da Biblioteca Nacional de Medicina dos EUA.</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">Scopus <code>Elsevier API</code></span>
-                <span class="escopo-item-desc">Base multidisciplinar indexada internacional (requer chave institucional ou de desenvolvedor).</span>
-              </li>
-              <li class="escopo-item">
-                <span class="escopo-item-nome">OpenAlex <code>REST API</code></span>
-                <span class="escopo-item-desc">Catálogo global e aberto de literatura científica com mais de 250 milhões de publicações.</span>
-              </li>
-              <li class="escopo-item" style="margin-top: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle);">
-                <span class="escopo-item-nome">Formatos de Importação e Exportação</span>
-                <span class="escopo-item-desc">Carga e descarga completas em <code>RIS</code>, <code>BibTeX</code>, <code>CSV</code>, <code>XLSX</code> e <code>JSON</code> estruturado.</span>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Coluna 3: Limites Operacionais (O que o app não faz) -->
-          <div class="escopo-col">
-            <header class="escopo-col-header">
-              <p class="escopo-col-tag">Transparência</p>
-              <h3 class="escopo-col-title">Limites Operacionais Declarados</h3>
-            </header>
-            <ul class="escopo-lista">
-              <li class="escopo-limite-item">
-                <span class="icone-limite" aria-hidden="true">✕</span>
-                <div>
-                  <strong>Sem meta-análise estatística integrada</strong>
-                  <p class="escopo-item-desc">Cálculos de metarregressão, modelos de efeitos fixos ou aleatórios e forest plots devem ser conduzidos em pacotes especializados (R meta/metafor, Stata ou RevMan).</p>
-                </div>
-              </li>
-              <li class="escopo-limite-item">
-                <span class="icone-limite" aria-hidden="true">✕</span>
-                <div>
-                  <strong>Sem pontuação GRADE automatizada</strong>
-                  <p class="escopo-item-desc">A avaliação da certeza das evidências pelo sistema GRADE exige julgamento substantivo da equipe de pesquisa sobre imprecisão, inconsistência e evidência indireta.</p>
-                </div>
-              </li>
-              <li class="escopo-limite-item">
-                <span class="icone-limite" aria-hidden="true">✕</span>
-                <div>
-                  <strong>Sem avaliação automática de risco de viés</strong>
-                  <p class="escopo-item-desc">Ferramentas como RoB 2 e ROBINS-I demandam inspeção detalhada do desenho do estudo por revisores treinados, não sendo executadas automaticamente por IA.</p>
-                </div>
-              </li>
-              <li class="escopo-limite-item">
-                <span class="icone-limite" aria-hidden="true">✕</span>
-                <div>
-                  <strong>Sem decisões autônomas de exclusão</strong>
-                  <p class="escopo-item-desc">O software nunca inclui ou exclui estudos sem a confirmação e o crivo de um pesquisador humano responsável.</p>
-                </div>
-              </li>
-            </ul>
-          </div>
-
-        </div>
       </div>
     </section>
 
-    <!-- ── Seção 4: Dados, Licença e Acesso ─────────────────────────────────── -->
-    <section class="section section-data" id="privacidade" aria-labelledby="data-title">
+    <!-- ── DIAGRAMA FINAL ─────────────────────────────────────────────────── -->
+    <section class="secao" id="diagrama" aria-labelledby="diagrama-titulo">
       <div class="container">
-        <header class="section-header reveal-on-scroll">
-          <p class="section-tag">04 · Governança</p>
-          <h2 id="data-title" class="section-title">Controle de Dados e Licenciamento</h2>
-        </header>
+        <div class="cabecalho-secao">
+          <p class="kicker">No fim</p>
+          <h2 id="diagrama-titulo" class="titulo-secao">O diagrama que a revista pede sai pronto</h2>
+          <p class="lead">
+            Toda revisão sistemática publicada precisa mostrar este caminho: quantos artigos você
+            encontrou, quantos descartou e por quê. O Revsist monta o desenho com os números que o
+            seu próprio trabalho produziu — você não digita nenhum deles.
+          </p>
+        </div>
+      </div>
 
-        <div class="lgpd-banner reveal-on-scroll">
-          <div class="lgpd-text">
-            <ul class="lgpd-checklist">
-              <li>
-                <strong>Soberania dos dados:</strong> Seus dados ficam sob seu controle — localmente no SQLite na versão desktop ou isolados com criptografia em repouso na versão web.
-              </li>
-              <li>
-                <strong>Privacidade com IA:</strong> Nenhum dado é compartilhado com terceiros, exceto quando o usuário aciona explicitamente a assistência de IA com chaves próprias ou institucionais.
-              </li>
-              <li>
-                <strong>Portabilidade total:</strong> Exportação integral do acervo em formatos abertos (JSON, CSV, RIS, BibTeX) a qualquer momento e eliminação definitiva de projetos a pedido do titular.
-              </li>
-              <li>
-                <strong>Código aberto e auditável:</strong> Distribuído sob licença livre MIT, com repositório público no GitHub para auditoria independente por qualquer pesquisador ou instituição.
-              </li>
+      <!-- Faixa ultralarga no papel claro: mesmo formato das faixas escuras,
+           com o fundo ondulado dos laços de seção. -->
+      <figure class="faixa-clipe faixa-clipe--papel laco">
+        <div class="container faixa-clipe-topo">
+          <span class="faixa-clipe-etiqueta">Das suas decisões ao diagrama</span>
+        </div>
+        <div class="faixa-clipe-rolagem">
+        <video
+          class="faixa-clipe-video"
+          data-laco
+          width="1920"
+          height="480"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="none"
+          poster="/videos/revsist-diagrama-faixa-poster.jpg"
+          aria-label="Animação em faixa do diagrama sendo montado da esquerda para a direita: 231 artigos encontrados nas bases, 27 repetidos removidos, 204 lidos por título e resumo, 156 fora pelo resumo, 48 lidos por inteiro, 24 fora após a leitura completa e 24 artigos na revisão. Depois você revê uma decisão, um artigo volta para a revisão e os números mudam sozinhos para 23 e 25. No fim saem os arquivos: o diagrama em PNG e em SVG e a lista de termos, bases e datas da busca."
+        >
+          <source src="/videos/revsist-diagrama-faixa.mp4" type="video/mp4" />
+        </video>
+        </div>
+        <button type="button" class="laco-pausa" data-laco-pausa aria-label="Pausar a animação">
+          <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pausa" /></svg>
+        </button>
+      </figure>
+
+      <div class="container">
+        <div class="prisma-pontos">
+          <div class="prisma-numero">
+            <b>0</b>
+            <span>números digitados à mão — o texto do artigo nunca deixa de bater com o seu acervo.</span>
+          </div>
+          <div class="prisma-numero">
+            <b>2</b>
+            <span>formatos de imagem para colar na dissertação: PNG e SVG.</span>
+          </div>
+          <div class="prisma-numero">
+            <b>1</b>
+            <span>clique para gerar de novo, sempre que você mudar alguma decisão.</span>
+          </div>
+        </div>
+
+        <p class="prisma-nota">
+          Junto sai a lista dos termos que você usou, as bases consultadas e as datas da busca — o
+          suficiente para outra pessoa repetir o seu caminho.
+        </p>
+
+      </div>
+    </section>
+
+    <!-- ── ROTEIROS ───────────────────────────────────────────────────────── -->
+    <section class="secao secao--contorno" id="diretrizes" aria-labelledby="diretrizes-titulo">
+      <div class="container">
+        <div class="cabecalho-secao">
+          <p class="kicker">Roteiros</p>
+          <h2 id="diretrizes-titulo" class="titulo-secao">Use o roteiro que a sua área pede</h2>
+          <p class="lead">
+            Cada área tem uma lista oficial do que precisa ser relatado numa revisão. O Revsist já
+            vem com onze delas em forma de checklist: você vai marcando conforme avança e sabe o que
+            ainda falta. Abaixo, as seis mais usadas.
+          </p>
+        </div>
+      </div>
+
+      <!-- Faixa no papel claro: escolher o roteiro, marcar o checklist e ver o
+           que ainda falta. -->
+      <figure class="faixa-clipe faixa-clipe--papel laco">
+        <div class="container faixa-clipe-topo">
+          <span class="faixa-clipe-etiqueta">Do roteiro ao checklist</span>
+        </div>
+        <div class="faixa-clipe-rolagem">
+        <video
+          class="faixa-clipe-video"
+          data-laco
+          width="1920"
+          height="480"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="none"
+          poster="/videos/revsist-roteiros-faixa-poster.jpg"
+          aria-label="Animação em faixa. Seis roteiros aparecem lado a lado: PRISMA 2020, PRISMA-ScR, JBI Scoping, Campbell, ROSES e MECIR. Para uma revisão que quer mapear o que já se sabe sobre um tema, o PRISMA-ScR é escolhido e vira um checklist de 22 itens; os itens vão sendo marcados e a barra mostra quantos faltam. No fim, o filtro Faltam mostra só o que ainda não foi feito, com o próximo item em destaque."
+        >
+          <source src="/videos/revsist-roteiros-faixa.mp4" type="video/mp4" />
+        </video>
+        </div>
+        <button type="button" class="laco-pausa" data-laco-pausa aria-label="Pausar a animação">
+          <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pausa" /></svg>
+        </button>
+      </figure>
+
+      <div class="container">
+        <div class="grade-diretrizes">
+          <article class="diretriz">
+            <p class="diretriz-tag">27 itens · o mais usado</p>
+            <h3 class="diretriz-nome">PRISMA 2020</h3>
+            <p class="diretriz-desc">O padrão internacional para revisão sistemática. Se a revista não disser qual usar, é este.</p>
+          </article>
+          <article class="diretriz">
+            <p class="diretriz-tag">22 itens · revisão de escopo</p>
+            <h3 class="diretriz-nome">PRISMA-ScR</h3>
+            <p class="diretriz-desc">Para quando você quer mapear o que existe sobre um tema, em vez de responder a uma pergunta fechada.</p>
+          </article>
+          <article class="diretriz">
+            <p class="diretriz-tag">Revisão de escopo</p>
+            <h3 class="diretriz-nome">JBI Scoping Review</h3>
+            <p class="diretriz-desc">O método do Joanna Briggs Institute, com o esquema PCC de montar a pergunta.</p>
+          </article>
+          <article class="diretriz">
+            <p class="diretriz-tag">Ciências sociais</p>
+            <h3 class="diretriz-nome">Campbell Collaboration</h3>
+            <p class="diretriz-desc">Muito pedido em educação, economia e políticas públicas.</p>
+          </article>
+          <article class="diretriz">
+            <p class="diretriz-tag">Meio ambiente</p>
+            <h3 class="diretriz-nome">ROSES</h3>
+            <p class="diretriz-desc">Feito para revisões sobre meio ambiente, território e conservação.</p>
+          </article>
+          <article class="diretriz">
+            <p class="diretriz-tag">Cochrane</p>
+            <h3 class="diretriz-nome">MECIR</h3>
+            <p class="diretriz-desc">As exigências da Cochrane para quem vai publicar uma revisão na biblioteca deles.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PARA QUEM ──────────────────────────────────────────────────────── -->
+    <section class="secao" id="para-quem" aria-labelledby="para-quem-titulo">
+      <div class="container">
+        <div class="cabecalho-secao">
+          <p class="kicker">Para quem é</p>
+          <h2 id="para-quem-titulo" class="titulo-secao">Feito para quem pesquisa no Brasil</h2>
+          <p class="lead">
+            A maioria das ferramentas de revisão foi feita para a área médica e para artigos em
+            inglês. O Revsist nasceu de uma pesquisa em ciências sociais aplicadas e leva a sério a
+            literatura em português.
+          </p>
+        </div>
+      </div>
+
+      <!-- Faixa no azul-tinta: os três cartões abaixo, na mesma ordem — bases
+           brasileiras, leitura em equipe e temas fora da área médica. -->
+      <figure class="faixa-clipe laco">
+        <div class="container faixa-clipe-topo">
+          <span class="faixa-clipe-etiqueta">Das bases brasileiras ao seu tema</span>
+        </div>
+        <div class="faixa-clipe-rolagem">
+        <video
+          class="faixa-clipe-video"
+          data-laco
+          width="1920"
+          height="480"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="none"
+          poster="/videos/revsist-para-quem-faixa-poster.jpg"
+          aria-label="Animação em faixa em três partes. Primeiro, a mesma busca vai às cinco bases: a BDTD devolve 142 artigos e a SciELO 89, enquanto Scopus, OpenAlex e PubMed não têm nada sobre o tema. Depois, duas pessoas leem os mesmos artigos; o Revsist aponta o artigo em que discordaram até que decidam juntas. Por fim, temas como políticas públicas, desenvolvimento regional, educação, gestão e meio ambiente levam aos roteiros Campbell, ROSES e PRISMA 2020, e a ficha da revisão acompanha o tema."
+        >
+          <source src="/videos/revsist-para-quem-faixa.mp4" type="video/mp4" />
+        </video>
+        </div>
+        <button type="button" class="laco-pausa" data-laco-pausa aria-label="Pausar a animação">
+          <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-pausa" /></svg>
+        </button>
+      </figure>
+
+      <div class="container">
+        <div class="grade-cartoes">
+          <article class="cartao">
+            <span class="cartao-icone"><svg class="icone icone--g" aria-hidden="true" focusable="false"><use href="#i-base" /></svg></span>
+            <h3 class="cartao-titulo">Teses e dissertações brasileiras</h3>
+            <p class="cartao-texto">
+              A busca na BDTD vem junto. Boa parte da produção nacional só existe lá — e ficaria de
+              fora se você usasse apenas as bases internacionais.
+            </p>
+          </article>
+          <article class="cartao">
+            <span class="cartao-icone"><svg class="icone icone--g" aria-hidden="true" focusable="false"><use href="#i-pessoas" /></svg></span>
+            <h3 class="cartao-titulo">Mestrado, doutorado e grupos de pesquisa</h3>
+            <p class="cartao-texto">
+              Dá para trabalhar em dupla ou em grupo no mesmo projeto, com cada pessoa lendo a sua
+              parte e o sistema mostrando onde vocês discordaram.
+            </p>
+          </article>
+          <article class="cartao">
+            <span class="cartao-icone"><svg class="icone icone--g" aria-hidden="true" focusable="false"><use href="#i-camadas" /></svg></span>
+            <h3 class="cartao-titulo">Temas fora da área médica</h3>
+            <p class="cartao-texto">
+              Políticas públicas, desenvolvimento regional, educação, gestão, meio ambiente: os
+              roteiros e as fichas se adaptam ao que a sua área exige.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── LIMITES ────────────────────────────────────────────────────────── -->
+    <section class="secao secao--tinta" id="limites" aria-labelledby="limites-titulo">
+      <div class="container">
+        <div class="cabecalho-secao cabecalho-secao--centro">
+          <p class="kicker">Sendo honesto</p>
+          <h2 id="limites-titulo" class="titulo-secao">O que o Revsist faz — e o que ele não faz</h2>
+          <p class="lead">
+            Nenhum programa escreve a revisão por você. O que dá para automatizar é o trabalho
+            repetitivo; a leitura e o julgamento continuam sendo seus.
+          </p>
+        </div>
+
+        <div class="grade-limites">
+          <div class="cartao">
+            <p class="limites-titulo limites-titulo--sim">
+              <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg>
+              Ele faz
+            </p>
+            <ul class="lista-checa">
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Buscar em cinco bases ao mesmo tempo e juntar os artigos repetidos</li>
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Guardar o motivo de cada inclusão e de cada exclusão</li>
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Comparar as decisões de dois revisores e apontar as divergências</li>
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-check" /></svg> Montar o diagrama e as tabelas que vão para o texto final</li>
             </ul>
           </div>
 
-          <div class="lgpd-actions">
-            <a href="/app" class="btn btn-primary" id="cta-lgpd">Entrar no Revsist</a>
-            <a href="/privacidade" class="btn btn-secondary">Política de Privacidade (LGPD)</a>
-            <a href="/termos" class="btn btn-secondary">Termos de Uso</a>
-            <a href="https://github.com/eduardomatheusfigueira/RSACV2" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">Repositório MIT no GitHub</a>
+          <div class="cartao">
+            <p class="limites-titulo limites-titulo--nao">
+              <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-x" /></svg>
+              Ele não faz
+            </p>
+            <ul class="lista-checa lista-checa--nao">
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-x" /></svg> Decidir sozinho quais artigos entram — a confirmação é sempre sua</li>
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-x" /></svg> Ler o texto completo no seu lugar</li>
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-x" /></svg> Calcular meta-análise estatística</li>
+              <li><svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-x" /></svg> Escrever a discussão da sua dissertação</li>
+            </ul>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- ── DÚVIDAS ────────────────────────────────────────────────────────── -->
+    <section class="secao secao--grade" id="perguntas" aria-labelledby="perguntas-titulo">
+      <div class="container">
+        <div class="cabecalho-secao cabecalho-secao--centro">
+          <p class="kicker">Dúvidas comuns</p>
+          <h2 id="perguntas-titulo" class="titulo-secao">O que costumam perguntar antes de começar</h2>
+        </div>
+
+        <div class="faq">
+          <div class="faq-item">
+            <h3>
+              <button type="button" class="faq-pergunta" aria-expanded="false" aria-controls="faq-1">
+                Preciso entender de metodologia para usar?
+                <svg class="icone" aria-hidden="true" focusable="false"><use href="#i-mais" /></svg>
+              </button>
+            </h3>
+            <div class="faq-resposta" id="faq-1" hidden>
+              Ajuda, mas o programa vai conduzindo. Você escolhe um dos onze roteiros já cadastrados
+              e ele mostra, etapa por etapa, o que precisa ser preenchido e o que ainda falta. O
+              <a href="/blog">blog do Revsist</a> tem textos explicando cada etapa em português,
+              começando por <a href="/blog/como-escrever-um-protocolo-de-revisao-sistematica/">como
+              escrever o plano da revisão</a>.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3>
+              <button type="button" class="faq-pergunta" aria-expanded="false" aria-controls="faq-2">
+                A inteligência artificial decide por mim?
+                <svg class="icone" aria-hidden="true" focusable="false"><use href="#i-mais" /></svg>
+              </button>
+            </h3>
+            <div class="faq-resposta" id="faq-2" hidden>
+              Não. A IA lê o resumo, compara com os critérios que você escreveu e dá uma opinião.
+              Quem inclui ou exclui é você — e fica registrado que houve opinião da IA, qual modelo
+              respondeu e o que ele disse. Sem a sua confirmação, nada é decidido.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3>
+              <button type="button" class="faq-pergunta" aria-expanded="false" aria-controls="faq-3">
+                Em quais bases ele procura?
+                <svg class="icone" aria-hidden="true" focusable="false"><use href="#i-mais" /></svg>
+              </button>
+            </h3>
+            <div class="faq-resposta" id="faq-3" hidden>
+              BDTD (teses e dissertações brasileiras), SciELO, Scopus, OpenAlex e PubMed, todas na
+              mesma busca. Você também pode subir um arquivo RIS ou BibTeX exportado do Zotero, do
+              Mendeley ou de qualquer outra base que já tenha consultado.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3>
+              <button type="button" class="faq-pergunta" aria-expanded="false" aria-controls="faq-4">
+                Serve para revisão de escopo (scoping review)?
+                <svg class="icone" aria-hidden="true" focusable="false"><use href="#i-mais" /></svg>
+              </button>
+            </h3>
+            <div class="faq-resposta" id="faq-4" hidden>
+              Serve. Estão cadastrados os roteiros PRISMA-ScR e JBI Scoping Review, com o esquema PCC
+              de montar a pergunta e as listas de conferência próprias de revisão de escopo. Se você
+              está em dúvida entre os dois tipos, veja
+              <a href="/blog/scoping-review-vs-revisao-sistematica/">quando escolher cada um</a>.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <h3>
+              <button type="button" class="faq-pergunta" aria-expanded="false" aria-controls="faq-5">
+                Quanto custa, e os meus dados ficam com vocês?
+                <svg class="icone" aria-hidden="true" focusable="false"><use href="#i-mais" /></svg>
+              </button>
+            </h3>
+            <div class="faq-resposta" id="faq-5" hidden>
+              Não custa nada e não pede cartão. O código é aberto sob licença MIT, então você pode
+              rodar o Revsist no seu próprio computador ou no servidor da sua universidade. Se usar
+              a ajuda da IA, a chave do serviço é sua — e pode apontar até para um modelo instalado
+              na sua máquina, sem nada sair dali.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── LEITURAS ───────────────────────────────────────────────────────── -->
+    <section class="secao" id="leituras" aria-labelledby="leituras-titulo">
+      <div class="container">
+        <div class="cabecalho-secao">
+          <p class="kicker">Para começar bem</p>
+          <h2 id="leituras-titulo" class="titulo-secao">Textos que explicam cada etapa</h2>
+        </div>
+
+        <div class="grade-leituras">
+          <a class="leitura" href="/blog/como-escrever-um-protocolo-de-revisao-sistematica/">
+            <span class="leitura-tag">Antes de tudo</span>
+            <span class="leitura-titulo">Como escrever o plano da sua revisão</span>
+            <span class="leitura-resumo">Da pergunta da pesquisa até a lista de critérios, com exemplo preenchido.</span>
+          </a>
+          <a class="leitura" href="/blog/checklist-prisma-2020-explicado/">
+            <span class="leitura-tag">O roteiro mais usado</span>
+            <span class="leitura-titulo">O checklist PRISMA 2020, item a item</span>
+            <span class="leitura-resumo">Os 27 itens em português, com o que cada um cobra de você na prática.</span>
+          </a>
+          <a class="leitura" href="/blog/scoping-review-vs-revisao-sistematica/">
+            <span class="leitura-tag">Qual escolher</span>
+            <span class="leitura-titulo">Revisão de escopo ou revisão sistemática?</span>
+            <span class="leitura-resumo">A diferença entre mapear um tema e responder a uma pergunta fechada.</span>
+          </a>
+          <a class="leitura" href="/blog/quanto-tempo-leva-uma-revisao-sistematica/">
+            <span class="leitura-tag">Planejamento</span>
+            <span class="leitura-titulo">Quanto tempo leva uma revisão sistemática</span>
+            <span class="leitura-resumo">Quanto dura cada etapa e onde o cronograma costuma estourar.</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CHAMADA FINAL ──────────────────────────────────────────────────── -->
+    <section class="chamada" aria-labelledby="chamada-titulo">
+      <div class="container">
+        <p class="kicker">Comece pelo começo</p>
+        <h2 id="chamada-titulo" class="titulo-secao">Abra um projeto e faça a primeira busca hoje</h2>
+        <p class="lead">
+          Leva alguns minutos para escrever a pergunta e ver os primeiros artigos chegando. Não pede
+          cartão e não tem período de teste que expira.
+        </p>
+        <div class="chamada-acoes">
+          <a href="/app" class="btn btn-chrome btn-lg">
+            Entrar no Revsist
+            <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-seta" /></svg>
+          </a>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <!-- ── Rodapé Institucional ────────────────────────────────────────────────── -->
+  <!-- ── AMPLIAÇÃO DE CAPTURAS ──────────────────────────────────────────── -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Tela ampliada do Revsist">
+    <div class="lightbox-caixa">
+      <button type="button" class="lightbox-fechar" id="lightbox-fechar" aria-label="Fechar a ampliação">
+        <svg class="icone icone--p" aria-hidden="true" focusable="false"><use href="#i-x" /></svg>
+      </button>
+      <img id="lightbox-img" src="./src/imagens/telas/01-triagem-1280.webp" width="1280" height="800" alt="Tela ampliada do Revsist" />
+      <p class="lightbox-legenda" id="lightbox-legenda">Tela do Revsist.</p>
+    </div>
+  </div>
+
+  <!-- ── RODAPÉ ─────────────────────────────────────────────────────────── -->
   <footer class="site-footer" role="contentinfo">
-    <div class="container footer-container">
+    <div class="footer-container">
       <div class="footer-top">
-        <div class="footer-brand">
-          <a href="/" class="brand-link" aria-label="Revsist — página inicial">
-            <svg class="brand-mark" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-              <path d="M 7 7 V 93" />
-              <circle cx="32" cy="32" r="25" />
-              <path d="M 45.946 52.749 L 73 93" />
-            </svg>
+        <div>
+          <div class="footer-brand-header">
+            <svg class="brand-mark-svg" viewBox="0 0 80 100" aria-hidden="true" focusable="false"><use href="#i-marca" /></svg>
             <span class="brand-name">Revsist</span>
-            <span class="badge-beta">v2.0 BETA</span>
-          </a>
-          <p>
-            Software acadêmico para conduzir revisão sistemática do protocolo à exportação, com proveniência e rastro auditável.
+            <span class="badge badge-beta">v2.0 beta</span>
+          </div>
+          <p class="footer-tagline">
+            Programa gratuito e de código aberto para fazer revisão sistemática e revisão de escopo,
+            pensado para quem pesquisa no Brasil.
           </p>
         </div>
 
-        <div class="footer-col">
-          <h2>Navegação</h2>
+        <div>
+          <p class="footer-heading">O programa</p>
           <ul class="footer-links">
             <li><a href="#como-funciona">Como funciona</a></li>
-            <li><a href="#rastro">O rastro</a></li>
-            <li><a href="#diretrizes">Diretrizes</a></li>
-            <li><a href="/blog">Blog</a></li>
-            <li><a href="/feed.xml">Feed RSS</a></li>
+            <li><a href="#registro">O que fica guardado</a></li>
+            <li><a href="#diagrama">O diagrama final</a></li>
+            <li><a href="#diretrizes">Roteiros disponíveis</a></li>
+            <li><a href="#limites">O que ele não faz</a></li>
           </ul>
         </div>
 
-        <div class="footer-col">
-          <h2>Governança</h2>
+        <div>
+          <p class="footer-heading">Aprender</p>
+          <ul class="footer-links">
+            <li><a href="/blog">Blog</a></li>
+            <li><a href="/blog/como-escrever-um-protocolo-de-revisao-sistematica/">Escrever o plano</a></li>
+            <li><a href="/blog/checklist-prisma-2020-explicado/">Checklist PRISMA 2020</a></li>
+            <li><a href="/blog/quanto-tempo-leva-uma-revisao-sistematica/">Quanto tempo leva</a></li>
+            <li><a href="#perguntas">Dúvidas comuns</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-heading">Transparência</p>
           <ul class="footer-links">
             <li><a href="/termos">Termos de uso</a></li>
-            <li><a href="/privacidade">Privacidade (LGPD)</a></li>
-            <li><a href="https://github.com/eduardomatheusfigueira/RSACV2" target="_blank" rel="noopener noreferrer">Código aberto (MIT)</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-col">
-          <h2>Projeto</h2>
-          <ul class="footer-links">
-            <li><a href="https://github.com/eduardomatheusfigueira/RSACV2/issues" target="_blank" rel="noopener noreferrer">Relatar problema</a></li>
-            <li><a href="/sitemap.xml">Mapa do site (XML)</a></li>
-            <li><span class="footer-meta" id="footer-version">Versão 2.0.0 · BETA</span></li>
+            <li><a href="/privacidade">Privacidade</a></li>
+            <li><a href="/feed.xml">Feed RSS</a></li>
+            <li><a href="#para-quem">Para quem é</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; 2026 Revsist. Distribuído sob licença livre MIT.</p>
-        <p class="footer-meta">Desenvolvido para pós-graduação e grupos de pesquisa.</p>
+        <span>© 2026 Revsist · Eduardo Matheus Figueira · Licença MIT</span>
+        <span class="footer-estado">
+          <span>Beta aberta</span>
+          <span>Grátis</span>
+          <span>Sem rastreadores</span>
+        </span>
       </div>
     </div>
   </footer>

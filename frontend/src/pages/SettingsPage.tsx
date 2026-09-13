@@ -46,7 +46,14 @@ import {
   Award,
   Lock,
   Save,
+  Inbox,
+  ThumbsDown,
+  Undo2,
+  Send,
+  Link2,
+  MessageSquareText,
 } from 'lucide-react'
+import { PainelFeedback } from '@/components/feedback/PainelFeedback'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -65,7 +72,12 @@ import {
   DialogBody,
   DialogFooter,
 } from '@/components/ui'
-import type { AuthUser, UserAdminUpdatePayload } from '@/types/api'
+import type {
+  AuthUser,
+  InviteRequestApproveResult,
+  InviteRequestItem,
+  UserAdminUpdatePayload,
+} from '@/types/api'
 import './SettingsPage.css'
 
 export interface ColorThemeOption {
@@ -291,62 +303,61 @@ interface ProviderKeysFieldProps {
   label: string
   hint: React.ReactNode
   placeholder: string
-  /** Máscaras das chaves já guardadas no backend. */
+  /** Máscaras das chaves já guardadas no backend, na ordem em que estão. */
   previews: string[]
-  /** Chaves novas sendo digitadas (só existem em modo de substituição). */
-  keys: string[]
-  editing: boolean
-  visibility: Record<number, boolean>
+  /** O que está digitado no campo de adicionar. */
+  draft: string
+  visible: boolean
   disabled: boolean
-  onStartEditing: () => void
-  onCancelEditing: () => void
+  /** Índice da chave sendo removida, ou `'todas'`, ou `'adicionando'`. */
+  busy: number | 'todas' | 'adicionando' | null
+  onDraftChange: (value: string) => void
+  onToggleVisibility: () => void
   onAdd: () => void
-  onUpdate: (index: number, value: string) => void
-  onRemoveField: (index: number) => void
-  onToggleVisibility: (index: number) => void
+  onRemoveOne: (index: number) => void
   onRemoveAll: () => void
 }
 
+/** Separa várias chaves coladas de uma vez (vírgula, ponto e vírgula, espaço ou quebra de linha). */
+export const separarChaves = (texto: string): string[] =>
+  texto
+    .split(/[\s,;]+/)
+    .map((k) => k.trim())
+    .filter(Boolean)
+
 /**
- * Campo de chaves de API de um provedor, em duas faces.
+ * Campo de chaves de API de um provedor, aditivo.
  *
- * O backend deixou de devolver a chave em texto claro, então não há o que
- * "editar": ou se olha a máscara do que está guardado, ou se digita uma chave
- * nova por inteiro para substituir. As duas faces deste componente são
- * exatamente esses dois estados — e o caminho de apagar é separado dos dois,
- * porque salvar o formulário nunca mais destrói credencial por engano.
+ * O backend não devolve a chave em texto claro, só a máscara — então editar a
+ * lista inteira obrigava a redigitar todas para acrescentar uma. Aqui cada
+ * operação mexe só no que diz: "Adicionar" acrescenta às guardadas, a lixeira
+ * de uma linha remove aquela chave, e "Remover todas" continua separado.
  */
 function ProviderKeysField({
   label,
   hint,
   placeholder,
   previews,
-  keys,
-  editing,
-  visibility,
+  draft,
+  visible,
   disabled,
-  onStartEditing,
-  onCancelEditing,
-  onAdd,
-  onUpdate,
-  onRemoveField,
+  busy,
+  onDraftChange,
   onToggleVisibility,
+  onAdd,
+  onRemoveOne,
   onRemoveAll,
 }: ProviderKeysFieldProps): JSX.Element {
-  const temChavesGuardadas = previews.length > 0
-  const mostrandoFormulario = editing || !temChavesGuardadas
+  const novas = separarChaves(draft)
+  const ocupado = busy !== null
 
   return (
     <div className="form-group" style={{ marginTop: 'var(--space-4)' }}>
       <div className="label-with-action">
         <label>{label}</label>
-        {mostrandoFormulario ? (
-          <button type="button" className="btn-text-action" onClick={onAdd} disabled={disabled}>
-            <Plus size={13} /> Adicionar outra chave
-          </button>
-        ) : (
-          <button type="button" className="btn-text-action" onClick={onStartEditing} disabled={disabled}>
-            <Edit3 size={13} /> Substituir chaves
+        {previews.length > 0 && (
+          <button type="button" className="btn-text-action danger" onClick={onRemoveAll} disabled={disabled || ocupado}>
+            <Trash2 size={13} /> Remover todas
           </button>
         )}
       </div>
@@ -355,78 +366,81 @@ function ProviderKeysField({
         {hint}
       </p>
 
-      {!mostrandoFormulario && (
+      {previews.length > 0 && (
         <>
           <div className="keys-list">
             {previews.map((preview, idx) => (
-              <div key={idx} className="key-input-row">
+              <div key={`${idx}-${preview}`} className="key-input-row">
                 <ShieldCheck size={16} className="key-icon" />
-                <input type="text" value={preview} readOnly disabled aria-label={`Chave ${idx + 1} configurada`} />
+                <input type="text" value={preview} readOnly disabled aria-label={`Chave ${idx + 1} guardada`} />
+                <button
+                  type="button"
+                  className="btn-icon danger"
+                  onClick={() => onRemoveOne(idx)}
+                  disabled={disabled || ocupado}
+                  title="Remover esta chave"
+                  aria-label={`Remover a chave ${idx + 1}`}
+                >
+                  {busy === idx ? <RefreshCw size={15} className="animate-spin" /> : <Trash2 size={16} />}
+                </button>
               </div>
             ))}
           </div>
-          <div className="keys-stored-actions">
-            <span className="range-hint">
-              {previews.length === 1
-                ? '1 chave configurada e guardada no servidor.'
-                : `${previews.length} chaves configuradas e guardadas no servidor.`}{' '}
-              O valor completo não é exibido nem devolvido pela API.
-            </span>
-            <button type="button" className="btn-text-action danger" onClick={onRemoveAll} disabled={disabled}>
-              <Trash2 size={13} /> Remover todas
-            </button>
-          </div>
+          <p className="range-hint keys-stored-count">
+            {previews.length === 1
+              ? '1 chave guardada no servidor.'
+              : `${previews.length} chaves guardadas no servidor, usadas em rodízio.`}{' '}
+            O valor completo não é exibido nem devolvido pela API.
+          </p>
         </>
       )}
 
-      {mostrandoFormulario && (
-        <>
-          <div className="keys-list">
-            {keys.map((k, idx) => (
-              <div key={idx} className="key-input-row">
-                <Key size={16} className="key-icon" />
-                <input
-                  type={visibility[idx] ? 'text' : 'password'}
-                  disabled={disabled}
-                  placeholder={placeholder}
-                  value={k}
-                  onChange={(e) => onUpdate(idx, e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-icon"
-                  onClick={() => onToggleVisibility(idx)}
-                  disabled={disabled}
-                  title={visibility[idx] ? 'Ocultar chave' : 'Exibir chave'}
-                >
-                  {visibility[idx] ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-                {keys.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn-icon danger"
-                    onClick={() => onRemoveField(idx)}
-                    disabled={disabled}
-                    title="Remover chave"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-          {temChavesGuardadas && (
-            <div className="keys-stored-actions">
-              <span className="range-hint">
-                Ao salvar, as {previews.length} chave(s) atuais serão substituídas pelo que estiver acima.
-              </span>
-              <button type="button" className="btn-text-action" onClick={onCancelEditing} disabled={disabled}>
-                Cancelar substituição
-              </button>
-            </div>
-          )}
-        </>
-      )}
+      <div className="keys-add">
+        <div className="key-input-row">
+          <Plus size={16} className="key-icon" />
+          <input
+            type={visible ? 'text' : 'password'}
+            disabled={disabled || busy === 'adicionando'}
+            placeholder={previews.length > 0 ? 'Cole uma chave nova para somar às de cima' : placeholder}
+            value={draft}
+            onChange={(e) => onDraftChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (novas.length > 0) onAdd()
+              }
+            }}
+            aria-label={`Adicionar chave em ${label}`}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={onToggleVisibility}
+            disabled={disabled}
+            title={visible ? 'Ocultar chave' : 'Exibir chave'}
+          >
+            {visible ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={onAdd}
+            disabled={disabled || novas.length === 0 || (ocupado && busy !== 'adicionando')}
+            loading={busy === 'adicionando'}
+            leftIcon={<Plus size={13} />}
+          >
+            {novas.length > 1 ? `Adicionar ${novas.length}` : 'Adicionar'}
+          </Button>
+        </div>
+        <p className="range-hint keys-add-hint">
+          {previews.length > 0
+            ? 'As chaves de cima continuam guardadas. Dá para colar várias de uma vez, separadas por vírgula ou quebra de linha.'
+            : 'Dá para colar várias de uma vez, separadas por vírgula ou quebra de linha.'}
+        </p>
+      </div>
     </div>
   )
 }
@@ -456,17 +470,14 @@ export function SettingsPage(): JSX.Element {
   const [qwenPreviews, setQwenPreviews] = useState<string[]>([])
   const [localPreviews, setLocalPreviews] = useState<string[]>([])
 
-  const [geminiKeys, setGeminiKeys] = useState<string[]>([''])
-  const [qwenKeys, setQwenKeys] = useState<string[]>([''])
-  const [localKeys, setLocalKeys] = useState<string[]>([''])
-
-  const [editingGeminiKeys, setEditingGeminiKeys] = useState(false)
-  const [editingQwenKeys, setEditingQwenKeys] = useState(false)
-  const [editingLocalKeys, setEditingLocalKeys] = useState(false)
-
-  const [showGeminiVisibility, setShowGeminiVisibility] = useState<Record<number, boolean>>({})
-  const [showQwenVisibility, setShowQwenVisibility] = useState<Record<number, boolean>>({})
-  const [showLocalVisibility, setShowLocalVisibility] = useState<Record<number, boolean>>({})
+  // O que está digitado no campo de adicionar de cada provedor.
+  const [keyDrafts, setKeyDrafts] = useState<Record<'gemini' | 'qwen' | 'local', string>>({
+    gemini: '',
+    qwen: '',
+    local: '',
+  })
+  const [keyDraftVisible, setKeyDraftVisible] = useState(false)
+  const [keysBusy, setKeysBusy] = useState<number | 'todas' | 'adicionando' | null>(null)
 
   const [endpoint, setEndpoint] = useState('http://localhost:11434/v1')
   const [temperature, setTemperature] = useState(0.2)
@@ -510,7 +521,11 @@ export function SettingsPage(): JSX.Element {
     } catch {}
   }
 
-  const [adminTab, setAdminTab] = useState<'invites' | 'users'>('invites')
+  const [adminTab, setAdminTab] = useState<'invites' | 'requests' | 'feedback' | 'users'>('invites')
+
+  // Feedback do beta: só a contagem mora aqui, para o selo da aba. A fila
+  // inteira é do `PainelFeedback`.
+  const [novosFeedback, setNovosFeedback] = useState(0)
   
   // Convites
   const [invites, setInvites] = useState<any[]>([])
@@ -520,6 +535,18 @@ export function SettingsPage(): JSX.Element {
   const [inviteDays, setInviteDays] = useState<number>(30)
   const [customInviteCode, setCustomInviteCode] = useState('')
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+
+  // Solicitações de convite vindas da tela de login
+  const [inviteRequests, setInviteRequests] = useState<InviteRequestItem[]>([])
+  const [pendingRequests, setPendingRequests] = useState(0)
+  const [loadingRequests, setLoadingRequests] = useState(false)
+  const [requestFilter, setRequestFilter] = useState<'pendente' | 'todos'>('pendente')
+  const [actingRequestId, setActingRequestId] = useState<string | null>(null)
+  // Resultado da última aprovação: fica na tela até o administrador fechar,
+  // porque ele contém a ação que ainda falta — o clique que manda o WhatsApp.
+  const [ultimaAprovacao, setUltimaAprovacao] = useState<
+    (InviteRequestApproveResult & { nome: string }) | null
+  >(null)
 
   // Usuários
   const [users, setUsers] = useState<AuthUser[]>([])
@@ -544,6 +571,20 @@ export function SettingsPage(): JSX.Element {
       console.error('Erro ao carregar convites:', err)
     } finally {
       setLoadingInvites(false)
+    }
+  }
+
+  const loadInviteRequests = async () => {
+    if (!isOwner) return
+    try {
+      setLoadingRequests(true)
+      const res = await api.listInviteRequests()
+      setInviteRequests(res.requests || [])
+      setPendingRequests(res.pendentes || 0)
+    } catch (err: any) {
+      console.error('Erro ao carregar solicitações de convite:', err)
+    } finally {
+      setLoadingRequests(false)
     }
   }
 
@@ -661,6 +702,92 @@ export function SettingsPage(): JSX.Element {
     }
   }
 
+  const handleApproveRequest = async (req: InviteRequestItem) => {
+    if (
+      !window.confirm(
+        `Aprovar o pedido de ${req.nome} (${req.email})? Um convite de uso único será gerado com validade de 14 dias.`
+      )
+    ) {
+      return
+    }
+    try {
+      setActingRequestId(req.id)
+      const res = await api.approveInviteRequest(req.id, { expires_in_days: 14 })
+      setUltimaAprovacao({ ...res, nome: req.nome })
+
+      if (res.email_enviado) {
+        toast.success(`Convite ${res.invite.code} gerado`, {
+          description: `E-mail de confirmação enviado para ${req.email}.`,
+        })
+      } else {
+        // Aprovação válida, aviso não entregue: dizer as duas coisas na mesma
+        // frase evita a leitura errada de que a aprovação falhou.
+        toast.warning(`Convite ${res.invite.code} gerado, mas o e-mail não saiu`, {
+          description: res.email_detalhe,
+        })
+      }
+      await Promise.all([loadInviteRequests(), loadInvites()])
+    } catch (err: any) {
+      toast.error('Falha ao aprovar solicitação', { description: err.message })
+    } finally {
+      setActingRequestId(null)
+    }
+  }
+
+  const handleRejectRequest = async (req: InviteRequestItem) => {
+    const motivo = window.prompt(
+      `Recusar o pedido de ${req.nome}? Anote o motivo (opcional, visível só para você):`,
+      req.admin_notes || ''
+    )
+    if (motivo === null) return
+    try {
+      setActingRequestId(req.id)
+      await api.updateInviteRequest(req.id, {
+        status: 'recusado',
+        admin_notes: motivo.trim(),
+      })
+      toast.success('Solicitação recusada')
+      await loadInviteRequests()
+    } catch (err: any) {
+      toast.error('Falha ao recusar solicitação', { description: err.message })
+    } finally {
+      setActingRequestId(null)
+    }
+  }
+
+  const handleReopenRequest = async (req: InviteRequestItem) => {
+    try {
+      setActingRequestId(req.id)
+      await api.updateInviteRequest(req.id, { status: 'pendente' })
+      toast.success('Solicitação devolvida para a fila')
+      await loadInviteRequests()
+    } catch (err: any) {
+      toast.error('Falha ao reabrir solicitação', { description: err.message })
+    } finally {
+      setActingRequestId(null)
+    }
+  }
+
+  const handleDeleteRequest = async (req: InviteRequestItem) => {
+    if (
+      !window.confirm(
+        `Excluir definitivamente o pedido de ${req.nome}? Nome, e-mail e telefone informados serão apagados do banco.`
+      )
+    ) {
+      return
+    }
+    try {
+      setActingRequestId(req.id)
+      await api.deleteInviteRequest(req.id)
+      toast.success('Solicitação excluída')
+      await loadInviteRequests()
+    } catch (err: any) {
+      toast.error('Falha ao excluir solicitação', { description: err.message })
+    } finally {
+      setActingRequestId(null)
+    }
+  }
+
   const handleCopyInviteCode = (code: string) => {
     navigator.clipboard.writeText(code)
     setCopiedCode(code)
@@ -671,7 +798,12 @@ export function SettingsPage(): JSX.Element {
     loadSettings()
     if (isOwner) {
       loadInvites()
+      loadInviteRequests()
       loadUsers()
+      api
+        .listFeedback('novo')
+        .then((res) => setNovosFeedback(res.novos || 0))
+        .catch((err) => console.error('Erro ao carregar feedback:', err))
     }
   }, [isOwner])
 
@@ -760,96 +892,101 @@ export function SettingsPage(): JSX.Element {
     setModel(presetId)
   }
 
-  /**
-   * Reflete o estado das chaves vindo do backend: exibe as máscaras e encerra
-   * o modo de substituição, limpando o que estava digitado.
-   */
+  type ProvedorDeChave = 'gemini' | 'qwen' | 'local'
+  const ROTULO_DO_PROVEDOR: Record<ProvedorDeChave, string> = {
+    gemini: 'Google Gemini',
+    qwen: 'Alibaba Qwen',
+    local: 'Local/OpenRouter',
+  }
+
+  /** Reflete as máscaras que o backend devolveu. */
   const applyKeyPreviews = (data: import('@/types/api').AISettings) => {
     setGeminiPreviews(data.gemini_key_previews || [])
     setQwenPreviews(data.qwen_key_previews || [])
     setLocalPreviews(data.local_key_previews || [])
-
-    setGeminiKeys([''])
-    setQwenKeys([''])
-    setLocalKeys([''])
-
-    setEditingGeminiKeys(false)
-    setEditingQwenKeys(false)
-    setEditingLocalKeys(false)
-
-    setShowGeminiVisibility({})
-    setShowQwenVisibility({})
-    setShowLocalVisibility({})
   }
 
-  /** Remoção explícita — o salvamento comum nunca apaga chave. */
-  const handleRemoveProviderKeys = async (target: 'gemini' | 'qwen' | 'local') => {
-    const rotulo = target === 'gemini' ? 'Google Gemini' : target === 'qwen' ? 'Alibaba Qwen' : 'Local/OpenRouter'
-    if (!window.confirm(`Remover todas as chaves de ${rotulo}? Esta ação não pode ser desfeita.`)) return
+  const contagemDe = (data: import('@/types/api').AISettings, alvo: ProvedorDeChave): number =>
+    alvo === 'gemini' ? data.gemini_keys_count : alvo === 'qwen' ? data.qwen_keys_count : data.local_keys_count
+
+  /**
+   * Acrescenta o que está digitado às chaves já guardadas do provedor.
+   * Devolve `false` se não havia nada para acrescentar ou se falhou.
+   */
+  const handleAddProviderKeys = async (alvo: ProvedorDeChave, silencioso = false): Promise<boolean> => {
+    const novas = separarChaves(keyDrafts[alvo])
+    if (novas.length === 0) return false
     try {
-      const updated = await api.deleteProviderKeys(target)
+      setKeysBusy('adicionando')
+      const antes = alvo === 'gemini' ? geminiPreviews.length : alvo === 'qwen' ? qwenPreviews.length : localPreviews.length
+      const updated = await api.addProviderKeys(alvo, novas)
       applyKeyPreviews(updated)
-    } catch (err) {
-      console.error('Erro ao remover chaves do provedor:', err)
+      setKeyDrafts((d) => ({ ...d, [alvo]: '' }))
+      setKeyDraftVisible(false)
+      const acrescentadas = contagemDe(updated, alvo) - antes
+      const repetidas = novas.length - acrescentadas
+      if (!silencioso || repetidas > 0) {
+        if (acrescentadas > 0) {
+          toast.success(
+            acrescentadas === 1 ? 'Chave adicionada' : `${acrescentadas} chaves adicionadas`,
+            {
+              description:
+                repetidas > 0
+                  ? `${repetidas} já estava(m) guardada(s) e foi(ram) ignorada(s).`
+                  : `Agora são ${contagemDe(updated, alvo)} chave(s) de ${ROTULO_DO_PROVEDOR[alvo]}.`,
+            }
+          )
+        } else {
+          toast.info('Essa chave já estava guardada', { description: 'Nada foi alterado.' })
+        }
+      }
+      return true
+    } catch (err: any) {
+      toast.error('Não foi possível adicionar a chave', { description: err?.message })
+      return false
+    } finally {
+      setKeysBusy(null)
     }
   }
 
-  // ── Gemini Key Handlers ─────────────────────────────────────────────
-  const addGeminiKeyField = () => setGeminiKeys([...geminiKeys, ''])
-  const updateGeminiKeyField = (index: number, val: string) => {
-    const list = [...geminiKeys]
-    list[index] = val
-    setGeminiKeys(list)
-  }
-  const removeGeminiKeyField = (index: number) => {
-    const list = geminiKeys.filter((_, i) => i !== index)
-    setGeminiKeys(list.length ? list : [''])
-  }
-  const toggleGeminiKeyVisibility = (index: number) => {
-    setShowGeminiVisibility((prev) => ({ ...prev, [index]: !prev[index] }))
-  }
-
-  // ── Qwen Key Handlers ───────────────────────────────────────────────
-  const addQwenKeyField = () => setQwenKeys([...qwenKeys, ''])
-  const updateQwenKeyField = (index: number, val: string) => {
-    const list = [...qwenKeys]
-    list[index] = val
-    setQwenKeys(list)
-  }
-  const removeQwenKeyField = (index: number) => {
-    const list = qwenKeys.filter((_, i) => i !== index)
-    setQwenKeys(list.length ? list : [''])
-  }
-  const toggleQwenKeyVisibility = (index: number) => {
-    setShowQwenVisibility((prev) => ({ ...prev, [index]: !prev[index] }))
+  /** Remove só a chave daquela linha. */
+  const handleRemoveProviderKey = async (alvo: ProvedorDeChave, index: number, mascara: string) => {
+    if (!window.confirm(`Remover a chave ${mascara} de ${ROTULO_DO_PROVEDOR[alvo]}? As outras continuam guardadas.`)) return
+    try {
+      setKeysBusy(index)
+      const updated = await api.deleteProviderKey(alvo, index)
+      applyKeyPreviews(updated)
+      toast.success('Chave removida', { description: `Restam ${contagemDe(updated, alvo)} chave(s).` })
+    } catch (err: any) {
+      toast.error('Não foi possível remover a chave', { description: err?.message })
+    } finally {
+      setKeysBusy(null)
+    }
   }
 
-  // ── Local Key Handlers ──────────────────────────────────────────────
-  const addLocalKeyField = () => setLocalKeys([...localKeys, ''])
-  const updateLocalKeyField = (index: number, val: string) => {
-    const list = [...localKeys]
-    list[index] = val
-    setLocalKeys(list)
-  }
-  const removeLocalKeyField = (index: number) => {
-    const list = localKeys.filter((_, i) => i !== index)
-    setLocalKeys(list.length ? list : [''])
-  }
-  const toggleLocalKeyVisibility = (index: number) => {
-    setShowLocalVisibility((prev) => ({ ...prev, [index]: !prev[index] }))
+  /** Remoção de todas — o salvamento comum nunca apaga chave. */
+  const handleRemoveProviderKeys = async (alvo: ProvedorDeChave) => {
+    if (!window.confirm(`Remover todas as chaves de ${ROTULO_DO_PROVEDOR[alvo]}? Esta ação não pode ser desfeita.`)) return
+    try {
+      setKeysBusy('todas')
+      const updated = await api.deleteProviderKeys(alvo)
+      applyKeyPreviews(updated)
+    } catch (err) {
+      console.error('Erro ao remover chaves do provedor:', err)
+    } finally {
+      setKeysBusy(null)
+    }
   }
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     try {
       setSaving(true)
-      // Só sobe a chave que o usuário digitou de propósito. Provedor que não
-      // entrou em modo de substituição nem vai no corpo da requisição — é
-      // assim que salvar o formulário deixa de poder apagar credencial.
-      const keysToSend = (editing: boolean, fields: string[]): string[] | undefined => {
-        if (!editing) return undefined
-        const clean = fields.map((k) => k.trim()).filter(Boolean)
-        return clean.length > 0 ? clean : undefined
+      // Chave digitada e não adicionada ainda não se perde ao salvar: vai para
+      // a lista pelo mesmo caminho aditivo do botão "Adicionar". O PUT não
+      // leva chave nenhuma — é assim que salvar nunca substitui as guardadas.
+      for (const alvo of ['gemini', 'qwen', 'local'] as ProvedorDeChave[]) {
+        if (separarChaves(keyDrafts[alvo]).length > 0) await handleAddProviderKeys(alvo, true)
       }
 
       const finalModel = model || (provider === 'gemini' ? 'gemini-3.6-flash' : provider === 'qwen' ? 'qwen3.8-max' : 'Llama-3.2-3B')
@@ -858,9 +995,6 @@ export function SettingsPage(): JSX.Element {
         ai_enabled: isAiActive,
         provider,
         model: finalModel,
-        gemini_api_keys: keysToSend(editingGeminiKeys, geminiKeys),
-        qwen_api_keys: keysToSend(editingQwenKeys, qwenKeys),
-        local_api_keys: keysToSend(editingLocalKeys, localKeys),
         endpoint: provider !== 'gemini' ? endpoint.trim() : null,
         temperature,
         max_tokens: maxTokens,
@@ -1355,19 +1489,14 @@ export function SettingsPage(): JSX.Element {
                 }
                 placeholder="Cole sua API Key do Google AI Studio (AIzaSy...)"
                 previews={geminiPreviews}
-                keys={geminiKeys}
-                editing={editingGeminiKeys}
-                visibility={showGeminiVisibility}
+                draft={keyDrafts.gemini}
+                visible={keyDraftVisible}
                 disabled={!isAiActive}
-                onStartEditing={() => setEditingGeminiKeys(true)}
-                onCancelEditing={() => {
-                  setEditingGeminiKeys(false)
-                  setGeminiKeys([''])
-                }}
-                onAdd={addGeminiKeyField}
-                onUpdate={updateGeminiKeyField}
-                onRemoveField={removeGeminiKeyField}
-                onToggleVisibility={toggleGeminiKeyVisibility}
+                busy={keysBusy}
+                onDraftChange={(v) => setKeyDrafts((d) => ({ ...d, gemini: v }))}
+                onToggleVisibility={() => setKeyDraftVisible((v) => !v)}
+                onAdd={() => handleAddProviderKeys('gemini')}
+                onRemoveOne={(i) => handleRemoveProviderKey('gemini', i, geminiPreviews[i])}
                 onRemoveAll={() => handleRemoveProviderKeys('gemini')}
               />
             )}
@@ -1382,19 +1511,14 @@ export function SettingsPage(): JSX.Element {
                 }
                 placeholder="Cole sua API Key do DashScope ou OpenRouter (sk-...)"
                 previews={qwenPreviews}
-                keys={qwenKeys}
-                editing={editingQwenKeys}
-                visibility={showQwenVisibility}
+                draft={keyDrafts.qwen}
+                visible={keyDraftVisible}
                 disabled={!isAiActive}
-                onStartEditing={() => setEditingQwenKeys(true)}
-                onCancelEditing={() => {
-                  setEditingQwenKeys(false)
-                  setQwenKeys([''])
-                }}
-                onAdd={addQwenKeyField}
-                onUpdate={updateQwenKeyField}
-                onRemoveField={removeQwenKeyField}
-                onToggleVisibility={toggleQwenKeyVisibility}
+                busy={keysBusy}
+                onDraftChange={(v) => setKeyDrafts((d) => ({ ...d, qwen: v }))}
+                onToggleVisibility={() => setKeyDraftVisible((v) => !v)}
+                onAdd={() => handleAddProviderKeys('qwen')}
+                onRemoveOne={(i) => handleRemoveProviderKey('qwen', i, qwenPreviews[i])}
                 onRemoveAll={() => handleRemoveProviderKeys('qwen')}
               />
             )}
@@ -1409,19 +1533,14 @@ export function SettingsPage(): JSX.Element {
                 }
                 placeholder="Bearer token local ou deixe em branco para Ollama"
                 previews={localPreviews}
-                keys={localKeys}
-                editing={editingLocalKeys}
-                visibility={showLocalVisibility}
+                draft={keyDrafts.local}
+                visible={keyDraftVisible}
                 disabled={!isAiActive}
-                onStartEditing={() => setEditingLocalKeys(true)}
-                onCancelEditing={() => {
-                  setEditingLocalKeys(false)
-                  setLocalKeys([''])
-                }}
-                onAdd={addLocalKeyField}
-                onUpdate={updateLocalKeyField}
-                onRemoveField={removeLocalKeyField}
-                onToggleVisibility={toggleLocalKeyVisibility}
+                busy={keysBusy}
+                onDraftChange={(v) => setKeyDrafts((d) => ({ ...d, local: v }))}
+                onToggleVisibility={() => setKeyDraftVisible((v) => !v)}
+                onAdd={() => handleAddProviderKeys('local')}
+                onRemoveOne={(i) => handleRemoveProviderKey('local', i, localPreviews[i])}
                 onRemoveAll={() => handleRemoveProviderKeys('local')}
               />
             )}
@@ -1844,6 +1963,30 @@ export function SettingsPage(): JSX.Element {
               </button>
               <button
                 type="button"
+                className={`admin-tab-btn ${adminTab === 'requests' ? 'active' : ''}`}
+                onClick={() => setAdminTab('requests')}
+              >
+                <Inbox size={14} aria-hidden="true" /> Solicitações ({inviteRequests.length})
+                {pendingRequests > 0 && (
+                  <span className="admin-tab-badge" aria-label={`${pendingRequests} pendentes`}>
+                    {pendingRequests}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`admin-tab-btn ${adminTab === 'feedback' ? 'active' : ''}`}
+                onClick={() => setAdminTab('feedback')}
+              >
+                <MessageSquareText size={14} aria-hidden="true" /> Feedback do beta
+                {novosFeedback > 0 && (
+                  <span className="admin-tab-badge" aria-label={`${novosFeedback} novos`}>
+                    {novosFeedback}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
                 className={`admin-tab-btn ${adminTab === 'users' ? 'active' : ''}`}
                 onClick={() => setAdminTab('users')}
               >
@@ -1998,7 +2141,298 @@ export function SettingsPage(): JSX.Element {
               </div>
             )}
 
-            {/* ABA 2: USUÁRIOS & PESQUISADORES CADASTRADOS */}
+            {/* ABA 2: SOLICITAÇÕES DE CONVITE (tela de login) */}
+            {adminTab === 'requests' && (
+              <div className="admin-panel">
+                {ultimaAprovacao && (
+                  <div className="aprovacao-resultado">
+                    <div className="aprovacao-cabecalho">
+                      <CheckCircle2 size={17} aria-hidden="true" />
+                      <div>
+                        <strong>{ultimaAprovacao.nome} foi aprovado(a)</strong>
+                        <div className="aprovacao-codigo">
+                          {ultimaAprovacao.invite.code}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="aprovacao-fechar"
+                        onClick={() => setUltimaAprovacao(null)}
+                        aria-label="Fechar aviso"
+                      >
+                        <XCircle size={15} />
+                      </button>
+                    </div>
+
+                    <div className="aprovacao-canais">
+                      <div className="aprovacao-canal">
+                        <Mail size={14} aria-hidden="true" />
+                        {ultimaAprovacao.email_enviado ? (
+                          <span>
+                            E-mail enviado para{' '}
+                            <strong>{ultimaAprovacao.request.email}</strong>, com o
+                            código, o link e as instruções.
+                          </span>
+                        ) : (
+                          <span className="aprovacao-canal--falhou">
+                            E-mail não enviado. {ultimaAprovacao.email_detalhe}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="aprovacao-canal">
+                        <Phone size={14} aria-hidden="true" />
+                        {ultimaAprovacao.whatsapp_url ? (
+                          <span>
+                            A mensagem de WhatsApp já está escrita e endereçada.
+                            Falta um clique seu para enviá-la.
+                          </span>
+                        ) : (
+                          <span className="aprovacao-canal--falhou">
+                            O telefone informado não permite montar o link do
+                            WhatsApp. Envie o código por outro caminho.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="aprovacao-acoes">
+                      {ultimaAprovacao.whatsapp_url && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() =>
+                            window.open(
+                              ultimaAprovacao.whatsapp_url,
+                              '_blank',
+                              'noopener,noreferrer'
+                            )
+                          }
+                          leftIcon={<Send size={13} />}
+                        >
+                          Enviar no WhatsApp
+                        </Button>
+                      )}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleCopyInviteCode(ultimaAprovacao.invite.code)}
+                        leftIcon={
+                          copiedCode === ultimaAprovacao.invite.code ? (
+                            <Check size={13} />
+                          ) : (
+                            <Copy size={13} />
+                          )
+                        }
+                      >
+                        {copiedCode === ultimaAprovacao.invite.code
+                          ? 'Código copiado'
+                          : 'Copiar código'}
+                      </Button>
+                      <button
+                        type="button"
+                        className="btn-text-action"
+                        onClick={() => handleCopyInviteCode(ultimaAprovacao.link_direto)}
+                        title="Copiar o link que abre o cadastro com o código preenchido"
+                      >
+                        <Link2 size={12} /> Copiar link direto
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="admin-toolbar">
+                  <h4 className="admin-table-title">
+                    Pedidos recebidos pela tela de login
+                    {pendingRequests > 0 && ` — ${pendingRequests} aguardando resposta`}
+                  </h4>
+                  <div className="admin-toolbar-actions">
+                    <button
+                      type="button"
+                      className={`btn-text-action ${requestFilter === 'pendente' ? 'is-active' : ''}`}
+                      onClick={() =>
+                        setRequestFilter(requestFilter === 'pendente' ? 'todos' : 'pendente')
+                      }
+                    >
+                      {requestFilter === 'pendente' ? 'Mostrar todos' : 'Só pendentes'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-text-action"
+                      onClick={loadInviteRequests}
+                      disabled={loadingRequests}
+                    >
+                      <RefreshCw size={12} className={loadingRequests ? 'animate-spin' : ''} /> Atualizar
+                    </button>
+                  </div>
+                </div>
+
+                {(() => {
+                  const visiveis =
+                    requestFilter === 'pendente'
+                      ? inviteRequests.filter((r) => r.status === 'pendente')
+                      : inviteRequests
+
+                  if (visiveis.length === 0) {
+                    return (
+                      <EmptyState
+                        size="inline"
+                        icon={<Inbox size={22} strokeWidth={1.25} aria-hidden="true" />}
+                        title={
+                          requestFilter === 'pendente'
+                            ? 'Nenhum pedido aguardando resposta'
+                            : 'Nenhum pedido recebido'
+                        }
+                        description="Quem chega à tela de login sem convite pode pedir acesso pela aba 'Quero um convite'. Os pedidos aparecem aqui."
+                      />
+                    )
+                  }
+
+                  return (
+                    <div className="admin-table-wrap">
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>Solicitante</th>
+                            <th>Contato</th>
+                            <th>Como conheceu</th>
+                            <th>Recebido em</th>
+                            <th>Status</th>
+                            <th className="col-actions">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visiveis.map((req) => {
+                            const ocupado = actingRequestId === req.id
+                            return (
+                              <tr key={req.id}>
+                                <td>
+                                  <div className="cell-strong">{req.nome}</div>
+                                  {req.instituicao && (
+                                    <div className="cell-muted">{req.instituicao}</div>
+                                  )}
+                                </td>
+                                <td>
+                                  <div>
+                                    <a href={`mailto:${req.email}`}>{req.email}</a>
+                                  </div>
+                                  <div className="cell-muted">{req.telefone}</div>
+                                </td>
+                                <td className="cell-muted">{req.onde_conheceu}</td>
+                                <td className="cell-muted">
+                                  {new Date(req.created_at).toLocaleDateString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </td>
+                                <td>
+                                  {req.status === 'pendente' && (
+                                    <Badge variant="warning" size="xs">Pendente</Badge>
+                                  )}
+                                  {req.status === 'aprovado' && (
+                                    <div className="request-approved-cell">
+                                      <Badge variant="success" size="xs">Aprovado</Badge>
+                                      {req.invite_code_generated && (
+                                        <button
+                                          type="button"
+                                          className="btn-text-action"
+                                          onClick={() =>
+                                            handleCopyInviteCode(req.invite_code_generated as string)
+                                          }
+                                          title="Copiar o código emitido para este pedido"
+                                        >
+                                          {copiedCode === req.invite_code_generated ? (
+                                            <Check size={12} />
+                                          ) : (
+                                            <Copy size={12} />
+                                          )}{' '}
+                                          {req.invite_code_generated}
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  {req.status === 'recusado' && (
+                                    <>
+                                      <Badge variant="error" size="xs">Recusado</Badge>
+                                      {req.admin_notes && (
+                                        <div className="cell-muted" title={req.admin_notes}>
+                                          {req.admin_notes}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </td>
+                                <td className="col-actions">
+                                  <div className="admin-row-actions">
+                                    {req.status === 'pendente' ? (
+                                      <>
+                                        <Button
+                                          variant="primary"
+                                          size="xs"
+                                          onClick={() => handleApproveRequest(req)}
+                                          disabled={ocupado}
+                                          title="Gerar convite de uso único e marcar como aprovado"
+                                          leftIcon={<Ticket size={12} />}
+                                        >
+                                          Aprovar
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          onClick={() => handleRejectRequest(req)}
+                                          disabled={ocupado}
+                                          title="Recusar o pedido"
+                                          leftIcon={<ThumbsDown size={12} />}
+                                        >
+                                          Recusar
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {req.status === 'recusado' && (
+                                          <Button
+                                            variant="secondary"
+                                            size="xs"
+                                            onClick={() => handleReopenRequest(req)}
+                                            disabled={ocupado}
+                                            title="Devolver o pedido para a fila de pendentes"
+                                            leftIcon={<Undo2 size={12} />}
+                                          >
+                                            Reabrir
+                                          </Button>
+                                        )}
+                                        <Button
+                                          variant="ghost"
+                                          size="xs"
+                                          onClick={() => handleDeleteRequest(req)}
+                                          disabled={ocupado}
+                                          title="Excluir o pedido e os dados de contato"
+                                          leftIcon={<Trash2 size={12} />}
+                                        >
+                                          Excluir
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* ABA 3: FEEDBACK DO BETA (botão do canto inferior direito) */}
+            {adminTab === 'feedback' && <PainelFeedback onContagem={setNovosFeedback} />}
+
+            {/* ABA 4: USUÁRIOS & PESQUISADORES CADASTRADOS */}
             {adminTab === 'users' && (
               <div className="admin-panel">
                 <div className="admin-toolbar">

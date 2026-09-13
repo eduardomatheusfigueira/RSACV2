@@ -1698,7 +1698,7 @@ export function ScreeningPage(): React.JSX.Element {
           >
             {/* Action Bar with Quick Decision & Navigation */}
             <div className="study-actions-toolbar">
-              <div className="decision-buttons-group" data-trilho-target="screening-decision-buttons">
+              <div className="decision-buttons-group">
                 <button
                   className={`btn-dec include ${selectedPaper.decision === 'Incluído' ? 'active' : ''}`}
                   onClick={() => handleDecision(selectedPaper.id, 'Incluído')}

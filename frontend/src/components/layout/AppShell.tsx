@@ -7,7 +7,8 @@ import { Outlet } from 'react-router-dom'
 import { TopRibbonBar } from './TopRibbonBar'
 import { StatusBar } from './StatusBar'
 import { LogPanel } from './LogPanel'
-import { TrilhoTutorBar, TrilhoDecisionModal, TrilhoSpotlight } from '@/components/trilho'
+import { BoasVindas } from '@/components/boasvindas'
+import { BotaoFeedback } from '@/components/feedback/BotaoFeedback'
 import './AppShell.css'
 
 export function AppShell(): JSX.Element {
@@ -24,10 +25,13 @@ export function AppShell(): JSX.Element {
         <StatusBar />
       </div>
 
-      {/* Camada Global do Modo Trilho (Tutor Metodológico) */}
-      <TrilhoSpotlight />
-      <TrilhoDecisionModal />
-      <TrilhoTutorBar />
+      {/* Boas-vindas da primeira vez. Mora aqui, e nao numa pagina, porque
+          precisa aparecer sobre qualquer tela em que a pessoa entre — o
+          primeiro acesso nem sempre cai no painel inicial. */}
+      <BoasVindas />
+
+      {/* Feedback do beta: em toda tela, no canto inferior direito. */}
+      <BotaoFeedback />
     </div>
   )
 }

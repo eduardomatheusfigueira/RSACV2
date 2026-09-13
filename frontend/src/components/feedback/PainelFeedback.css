@@ -1,0 +1,180 @@
+/**
+ * Revsist — Fila de feedback do beta (painel de administração).
+ */
+
+.pf-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  margin-bottom: var(--space-3);
+}
+
+.pf-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: var(--space-1) var(--space-2-5);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.pf-filtro:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.pf-filtro.is-ativo {
+  color: var(--color-accent-text, var(--color-accent));
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+}
+
+.pf-filtro__n {
+  min-width: 18px;
+  padding: 0 5px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs, 10px);
+  text-align: center;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+.pf-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-text-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.pf-cartao--problema {
+  border-left-color: var(--color-error);
+}
+
+.pf-cartao--sugestao {
+  border-left-color: var(--color-accent);
+}
+
+.pf-cartao--elogio {
+  border-left-color: var(--color-success);
+}
+
+.pf-cartao.is-novo {
+  box-shadow: var(--shadow-sm);
+}
+
+.pf-cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.pf-data {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.pf-autor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1-5) var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.pf-muted {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+a.pf-muted {
+  color: var(--color-accent-text, var(--color-accent));
+}
+
+.pf-mensagem {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.pf-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-tertiary);
+}
+
+.pf-meta code {
+  font-family: var(--font-mono);
+}
+
+.pf-navegador {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 420px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pf-nota {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-nota textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1-5) var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+
+.pf-nota textarea:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--color-accent);
+}
+
+.pf-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
