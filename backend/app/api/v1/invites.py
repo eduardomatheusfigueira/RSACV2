@@ -11,7 +11,6 @@ para o cadastro de novos pesquisadores na plataforma.
 from __future__ import annotations
 
 import logging
-import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -21,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.infrastructure.persistence.models import (
     InviteCodeModel,
+    InviteRequestModel,
     UserModel,
     as_utc,
     generate_uuid,
@@ -28,20 +28,23 @@ from app.infrastructure.persistence.models import (
 from app.schemas.invites import (
     InviteCreateRequest,
     InviteListResponse,
+    InviteRequestApprove,
+    InviteRequestApproveResponse,
+    InviteRequestListResponse,
+    InviteRequestResponse,
+    InviteRequestUpdate,
     InviteResponse,
 )
 from app.security.dependencies import require_owner
+from app.services import aprovacao_convite
+from app.services.retencao import aplicar_retencao_se_devido
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/invites", tags=["invites"])
 
 
-def gerar_codigo_convite() -> str:
-    """Gera um código de convite legível e seguro no formato RSAC-XXXX-YYYY."""
-    p1 = secrets.token_hex(2).upper()
-    p2 = secrets.token_hex(2).upper()
-    return f"RSAC-{p1}-{p2}"
+gerar_codigo_convite = aprovacao_convite.gerar_codigo_convite
 
 
 def _serializar_convite(inv: InviteCodeModel, db: Session) -> InviteResponse:
@@ -184,3 +187,197 @@ def revogar_convite(
         admin.username,
     )
     return _serializar_convite(convite, db)
+
+
+# ── Fila de solicitações vindas da tela de login ──────────────────────
+#
+# O convite continua sendo de emissão exclusiva do administrador; o que estas
+# rotas acrescentam é a fila de quem pediu. Aprovar é o atalho que faltava:
+# uma chamada gera o código, marca o pedido como atendido e guarda qual código
+# foi emitido para aquela pessoa — o vínculo que, feito à mão, se perdia.
+
+
+def _serializar_solicitacao(s: InviteRequestModel) -> InviteRequestResponse:
+    return InviteRequestResponse(
+        id=s.id,
+        nome=s.nome,
+        email=s.email,
+        telefone=s.telefone,
+        onde_conheceu=s.onde_conheceu,
+        instituicao=s.instituicao or "",
+        status=s.status,
+        created_at=s.created_at,
+        responded_at=s.responded_at,
+        invite_code_generated=s.invite_code_generated,
+        admin_notes=s.admin_notes or "",
+    )
+
+
+@router.get(
+    "/requests",
+    response_model=InviteRequestListResponse,
+    summary="Listar solicitações de convite recebidas (apenas owner)",
+)
+def listar_solicitacoes(
+    status_filtro: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _admin: UserModel = Depends(require_owner),
+):
+    """
+    Lista os pedidos de acesso enviados pela tela de login.
+
+    Pendentes primeiro, e dentro de cada grupo o mais recente na frente: a
+    fila existe para ser respondida, e ordenar só por data deixaria um pedido
+    novo já recusado acima de um antigo ainda sem resposta.
+    """
+    aplicar_retencao_se_devido(db)
+
+    consulta = db.query(InviteRequestModel)
+    if status_filtro:
+        consulta = consulta.filter(InviteRequestModel.status == status_filtro.strip().lower())
+
+    solicitacoes = consulta.order_by(InviteRequestModel.created_at.desc()).all()
+    itens = [_serializar_solicitacao(s) for s in solicitacoes]
+    itens.sort(key=lambda i: (i.status != "pendente", -i.created_at.timestamp()))
+
+    pendentes = db.query(InviteRequestModel).filter(
+        InviteRequestModel.status == "pendente"
+    ).count()
+
+    return InviteRequestListResponse(
+        requests=itens,
+        total=len(itens),
+        pendentes=pendentes,
+    )
+
+
+@router.post(
+    "/requests/{request_id}/approve",
+    response_model=InviteRequestApproveResponse,
+    summary="Aprovar solicitação emitindo um convite de uso único (apenas owner)",
+)
+def aprovar_solicitacao(
+    request_id: str,
+    payload: InviteRequestApprove,
+    db: Session = Depends(get_db),
+    admin: UserModel = Depends(require_owner),
+):
+    """
+    Emite um convite para quem solicitou e marca o pedido como aprovado.
+    """
+    solicitacao = (
+        db.query(InviteRequestModel).filter(InviteRequestModel.id == request_id).first()
+    )
+    if not solicitacao:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Solicitação não encontrada.",
+        )
+    try:
+        resultado = aprovacao_convite.aprovar(
+            db,
+            solicitacao,
+            aprovado_por_id=admin.id,
+            via="painel",
+            expires_in_days=payload.expires_in_days,
+            nota=payload.note,
+        )
+    except aprovacao_convite.PedidoJaRespondido:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Esta solicitação já foi aprovada com o convite "
+                f"{solicitacao.invite_code_generated}."
+            ),
+        )
+
+    convite = resultado.convite
+    mensagens = resultado.mensagens
+    envio = resultado.envio
+
+    return InviteRequestApproveResponse(
+        request=_serializar_solicitacao(solicitacao),
+        invite=_serializar_convite(convite, db),
+        link_direto=mensagens.link_direto,
+        whatsapp_url=mensagens.whatsapp_url,
+        email_enviado=envio.enviado,
+        email_detalhe=envio.detalhe,
+    )
+
+
+@router.patch(
+    "/requests/{request_id}",
+    response_model=InviteRequestResponse,
+    summary="Atualizar status ou anotação de uma solicitação (apenas owner)",
+)
+def atualizar_solicitacao(
+    request_id: str,
+    payload: InviteRequestUpdate,
+    db: Session = Depends(get_db),
+    admin: UserModel = Depends(require_owner),
+):
+    """
+    Recusa, reabre ou anota um pedido sem emitir convite.
+    """
+    solicitacao = (
+        db.query(InviteRequestModel).filter(InviteRequestModel.id == request_id).first()
+    )
+    if not solicitacao:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Solicitação não encontrada.",
+        )
+
+    if payload.status is not None and payload.status != solicitacao.status:
+        solicitacao.status = payload.status
+        solicitacao.responded_at = (
+            datetime.now(timezone.utc) if payload.status != "pendente" else None
+        )
+    if payload.admin_notes is not None:
+        solicitacao.admin_notes = payload.admin_notes.strip()
+
+    db.commit()
+    db.refresh(solicitacao)
+
+    logger.info(
+        "[Convites] Solicitação %s atualizada por '%s' (status: %s).",
+        solicitacao.id,
+        admin.username,
+        solicitacao.status,
+    )
+    return _serializar_solicitacao(solicitacao)
+
+
+@router.delete(
+    "/requests/{request_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Excluir definitivamente uma solicitação (apenas owner)",
+)
+def excluir_solicitacao(
+    request_id: str,
+    db: Session = Depends(get_db),
+    admin: UserModel = Depends(require_owner),
+):
+    """
+    Apaga o pedido e, com ele, os dados de contato de quem não virou usuário.
+
+    É a contrapartida do formulário público: a fila guarda nome, e-mail e
+    telefone de gente que não tem conta para pedir a própria eliminação, de
+    modo que o administrador precisa poder fazê-lo por ela.
+    """
+    solicitacao = (
+        db.query(InviteRequestModel).filter(InviteRequestModel.id == request_id).first()
+    )
+    if not solicitacao:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Solicitação não encontrada.",
+        )
+
+    db.delete(solicitacao)
+    db.commit()
+    logger.info(
+        "[Convites] Solicitação %s excluída pelo administrador '%s'.",
+        request_id,
+        admin.username,
+    )

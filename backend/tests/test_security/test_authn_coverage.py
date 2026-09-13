@@ -21,7 +21,7 @@ from app.main import create_app
 # A lista **completa** de rotas que respondem sem sessão (§29.3.1).
 #
 # Acrescentar algo aqui é uma decisão de segurança e deve ser justificada no
-# mesmo commit. Hoje são seis caminhos, todos sem dado de negócio:
+# mesmo commit. Hoje são nove caminhos, nenhum deles lendo dado de negócio:
 #   /health          — o lançador precisa saber se o processo subiu
 #   /auth/status     — o cliente precisa saber se mostra login ou a aplicação
 #   /auth/login      — porta de entrada
@@ -31,12 +31,33 @@ from app.main import create_app
 #                      **cria** a sessão. O que as protege não é autenticação,
 #                      e sim o `state` de uso único com PKCE, e o limite da
 #                      família `auth` no limitador de taxa.
+#   /auth/invite/request — pedido de convite da tela de login. É a única rota
+#                      em que um anônimo **grava** algo, e por isso a que mais
+#                      precisa de justificativa: quem pede acesso ainda não tem
+#                      conta, então exigir sessão seria exigir o que o pedido
+#                      existe para obter. O que a protege é o limite da família
+#                      `auth` por origem, a ausência de eco (a resposta é a
+#                      mesma para pedido novo e repetido) e o fato de o registro
+#                      criado não conceder nada — só entra numa fila que o owner
+#                      avalia.
+#
+# Fora da API, e por isso fora desta enumeração (que lê o OpenAPI), há duas
+# rotas HTML públicas, registradas no próprio `app`:
+#   /c/{codigo}       — link curto do convite; só redireciona para a SPA, e o
+#                       código é filtrado ao alfabeto dos convites.
+#   /convite/decidir  — botões de aprovar/recusar do aviso de novo pedido. Não
+#                       exigem sessão porque são clicados na caixa de entrada;
+#                       o que os protege é o token HMAC por pedido e por ação,
+#                       com vencimento, uso único e ação apenas no POST. As
+#                       garantias são verificadas em
+#                       `tests/test_api/test_decisao_por_email.py`.
 ROTAS_PUBLICAS = {
     "/api/v1/health",
     "/api/v1/auth/status",
     "/api/v1/auth/login",
     "/api/v1/auth/local",
     "/api/v1/auth/invite/validate",
+    "/api/v1/auth/invite/request",
     "/api/v1/auth/register-with-invite",
     "/api/v1/auth/google/start",
     "/api/v1/auth/google/callback",
@@ -148,6 +169,17 @@ async def test_rotas_publicas_respondem_sem_sessao(anon_client, caminho):
         res = await anon_client.get(caminho, follow_redirects=False)
         assert res.status_code == 303
         assert "/app/login?erro=" in res.headers["location"]
+    elif caminho == "/api/v1/auth/invite/request":
+        res = await anon_client.post(
+            caminho,
+            json={
+                "nome": "Pessoa Anônima",
+                "email": "anonima@exemplo.br",
+                "telefone": "(51) 90000-0000",
+                "onde_conheceu": "Busca na internet",
+            },
+        )
+        assert res.status_code == 201
     elif caminho == "/api/v1/auth/invite/validate":
         res = await anon_client.post(caminho, json={"invite_code": "RSAC-TEST-0000"})
         assert res.status_code in (400, 404)

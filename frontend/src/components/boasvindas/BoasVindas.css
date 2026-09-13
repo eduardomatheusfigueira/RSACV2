@@ -1,0 +1,289 @@
+/**
+ * Revsist — Boas-vindas do primeiro acesso.
+ */
+
+.bv-veu {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-boas-vindas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: color-mix(in srgb, var(--color-text-primary) 55%, transparent);
+  animation: bv-surgir var(--motion-base) var(--ease-out);
+}
+
+.bv-janela {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - var(--space-8));
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.bv-fechar {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  /* Acima do conteúdo rolável do passo, que sobe por baixo dele. Não disputa
+     com nada fora da janela — o empilhamento da janela inteira já foi
+     resolvido em `.bv-veu`. */
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.bv-fechar:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+/* ── Corpo ──────────────────────────────────────────────────────────── */
+
+.bv-passo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-6) var(--space-5) var(--space-6);
+}
+
+.bv-marca {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-5);
+}
+
+.bv-icone-grande {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto var(--space-4) auto;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-accent);
+}
+
+.bv-titulo {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  color: var(--color-text-primary);
+  text-align: center;
+  letter-spacing: -0.01em;
+}
+
+.bv-texto {
+  margin: var(--space-3) 0 0 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.bv-texto--secundario {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary, var(--color-text-secondary));
+}
+
+/* ── Destaques do primeiro passo ────────────────────────────────────── */
+
+.bv-destaques {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.bv-destaque {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--color-text-secondary);
+}
+
+.bv-destaque svg {
+  flex-shrink: 0;
+  margin-top: var(--space-0-5);
+  color: var(--color-accent);
+}
+
+.bv-destaque strong {
+  color: var(--color-text-primary);
+}
+
+/* ── As seis etapas ─────────────────────────────────────────────────── */
+
+.bv-etapas {
+  list-style: none;
+  margin: var(--space-5) 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.bv-etapa {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.bv-etapa:nth-child(odd) {
+  background: var(--color-bg-tertiary);
+}
+
+.bv-etapa-n {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  background: var(--color-accent);
+  color: var(--color-bg-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--weight-bold);
+}
+
+.bv-etapa-icone {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-secondary);
+  margin-top: var(--space-0-5);
+}
+
+.bv-etapa-corpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  font-size: var(--font-size-xs);
+  line-height: var(--leading-normal);
+  color: var(--color-text-secondary);
+}
+
+.bv-etapa-corpo strong {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+/* ── Rodapé ─────────────────────────────────────────────────────────── */
+
+.bv-rodape {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-primary);
+}
+
+.bv-marcadores {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.bv-marcador {
+  width: 22px;
+  height: 3px;
+  border-radius: var(--radius-xs);
+  background: var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.bv-marcador--ativo {
+  background: var(--color-accent);
+}
+
+.bv-acoes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.bv-pular {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.bv-pular:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+@keyframes bv-surgir {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Quem pediu menos movimento não precisa da entrada animada: ela não carrega
+   informação, só suaviza a chegada. */
+@media (prefers-reduced-motion: reduce) {
+  .bv-veu {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .bv-veu {
+    padding: var(--space-3);
+  }
+
+  .bv-passo {
+    padding: var(--space-6) var(--space-4) var(--space-4) var(--space-4);
+  }
+
+  .bv-rodape {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    padding: var(--space-4);
+  }
+
+  .bv-acoes {
+    justify-content: space-between;
+  }
+
+  .bv-marcadores {
+    justify-content: center;
+  }
+}

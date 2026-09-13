@@ -94,6 +94,11 @@ def _familia_da_rota(caminho: str, metodo: str) -> str:
     """Classifica a requisição na família de limite correspondente."""
     if "/auth/login" in caminho or "/auth/local" in caminho or "/auth/google" in caminho:
         return "auth"
+    # O pedido público de convite é formulário aberto na tela de login: sem o
+    # limite de origem, ele seria o caminho mais barato para encher a fila do
+    # administrador de lixo.
+    if "/auth/invite/request" in caminho or caminho.startswith("/convite/decidir"):
+        return "auth"
     if metodo == "GET" and any(caminho.endswith(s) for s in LEITURAS_DE_ACOMPANHAMENTO):
         return "geral"
     if "/ai/" in caminho or "/screening/ai" in caminho:
@@ -139,7 +144,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         caminho = request.url.path
-        if not caminho.startswith("/api/") or caminho.endswith("/health"):
+        # `/convite/decidir` não é API, mas recebe um token que concede acesso:
+        # entra no limite como se fosse, na família `auth`.
+        if caminho.startswith("/convite/decidir"):
+            pass
+        elif not caminho.startswith("/api/") or caminho.endswith("/health"):
             return await call_next(request)
 
         familia = _familia_da_rota(caminho, request.method)

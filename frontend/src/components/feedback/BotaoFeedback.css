@@ -1,0 +1,231 @@
+/**
+ * Revsist — Botão e janela de feedback do beta.
+ */
+
+/* ── Botão flutuante ────────────────────────────────────────────────── */
+
+.fb-botao {
+  position: fixed;
+  right: var(--space-4);
+  /* Logo acima da barra de status, sem cobri-la. */
+  bottom: calc(var(--statusbar-height) + var(--space-3));
+  /* Acima do painel de logs, que ancora à direita, e abaixo de diálogos e
+     avisos: um modal aberto cobre o botão, e um aviso transitório passa por
+     cima dele sem disputar clique. */
+  z-index: calc(var(--z-drawer) + 1);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  height: 34px;
+  padding: 0 var(--space-3) 0 var(--space-2-5);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-on-chrome, #fff);
+  background: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 70%, #000);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.fb-botao:hover {
+  background: var(--color-accent-hover, var(--color-accent));
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.fb-botao:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+.fb-botao:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.fb-botao__beta {
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-3xs, 9px);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+@media (max-width: 768px) {
+  /* A barra de status cresce no celular (alvos de toque de 34 px). O botão
+     vira só o ícone, para não cobrir o conteúdo que rola por baixo. */
+  .fb-botao {
+    right: var(--space-3);
+    bottom: calc(52px + var(--rsac-safe-bottom, 0px));
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .fb-botao__rotulo,
+  .fb-botao__beta {
+    display: none;
+  }
+}
+
+@media print {
+  .fb-botao {
+    display: none;
+  }
+}
+
+/* ── Janela ─────────────────────────────────────────────────────────── */
+
+.fb-intro {
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+}
+
+.fb-tipos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+@media (max-width: 480px) {
+  .fb-tipos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.fb-tipo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2-5) var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.fb-tipo:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.fb-tipo.is-ativo {
+  color: var(--color-accent-text, var(--color-accent));
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+.fb-tipo--problema.is-ativo {
+  color: var(--color-error-text, var(--color-error));
+  background: var(--color-error-bg);
+  border-color: var(--color-error);
+  box-shadow: inset 0 0 0 1px var(--color-error);
+}
+
+.fb-tipo--elogio.is-ativo {
+  color: var(--color-success-text, var(--color-success));
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+  box-shadow: inset 0 0 0 1px var(--color-success);
+}
+
+.fb-tipo:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.fb-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fb-campo__rotulo {
+  font-size: var(--font-size-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.fb-campo .rsac-textarea {
+  min-height: 132px;
+  font-size: var(--font-size-md, var(--font-size-sm));
+}
+
+.fb-campo__rodape {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-2xs, 10px);
+  color: var(--color-text-tertiary);
+}
+
+.fb-contador--alto {
+  color: var(--color-warning-text, var(--color-warning));
+  font-weight: var(--weight-semibold);
+}
+
+.fb-contexto {
+  margin: 0;
+  padding: var(--space-2) var(--space-2-5);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.fb-contexto code {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  word-break: break-all;
+}
+
+.fb-janela .rsac-dialog-footer {
+  margin-top: 0;
+}
+
+/* ── Confirmação ────────────────────────────────────────────────────── */
+
+.fb-sucesso {
+  align-items: center;
+  text-align: center;
+  padding-block: var(--space-8) var(--space-6);
+}
+
+.fb-sucesso__icone {
+  color: var(--color-success);
+}
+
+.fb-sucesso__titulo {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.fb-sucesso__texto {
+  max-width: 40ch;
+  font-size: var(--font-size-sm);
+}
+
+.fb-sucesso__acoes {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}

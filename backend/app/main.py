@@ -14,7 +14,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+import re
+
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -101,6 +103,19 @@ async def lifespan(app: FastAPI):
     # `aplicar_migracoes` trata sozinha o banco de mesa anterior ao
     # versionamento, carimbando-o antes de migrar.
     aplicar_migracoes(engine)
+
+    # Retenção e descarte: os prazos que o Aviso de Privacidade publica. Roda
+    # na partida e, depois, de forma oportunista (ver `services/retencao`).
+    from app.services.retencao import aplicar_retencao
+
+    _db_retencao = SessionLocal()
+    try:
+        aplicar_retencao(_db_retencao)
+    except Exception:
+        _db_retencao.rollback()
+        logger.exception("[Retenção] Falha na partida; o servidor sobe mesmo assim.")
+    finally:
+        _db_retencao.close()
 
     # ── Portão de partida segura (doc 29 §29.2.4) ─────────────────────
     #
@@ -326,6 +341,40 @@ def create_app() -> FastAPI:
     # resolvidas sem passar pela dependência de sessão do agregador.
     app.include_router(public_router, prefix="/api/v1")
     app.include_router(api_router, prefix="/api/v1")
+
+    # ── Link curto do convite ─────────────────────────────────────────
+    #
+    # `revsist.com/c/RSAC-XXXX-YYYY` é o que vai no WhatsApp e no e-mail de
+    # aprovação. Ele existe por duas razões, e nenhuma é estética:
+    #
+    #   1. A SPA roteia por hash, então o endereço real do destino é
+    #      `/app/#/convite/CÓDIGO`. Um `#` no meio de uma mensagem de WhatsApp
+    #      é onde vários aplicativos param de sublinhar o link — metade dele
+    #      fica fora do toque.
+    #   2. Curto sobrevive à quebra de linha do cliente de e-mail e cabe
+    #      inteiro na visualização de um celular.
+    #
+    # Fica registrado aqui, fora do bloco que depende de `dist`, porque é um
+    # redirecionamento: precisa responder mesmo num servidor que ainda não
+    # compilou a interface — melhor mandar para uma SPA ausente, e ver o erro
+    # da SPA, do que devolver 404 num link já enviado a alguém.
+    # Páginas de decisão dos botões do aviso de novo pedido. Registradas antes
+    # das rotas estáticas pelo mesmo motivo do link curto: `/convite/...` não
+    # pode cair na SPA nem na landing.
+    from app.api.decisao_por_email import router as decisao_por_email_router
+
+    app.include_router(decisao_por_email_router)
+
+    @app.get("/c/{codigo}", include_in_schema=False)
+    async def entrar_com_convite(codigo: str):
+        # O código entra no destino, então é filtrado, não escapado: aceitar
+        # qualquer texto aqui transformaria a rota em redirecionador aberto —
+        # `revsist.com/c/...` na barra do navegador, o site de outra pessoa na
+        # tela. Só o alfabeto dos códigos passa.
+        limpo = re.sub(r"[^A-Za-z0-9-]", "", codigo)[:32].upper()
+        if not limpo:
+            return RedirectResponse(url="/app", status_code=302)
+        return RedirectResponse(url=f"/app/#/convite/{limpo}", status_code=302)
 
     # Servir Landing Page Institucional e Frontend Web (SPA)
     landing_dist = Path(__file__).resolve().parent.parent.parent / "landing" / "dist"

@@ -186,6 +186,8 @@ def test_as_operacoes_do_plano_estao_previstas():
         "signup", "login", "data_export", "data_erasure",
         "ai_dispatch", "pdf_fetch", "consent_given", "consent_revoked",
         "team_invitation_issued", "team_membership_created", "team_membership_revoked",
+        "invite_requested", "invite_approved_notice",
+        "feedback_received",
     }
 
 

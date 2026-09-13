@@ -18,6 +18,7 @@ import { ExportPage } from '@/pages/ExportPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import TeamPage from '@/pages/TeamPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { AceiteDeTermos } from '@/components/aceite'
 import { ErrorBoundary, Toaster } from '@/components/ui'
 import { api } from '@/api/client'
 import {
@@ -347,7 +348,13 @@ export function App(): JSX.Element {
     <QueryClientProvider client={queryClient}>
       <HashRouter>
         <ErrorBoundary fallbackTitle="Erro na aplicação">
-          <AppContent />
+          {/* Envolve, em vez de sobrepor: enquanto o aceite não vem, o
+              `AuthGate` lá dentro nem chega a ser montado — e sem ele não há
+              conversa com o backend nem sessão restaurada por baixo do véu.
+              É o que separa uma porta de uma cortina. */}
+          <AceiteDeTermos>
+            <AppContent />
+          </AceiteDeTermos>
         </ErrorBoundary>
         <Toaster />
       </HashRouter>

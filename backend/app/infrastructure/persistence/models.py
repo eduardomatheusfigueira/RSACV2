@@ -840,6 +840,67 @@ class InviteCodeModel(Base):
     note: Mapped[str] = mapped_column(String(255), default="")
 
 
+class InviteRequestModel(Base):
+    """
+    Solicitação pública de convite feita na página de login.
+
+    Registra dados de contato e contexto de pesquisadores que desejam
+    acesso ao Revsist, permitindo ao administrador avaliar e responder
+    com um código de convite.
+    """
+
+    __tablename__ = "invite_requests"
+    __table_args__ = (
+        Index("ix_invite_requests_status", "status"),
+        Index("ix_invite_requests_created_at", "created_at"),
+        Index("ix_invite_requests_email", "email"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    nome: Mapped[str] = mapped_column(String(120), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    telefone: Mapped[str] = mapped_column(String(50), nullable=False)
+    onde_conheceu: Mapped[str] = mapped_column(String(255), nullable=False)
+    instituicao: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pendente", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    invite_code_generated: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    admin_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class FeedbackModel(Base):
+    """
+    Retorno enviado de dentro do aplicativo pelo botão de feedback do beta.
+
+    Só quem tem conta envia, e por isso o registro guarda o vínculo com o
+    usuário em vez de copiar nome e e-mail: a identificação vem da conta na
+    hora da leitura, e some com ela. `DELETE /me` apaga estas linhas junto.
+
+    O contexto técnico (tela, versão, navegador) é o mínimo para reproduzir um
+    problema relatado — sem ele, "a triagem travou" não diz onde nem em quê.
+    """
+
+    __tablename__ = "feedbacks"
+    __table_args__ = (
+        Index("ix_feedbacks_status", "status"),
+        Index("ix_feedbacks_created_at", "created_at"),
+        Index("ix_feedbacks_user_id", "user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    tipo: Mapped[str] = mapped_column(String(20), nullable=False)
+    mensagem: Mapped[str] = mapped_column(Text, nullable=False)
+    pagina: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    navegador: Mapped[str] = mapped_column(String(300), default="", nullable=False)
+    versao: Mapped[str] = mapped_column(String(20), default="", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="novo", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    admin_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class SessionModel(Base):
     """
     Sessão ativa, com estado no servidor.

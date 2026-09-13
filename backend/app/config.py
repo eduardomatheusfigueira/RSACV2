@@ -107,7 +107,44 @@ class Settings(BaseSettings):
     # É o modo "por convite" da v1, sem escrever código de convite.
     signup_allowlist: str = ""
     # Versão do Aviso de Privacidade e dos Termos vigente, registrada no aceite.
-    terms_version: str = "2026-08"
+    terms_version: str = "2026-09"
+
+    # ── Envio de e-mail (aviso de convite aprovado) ───────────────────
+    #
+    # Desligado enquanto `smtp_host` estiver vazio, e de propósito: o backend
+    # precisa subir e aprovar convites sem nenhuma conta de e-mail configurada
+    # — é o caso do perfil `desktop` e o de quem só quer avisar pelo WhatsApp.
+    # Sem SMTP, a aprovação segue funcionando e o painel diz que o e-mail não
+    # saiu, em vez de recusar a aprovação inteira por causa do aviso.
+    #
+    # Para o Gmail: host `smtp.gmail.com`, porta 587, usuário é o endereço
+    # completo e a senha é uma **Senha de app** (Conta Google → Segurança →
+    # Verificação em duas etapas → Senhas de app). A senha normal da conta não
+    # funciona: o Google bloqueia login por senha em SMTP desde 2022.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    # O Google mostra a Senha de app em quatro grupos de quatro — "fqim gkbe
+    # lxvj bzof" —, e é assim que ela vai ser copiada, porque é assim que
+    # aparece na tela. Mas o segredo são os 16 caracteres, sem os espaços, e o
+    # SMTP do Gmail recusa a versão espaçada com o mesmo "autenticação
+    # falhou" que daria para uma senha errada. Exigir que quem configura
+    # apague os espaços à mão é transferir para a pessoa um detalhe que o
+    # código resolve sozinho — e cobrar isso justamente no passo em que o erro
+    # é invisível e a mensagem do servidor não ajuda.
+    # STARTTLS na 587 (Gmail, Outlook); SSL direto na 465.
+    smtp_use_tls: bool = True
+    # Quem assina. O endereço precisa ser o mesmo de `smtp_user` ou um alias
+    # verificado da conta — remetente divergente cai em spam ou é recusado.
+    smtp_from_email: str = ""
+    smtp_from_name: str = "Revsist"
+    # Para onde vai a resposta de quem apertar "responder".
+    smtp_reply_to: str = ""
+    # Quem recebe o aviso de cada novo pedido de convite, com os botões de
+    # aprovar e recusar. Vazio cai em `smtp_reply_to` e, depois, em
+    # `smtp_from_email` — no caso comum, o administrador é quem envia.
+    convites_email_admin: str = ""
 
     # ── Sessões (doc 29 §29.3.3) ──────────────────────────────────────
     # Validade da sessão, renovada por atividade: quem está triando não é
@@ -145,6 +182,20 @@ class Settings(BaseSettings):
     ai_context_budget_chars: int = 28000
 
     # ── Perímetro derivado do perfil ──────────────────────────────────
+
+    @field_validator("smtp_password", mode="before")
+    @classmethod
+    def _limpar_senha_de_app(cls, v):
+        """
+        Remove os espaços com que o Google exibe a Senha de app.
+
+        Nenhuma Senha de app contém espaço — os grupos de quatro são só uma
+        ajuda de leitura na tela do Google —, então apagá-los nunca altera um
+        segredo legítimo, e faz funcionar o que a pessoa copiou da tela.
+        """
+        if isinstance(v, str):
+            return "".join(v.split())
+        return v
 
     @field_validator("cors_origins", "trusted_hosts", mode="before")
     @classmethod

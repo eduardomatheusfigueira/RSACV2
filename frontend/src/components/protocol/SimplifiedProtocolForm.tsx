@@ -305,7 +305,6 @@ export function SimplifiedProtocolForm({
     <div className="simplified-protocol">
       {/* ── S1: Título provisório ─────────────────────────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-title"
         icone={<FileText size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Título Provisório do Estudo"
         etiquetaItem="S1"
@@ -331,7 +330,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S2 e S3: Pergunta e framework ─────────────────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-objective"
         icone={<BookOpen size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Pergunta Principal e Objetivo Geral"
         etiquetaItem="S2"
@@ -358,7 +356,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S3: Decomposição estruturada da pergunta ──────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-framework"
         icone={<Layers size={20} className="icon-accent" aria-hidden="true" />}
         titulo={`Decomposição Estruturada da Pergunta (${frameworkType})`}
         etiquetaItem="S3"
@@ -414,7 +411,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S4: Desenho da revisão ────────────────────────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-design"
         icone={<CheckSquare size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Desenho Metodológico da Revisão"
         etiquetaItem={`S4 · ${currentDesign.badge}`}
@@ -444,7 +440,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S5 e S8: Bases-alvo e recorte ─────────────────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-databases"
         icone={<Database size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Bases-alvo e Recorte da Busca"
         etiquetaItem="S5 · S8"
@@ -575,7 +570,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S6 e S7: Estratégia canônica e adaptação por base ──── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-strategy"
         icone={<Search size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Estratégia de Busca Canônica e Adaptação por Base"
         etiquetaItem="S6 · S7"
@@ -703,7 +697,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S9: Métodos complementares ────────────────────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-sources"
         icone={<Globe size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Métodos Complementares e Literatura Cinzenta"
         etiquetaItem="S9"
@@ -729,7 +722,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S10: Critérios de elegibilidade ───────────────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-criteria"
         icone={<Filter size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Critérios de Elegibilidade"
         etiquetaItem="S10"
@@ -842,7 +834,6 @@ export function SimplifiedProtocolForm({
 
       {/* ── S11: Perguntas de extração (decisão D-C) ──────────── */}
       <CampoDoProtocolo
-        data-trilho-target="protocol-questions"
         icone={<HelpCircle size={20} className="icon-accent" aria-hidden="true" />}
         titulo="Perguntas de Extração de Dados"
         etiquetaItem="S11"
