@@ -18,7 +18,7 @@
     mais o CSP servido pelo Caddy e pelo backend.
   -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none'" />
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; object-src 'none';" />
 
   <meta property="og:type" content="article" />
   <meta property="og:site_name" content="Revsist" />
@@ -33,42 +33,71 @@
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-  <link rel="stylesheet" href="../src/styles/landing.css" />
+  <link rel="preload" href="/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin />
+  <script>
+    /* Aceite de termos: marca o documento antes da primeira pintura. O véu e o
+       texto vêm de src/scripts/aceite.js; aqui só se decide se a página nasce
+       bloqueada, porque essa decisão não pode esperar o módulo carregar. */
+    (function () {
+      try {
+        var p = location.pathname.replace(/\/+$/, '') || '/';
+        if (p === '/termos' || p === '/privacidade') return;
+        var b = localStorage.getItem('rsac_aceite_termos');
+        if (b && JSON.parse(b).versao === '2026-09') return;
+      } catch (e) { return; }
+      document.documentElement.setAttribute('data-aceite', 'pendente');
+    })();
+  </script>
+  <link rel="stylesheet" href="/src/styles/landing.css" />
   <noscript><link rel="stylesheet" href="/styles/nojs.css" /></noscript>
 </head>
 <body>
 
   <a class="skip-link" href="#conteudo">Ir direto ao conteúdo</a>
 
-  <header class="site-header" role="banner">
-    <div class="container header-inner">
-      <a href="/" class="brand-link" aria-label="Revsist — página inicial">
-        <svg class="brand-mark" viewBox="0 0 80 100" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Biblioteca central de ícones SVG compartilhada com a landing page -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-marca" viewBox="0 0 80 100">
+        <g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
           <path d="M 7 7 V 93" />
           <circle cx="32" cy="32" r="25" />
-          <path d="M 45.946 52.749 L 73 93" />
-        </svg>
+          <path d="M 45.946 52.749 L 73 93" stroke="var(--marca-cabo, currentColor)" />
+        </g>
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" /></symbol>
+      <symbol id="i-seta" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" /></symbol>
+    </defs>
+  </svg>
+
+  <header class="site-header" id="topo">
+    <div class="header-container">
+      <a href="/" class="brand-logo" aria-label="Revsist — página inicial">
+        <svg class="brand-mark-svg" viewBox="0 0 80 100" aria-hidden="true" focusable="false"><use href="#i-marca" /></svg>
         <span class="brand-name">Revsist</span>
-        <span class="badge-beta">v2.0 BETA</span>
+        <span class="badge badge-beta">v2.0 beta</span>
       </a>
 
-      <nav class="nav-links" id="nav-links" aria-label="Documentos e seções">
-        <a href="/" class="nav-link">Início</a>
-        <a href="/privacidade" class="nav-link">Privacidade e LGPD</a>
-        <a href="/#limites" class="nav-link">O que o Revsist não faz</a>
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menu de navegação">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+
+      <nav class="main-nav" id="main-nav" aria-label="Navegação principal">
+        <ul class="nav-list">
+          <li><a href="/#como-funciona" class="nav-link">Como funciona</a></li>
+          <li><a href="/#registro" class="nav-link">O que fica guardado</a></li>
+          <li><a href="/#diretrizes" class="nav-link">Roteiros</a></li>
+          <li><a href="/termos" class="nav-link is-active">Termos de uso</a></li>
+          <li><a href="/privacidade" class="nav-link">Privacidade</a></li>
+          <li><a href="/blog" class="nav-link">Blog</a></li>
+        </ul>
+        <div class="nav-actions">
+          <a href="/app" class="btn btn-chrome btn-sm">Entrar no Revsist</a>
+        </div>
       </nav>
-
-      <div class="header-actions">
-        <a href="/app" class="btn btn-primary btn-sm">Entrar</a>
-
-        <button id="nav-toggle-btn" class="btn-nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Abrir menu de seções">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
-      </div>
     </div>
   </header>
 
@@ -78,182 +107,312 @@
         <h1>Termos de Uso da Plataforma Revsist</h1>
 
         <p class="legal-meta">
-          VERSÃO 1.0<br />
-          VIGÊNCIA: 29 DE AGOSTO DE 2026<br />
-          ÚLTIMA ATUALIZAÇÃO: 29 DE AGOSTO DE 2026
+          VERSÃO 2.0<br />
+          VIGÊNCIA: 12 DE SETEMBRO DE 2026<br />
+          ÚLTIMA ATUALIZAÇÃO: 12 DE SETEMBRO DE 2026
         </p>
 
         <p>
           O <strong>Revsist</strong> (“Revsist”, “plataforma” ou “serviço”) é um software para
           planejamento, coleta, triagem metodológica, extração e síntese de evidências em revisões
-          sistemáticas de literatura científica.
+          sistemáticas de literatura científica. É mantido por
+          <strong>Eduardo Matheus Figueira</strong>, pessoa natural, como projeto acadêmico.
         </p>
         <p>
-          Ao criar uma conta ou utilizar a plataforma, você declara ter lido, compreendido e
-          concordado com estes termos e com o <a href="/privacidade">Aviso de Privacidade</a>.
+          Estes Termos regem o uso da plataforma. Ao aceitá-los na tela de entrada, ao pedir um
+          convite ou ao criar uma conta, você declara ter lido, compreendido e concordado com este
+          documento e com o <a href="/privacidade">Aviso de Privacidade</a>, que é parte integrante
+          dele.
         </p>
 
         <div class="legal-callout">
           <p>
-            <strong>Aviso de estágio.</strong> O Revsist está em BETA aberto e é distribuído sob
-            licença MIT, no estado em que se encontra. Nenhum item destes termos deve ser lido como
-            garantia de resultado científico: as decisões metodológicas continuam sendo do
-            pesquisador responsável.
+            <strong>Aviso de estágio.</strong> O Revsist está em BETA, é oferecido gratuitamente e é
+            distribuído <em>no estado em que se encontra</em>. Nada neste documento deve ser lido
+            como garantia de resultado científico ou de disponibilidade: as decisões metodológicas
+            continuam sendo do pesquisador responsável, e o serviço pode ficar indisponível, mudar
+            de comportamento ou ser descontinuado.
           </p>
         </div>
 
         <nav class="legal-toc" aria-label="Índice do documento">
           <h2>Neste documento</h2>
           <ol>
-            <li><a href="#objeto">Objeto e funcionalidades</a></li>
-            <li><a href="#cadastro">Cadastro, acesso e segurança da conta</a></li>
-            <li><a href="#byok">Modelo BYOK e uso de inteligência artificial</a></li>
-            <li><a href="#autoria">Direitos autorais e propriedade intelectual</a></li>
-            <li><a href="#responsabilidade">Limitações de responsabilidade e disponibilidade</a></li>
+            <li><a href="#objeto">O que o Revsist faz</a></li>
+            <li><a href="#limites">O que o Revsist não faz</a></li>
+            <li><a href="#acesso">Acesso por convite</a></li>
+            <li><a href="#conta">Conta, credenciais e segurança</a></li>
+            <li><a href="#gratuidade">Gratuidade e estágio BETA</a></li>
+            <li><a href="#uso">Uso aceitável e condutas vedadas</a></li>
+            <li><a href="#limites-tecnicos">Limites técnicos de uso</a></li>
+            <li><a href="#conteudo">Seu conteúdo de pesquisa</a></li>
+            <li><a href="#terceiros">Bases científicas, PDFs e direitos de terceiros</a></li>
+            <li><a href="#byok">Inteligência artificial e modelo BYOK</a></li>
+            <li><a href="#equipe">Trabalho em equipe</a></li>
+            <li><a href="#comunicacoes">Comunicações que enviamos</a></li>
+            <li><a href="#encerramento">Suspensão e encerramento</a></li>
+            <li><a href="#disponibilidade">Disponibilidade, backup e perda de dados</a></li>
+            <li><a href="#responsabilidade">Limitação de responsabilidade</a></li>
+            <li><a href="#software">Propriedade intelectual do software</a></li>
             <li><a href="#alteracoes">Alterações nestes termos</a></li>
-            <li><a href="#foro">Foro e legislação aplicável</a></li>
+            <li><a href="#geral">Disposições gerais</a></li>
+            <li><a href="#foro">Lei aplicável, foro e contato</a></li>
           </ol>
         </nav>
 
-        <h2 id="objeto">1. Objeto e funcionalidades</h2>
-        <p>O Revsist disponibiliza ao pesquisador um ambiente integrado para:</p>
+        <h2 id="objeto">1. O que o Revsist faz</h2>
+        <p>A plataforma oferece um ambiente integrado para conduzir uma revisão sistemática:</p>
         <ol>
-          <li>Elaboração de protocolos científicos — pergunta de pesquisa, critérios de inclusão e exclusão, descritores de busca e estratégia PICO, PCC ou SPIDER.</li>
-          <li>Coleta automatizada em repositórios e bases bibliográficas: BDTD, SciELO, Scopus, PubMed e OpenAlex.</li>
-          <li>Deduplicação e gestão do acervo bibliográfico.</li>
-          <li>Triagem de títulos e resumos, com parecer sugerido opcional por modelos de linguagem e conferência humana obrigatória.</li>
-          <li>Aquisição, leitura e extração de dados de textos integrais em PDF, com ancoragem em trecho literal e página.</li>
-          <li>Exportação da síntese em planilha <code>.xlsx</code>, referências em <code>.bib</code> e pacote completo de portabilidade em JSON.</li>
+          <li><strong>Protocolo.</strong> Pergunta de pesquisa, critérios de inclusão e exclusão, descritores e estratégia de busca em estruturas PICO, PCC ou SPIDER, com versionamento e congelamento do protocolo.</li>
+          <li><strong>Coleta.</strong> Busca automatizada em BDTD, SciELO, Scopus, PubMed e OpenAlex, com deduplicação do acervo reunido.</li>
+          <li><strong>Triagem.</strong> Leitura de títulos e resumos com registro do motivo de cada inclusão e exclusão, e parecer sugerido opcional por modelos de linguagem, sempre sujeito a conferência humana.</li>
+          <li><strong>Texto integral.</strong> Aquisição, leitura e extração de dados de PDFs, com ancoragem da informação extraída em trecho literal e página.</li>
+          <li><strong>Indicadores.</strong> Análises bibliométricas do corpus reunido — autoria, temas, séries temporais e grafos de coocorrência.</li>
+          <li><strong>Síntese e exportação.</strong> Diagrama de fluxo PRISMA 2020, planilha <code>.xlsx</code>, referências <code>.bib</code> e pacote completo de portabilidade em <code>.json</code>.</li>
+          <li><strong>Trabalho em equipe.</strong> Projetos compartilhados entre pesquisadores, com papéis distintos e convites de participação.</li>
         </ol>
         <p>
-          Funcionalidades descritas na documentação de planejamento e ainda não entregues nesta
-          versão — entre elas a triagem em equipe com dupla avaliação cega e a importação de
-          arquivos <code>.ris</code> e <code>.bib</code> — não integram o objeto destes termos
-          enquanto não estiverem disponíveis na plataforma. O que está e o que não está entregue é
-          listado em <a href="/#limites">“O que o Revsist não faz”</a>.
+          Recursos descritos na documentação de planejamento e ainda não disponíveis na plataforma
+          não integram o objeto destes Termos enquanto não forem entregues. O que está e o que não
+          está entregue é listado em <a href="/#limites">“O que o Revsist não faz”</a>.
         </p>
 
-        <h2 id="cadastro">2. Cadastro, acesso e segurança da conta</h2>
+        <h2 id="limites">2. O que o Revsist não faz</h2>
         <ol>
-          <li>
-            <strong>Elegibilidade.</strong> O acesso destina-se a pesquisadores, docentes,
-            estudantes de graduação e pós-graduação e profissionais dedicados à produção acadêmica e
-            científica.
-          </li>
+          <li><strong>Não decide por você.</strong> Nenhum estudo é incluído ou excluído sem confirmação humana. A sugestão automatizada é insumo, nunca decisão.</li>
+          <li><strong>Não valida seu método.</strong> A plataforma organiza e registra o percurso metodológico; não atesta a adequação da pergunta, dos critérios ou da estratégia de busca adotada.</li>
+          <li><strong>Não garante exaustividade da busca.</strong> A cobertura depende das bases consultadas, das suas credenciais de acesso e da disponibilidade das APIs externas no momento da coleta.</li>
+          <li><strong>Não é aconselhamento.</strong> Nada aqui constitui orientação médica, jurídica, estatística ou de qualquer outra natureza profissional.</li>
+          <li><strong>Não substitui a revisão por pares</strong> nem as exigências do seu programa, orientador, comitê de ética ou periódico.</li>
+        </ol>
+
+        <h2 id="acesso">3. Acesso por convite</h2>
+        <ol>
+          <li><strong>Elegibilidade.</strong> O acesso destina-se a pesquisadores, docentes, estudantes de graduação e pós-graduação e profissionais dedicados à produção acadêmica e científica. É necessário ter ao menos 18 anos.</li>
+          <li><strong>Convite de uso único.</strong> O cadastro só se conclui com um código de convite válido, pessoal e de uso único, que perde a validade depois de utilizado ou ao vencer o prazo.</li>
+          <li><strong>Pedido de convite.</strong> Quem ainda não tem código pode pedir um pela tela de entrada, informando nome, e-mail, telefone e como conheceu a plataforma. O pedido é avaliado manualmente.</li>
+          <li><strong>Concessão discricionária.</strong> A concessão de convite é uma liberalidade: o pedido pode ser recusado sem obrigação de justificar, e a recusa não gera direito a indenização. A recusa não impede um novo pedido futuro.</li>
+          <li><strong>Convite não transferível.</strong> O código é destinado a quem o recebeu. Repassá-lo a terceiros contraria estes Termos e permite a revogação do convite e da conta dele originada.</li>
+        </ol>
+
+        <h2 id="conta">4. Conta, credenciais e segurança</h2>
+        <ol>
           <li>
             <strong>Modalidades de autenticação.</strong>
             <ul>
-              <li><strong>Google OAuth</strong>, com endereço de e-mail verificado.</li>
-              <li><strong>Usuário e senha local</strong>, com mínimo de 12 caracteres e derivação por Argon2id.</li>
-              <li><strong>Código de convite</strong> de uso único, para registro de nova conta.</li>
+              <li>Entrada com Google, mediante conta com endereço de e-mail verificado.</li>
+              <li>Usuário e senha, com <strong>mínimo de 12 caracteres</strong> e derivação por Argon2id.</li>
+              <li>Nas instalações de mesa, troca de um token local pela sessão, sem senha.</li>
             </ul>
           </li>
-          <li>
-            <strong>Responsabilidade do usuário.</strong> O titular da conta é o único responsável
-            pela confidencialidade de suas credenciais e pela veracidade das informações
-            cadastradas.
-          </li>
-          <li>
-            <strong>Encerramento e exclusão.</strong> A conta pode ser excluída a qualquer momento
-            pela própria interface, com prazo de carência de 7 dias ou eliminação imediata e
-            definitiva de dados e arquivos.
-          </li>
+          <li><strong>Conta pessoal e intransferível.</strong> Uma conta pertence a uma pessoa. Compartilhar credenciais compromete a autoria das decisões registradas — que é justamente o que a plataforma existe para preservar.</li>
+          <li><strong>Responsabilidade do titular.</strong> Você é responsável pela confidencialidade das suas credenciais, pela veracidade das informações cadastradas e pelo que for feito na sua conta. Avise-nos imediatamente se suspeitar de uso indevido.</li>
+          <li><strong>Sessões.</strong> A sessão tem validade limitada e é renovada por atividade. Encerrar a sessão invalida o token no servidor, e não apenas no navegador.</li>
+          <li><strong>Exclusão da conta.</strong> Você pode excluir sua conta a qualquer momento pela própria interface, com prazo de arrependimento de 7 dias (desativação prévia) ou com eliminação imediata e definitiva de dados e arquivos. O procedimento está detalhado no <a href="/privacidade#direitos">Aviso de Privacidade</a>.</li>
         </ol>
 
-        <h2 id="byok">3. Modelo BYOK e uso de inteligência artificial</h2>
+        <h2 id="gratuidade">5. Gratuidade e estágio BETA</h2>
         <ol>
-          <li>
-            <strong>Chaves próprias.</strong> Para usar modelos proprietários de IA (Google Gemini,
-            Alibaba Qwen), o pesquisador fornece suas próprias chaves de API, obtidas junto aos
-            respectivos provedores. Modelos locais via Ollama ou LM Studio dispensam chave e não
-            enviam dados para fora do ambiente do pesquisador.
-          </li>
-          <li>
-            <strong>Cifra em repouso.</strong> Chaves de API e credenciais de bases científicas são
-            cifradas no banco com cifra autenticada (AES-256-GCM / ChaCha20-Poly1305), nunca são
-            exibidas em texto claro e não são compartilhadas com terceiros.
-          </li>
-          <li>
-            <strong>Autonomia metodológica.</strong> O Revsist é ferramenta de assistência. Nenhum
-            estudo é incluído ou excluído sem confirmação humana, e as decisões finais de inclusão,
-            exclusão e síntese cabem exclusivamente ao pesquisador responsável.
-          </li>
-          <li>
-            <strong>Rastro.</strong> Cada decisão assistida grava provedor, modelo e o hash SHA-256
-            do contexto enviado, junto da identificação de quem confirmou a decisão.
-          </li>
+          <li><strong>Uso gratuito.</strong> A plataforma é oferecida sem cobrança. Não pedimos cartão, não há período de teste que expira e não há plano pago em vigor.</li>
+          <li><strong>Custos que são seus.</strong> O uso de provedores pagos de inteligência artificial e de bases científicas por assinatura ocorre com <em>suas</em> credenciais, e a cobrança correspondente é feita a você pelo respectivo fornecedor. Não intermediamos nem reembolsamos esses valores.</li>
+          <li><strong>BETA.</strong> A plataforma está em desenvolvimento ativo. Comportamentos podem mudar entre versões, recursos podem ser alterados ou removidos e defeitos são esperados.</li>
+          <li><strong>Mudança de modelo.</strong> Caso venha a existir cobrança no futuro, ela será anunciada com antecedência razoável e não se aplicará retroativamente ao uso já feito. Você poderá exportar seus dados e encerrar a conta antes de qualquer cobrança.</li>
         </ol>
 
-        <h2 id="autoria">4. Direitos autorais e propriedade intelectual</h2>
+        <h2 id="uso">6. Uso aceitável e condutas vedadas</h2>
+        <p>Ao usar o Revsist, você concorda em não:</p>
         <ol>
-          <li>
-            <strong>Titularidade do conteúdo.</strong> Todo o acervo de pesquisa, protocolos,
-            anotações e sínteses geradas pertencem integralmente aos seus autores.
-          </li>
-          <li>
-            <strong>Direitos autorais dos artigos.</strong> O download e a guarda de arquivos PDF de
-            artigos científicos devem respeitar as licenças de acesso aberto e os contratos de
-            assinatura institucional do pesquisador com as editoras.
-          </li>
-          <li>
-            <strong>Licença do software.</strong> O código do Revsist é distribuído sob
-            <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">licença MIT</a>,
-            e está disponível em
-            <a href="https://github.com/eduardomatheusfigueira/RSACV2" target="_blank" rel="noopener noreferrer">github.com/eduardomatheusfigueira/RSACV2</a>.
-          </li>
+          <li>Utilizar a plataforma para finalidade ilícita, fraudulenta ou que viole direitos de terceiros;</li>
+          <li>Tentar obter acesso não autorizado a contas, projetos, servidores ou dados de outros pesquisadores;</li>
+          <li>Contornar limites técnicos, mecanismos de autenticação, limites de taxa ou controles de segurança;</li>
+          <li>Automatizar o uso de modo a sobrecarregar a plataforma ou as bases científicas consultadas por meio dela;</li>
+          <li>Usar a coleta para raspagem em massa de bases científicas com finalidade alheia a uma revisão de literatura, ou em desacordo com os termos dessas bases;</li>
+          <li>Inserir dados pessoais sensíveis de terceiros, dados de pacientes ou dados sujeitos a sigilo em campos de pesquisa, que não são projetados para esse fim;</li>
+          <li>Revender, sublicenciar ou oferecer o serviço a terceiros como se fosse seu;</li>
+          <li>Remover avisos de autoria ou apresentar resultados da plataforma de modo a induzir a erro sobre como foram obtidos.</li>
         </ol>
 
-        <h2 id="responsabilidade">5. Limitações de responsabilidade e disponibilidade</h2>
-        <ol>
-          <li>
-            <strong>Disponibilidade.</strong> Empregamos esforço técnico contínuo para manter a
-            estabilidade e a segurança da plataforma, mas não garantimos funcionamento
-            ininterrupto — quedas de serviços de terceiros, falhas de conectividade e
-            indisponibilidade de APIs externas (Google, SciELO, BDTD, entre outras) estão fora do
-            nosso controle.
-          </li>
-          <li>
-            <strong>Backup e exportação.</strong> Recomendamos exportações periódicas dos projetos
-            pela ferramenta de portabilidade, como boa prática metodológica.
-          </li>
-          <li>
-            <strong>Estágio BETA.</strong> A plataforma está em desenvolvimento ativo. Podem ocorrer
-            mudanças de comportamento entre versões, e recursos podem ser alterados ou removidos.
-          </li>
-        </ol>
-
-        <h2 id="alteracoes">6. Alterações nestes termos</h2>
+        <h2 id="limites-tecnicos">7. Limites técnicos de uso</h2>
         <p>
-          Estes termos podem ser revisados periodicamente. Alterações substanciais serão comunicadas
-          aos usuários cadastrados por aviso no próprio sistema, com indicação da nova versão e da
-          data de vigência.
+          A plataforma aplica limites de taxa por sessão e por origem, e limites de volume em
+          operações caras — coleta em lote, aquisição de PDFs e chamadas de inteligência artificial.
+          Os limites existem para manter o serviço utilizável por todos e para respeitar as bases
+          científicas consultadas. Eles podem ser ajustados sem aviso prévio, e o uso que os
+          contorne de forma deliberada autoriza a suspensão da conta.
         </p>
 
-        <h2 id="foro">7. Foro e legislação aplicável</h2>
+        <h2 id="conteudo">8. Seu conteúdo de pesquisa</h2>
+        <ol>
+          <li><strong>Titularidade.</strong> Protocolos, critérios, decisões de triagem, extrações, anotações e sínteses que você produz pertencem integralmente a você e aos seus coautores. Não reivindicamos propriedade sobre eles.</li>
+          <li><strong>Licença de operação.</strong> Você nos concede apenas a licença limitada, não exclusiva e revogável de armazenar, processar e exibir esse conteúdo <em>na medida necessária para operar o serviço para você</em> — o que inclui cópias de segurança. Essa licença termina quando o conteúdo é eliminado.</li>
+          <li><strong>Não usamos seu conteúdo para outros fins.</strong> Não treinamos modelos com o seu material, não o comercializamos e não o divulgamos, salvo obrigação legal ou ordem judicial.</li>
+          <li><strong>Exportação.</strong> Você pode exportar seu conteúdo a qualquer momento, em formatos abertos, pela ferramenta de portabilidade.</li>
+        </ol>
+
+        <h2 id="terceiros">9. Bases científicas, PDFs e direitos de terceiros</h2>
+        <ol>
+          <li><strong>Termos das bases.</strong> A consulta a BDTD, SciELO, Scopus, PubMed, OpenAlex, Crossref e Unpaywall se sujeita aos termos de cada uma. Quando a base exige credencial ou assinatura institucional, a relação é entre você e ela.</li>
+          <li><strong>Direitos autorais dos artigos.</strong> O download e a guarda de PDFs devem respeitar as licenças de acesso aberto e os contratos de assinatura da sua instituição com as editoras. A responsabilidade por essa conformidade é sua.</li>
+          <li><strong>Metadados.</strong> Referências bibliográficas coletadas em bases públicas mantêm as condições de uso definidas por cada fonte.</li>
+          <li><strong>Retirada de conteúdo.</strong> Diante de notificação fundamentada de violação de direito autoral, podemos remover o arquivo indicado e comunicar o titular da conta.</li>
+        </ol>
+
+        <h2 id="byok">10. Inteligência artificial e modelo BYOK</h2>
+        <ol>
+          <li><strong>Chaves próprias (BYOK).</strong> Para usar modelos proprietários (Google Gemini, Alibaba Qwen), você fornece suas próprias chaves de API, obtidas junto aos provedores. Modelos locais, via Ollama ou LM Studio, dispensam chave e não enviam dados para fora do seu ambiente.</li>
+          <li><strong>Cifra em repouso.</strong> Chaves de API e credenciais de bases são cifradas no banco com cifra autenticada (AES-256-GCM ou ChaCha20-Poly1305), nunca são exibidas em texto claro e não são compartilhadas com terceiros.</li>
+          <li><strong>Minimização.</strong> Na triagem assistida enviamos ao provedor apenas o título, o resumo e os critérios do seu protocolo. Nomes de autores dos artigos não são enviados.</li>
+          <li><strong>Autonomia metodológica.</strong> A assistência sugere; você decide. Pode operar em modo inteiramente manual, sem qualquer chamada a provedor de IA.</li>
+          <li><strong>Rastro.</strong> Cada decisão assistida registra provedor, modelo, o hash SHA-256 do contexto enviado e quem confirmou a decisão — o que permite auditar depois como cada escolha foi feita.</li>
+          <li><strong>Limites do modelo.</strong> Modelos de linguagem erram, inventam referências e são sensíveis à formulação do texto. Conferir a sugestão contra o estudo real é parte do seu trabalho, não uma cautela opcional.</li>
+        </ol>
+
+        <h2 id="equipe">11. Trabalho em equipe</h2>
+        <ol>
+          <li><strong>Papéis.</strong> Um projeto tem um responsável e pode ter outros membros, com papéis que definem o que cada um pode ver e fazer.</li>
+          <li><strong>Convite de participação.</strong> O responsável convida membros por código próprio. Ao aceitar, o convidado passa a acessar o conteúdo daquele projeto.</li>
+          <li><strong>Visibilidade.</strong> Membros de um projeto veem o conteúdo do projeto, a autoria das decisões nele registradas e o nome, o nome de usuário e o e-mail uns dos outros — o necessário para trabalharem juntos. Não veem outros projetos seus, seu perfil acadêmico nem suas credenciais.</li>
+          <li><strong>Responsabilidade do responsável.</strong> Quem convida responde por quem convidou e pela adequação do compartilhamento — inclusive quanto a exigências do seu comitê de ética ou da sua instituição.</li>
+          <li><strong>Saída.</strong> A remoção de um membro encerra o acesso dele ao projeto, mas preserva o registro de autoria das decisões que ele tomou: apagá-lo comprometeria a auditabilidade da revisão.</li>
+        </ol>
+
+        <h2 id="comunicacoes">12. Comunicações que enviamos</h2>
+        <ol>
+          <li><strong>Operacionais.</strong> Enviamos mensagens necessárias ao funcionamento do serviço — aprovação de pedido de convite, avisos de segurança, mudanças nestes Termos. Não é possível descadastrar-se dessas mensagens sem encerrar a conta, porque elas são parte da prestação.</li>
+          <li><strong>Canais.</strong> A confirmação de um pedido de convite pode ser enviada por e-mail e, quando você informa um telefone no pedido, também por mensagem ao número informado.</li>
+          <li><strong>Sem marketing.</strong> Não enviamos publicidade, não cedemos seu contato a terceiros e não usamos seus dados para prospecção.</li>
+        </ol>
+
+        <h2 id="encerramento">13. Suspensão e encerramento</h2>
+        <ol>
+          <li><strong>Por você.</strong> A qualquer momento, pela interface, sem justificar.</li>
+          <li><strong>Por nós, com aviso.</strong> Podemos encerrar ou suspender o acesso, com aviso prévio razoável e oportunidade de exportar seus dados, em caso de descontinuidade do serviço ou de mudança relevante no projeto.</li>
+          <li><strong>Por nós, de imediato.</strong> Podemos suspender sem aviso prévio diante de violação grave destes Termos, risco à segurança da plataforma ou de terceiros, ou determinação legal. Nesse caso, comunicaremos o motivo assim que for possível e seguro.</li>
+          <li><strong>Efeitos.</strong> O encerramento não afeta obrigações já constituídas nem os registros que a lei exige preservar, descritos no <a href="/privacidade#retencao">Aviso de Privacidade</a>.</li>
+        </ol>
+
+        <h2 id="disponibilidade">14. Disponibilidade, backup e perda de dados</h2>
+        <ol>
+          <li><strong>Sem garantia de disponibilidade.</strong> Empregamos esforço técnico contínuo para manter a plataforma estável e segura, mas não há SLA. Quedas de serviços de terceiros, falhas de conectividade e indisponibilidade de APIs externas estão fora do nosso controle.</li>
+          <li><strong>Manutenção.</strong> Podem ocorrer interrupções para manutenção, preferencialmente anunciadas com antecedência.</li>
+          <li><strong>Cópias de segurança.</strong> Nesta fase BETA <strong>não há garantia de cópia de segurança automática</strong> dos dados hospedados. Havendo cópias, elas servem à continuidade da nossa operação e não substituem a sua.</li>
+          <li><strong>Exporte com regularidade.</strong> Recomendamos exportações periódicas pela ferramenta de portabilidade, como boa prática metodológica. Em um projeto que dura meses, essa é a proteção mais eficaz contra perda — inclusive contra erro seu.</li>
+        </ol>
+
+        <h2 id="responsabilidade">15. Limitação de responsabilidade</h2>
+        <ol>
+          <li>A plataforma é fornecida <em>no estado em que se encontra</em>, sem garantias expressas ou implícitas de adequação a uma finalidade específica, exatidão ou operação ininterrupta.</li>
+          <li>Na máxima extensão permitida pela lei brasileira, não respondemos por danos indiretos, lucros cessantes, perda de chance, perda de prazo acadêmico ou dano decorrente de decisão metodológica tomada pelo pesquisador.</li>
+          <li>Não respondemos por indisponibilidade, alteração ou descontinuação de serviços de terceiros — bases científicas, provedores de IA, serviços de autenticação —, nem pelos custos que você contrate diretamente com eles.</li>
+          <li>Estas limitações não afastam a responsabilidade por dolo, por culpa grave nem as hipóteses em que a lei a considera inafastável.</li>
+        </ol>
+
+        <h2 id="software">16. Propriedade intelectual do software</h2>
+        <ol>
+          <li><strong>Licença do código.</strong> O código do Revsist é distribuído sob <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">licença MIT</a>, cujos termos regem o que você pode fazer com ele.</li>
+          <li><strong>Marca e identidade visual.</strong> O nome “Revsist”, o monograma e a identidade visual não são abrangidos pela licença do código e não podem ser usados de modo a sugerir vínculo, endosso ou origem que não existam.</li>
+          <li><strong>Retorno e sugestões.</strong> Sugestões que você nos enviar podem ser incorporadas ao produto sem que isso gere obrigação de contrapartida — e sem que você perca qualquer direito que já tivesse sobre elas.</li>
+        </ol>
+
+        <h2 id="alteracoes">17. Alterações nestes termos</h2>
         <p>
-          Estes termos são regidos pela legislação brasileira, em especial o Marco Civil da Internet
-          (Lei nº 12.965/2014) e a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018).
+          Estes Termos podem ser revisados. Alterações substanciais são comunicadas com indicação da
+          nova versão e da data de vigência, e o aceite volta a ser solicitado na entrada da
+          plataforma. Continuar a usar o serviço depois da vigência significa concordar com a nova
+          versão; se não concordar, você pode exportar seus dados e encerrar a conta.
         </p>
 
+        <h2 id="geral">18. Disposições gerais</h2>
+        <ol>
+          <li><strong>Independência das cláusulas.</strong> Se alguma disposição for considerada inválida, as demais permanecem em vigor.</li>
+          <li><strong>Tolerância.</strong> Deixar de exigir o cumprimento de uma cláusula não significa renunciar a ela.</li>
+          <li><strong>Cessão.</strong> Você não pode ceder sua conta. Podemos ceder a operação do serviço em caso de sucessão do projeto, mediante aviso e preservando estes Termos e o Aviso de Privacidade.</li>
+          <li><strong>Integralidade.</strong> Estes Termos e o Aviso de Privacidade constituem o acordo integral sobre o uso da plataforma.</li>
+          <li><strong>Idioma.</strong> A versão em português é a que prevalece.</li>
+        </ol>
+
+        <h2 id="foro">19. Lei aplicável, foro e contato</h2>
         <p>
-          Documento relacionado: <a href="/privacidade">Aviso de Privacidade</a>.
+          Estes Termos são regidos pela legislação brasileira, em especial o Marco Civil da Internet
+          (Lei nº 12.965/2014), a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018) e,
+          no que couber, o Código de Defesa do Consumidor.
         </p>
+        <p>
+          Fica eleito o foro da comarca de
+          <span class="legal-pending">cidade/UF a preencher</span>, sem prejuízo do direito de o
+          usuário demandar no foro de seu domicílio quando a lei assim lhe assegurar.
+        </p>
+        <p>
+          <strong>Contato:</strong>
+          <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a>.
+          Para assuntos de proteção de dados, consulte o
+          <a href="/privacidade#controlador">Aviso de Privacidade</a>.
+        </p>
+
+        <p>Documento relacionado: <a href="/privacidade">Aviso de Privacidade</a>.</p>
       </article>
     </div>
   </main>
 
   <footer class="site-footer" role="contentinfo">
-    <div class="container">
+    <div class="footer-container">
+      <div class="footer-top">
+        <div>
+          <div class="footer-brand-header">
+            <svg class="brand-mark-svg" viewBox="0 0 80 100" aria-hidden="true" focusable="false"><use href="#i-marca" /></svg>
+            <span class="brand-name">Revsist</span>
+            <span class="badge badge-beta">v2.0 beta</span>
+          </div>
+          <p class="footer-tagline">
+            Programa gratuito e de código aberto para fazer revisão sistemática e revisão de escopo,
+            pensado para quem pesquisa no Brasil.
+          </p>
+        </div>
+
+        <div>
+          <p class="footer-heading">O programa</p>
+          <ul class="footer-links">
+            <li><a href="/#como-funciona">Como funciona</a></li>
+            <li><a href="/#registro">O que fica guardado</a></li>
+            <li><a href="/#diagrama">O diagrama final</a></li>
+            <li><a href="/#diretrizes">Roteiros disponíveis</a></li>
+            <li><a href="/#limites">O que ele não faz</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-heading">Aprender</p>
+          <ul class="footer-links">
+            <li><a href="/blog">Blog</a></li>
+            <li><a href="/blog/como-escrever-um-protocolo-de-revisao-sistematica/">Escrever o plano</a></li>
+            <li><a href="/blog/checklist-prisma-2020-explicado/">Checklist PRISMA 2020</a></li>
+            <li><a href="/blog/quanto-tempo-leva-uma-revisao-sistematica/">Quanto tempo leva</a></li>
+            <li><a href="/#perguntas">Dúvidas comuns</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <p class="footer-heading">Transparência</p>
+          <ul class="footer-links">
+            <li><a href="/termos">Termos de uso</a></li>
+            <li><a href="/privacidade">Privacidade</a></li>
+            <li><a href="/feed.xml">Feed RSS</a></li>
+            <li><a href="/#para-quem">Para quem é</a></li>
+          </ul>
+        </div>
+      </div>
+
       <div class="footer-bottom">
-        <p>
-          © 2026 Revsist. Distribuído sob
-          <a href="https://opensource.org/licenses/MIT" target="_blank" rel="noopener noreferrer">licença MIT</a>.
-        </p>
-        <p class="footer-meta" id="footer-version">Versão 2.0.0 · BETA</p>
+        <span>© 2026 Revsist · Eduardo Matheus Figueira · Licença MIT</span>
+        <span class="footer-estado">
+          <span>Beta aberta</span>
+          <span>Grátis</span>
+          <span>Sem rastreadores</span>
+        </span>
       </div>
     </div>
   </footer>
 
-  <script src="../src/scripts/landing.js" type="module"></script>
+  <script src="/src/scripts/landing.js" type="module"></script>
 </body>
 </html>

@@ -1,0 +1,33 @@
+{
+  "name": "revsist-remotion",
+  "version": "2.0.0",
+  "description": "Revsist — Laço de abertura da landing renderizado em Remotion",
+  "private": true,
+  "scripts": {
+    "sincronizar": "node scripts/sincronizar-assets.mjs",
+    "prestart": "npm run sincronizar",
+    "start": "remotion studio src/index.ts",
+    "render:hero": "node scripts/renderizar-laco.mjs hero",
+    "render:busca": "node scripts/renderizar-laco.mjs busca",
+    "render:registro": "node scripts/renderizar-laco.mjs registro",
+    "render:diagrama": "node scripts/renderizar-laco.mjs diagrama",
+    "render:faixa": "node scripts/renderizar-laco.mjs faixa",
+    "render:registro-faixa": "node scripts/renderizar-laco.mjs registro-faixa",
+    "render:diagrama-faixa": "node scripts/renderizar-laco.mjs diagrama-faixa",
+    "render:roteiros-faixa": "node scripts/renderizar-laco.mjs roteiros-faixa",
+    "render:para-quem-faixa": "node scripts/renderizar-laco.mjs para-quem-faixa",
+    "posters": "remotion still src/index.ts HeroLoop ../landing/public/videos/revsist-hero-poster.jpg --frame=70 --image-format=jpeg --jpeg-quality=80 --scale=0.75 && remotion still src/index.ts LacoBusca ../landing/public/videos/revsist-busca-poster.jpg --frame=210 --image-format=jpeg --jpeg-quality=80 --scale=0.8 && remotion still src/index.ts LacoRegistro ../landing/public/videos/revsist-registro-poster.jpg --frame=236 --image-format=jpeg --jpeg-quality=80 --scale=0.75 && remotion still src/index.ts LacoDiagrama ../landing/public/videos/revsist-diagrama-poster.jpg --frame=230 --image-format=jpeg --jpeg-quality=80 --scale=0.75 && remotion still src/index.ts FaixaVaiVem ../landing/public/videos/revsist-faixa-poster.jpg --frame=440 --image-format=jpeg --jpeg-quality=82 --scale=0.75 && remotion still src/index.ts FaixaRegistro ../landing/public/videos/revsist-registro-faixa-poster.jpg --frame=440 --image-format=jpeg --jpeg-quality=82 --scale=0.75 && remotion still src/index.ts FaixaDiagrama ../landing/public/videos/revsist-diagrama-faixa-poster.jpg --frame=440 --image-format=jpeg --jpeg-quality=82 --scale=0.75 && remotion still src/index.ts FaixaRoteiros ../landing/public/videos/revsist-roteiros-faixa-poster.jpg --frame=440 --image-format=jpeg --jpeg-quality=82 --scale=0.75 && remotion still src/index.ts FaixaParaQuem ../landing/public/videos/revsist-para-quem-faixa-poster.jpg --frame=150 --image-format=jpeg --jpeg-quality=82 --scale=0.75",
+    "prebuild": "npm run sincronizar",
+    "build": "npm run render:hero && npm run render:busca && npm run render:registro && npm run render:diagrama && npm run render:faixa && npm run render:registro-faixa && npm run render:diagrama-faixa && npm run render:roteiros-faixa && npm run render:para-quem-faixa && npm run posters"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.250",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.250"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}

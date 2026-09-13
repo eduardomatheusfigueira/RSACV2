@@ -4,7 +4,10 @@
  * ==============================================================================
  *
  * Semeia a fixture e gera as 6 telas reais do app em WebP (1280w e 640w),
- * com viewport 1440×900 @2x, tema Platinum-Dusk / Light, sem dados pessoais.
+ * com viewport 1440×900 @2x, no tema padrão do app — `platinum-dusk`, fixado em
+ * `frontend/index.html` e em `useSettingsStore` —, sem dados pessoais. A landing
+ * usa a mesma paleta: capturar em outro tema faria o site prometer uma
+ * identidade e o produto mostrar outra.
  *
  * Saída em `landing/src/imagens/telas/`.
  */
