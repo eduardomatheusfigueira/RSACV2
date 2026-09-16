@@ -24,6 +24,7 @@ from app.domain.collaboration import politica_de
 from app.domain.entities import Decision, Methodology, Paper, Protocol
 from app.infrastructure.ai.base import BaseAIClient, ProvedorIndisponivel, ScreeningResult
 from app.infrastructure.ai.factory import AIFactory
+from app.services.uso import medidor
 from app.infrastructure.ai.prompts import build_screening_prompt
 from app.domain.triabilidade import filtro_com_resumo
 from app.services.acelerador import AceleradorAdaptativo
@@ -236,7 +237,8 @@ class ScreeningService:
         protocol_entity = _to_protocol_entity(protocol_model)
 
         client = self._get_client(db, user_id=actor.user_id if actor else None)
-        result = await client.analyze_screening(paper_entity, protocol_entity)
+        with medidor.medir(db, actor.user_id if actor else None, "triagem", project_id=project_id):
+            result = await client.analyze_screening(paper_entity, protocol_entity)
 
         # Hash do contexto que produziu a decisão (doc 29 §29.9.3). Guardar o
         # texto inteiro inflaria o banco a cada triagem; o hash é o suficiente

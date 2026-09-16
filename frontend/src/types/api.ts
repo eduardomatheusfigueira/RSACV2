@@ -644,6 +644,11 @@ export interface AuthUser {
   auth_provider?: string
   created_at: string
   last_login_at?: string | null
+  /** Versão dos documentos que a conta aceitou (doc 52 §8.0). */
+  terms_version?: string
+  terms_accepted_at?: string | null
+  /** Interruptor do registro de uso do beta. */
+  uso_coleta_ativa?: boolean
 }
 
 export interface UserAdminUpdatePayload {
@@ -777,6 +782,152 @@ export interface FeedbackListResponse {
   items: FeedbackItem[]
   total: number
   novos: number
+}
+
+// ── Aba Sistema: dados de uso e ciclo do beta (doc 52 §6.6) ───────────
+
+export type EstadoDaColeta = 'aguardando' | 'ativa' | 'pausada' | 'encerrada'
+export type PeriodoDoSistema = '7' | '30' | '90' | 'beta'
+export type SituacaoDeErro = 'novo' | 'investigando' | 'resolvido' | 'ignorado'
+
+/** Número que o servidor pode ter suprimido por vir de menos de cinco pessoas. */
+export interface Agregado {
+  valor: number | null
+  pessoas: number | null
+  suprimido: boolean
+}
+
+export interface ItemDoPortao {
+  chave: string
+  rotulo: string
+  ok: boolean
+  detalhe: string
+  bloqueante: boolean
+}
+
+export interface CicloDoBeta {
+  inicio: string
+  fim: string
+  duracao_dias: number
+  dias_restantes: number
+  progresso: number
+  aviso_de_decisao_em: string
+  descarte_final_em: string
+  estado: {
+    estado: EstadoDaColeta
+    alterado_em: string | null
+    alterado_por: string | null
+    motivo: string
+    transicoes: EstadoDaColeta[]
+  }
+  portao: ItemDoPortao[]
+  pode_ativar: boolean
+  participacao: { contas_ativas: number; coleta_desligada: Agregado }
+  ultima_retencao_em: string | null
+}
+
+export interface ResumoDoSistema {
+  periodo: PeriodoDoSistema
+  desde: string
+  participantes_ativos: Agregado
+  tempo_ativo_mediano_min: Agregado
+  erros_novos: number
+  pessoas_atingidas_por_erro: Agregado
+  tokens: Agregado
+}
+
+export interface GrupoDeConsumo {
+  chaves: string[]
+  chamadas: number | null
+  tokens: number | null
+  latencia_media_ms: number | null
+  suprimido: boolean
+}
+
+export interface ConsumoDeIA {
+  periodo: PeriodoDoSistema
+  total_de_chamadas: number | null
+  suprimido: boolean
+  por_provedor_e_modelo: GrupoDeConsumo[]
+  por_operacao: GrupoDeConsumo[]
+  por_resultado: GrupoDeConsumo[]
+  porcentagem_estimada: number | null
+  porcentagem_reserva: number | null
+}
+
+export interface ErroAgrupado {
+  impressao: string
+  tipo: string
+  mensagem: string
+  pilha: string
+  origem: 'cliente' | 'servidor' | ''
+  tela: string | null
+  rota: string | null
+  ocorrencias: number
+  pessoas: number | null
+  pessoas_suprimido: boolean
+  primeira_vez: string
+  ultima_vez: string
+  versoes: string[]
+  situacao: SituacaoDeErro
+  resolvido_na_versao: string
+  nota: string
+}
+
+export interface TabelaDeDadosDeUso {
+  chave: string
+  rotulo: string
+  linhas: number
+  mais_antigo: string | null
+  prazo: string
+  proximo_descarte: string | null
+}
+
+export interface AcaoDoSistema {
+  acao: string
+  executada_em: string
+  executada_por: string
+  parametros: Record<string, unknown>
+  resultado: string
+}
+
+export interface ContagensDeUso {
+  eventos: number
+  erros: number
+  chamadas_ia: number
+}
+
+// ── Privacidade e dados de uso, do ponto de vista de quem usa ─────────
+
+export interface SituacaoDeUso {
+  coleta_ativa: boolean
+  alterada_em: string | null
+  coleta_em_vigor: boolean
+  beta_fim: string
+  contagens: ContagensDeUso
+}
+
+export interface RegistroDeUso {
+  ocorrido_em: string
+  descricao: string
+  detalhe: string
+}
+
+export interface ConsumoDeIADoTitular {
+  dia: string
+  provedor: string
+  modelo: string
+  operacao: string
+  chamadas: number
+  tokens: number
+}
+
+export interface MeusRegistrosDeUso {
+  eventos: RegistroDeUso[]
+  erros: RegistroDeUso[]
+  consumo_de_ia: ConsumoDeIADoTitular[]
+  tokens_total: number
+  contagens: ContagensDeUso
 }
 
 export interface RegisterWithInvitePayload {

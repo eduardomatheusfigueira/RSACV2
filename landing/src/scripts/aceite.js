@@ -5,8 +5,11 @@
  * e a Política de Privacidade.
  *
  * O texto diz o que é verdade, e isso é o ponto. O Revsist não tem Google
- * Analytics, pixel, nem métrica de terceiro; o único cookie é o `rsac_session`,
- * técnico, criado apenas depois do login. Um banner com "aceitar todos" e
+ * Analytics, pixel, nem métrica de TERCEIRO; o único cookie é o `rsac_session`,
+ * técnico, criado apenas depois do login. O que existe é o registro de uso do
+ * beta, de primeira parte, que o próprio texto do aceite anuncia desde a
+ * versão 2026-09.2 — e que a pessoa desliga em Configurações. Um banner com
+ * "aceitar todos" e
  * "recusar" prometeria uma escolha que não existe — e escolha falsa é
  * justamente o que a ANPD trata como prática enganosa. Aqui o aviso informa o
  * que há, e o aceite é dos documentos, que é o que de fato precisa de aceite.
@@ -25,7 +28,7 @@ const CHAVE = 'rsac_aceite_termos';
  * muda junto e o aceite é pedido de novo, porque o que foi aceito era outro
  * texto.
  */
-const VERSAO = '2026-09';
+const VERSAO = '2026-09.2';
 
 /** Caminhos que precisam continuar legíveis sem aceite. */
 const LIVRES = ['/termos', '/privacidade'];
@@ -80,9 +83,16 @@ function montarJanela() {
 
       <p class="aceite-texto">
         O Revsist usa <strong>um único cookie</strong>, técnico, que serve para
-        manter você conectado depois do login. Não há rastreador, anúncio,
-        pixel de telemetria nem métrica de terceiros — nada que siga você por
-        outros sites.
+        manter você conectado depois do login. Não há anúncio, nem rastreador ou
+        pixel de terceiros — nada que siga você por outros sites.
+      </p>
+
+      <p class="aceite-texto">
+        <strong>Durante o beta, registramos no nosso próprio servidor como a
+        plataforma é usada</strong> — telas, ações, erros e consumo de IA —,
+        nunca o conteúdo da sua pesquisa. Você pode desligar isso em
+        Configurações. O detalhe está no
+        <a href="/privacidade#uso-beta">Aviso de Privacidade</a>.
       </p>
 
       <label class="aceite-marcacao">

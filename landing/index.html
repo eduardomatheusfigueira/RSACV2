@@ -127,7 +127,7 @@
         var p = location.pathname.replace(/\/+$/, '') || '/';
         if (p === '/termos' || p === '/privacidade') return;
         var b = localStorage.getItem('rsac_aceite_termos');
-        if (b && JSON.parse(b).versao === '2026-09') return;
+        if (b && JSON.parse(b).versao === '2026-09.2') return;
       } catch (e) { return; }
       document.documentElement.setAttribute('data-aceite', 'pendente');
     })();
@@ -1299,7 +1299,7 @@
         <span class="footer-estado">
           <span>Beta aberta</span>
           <span>Grátis</span>
-          <span>Sem rastreadores</span>
+          <span>Sem rastreadores de terceiros</span>
         </span>
       </div>
     </div>

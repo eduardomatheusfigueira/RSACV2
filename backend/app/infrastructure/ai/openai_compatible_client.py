@@ -10,6 +10,7 @@ com suporte a fallback de modelos, rotação de chaves e tratamento de formatos 
 import json
 import logging
 import re
+import time
 from typing import List, Optional
 
 import httpx
@@ -26,6 +27,7 @@ from app.infrastructure.ai.prompts import (
     build_protocol_suggestion_prompt,
     build_screening_prompt,
 )
+from app.services.uso import medidor
 
 logger = logging.getLogger(__name__)
 
@@ -126,12 +128,12 @@ class OpenAICompatibleAIClient(BaseAIClient):
 
         async with httpx.AsyncClient(timeout=120.0) as client:
             try:
-                res = await client.post(url, json=payload_with_format, headers=headers)
+                res = await self._postar_medindo(client, url, payload_with_format, headers, prompt)
                 if res.status_code == 200:
                     data = res.json()
                     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
                     cleaned = self._clean_json(content)
-                    return json.loads(cleaned)
+                    return self._converter_medindo(cleaned, data, content, prompt)
                 elif res.status_code in (400, 422):
                     # Alguns modelos locais ou endpoints não suportam response_format: json_object
                     logger.info(f"[{self.provider_name}] Endpoint retornou {res.status_code} com response_format. Tentando sem response_format...")
@@ -153,14 +155,63 @@ class OpenAICompatibleAIClient(BaseAIClient):
                 "temperature": self.temperature,
             }
 
-            res = await client.post(url, json=payload_fallback, headers=headers)
+            res = await self._postar_medindo(client, url, payload_fallback, headers, prompt)
             if res.status_code != 200:
                 raise RuntimeError(f"[{self.provider_name}] Erro na API: HTTP {res.status_code} - {res.text}")
 
             data = res.json()
             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
             cleaned = self._clean_json(content)
-            return json.loads(cleaned)
+            return self._converter_medindo(cleaned, data, content, prompt)
+
+    # ── Medição de consumo (doc 52 §5.5) ──────────────────────────────
+    #
+    # A resposta 200 só é anotada depois de o JSON ser convertido, porque é aí
+    # que se sabe se ela foi `ok` ou `resposta_invalida`. O que não é 200 é
+    # anotado já no envio.
+
+    def _chave_ordinal(self) -> Optional[int]:
+        return (self.current_key_idx % len(self.api_keys)) + 1 if self.api_keys else None
+
+    async def _postar_medindo(self, client, url: str, payload: dict, headers: dict, prompt: str):
+        self._inicio_da_chamada = time.monotonic()
+        try:
+            res = await client.post(url, json=payload, headers=headers)
+        except Exception:
+            self._anotar("falha", prompt)
+            raise
+        if res.status_code != 200:
+            resultado = "limite_minuto" if res.status_code == 429 else (
+                "modelo_indisponivel" if res.status_code == 404 else "falha"
+            )
+            self._anotar(resultado, prompt)
+        return res
+
+    def _converter_medindo(self, cleaned: str, data: dict, content: str, prompt: str):
+        medida = {
+            "modelo_respondeu": data.get("model") or self.model_name,
+            "tokens": medidor.tokens_openai(data),
+            "caracteres_recebidos": len(content or ""),
+        }
+        try:
+            convertido = json.loads(cleaned)
+        except json.JSONDecodeError:
+            self._anotar("resposta_invalida", prompt, **medida)
+            raise
+        self._anotar("ok", prompt, **medida)
+        return convertido
+
+    def _anotar(self, resultado: str, prompt: str, **extra) -> None:
+        inicio = getattr(self, "_inicio_da_chamada", None) or time.monotonic()
+        medidor.anotar(
+            provedor=self.provider_name,
+            modelo_pedido=self.model_name,
+            resultado=resultado,
+            caracteres_enviados=len(prompt or ""),
+            latencia_ms=int((time.monotonic() - inicio) * 1000),
+            chave_ordinal=self._chave_ordinal(),
+            **extra,
+        )
 
     async def analyze_screening(
         self,
@@ -283,7 +334,19 @@ class OpenAICompatibleAIClient(BaseAIClient):
                 "max_tokens": 5,
             }
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.post(f"{self.base_url}/chat/completions", headers=headers, json=payload)
+                res = await self._postar_medindo(
+                    client, f"{self.base_url}/chat/completions", payload, headers, "ping"
+                )
+                if res.status_code == 200:
+                    try:
+                        data = res.json()
+                    except ValueError:
+                        data = {}
+                    self._anotar(
+                        "ok", "ping",
+                        modelo_respondeu=data.get("model") or self.model_name,
+                        tokens=medidor.tokens_openai(data),
+                    )
                 return res.status_code == 200
         except Exception as e:
             logger.error(f"[{self.provider_name}] Erro no teste de conexão: {e}")

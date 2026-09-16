@@ -43,7 +43,7 @@
         var p = location.pathname.replace(/\/+$/, '') || '/';
         if (p === '/termos' || p === '/privacidade') return;
         var b = localStorage.getItem('rsac_aceite_termos');
-        if (b && JSON.parse(b).versao === '2026-09') return;
+        if (b && JSON.parse(b).versao === '2026-09.2') return;
       } catch (e) { return; }
       document.documentElement.setAttribute('data-aceite', 'pendente');
     })();
@@ -107,9 +107,9 @@
         <h1>Aviso de Privacidade do Revsist</h1>
 
         <p class="legal-meta">
-          VERSÃO 2.0<br />
-          VIGÊNCIA: 12 DE SETEMBRO DE 2026<br />
-          ÚLTIMA ATUALIZAÇÃO: 12 DE SETEMBRO DE 2026
+          VERSÃO 2.1<br />
+          VIGÊNCIA: 15 DE SETEMBRO DE 2026<br />
+          ÚLTIMA ATUALIZAÇÃO: 15 DE SETEMBRO DE 2026
         </p>
 
         <p>
@@ -121,11 +121,13 @@
 
         <div class="legal-callout">
           <p>
-            <strong>O resumo honesto.</strong> Não há publicidade, rastreador, pixel nem métrica de
-            terceiros. O único cookie é técnico e serve para manter você conectado. O seu conteúdo
+            <strong>O resumo honesto.</strong> Não há publicidade, nem rastreador, pixel ou métrica
+            de terceiros. O único cookie é técnico e serve para manter você conectado. O seu conteúdo
             de pesquisa é seu: não treinamos modelos com ele, não o vendemos e não o divulgamos.
-            O que sai da plataforma para fora sai por decisão sua — quando você liga uma chave de
-            IA ou consulta uma base científica.
+            <strong>Durante o beta, registramos no nosso próprio servidor como a plataforma é usada —
+            telas, ações, erros e consumo de IA —, nunca o que você escreve ou pesquisa. Você pode
+            desligar essa parte a qualquer momento.</strong> O que sai da plataforma para fora sai por
+            decisão sua — quando você liga uma chave de IA ou consulta uma base científica.
           </p>
         </div>
 
@@ -137,6 +139,7 @@
             <li><a href="#dados">Dados tratados, origem e finalidade</a></li>
             <li><a href="#convite">Quem pede convite e não vira usuário</a></li>
             <li><a href="#ia">Decisões assistidas por IA e revisão humana</a></li>
+            <li><a href="#uso-beta">Dados de uso durante o beta</a></li>
             <li><a href="#compartilhamento">Com quem compartilhamos</a></li>
             <li><a href="#internacional">Transferência internacional</a></li>
             <li><a href="#navegador">Cookies e armazenamento no navegador</a></li>
@@ -267,6 +270,27 @@
                 <td>V (execução de contrato)</td>
               </tr>
               <tr>
+                <td>Uso da plataforma (beta)</td>
+                <td>Telas abertas, ações acionadas (identificadas por nome fixo, sem o texto da tela), tempo ativo, navegador e sistema resumidos</td>
+                <td>Gerado pelo uso, no seu navegador</td>
+                <td>Entender onde a plataforma ajuda, onde confunde e o que corrigir primeiro</td>
+                <td>IX (legítimo interesse) — <strong>desligável</strong></td>
+              </tr>
+              <tr>
+                <td>Diagnóstico de erros</td>
+                <td>Tipo e mensagem do erro, com dados identificáveis removidos, tela, versão e navegador</td>
+                <td>Gerado quando algo falha, no navegador ou no servidor</td>
+                <td>Encontrar e corrigir defeitos</td>
+                <td>IX (legítimo interesse)</td>
+              </tr>
+              <tr>
+                <td>Consumo de inteligência artificial</td>
+                <td>Provedor, modelo, tipo de operação, tokens de entrada e saída, duração e resultado de cada chamada</td>
+                <td>Gerado quando você usa a assistência</td>
+                <td>Mostrar a você o seu consumo; dimensionar custo e confiabilidade</td>
+                <td>V (execução de contrato) e IX</td>
+              </tr>
+              <tr>
                 <td>Consentimento e aceite</td>
                 <td>Versão dos documentos aceitos e data do aceite</td>
                 <td>Registrado no cadastro e no navegador</td>
@@ -309,7 +333,79 @@
           <li><strong>Direito à revisão (art. 20).</strong> Ainda assim, e por precaução, asseguramos o direito de solicitar revisão de qualquer decisão apoiada por tratamento automatizado, bem como informações claras sobre os critérios utilizados — observados o segredo comercial e industrial dos provedores dos modelos, que não controlamos.</li>
         </ol>
 
-        <h2 id="compartilhamento">6. Com quem compartilhamos</h2>
+        <h2 id="uso-beta">6. Dados de uso durante o beta</h2>
+        <p>
+          O Revsist está em beta, e um beta serve para descobrir o que funciona e o que não
+          funciona. Para isso, registramos como a plataforma é usada. Esta seção diz exatamente o
+          quê, e o que fica de fora.
+        </p>
+
+        <h3>O que registramos</h3>
+        <ol>
+          <li><strong>Uso da plataforma.</strong> Quais telas você abre, quais botões e comandos aciona, quanto tempo fica ativo em cada etapa e sinais de dificuldade, como clicar várias vezes seguidas no mesmo lugar. Cada ação é identificada por um nome fixo definido por nós, como &ldquo;Triar em lote&rdquo;, e não pelo que está escrito na tela. Registramos também, uma vez por sessão, o tipo de navegador e de sistema, a faixa de largura da tela, o idioma e o tema.</li>
+          <li><strong>Erros.</strong> Quando algo falha no seu navegador ou no servidor, registramos o tipo do erro, a tela, a versão da plataforma e uma mensagem técnica da qual removemos e-mails, endereços, números longos e trechos entre aspas.</li>
+          <li><strong>Consumo de inteligência artificial.</strong> Em cada chamada feita com a sua chave: provedor, modelo, tipo de operação (por exemplo, triagem), número de tokens enviados e recebidos, duração e resultado, inclusive recusas por limite de cota. Você vê esse consumo em Configurações.</li>
+          <li><strong>Desempenho.</strong> O tempo de resposta do servidor é medido de forma agregada, sem identificar ninguém.</li>
+        </ol>
+
+        <h3>O que nunca registramos</h3>
+        <ul>
+          <li>O conteúdo da sua pesquisa: protocolos, critérios, termos de busca, títulos, resumos, decisões e seus motivos, extrações e anotações.</li>
+          <li>O que você digita em qualquer campo.</li>
+          <li>Gravação de tela, movimento do mouse ou posição dos cliques.</li>
+          <li>Chaves de API e senhas.</li>
+          <li>Seu endereço IP nesses registros.</li>
+          <li>Nada no site público e no blog, onde você não tem conta.</li>
+          <li>Nada nas instalações de mesa do Revsist.</li>
+        </ul>
+
+        <h3>Onde fica e quem vê</h3>
+        <p>
+          Tudo fica no servidor do próprio Revsist. Nenhum serviço de análise de terceiros recebe
+          esses dados. Outros membros das suas equipes, inclusive o responsável por um projeto,
+          <strong>não têm acesso</strong> aos seus dados de uso. O controlador os consulta em forma
+          agregada, e grupos com menos de cinco pessoas não são exibidos.
+        </p>
+
+        <h3>Base legal</h3>
+        <p>
+          O registro de uso da plataforma e de erros se apoia no legítimo interesse (art. 7º, IX) de
+          manter e melhorar um serviço gratuito em desenvolvimento. O teste de balanceamento está
+          disponível mediante pedido. O registro de consumo de IA também serve para mostrar a você o
+          seu próprio consumo (art. 7º, V).
+        </p>
+
+        <h3>Como desligar</h3>
+        <p>
+          Em <em>Configurações → Privacidade e dados de uso</em>, desligue <em>Compartilhar dados de
+          uso do beta</em>. O registro de uso da plataforma para na hora, e você pode apagar o que já
+          foi registrado. Nenhum recurso deixa de funcionar. Se o seu navegador enviar o sinal
+          <em>Global Privacy Control</em>, ele vale como desligamento. Erros e consumo de IA continuam
+          registrados, porque são necessários para manter o serviço funcionando e para mostrar a você
+          o que a sua chave gastou.
+        </p>
+
+        <h3>Ver o que foi registrado</h3>
+        <p>Na mesma tela, você vê os registros de uso da sua conta em linguagem comum.</p>
+
+        <h3>Até quando</h3>
+        <p>
+          O beta tem duração prevista de um ano e termina em <strong>12 de setembro de 2027</strong>.
+          Pode terminar antes, mas não depois sem uma nova versão deste Aviso, que você será convidado
+          a aceitar de novo. A coleta de uso termina com o beta. Os prazos de guarda estão na seção
+          <a href="#retencao">Retenção e descarte</a>. Ao eliminar sua conta, esses registros são
+          apagados. Permanecem apenas estatísticas agregadas que não identificam ninguém.
+        </p>
+
+        <h3>Pesquisas e estudos</h3>
+        <p>
+          Às vezes poderemos convidar você para um questionário curto, uma entrevista ou um estudo
+          científico sobre a plataforma. A participação é sempre opcional, pedida à parte e com termo
+          próprio. Recusar não muda nada no seu acesso. Dados de uso só entram num estudo publicado
+          com o seu consentimento específico para isso.
+        </p>
+
+        <h2 id="compartilhamento">7. Com quem compartilhamos</h2>
         <p>Não vendemos dados pessoais. O compartilhamento se limita ao necessário para operar:</p>
         <ol>
           <li><strong>Provedores de IA que você habilitar</strong> (Google Gemini, Alibaba Qwen): recebem título, resumo e critérios do protocolo, por meio da <em>sua</em> chave. Modelos locais não enviam nada para fora.</li>
@@ -322,8 +418,12 @@
           Outros pesquisadores só acessam o seu conteúdo quando você os convida para um projeto, e
           limitado àquele projeto.
         </p>
+        <p>
+          Os dados de uso do beta <strong>não são compartilhados</strong> com ninguém: ficam no
+          servidor do Revsist.
+        </p>
 
-        <h2 id="internacional">7. Transferência internacional (art. 33)</h2>
+        <h2 id="internacional">8. Transferência internacional (art. 33)</h2>
         <ol>
           <li><strong>Provedores de IA no modelo BYOK.</strong> O Google Gemini processa em servidores da Google LLC nos Estados Unidos; o Alibaba Qwen, na região que você configurar. O envio ocorre pela sua chave de API e por sua decisão explícita de habilitá-la, o que atende ao art. 33, VIII e IX.</li>
           <li><strong>Modelos locais.</strong> Ollama e LM Studio processam integralmente no seu ambiente. Não há transferência.</li>
@@ -332,7 +432,7 @@
           <li><strong>Como evitar.</strong> Usar exclusivamente modelos locais e bases nacionais mantém o tratamento inteiramente no seu ambiente e no território brasileiro.</li>
         </ol>
 
-        <h2 id="navegador">8. Cookies e armazenamento no navegador</h2>
+        <h2 id="navegador">9. Cookies e armazenamento no navegador</h2>
         <p>
           O Revsist usa <strong>um único cookie</strong>, estritamente necessário, e nenhum de
           rastreio:
@@ -373,6 +473,12 @@
                 <td>Até você limpar os dados do navegador</td>
               </tr>
               <tr>
+                <td><code>rsac_uso_fila</code></td>
+                <td>Armazenamento de sessão</td>
+                <td>Guardar por instantes os registros de uso ainda não enviados, para não perdê-los ao recarregar a página</td>
+                <td>Apagado ao fechar a aba</td>
+              </tr>
+              <tr>
                 <td><code>rsac_session_token</code>, <code>rsac_api_url</code></td>
                 <td>Armazenamento de sessão</td>
                 <td>Sustentar a sessão e o endereço do servidor enquanto a aba está aberta</td>
@@ -382,10 +488,11 @@
           </table>
         </div>
         <p>
-          Os itens de armazenamento local e de sessão ficam <strong>apenas no seu navegador</strong>: não são enviados ao
-          servidor nem legíveis por outro site. Não há cookie de rastreio publicitário, métrica
-          comportamental de terceiro nem pixel de telemetria — nada que acompanhe você por outros
-          sites.
+          Os itens de armazenamento local e de sessão ficam <strong>apenas no seu navegador</strong> e
+          não são legíveis por outro site. Não há cookie de rastreio publicitário, pixel nem métrica
+          de terceiros — nada que acompanhe você por outros sites. O registro de uso do beta, descrito
+          na seção <a href="#uso-beta">Dados de uso durante o beta</a>, é feito pelo próprio Revsist e
+          enviado apenas ao servidor do Revsist.
         </p>
         <p>
           <strong>Sobre a tela de aceite.</strong> Ao abrir o site pela primeira vez, informamos
@@ -397,7 +504,7 @@
           quê.
         </p>
 
-        <h2 id="seguranca">9. Segurança da informação (art. 46)</h2>
+        <h2 id="seguranca">10. Segurança da informação (art. 46)</h2>
         <p>Medidas técnicas efetivamente adotadas:</p>
         <ol>
           <li><strong>Senhas</strong> guardadas como hash Argon2id, com mínimo de 12 caracteres. Em nenhum momento a senha em claro é gravada.</li>
@@ -409,7 +516,7 @@
           <li><strong>Autenticação exigida por padrão</strong> em toda a API: uma rota nova nasce protegida, e a lista de exceções públicas é curta, explícita e verificada por teste automatizado a cada alteração.</li>
           <li><strong>Guarda de saída</strong> que valida o destino das requisições externas, impedindo que a plataforma seja usada para alcançar a rede interna.</li>
           <li><strong>Mascaramento em registros técnicos</strong>: credenciais reconhecíveis — chaves de API e tokens — são substituídas por máscara antes de chegar aos logs, e os avisos de envio de e-mail registram o endereço abreviado.</li>
-          <li><strong>Descarte automático</strong> dos dados cujo prazo de retenção venceu, conforme a seção 11.</li>
+          <li><strong>Descarte automático</strong> dos dados cujo prazo de retenção venceu, conforme a seção <a href="#retencao">Retenção e descarte</a>.</li>
         </ol>
         <p>
           Nenhuma medida elimina risco por completo. Se você identificar uma falha de segurança,
@@ -417,7 +524,7 @@
           relato responsável é bem-vindo e não será tratado como uso indevido.
         </p>
 
-        <h2 id="incidentes">10. Incidentes de segurança (art. 48)</h2>
+        <h2 id="incidentes">11. Incidentes de segurança (art. 48)</h2>
         <p>
           Diante de incidente que possa acarretar risco ou dano relevante, comunicaremos a ANPD e os
           titulares afetados em prazo razoável, informando a natureza dos dados envolvidos, os
@@ -426,7 +533,7 @@
           cadastrado e por aviso destacado na interface.
         </p>
 
-        <h2 id="retencao">11. Retenção e descarte (arts. 15 e 16)</h2>
+        <h2 id="retencao">12. Retenção e descarte (arts. 15 e 16)</h2>
         <div class="legal-table-wrap">
           <table>
             <thead>
@@ -469,6 +576,26 @@
               </tr>
 
               <tr>
+                <td>Registros de uso da plataforma</td>
+                <td>Até 180 dias, e nunca além de 12 de outubro de 2027 (30 dias após o fim do beta)</td>
+                <td>Analisar o uso ao longo do beta</td>
+              </tr>
+              <tr>
+                <td>Registros de erros</td>
+                <td>Até 90 dias</td>
+                <td>Corrigir defeitos</td>
+              </tr>
+              <tr>
+                <td>Registros de consumo de IA</td>
+                <td>Até 12 meses</td>
+                <td>Mostrar a você o histórico do seu consumo</td>
+              </tr>
+              <tr>
+                <td>Estatísticas agregadas de uso</td>
+                <td>Sem prazo</td>
+                <td>Não identificam ninguém</td>
+              </tr>
+              <tr>
                 <td>Registro de operações (ROPA)</td>
                 <td>5 anos</td>
                 <td>Prestação de contas (art. 37 c/c art. 16, I). Guarda apenas metadados — nunca o conteúdo tratado</td>
@@ -482,7 +609,7 @@
           fisicamente do disco os PDFs associados aos seus projetos.
         </p>
 
-        <h2 id="direitos">12. Seus direitos e como exercê-los (arts. 18 e 19)</h2>
+        <h2 id="direitos">13. Seus direitos e como exercê-los (arts. 18 e 19)</h2>
         <p>
           Vários direitos são exercidos por você mesmo, na seção de conta, sem precisar pedir nada a
           ninguém:
@@ -493,8 +620,8 @@
           <li><strong>Portabilidade.</strong> Exportação de projetos, protocolos, referências, extrações, rastro de decisões e configurações em formato estruturado e interoperável.</li>
           <li><strong>Eliminação.</strong> Exclusão da conta com prazo de arrependimento de 7 dias (desativação prévia) ou eliminação imediata e definitiva.</li>
           <li><strong>Revogação do consentimento.</strong> Para os campos opcionais de perfil e para o pedido de convite, a qualquer momento.</li>
-          <li><strong>Informação sobre compartilhamento.</strong> A relação de destinatários está na seção 6 e é mantida atualizada.</li>
-          <li><strong>Oposição</strong> a tratamento fundado em legítimo interesse, com análise do caso concreto.</li>
+          <li><strong>Informação sobre compartilhamento.</strong> A relação de destinatários está na seção <a href="#compartilhamento">Com quem compartilhamos</a> e é mantida atualizada.</li>
+          <li><strong>Oposição</strong> a tratamento fundado em legítimo interesse, com análise do caso concreto. Para os dados de uso do beta, a oposição é exercida por você mesmo, no interruptor de <em>Configurações → Privacidade e dados de uso</em>, sem precisar justificar.</li>
         </ol>
         <p>
           Para o que não estiver na interface, escreva para
@@ -507,7 +634,7 @@
           Dados a qualquer momento, inclusive sem nos procurar antes.
         </p>
 
-        <h2 id="menores">13. Crianças e adolescentes (art. 14)</h2>
+        <h2 id="menores">14. Crianças e adolescentes (art. 14)</h2>
         <p>
           A plataforma se destina a maiores de 18 anos e não é dirigida a crianças ou adolescentes.
           Não coletamos conscientemente dados de menores. Se identificarmos um cadastro nessa
@@ -516,7 +643,7 @@
           <a href="mailto:eduardomatheusfigueira@gmail.com">eduardomatheusfigueira@gmail.com</a>.
         </p>
 
-        <h2 id="ropa">14. Registro das operações de tratamento</h2>
+        <h2 id="ropa">15. Registro das operações de tratamento</h2>
         <p>
           Mantemos um registro interno das operações realizadas, conforme o art. 37. Ele guarda
           <strong>a categoria do dado, nunca o dado</strong>: anota que houve um login, uma
@@ -530,7 +657,7 @@
           não frustra o seu direito à eliminação.
         </p>
 
-        <h2 id="alteracoes">15. Alterações neste aviso</h2>
+        <h2 id="alteracoes">16. Alterações neste aviso</h2>
         <p>
           Este documento pode ser atualizado para refletir mudanças no sistema ou exigências
           regulatórias. Alterações relevantes são anunciadas na interface, com indicação destacada
@@ -597,7 +724,7 @@
         <span class="footer-estado">
           <span>Beta aberta</span>
           <span>Grátis</span>
-          <span>Sem rastreadores</span>
+          <span>Sem rastreadores de terceiros</span>
         </span>
       </div>
     </div>

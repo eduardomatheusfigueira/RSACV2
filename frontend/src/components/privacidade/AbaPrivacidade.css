@@ -1,0 +1,124 @@
+/**
+ * Revsist — Configurações › Privacidade e dados de uso (doc 52 §6.7).
+ */
+
+.priv-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.priv-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.priv-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.priv-muted {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+  color: var(--color-text-tertiary);
+}
+
+.priv-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.priv-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.priv-contagens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.priv-tabela {
+  width: 100%;
+  font-size: var(--font-size-xs);
+  border-collapse: collapse;
+}
+
+.priv-tabela th,
+.priv-tabela td {
+  padding: var(--space-1-5) var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.priv-tabela thead th {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.priv-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.priv-tabela th.priv-num,
+.priv-tabela td.priv-num {
+  text-align: right;
+}
+
+.priv-registros {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 420px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.priv-registros li {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 720px) {
+  .priv-registros li {
+    grid-template-columns: 1fr;
+    gap: var(--space-0-5);
+  }
+
+  .priv-tabela {
+    display: block;
+    overflow-x: auto;
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "versao": 1,
+  "_leia": "Vocabulário fechado dos eventos de uso do beta (doc 52 §5 e §6.2). Todo evento cita as perguntas do §3 que o justificam; não existe tipo de propriedade de texto livre. O frontend gera seus tipos a partir deste arquivo.",
+  "telas": [
+    "entrada",
+    "inicio",
+    "projetos",
+    "projeto.protocolo",
+    "projeto.coleta",
+    "projeto.triagem",
+    "projeto.extracao",
+    "projeto.indicadores",
+    "projeto.exportacao",
+    "projeto.equipe",
+    "configuracoes"
+  ],
+  "alvos": [
+    "projeto.criar",
+    "protocolo.sugerir_ia",
+    "protocolo.congelar",
+    "protocolo.emenda.abrir",
+    "coleta.iniciar",
+    "coleta.cancelar",
+    "coleta.fonte.alternar",
+    "triagem.lote.iniciar",
+    "triagem.decisao.incluir",
+    "triagem.decisao.excluir",
+    "triagem.sugestao_ia.aceitar",
+    "triagem.sugestao_ia.rejeitar",
+    "triagem.filtro.alterar",
+    "extracao.pdf.obter",
+    "extracao.ia.extrair",
+    "indicadores.instantaneo.criar",
+    "exportacao.xlsx",
+    "exportacao.bib",
+    "exportacao.prisma",
+    "equipe.convite.emitir",
+    "config.ia.testar_conexao",
+    "config.chave.adicionar",
+    "feedback.abrir",
+    "ajuda.abrir"
+  ],
+  "faixas": ["0", "1-10", "11-100", "101-1000", ">1000"],
+  "eventos": {
+    "sessao_uso.inicio": {
+      "nivel": "B",
+      "perguntas": ["Q-12"],
+      "descricao_publica": "Início de uma sessão de uso",
+      "propriedades": {
+        "origem": { "tipo": "enum", "valores": ["login", "retorno", "recarga"] }
+      }
+    },
+    "sessao_uso.fim": {
+      "nivel": "B",
+      "perguntas": ["Q-08", "Q-12"],
+      "descricao_publica": "Fim de uma sessão de uso, com o tempo ativo",
+      "propriedades": {
+        "tempo_ativo_s": { "tipo": "int", "min": 0, "max": 86400 },
+        "tempo_total_s": { "tipo": "int", "min": 0, "max": 86400 },
+        "telas_distintas": { "tipo": "int", "min": 0, "max": 20 },
+        "motivo": { "tipo": "enum", "valores": ["inatividade", "fechamento", "logout"] }
+      }
+    },
+    "tela.vista": {
+      "nivel": "B",
+      "perguntas": ["Q-06"],
+      "descricao_publica": "Tela aberta",
+      "propriedades": {
+        "anterior": { "tipo": "enum", "ref": "telas", "extras": ["nenhuma"] }
+      }
+    },
+    "tela.saida": {
+      "nivel": "B",
+      "perguntas": ["Q-06", "Q-08"],
+      "descricao_publica": "Saída de uma tela, com o tempo ativo nela",
+      "propriedades": {
+        "tempo_ativo_s": { "tipo": "int", "min": 0, "max": 86400 }
+      }
+    },
+    "acao": {
+      "nivel": "B",
+      "perguntas": ["Q-06"],
+      "descricao_publica": "Comando acionado, identificado por nome fixo",
+      "propriedades": {
+        "alvo": { "tipo": "enum", "ref": "alvos" }
+      }
+    },
+    "frustracao.clique_repetido": {
+      "nivel": "B",
+      "perguntas": ["Q-07"],
+      "descricao_publica": "Cliques repetidos no mesmo lugar",
+      "propriedades": {
+        "alvo": { "tipo": "enum", "ref": "alvos", "extras": ["nao_instrumentado"] },
+        "cliques": { "tipo": "int", "min": 3, "max": 10 }
+      }
+    },
+    "frustracao.clique_desabilitado": {
+      "nivel": "B",
+      "perguntas": ["Q-07"],
+      "descricao_publica": "Clique em comando desabilitado",
+      "propriedades": {
+        "alvo": { "tipo": "enum", "ref": "alvos", "extras": ["nao_instrumentado"] }
+      }
+    },
+    "ambiente": {
+      "nivel": "B",
+      "perguntas": ["Q-10"],
+      "descricao_publica": "Navegador, sistema, faixa de largura, tema e idioma, resumidos",
+      "propriedades": {
+        "navegador": { "tipo": "enum", "valores": ["chrome", "edge", "firefox", "safari", "outro"] },
+        "navegador_versao": { "tipo": "int", "min": 0, "max": 999 },
+        "sistema": { "tipo": "enum", "valores": ["windows", "macos", "linux", "android", "ios", "outro"] },
+        "largura": { "tipo": "enum", "valores": ["<768", "768-1279", ">=1280"] },
+        "tema": { "tipo": "enum", "valores": ["claro", "escuro"] },
+        "idioma": { "tipo": "enum", "valores": ["pt", "en", "es", "fr", "de", "it", "outro"] },
+        "cliente": { "tipo": "enum", "valores": ["web", "electron"] }
+      }
+    },
+    "desempenho.primeira_tela": {
+      "nivel": "B",
+      "perguntas": ["Q-11"],
+      "descricao_publica": "Tempo até a primeira tela útil",
+      "propriedades": {
+        "duracao_ms": { "tipo": "int", "min": 0, "max": 120000 }
+      }
+    },
+    "desempenho.requisicao_lenta": {
+      "nivel": "B",
+      "perguntas": ["Q-11"],
+      "descricao_publica": "Espera acima de dois segundos numa tela",
+      "propriedades": {
+        "duracao_ms": { "tipo": "int", "min": 2000, "max": 300000 }
+      }
+    },
+    "jornada.exportacao": {
+      "nivel": "B",
+      "perguntas": ["Q-01", "Q-02"],
+      "descricao_publica": "Exportação concluída, com o formato",
+      "propriedades": {
+        "formato": { "tipo": "enum", "valores": ["xlsx", "bib", "json", "prisma"] }
+      }
+    },
+    "jornada.triagem_lote_concluida": {
+      "nivel": "B",
+      "perguntas": ["Q-01", "Q-04", "Q-05"],
+      "descricao_publica": "Triagem em lote concluída, com a faixa de estudos",
+      "propriedades": {
+        "estudos": { "tipo": "faixa" },
+        "com_ia": { "tipo": "bool" },
+        "interrompida_por_cota": { "tipo": "bool" }
+      }
+    }
+  }
+}

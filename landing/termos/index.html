@@ -43,7 +43,7 @@
         var p = location.pathname.replace(/\/+$/, '') || '/';
         if (p === '/termos' || p === '/privacidade') return;
         var b = localStorage.getItem('rsac_aceite_termos');
-        if (b && JSON.parse(b).versao === '2026-09') return;
+        if (b && JSON.parse(b).versao === '2026-09.2') return;
       } catch (e) { return; }
       document.documentElement.setAttribute('data-aceite', 'pendente');
     })();
@@ -107,9 +107,9 @@
         <h1>Termos de Uso da Plataforma Revsist</h1>
 
         <p class="legal-meta">
-          VERSÃO 2.0<br />
-          VIGÊNCIA: 12 DE SETEMBRO DE 2026<br />
-          ÚLTIMA ATUALIZAÇÃO: 12 DE SETEMBRO DE 2026
+          VERSÃO 2.1<br />
+          VIGÊNCIA: 15 DE SETEMBRO DE 2026<br />
+          ÚLTIMA ATUALIZAÇÃO: 15 DE SETEMBRO DE 2026
         </p>
 
         <p>
@@ -215,8 +215,10 @@
         <ol>
           <li><strong>Uso gratuito.</strong> A plataforma é oferecida sem cobrança. Não pedimos cartão, não há período de teste que expira e não há plano pago em vigor.</li>
           <li><strong>Custos que são seus.</strong> O uso de provedores pagos de inteligência artificial e de bases científicas por assinatura ocorre com <em>suas</em> credenciais, e a cobrança correspondente é feita a você pelo respectivo fornecedor. Não intermediamos nem reembolsamos esses valores.</li>
-          <li><strong>BETA.</strong> A plataforma está em desenvolvimento ativo. Comportamentos podem mudar entre versões, recursos podem ser alterados ou removidos e defeitos são esperados.</li>
+          <li><strong>BETA.</strong> A plataforma está em desenvolvimento ativo. Comportamentos podem mudar entre versões, recursos podem ser alterados ou removidos e defeitos são esperados. <strong>O BETA tem duração prevista de 12 meses, de 12 de setembro de 2026 a 12 de setembro de 2027.</strong> Ele pode ser encerrado antes, com aviso. Uma prorrogação só ocorre com nova versão destes Termos e do Aviso de Privacidade.</li>
           <li><strong>Mudança de modelo.</strong> Caso venha a existir cobrança no futuro, ela será anunciada com antecedência razoável e não se aplicará retroativamente ao uso já feito. Você poderá exportar seus dados e encerrar a conta antes de qualquer cobrança.</li>
+          <li><strong>Participação no beta e dados de uso.</strong> Participar do BETA é usar uma plataforma que ainda está sendo medida. Enquanto durar o BETA, registramos como a plataforma é usada — telas, ações, tempo ativo, erros e consumo de IA — nos termos da seção <a href="/privacidade#uso-beta">Dados de uso durante o beta</a> do Aviso de Privacidade. Esse registro não inclui o conteúdo da sua pesquisa, não é compartilhado com terceiros e não é visível a outros membros das suas equipes. Você pode desligar o registro de uso da plataforma a qualquer momento, sem perder acesso a nenhum recurso.</li>
+          <li><strong>Pesquisas e estudos.</strong> Convites para questionários, entrevistas ou estudos científicos sobre a plataforma são sempre opcionais, feitos à parte e acompanhados de termo próprio. Recusá-los não afeta o seu acesso.</li>
         </ol>
 
         <h2 id="uso">6. Uso aceitável e condutas vedadas</h2>
@@ -247,6 +249,7 @@
           <li><strong>Licença de operação.</strong> Você nos concede apenas a licença limitada, não exclusiva e revogável de armazenar, processar e exibir esse conteúdo <em>na medida necessária para operar o serviço para você</em> — o que inclui cópias de segurança. Essa licença termina quando o conteúdo é eliminado.</li>
           <li><strong>Não usamos seu conteúdo para outros fins.</strong> Não treinamos modelos com o seu material, não o comercializamos e não o divulgamos, salvo obrigação legal ou ordem judicial.</li>
           <li><strong>Exportação.</strong> Você pode exportar seu conteúdo a qualquer momento, em formatos abertos, pela ferramenta de portabilidade.</li>
+          <li><strong>Dados de uso não são conteúdo.</strong> Os registros de uso do beta descrevem como a plataforma foi usada, não o que você produziu nela, e não autorizam a leitura do seu conteúdo de pesquisa.</li>
         </ol>
 
         <h2 id="terceiros">9. Bases científicas, PDFs e direitos de terceiros</h2>
@@ -280,7 +283,7 @@
         <ol>
           <li><strong>Operacionais.</strong> Enviamos mensagens necessárias ao funcionamento do serviço — aprovação de pedido de convite, avisos de segurança, mudanças nestes Termos. Não é possível descadastrar-se dessas mensagens sem encerrar a conta, porque elas são parte da prestação.</li>
           <li><strong>Canais.</strong> A confirmação de um pedido de convite pode ser enviada por e-mail e, quando você informa um telefone no pedido, também por mensagem ao número informado.</li>
-          <li><strong>Sem marketing.</strong> Não enviamos publicidade, não cedemos seu contato a terceiros e não usamos seus dados para prospecção.</li>
+          <li><strong>Sem marketing.</strong> Não enviamos publicidade, não cedemos seu contato a terceiros e não usamos seus dados para prospecção. Convites para pesquisas sobre a plataforma não são publicidade, são opcionais e podem ser desligados com &ldquo;não perguntar mais&rdquo;.</li>
         </ol>
 
         <h2 id="encerramento">13. Suspensão e encerramento</h2>
@@ -407,7 +410,7 @@
         <span class="footer-estado">
           <span>Beta aberta</span>
           <span>Grátis</span>
-          <span>Sem rastreadores</span>
+          <span>Sem rastreadores de terceiros</span>
         </span>
       </div>
     </div>

@@ -284,7 +284,7 @@ function renderizarRodape(caminhoRaiz = '/') {
           <span class="footer-estado">
             <span>Beta aberta</span>
             <span>Grátis</span>
-            <span>Sem rastreadores</span>
+            <span>Sem rastreadores de terceiros</span>
           </span>
         </div>
       </div>
@@ -488,7 +488,7 @@ export function gerarBlog() {
         var p = location.pathname.replace(/\\/+$/, '') || '/';
         if (p === '/termos' || p === '/privacidade') return;
         var b = localStorage.getItem('rsac_aceite_termos');
-        if (b && JSON.parse(b).versao === '2026-09') return;
+        if (b && JSON.parse(b).versao === '2026-09.2') return;
       } catch (e) { return; }
       document.documentElement.setAttribute('data-aceite', 'pendente');
     })();
@@ -667,7 +667,7 @@ export function gerarBlog() {
         var p = location.pathname.replace(/\\/+$/, '') || '/';
         if (p === '/termos' || p === '/privacidade') return;
         var b = localStorage.getItem('rsac_aceite_termos');
-        if (b && JSON.parse(b).versao === '2026-09') return;
+        if (b && JSON.parse(b).versao === '2026-09.2') return;
       } catch (e) { return; }
       document.documentElement.setAttribute('data-aceite', 'pendente');
     })();
@@ -744,8 +744,8 @@ ${rssItems}
   const rotasEstaticas = [
     { loc: 'https://revsist.com/', lastmod: '2026-09-02', priority: '1.0', changefreq: 'weekly' },
     { loc: 'https://revsist.com/blog', lastmod: '2026-09-02', priority: '0.9', changefreq: 'daily' },
-    { loc: 'https://revsist.com/termos', lastmod: '2026-09-02', priority: '0.5', changefreq: 'monthly' },
-    { loc: 'https://revsist.com/privacidade', lastmod: '2026-09-02', priority: '0.5', changefreq: 'monthly' },
+    { loc: 'https://revsist.com/termos', lastmod: '2026-09-15', priority: '0.5', changefreq: 'monthly' },
+    { loc: 'https://revsist.com/privacidade', lastmod: '2026-09-15', priority: '0.5', changefreq: 'monthly' },
   ]
 
   const rotasPosts = posts.map((p) => ({

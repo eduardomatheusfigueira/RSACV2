@@ -37,6 +37,13 @@ class UserResponse(BaseModel):
     auth_provider: str = "password"
     created_at: datetime
     last_login_at: Optional[datetime] = None
+    # Versão dos documentos que esta conta aceitou. A interface compara com a
+    # vigente para pedir o reaceite quando o Aviso muda (doc 52 §8.0) — e o
+    # servidor faz a mesma comparação antes de registrar qualquer dado de uso.
+    terms_version: str = ""
+    terms_accepted_at: Optional[datetime] = None
+    # Interruptor do registro de uso do beta, exibido em Configurações.
+    uso_coleta_ativa: bool = True
 
 
 class UserAdminUpdateRequest(BaseModel):

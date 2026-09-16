@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.infrastructure.ai.factory import AIFactory
+from app.services.uso import medidor
 from app.infrastructure.ai.prompts import (
     AVISO_DE_CONTEUDO_EXTERNO,
     delimitar_conteudo_externo,
@@ -73,12 +74,13 @@ class ExtractionService:
         prompt = self._build_prompt(context_text, questions_list_text, source_kind)
 
         client = AIFactory.get_client(db, user_id=user_id)
-        if hasattr(client, "_call_gemini_api"):
-            data = await client._call_gemini_api(prompt)
-        elif hasattr(client, "_call_chat_completion"):
-            data = await client._call_chat_completion(prompt)
-        else:
-            data = {"respostas": []}
+        with medidor.medir(db, user_id, "extracao", project_id=project_id):
+            if hasattr(client, "_call_gemini_api"):
+                data = await client._call_gemini_api(prompt)
+            elif hasattr(client, "_call_chat_completion"):
+                data = await client._call_chat_completion(prompt)
+            else:
+                data = {"respostas": []}
 
         # Extrair a lista de respostas suportando formatos variados:
         # 1. data = {"respostas": [...]}

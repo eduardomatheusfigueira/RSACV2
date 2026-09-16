@@ -7,6 +7,7 @@ Utiliza Pydantic BaseSettings para gerenciamento centralizado de configurações
 com suporte a variáveis de ambiente e valores padrão.
 """
 
+from datetime import date, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Optional
@@ -107,7 +108,34 @@ class Settings(BaseSettings):
     # É o modo "por convite" da v1, sem escrever código de convite.
     signup_allowlist: str = ""
     # Versão do Aviso de Privacidade e dos Termos vigente, registrada no aceite.
-    terms_version: str = "2026-09"
+    terms_version: str = "2026-09.2"
+
+    # ── Dados de uso do beta (doc 52) ─────────────────────────────────
+    #
+    # Três travas independentes, e todas precisam estar abertas para que um
+    # único evento seja gravado (doc 52 §6.4):
+    #
+    #   1. `uso_coleta_ativa` — o interruptor de implantação. Desligado por
+    #      padrão: a coleta não pode começar por esquecimento numa atualização.
+    #   2. `uso_versao_dos_termos` — a versão do Aviso que **declara** a coleta.
+    #      Só vale quando coincide com `terms_version`, porque é essa a versão
+    #      que as pessoas aceitam: publicar um Aviso novo sem subir a versão
+    #      deixaria a coleta valendo para quem aceitou o texto antigo. Desde
+    #      15/09/2026 a seção "Dados de uso durante o beta" está publicada em
+    #      `/privacidade#uso-beta`, e por isso o valor é a versão vigente.
+    #   3. O estado na tabela `sistema_estado_da_coleta`, mudado pela aba
+    #      Sistema — ativar, pausar, encerrar.
+    uso_coleta_ativa: bool = False
+    uso_versao_dos_termos: str = "2026-09.2"
+    # Chave do HMAC que pseudonimiza identificadores nas exportações para
+    # análise (doc 52 §7.7). Vazia desabilita a exportação.
+    uso_segredo_pseudonimo: str = ""
+
+    # O beta dura um ano (doc 52 §6.6.4, D-07). O início é a vigência dos
+    # Termos 2.0, que declararam o BETA. Prorrogar não é mudar este número e
+    # reiniciar: a data de fim está escrita no Aviso que cada pessoa aceitou.
+    beta_inicio: date = date(2026, 9, 12)
+    beta_duracao_dias: int = 365
 
     # ── Envio de e-mail (aviso de convite aprovado) ───────────────────
     #
@@ -264,6 +292,11 @@ class Settings(BaseSettings):
         if self.deployment_profile is DeploymentProfile.CI:
             return ["http://testserver"]
         return [o.strip().rstrip("/") for o in self.cors_origins if o and o.strip()]
+
+    @property
+    def beta_fim(self) -> date:
+        """Primeiro dia **fora** do beta: a coleta recusa a partir dele."""
+        return self.beta_inicio + timedelta(days=self.beta_duracao_dias)
 
     @property
     def google_login_enabled(self) -> bool:

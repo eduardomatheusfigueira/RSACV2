@@ -29,10 +29,15 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.infrastructure.persistence.models import (
     InviteRequestModel,
     LoginAttemptModel,
     SessionModel,
+    SistemaAcaoModel,
+    UsoChamadaIAModel,
+    UsoErroModel,
+    UsoEventoModel,
 )
 from app.security import oauth_state
 
@@ -42,10 +47,23 @@ logger = logging.getLogger(__name__)
 DIAS_TENTATIVAS_DE_LOGIN = 90
 DIAS_PEDIDOS_DE_CONVITE_RESPONDIDOS = 365
 
+# ── Dados de uso do beta (doc 52 §7.5) ────────────────────────────────
+# Ainda não publicados: entram no Aviso 2.1, e a coleta não pode ser ativada
+# antes disso (`services/uso/portao.py`, item "termos").
+DIAS_EVENTOS_DE_USO = 180
+DIAS_EVENTOS_APOS_FIM_DO_BETA = 30
+DIAS_OCORRENCIAS_DE_ERRO = 90
+DIAS_CHAMADAS_DE_IA = 365
+DIAS_DIARIO_DE_ACOES = 5 * 365
+
 # Intervalo mínimo entre execuções oportunistas, em segundos.
 INTERVALO_MINIMO = 3600
 
 _ultima_execucao: float = 0.0
+
+# Quando a retenção terminou pela última vez neste processo. A aba Sistema
+# mostra, e o portão de ativação exige que tenha sido nas últimas 24 horas.
+ultima_execucao_em: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -54,6 +72,10 @@ class ResultadoDaRetencao:
     pedidos_de_convite: int = 0
     sessoes: int = 0
     estados_oauth: int = 0
+    eventos_de_uso: int = 0
+    ocorrencias_de_erro: int = 0
+    chamadas_de_ia: int = 0
+    acoes_do_sistema: int = 0
 
     @property
     def total(self) -> int:
@@ -62,7 +84,30 @@ class ResultadoDaRetencao:
             + self.pedidos_de_convite
             + self.sessoes
             + self.estados_oauth
+            + self.eventos_de_uso
+            + self.ocorrencias_de_erro
+            + self.chamadas_de_ia
+            + self.acoes_do_sistema
         )
+
+
+def limite_dos_eventos_de_uso(agora: datetime) -> datetime:
+    """
+    Tudo recebido antes deste instante vence.
+
+    O prazo é de 180 dias **ou** 30 dias após o fim do beta, o que vier
+    primeiro. Passado o fim + 30 dias, o limite vira "agora": não sobra nenhum
+    evento bruto, só os agregados.
+    """
+    from app.services.uso.portao import inicio_do_dia_em_utc
+
+    pelo_prazo = agora - timedelta(days=DIAS_EVENTOS_DE_USO)
+    descarte_final = inicio_do_dia_em_utc(
+        settings.beta_fim + timedelta(days=DIAS_EVENTOS_APOS_FIM_DO_BETA)
+    )
+    if agora >= descarte_final:
+        return agora
+    return pelo_prazo
 
 
 def aplicar_retencao(db: Session, agora: datetime | None = None) -> ResultadoDaRetencao:
@@ -103,6 +148,27 @@ def aplicar_retencao(db: Session, agora: datetime | None = None) -> ResultadoDaR
         .delete(synchronize_session=False)
     )
 
+    eventos = (
+        db.query(UsoEventoModel)
+        .filter(UsoEventoModel.recebido_em < limite_dos_eventos_de_uso(agora))
+        .delete(synchronize_session=False)
+    )
+    erros = (
+        db.query(UsoErroModel)
+        .filter(UsoErroModel.recebido_em < agora - timedelta(days=DIAS_OCORRENCIAS_DE_ERRO))
+        .delete(synchronize_session=False)
+    )
+    chamadas = (
+        db.query(UsoChamadaIAModel)
+        .filter(UsoChamadaIAModel.ocorrido_em < agora - timedelta(days=DIAS_CHAMADAS_DE_IA))
+        .delete(synchronize_session=False)
+    )
+    acoes = (
+        db.query(SistemaAcaoModel)
+        .filter(SistemaAcaoModel.executada_em < agora - timedelta(days=DIAS_DIARIO_DE_ACOES))
+        .delete(synchronize_session=False)
+    )
+
     db.commit()
 
     # `expurgar_vencidos` usa o próprio relógio e faz o próprio commit.
@@ -113,17 +179,30 @@ def aplicar_retencao(db: Session, agora: datetime | None = None) -> ResultadoDaR
         pedidos_de_convite=pedidos,
         sessoes=sessoes,
         estados_oauth=estados or 0,
+        eventos_de_uso=eventos,
+        ocorrencias_de_erro=erros,
+        chamadas_de_ia=chamadas,
+        acoes_do_sistema=acoes,
     )
+
+    global ultima_execucao_em
+    ultima_execucao_em = datetime.now(timezone.utc)
+
     if resultado.total:
         # Contagens, e só: o log de descarte não pode virar o lugar onde o dado
         # descartado sobrevive.
         logger.info(
             "[Retenção] Eliminados: %d tentativas de login, %d pedidos de convite, "
-            "%d sessões, %d estados OAuth.",
+            "%d sessões, %d estados OAuth, %d eventos de uso, %d ocorrências de erro, "
+            "%d chamadas de IA, %d ações do sistema.",
             resultado.tentativas_de_login,
             resultado.pedidos_de_convite,
             resultado.sessoes,
             resultado.estados_oauth,
+            resultado.eventos_de_uso,
+            resultado.ocorrencias_de_erro,
+            resultado.chamadas_de_ia,
+            resultado.acoes_do_sistema,
         )
     return resultado
 

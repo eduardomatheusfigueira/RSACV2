@@ -76,6 +76,7 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 45      vigente            protocolos — qualificação, modos Simplificado/Completo e bibliometria
 47–49   vigente            bibliometria auditável — instantâneo, instrumento, indicador, evidência
 50      vigente            espaço de equipe — perfil compartilhado, trabalhos e mural
+52      em discussão       dados de uso do beta — tempo, ações, erros, tokens e textos legais
 ```
 
 ---
@@ -232,6 +233,14 @@ está lá dentro*. O doc 38 é o instrumento de verificação, item a item, cont
 |---|-----------|-----------|
 | **37** | [Diagnóstico de Conformidade à LGPD](./37_DIAGNOSTICO_LGPD.md) | Mudança de regime ao virar serviço, mapa dos dados pessoais já tratados, bases legais, transferência internacional e 15 achados com evidência em `arquivo:linha` |
 | **38** | [Checklist da LGPD](./38_CHECKLIST_LGPD.md) | 88 itens verificáveis contra o código, com comando de conferência, estado aferido e o portão de publicação |
+
+| **52** 🟡 | [Plano de Coleta de Dados de Uso do Beta](./52_PLANO_DADOS_DE_USO_DO_BETA.md) | Documento único. Doze perguntas que o beta precisa responder e o catálogo fechado de dados que as responde: tempo ativo, telas e ações por identificador fixo, erros sanitizados, tokens por chamada de IA. Três níveis com bases legais distintas (operacional, uso do produto com interruptor, estudo com TCLE), texto proposto para Aviso, Termos e tela de aceite, a aba **Sistema** (só do dono) para visualizar e gerenciar os dados, o ciclo do beta de 1 ano (12/09/2026 a 12/09/2027), sete fases e o portão de ativação |
+
+> **Comportamento, nunca conteúdo** — doc 52 §2, princípio P3. Os eventos de uso
+> não têm tipo "texto livre": a garantia de que um título, um critério ou o que
+> se digita não entra na telemetria é a mesma do ROPA — não existir por onde
+> passar. E nada é coletado de quem não reaceitou a versão dos termos que o
+> declara (P5).
 
 > A norma de referência é a Lei nº 13.709/2018 em **texto compilado**, já com
 > as alterações da Lei nº 15.352/2026. O doc 38 é o que se consulta antes de

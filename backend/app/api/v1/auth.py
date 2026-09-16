@@ -112,6 +112,9 @@ def _serializar(user: UserModel) -> UserResponse:
         auth_provider=user.auth_provider or "password",
         created_at=user.created_at,
         last_login_at=user.last_login_at,
+        terms_version=user.terms_version or "",
+        terms_accepted_at=user.terms_accepted_at,
+        uso_coleta_ativa=bool(user.uso_coleta_ativa),
     )
 
 

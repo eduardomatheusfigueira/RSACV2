@@ -20,6 +20,7 @@ import TeamPage from '@/pages/TeamPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { AceiteDeTermos } from '@/components/aceite'
 import { ErrorBoundary, Toaster } from '@/components/ui'
+import { ReaceiteDeTermos } from '@/components/aceite/ReaceiteDeTermos'
 import { api } from '@/api/client'
 import {
   analisarUrlDeBackend,
@@ -274,6 +275,10 @@ function AppContent(): JSX.Element {
 
   return (
     <AuthGate>
+      {/* Depois do login, e só para quem tem conta: o aceite que vale é o
+          gravado na conta, e é ele que o servidor confere antes de registrar
+          qualquer dado de uso (doc 52 §8.0). */}
+      <ReaceiteDeTermos>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
@@ -339,6 +344,7 @@ function AppContent(): JSX.Element {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </ReaceiteDeTermos>
     </AuthGate>
   )
 }

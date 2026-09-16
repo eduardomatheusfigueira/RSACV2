@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.infrastructure.ai.factory import AIFactory
+from app.services.uso import medidor
 from app.infrastructure.persistence.models import AISettingsModel, UserModel
 from app.schemas.ai import (
     AISettingsResponse,
@@ -323,7 +324,8 @@ async def test_ai_connection(
         )
 
     client = AIFactory.get_client(db, user_id=usuario.id)
-    diagnostico = await client.diagnosticar_conexao()
+    with medidor.medir(db, usuario.id, "teste_conexao"):
+        diagnostico = await client.diagnosticar_conexao()
 
     if not diagnostico.ok:
         # 502 continua sendo o código certo — a falha é do provedor, não do
@@ -360,11 +362,12 @@ async def suggest_protocol(
 
     client = AIFactory.get_client(db, user_id=usuario.id)
     try:
-        suggestions = await client.generate_protocol_suggestions(
-            title=data.title,
-            methodology=data.methodology,
-            initial_description=data.description,
-        )
+        with medidor.medir(db, usuario.id, "sugestao_protocolo"):
+            suggestions = await client.generate_protocol_suggestions(
+                title=data.title,
+                methodology=data.methodology,
+                initial_description=data.description,
+            )
         return suggestions
     except Exception as e:
         mensagem, _ = erro_interno(
@@ -389,17 +392,18 @@ async def assist_field(
 
     client = AIFactory.get_client(db, user_id=usuario.id)
     try:
-        result = await client.assist_field(
-            field_label=data.field_label,
-            field_guidelines=data.field_guidelines,
-            current_value=data.current_value,
-            project_title=data.project_title,
-            methodology=data.methodology,
-            project_context=data.project_context,
-            action=data.action,
-            custom_instruction=data.custom_instruction,
-            field_id=data.field_id,
-        )
+        with medidor.medir(db, usuario.id, "assistencia_campo"):
+            result = await client.assist_field(
+                field_label=data.field_label,
+                field_guidelines=data.field_guidelines,
+                current_value=data.current_value,
+                project_title=data.project_title,
+                methodology=data.methodology,
+                project_context=data.project_context,
+                action=data.action,
+                custom_instruction=data.custom_instruction,
+                field_id=data.field_id,
+            )
         return FieldAssistResponse(
             field_id=data.field_id,
             suggested_text=result.get("suggested_text", ""),

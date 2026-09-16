@@ -44,6 +44,8 @@ interface AuthState {
   submitting: boolean
 
   bootstrap: () => Promise<void>
+  /** Relê a conta no servidor — usada depois do reaceite dos documentos. */
+  refreshUser: () => Promise<void>
   login: (username: string, password: string) => Promise<boolean>
   registerWithInvite: (payload: import('@/types/api').RegisterWithInvitePayload) => Promise<boolean>
   loginWithLocalToken: (token: string) => Promise<boolean>
@@ -134,6 +136,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // responde, e concluir que a senha está errada.
       set({ phase: 'unavailable', user: null })
       useSettingsStore.getState().setActiveProject(null)
+    }
+  },
+
+  refreshUser: async () => {
+    try {
+      const status = await api.getAuthStatus()
+      if (status.authenticated && status.user) {
+        set({ status, user: status.user })
+      }
+    } catch {
+      // Falha aqui não muda a sessão: a próxima carga da página relê.
     }
   },
 

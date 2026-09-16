@@ -49,6 +49,8 @@ from app.security.sessions import SESSION_COOKIE, revoke_all_sessions
 from app.services.pdf_service import PDFService
 from app.services.profile_service import ProfileService
 from app.services import ropa_service
+from app.schemas.uso import MeUsoRegistrosResponse, MeUsoResponse, MeUsoUpdate
+from app.services.uso import painel, portao
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +128,10 @@ def executar_eliminacao_completa_usuario(db: Session, user_id: str) -> None:
     db.query(FeedbackModel).filter(FeedbackModel.user_id == user_id).delete(
         synchronize_session=False
     )
+    # Dados de uso do beta (doc 52 §7.6). O `ON DELETE CASCADE` cuida disso no
+    # PostgreSQL; a exclusão explícita cobre o SQLite sem o PRAGMA — e deixa a
+    # intenção escrita onde se lê a eliminação.
+    painel.apagar_uso_da_conta(db, user_id, commit=False)
 
     # 4. Revogar sessões
     revoke_all_sessions(db, user_id)
@@ -143,6 +149,9 @@ def executar_eliminacao_completa_usuario(db: Session, user_id: str) -> None:
             "identificador_externo",
             "conteudo_de_pesquisa",
             "documento",
+            "uso_da_plataforma",
+            "diagnostico_tecnico",
+            "consumo_de_ia",
         ],
         user_id=user_id,
         commit=False,
@@ -239,6 +248,16 @@ def obter_declaracao_completa(
             "categorias": ["identificacao", "contato", "conexao"],
             "descricao": "Mensagem, tela, versão e navegador, lidos pelo administrador para corrigir problemas e responder a quem escreveu.",
         },
+        {
+            "finalidade": "Dados de uso do beta: uso da plataforma, erros e consumo de IA",
+            "base_legal": "Art. 7º, IX (Legítimo interesse) e V (Execução de contrato, para o consumo de IA)",
+            "categorias": ["uso_da_plataforma", "diagnostico_tecnico", "consumo_de_ia"],
+            "descricao": (
+                "Telas, ações por nome fixo, tempo ativo, erros sanitizados e tokens por chamada — nunca o "
+                "conteúdo da pesquisa. Só registrado quando a coleta está ativa e declarada no Aviso; o uso "
+                "da plataforma pode ser desligado em GET/PATCH /api/v1/me/uso."
+            ),
+        },
     ]
 
     destinatarios = [
@@ -259,6 +278,9 @@ def obter_declaracao_completa(
         {"dado": "Sessões e tokens", "prazo": "Eliminados após expiração ou logout"},
         {"dado": "Feedback do beta", "prazo": "Até exclusão pelo administrador ou da conta"},
         {"dado": "Tentativas de login (IPs)", "prazo": "Expurgo automático após 90 dias"},
+        {"dado": "Eventos de uso do beta", "prazo": "Até 180 dias, nunca além de 30 dias após o fim do beta"},
+        {"dado": "Ocorrências de erro", "prazo": "Até 90 dias"},
+        {"dado": "Chamadas de IA (consumo de tokens)", "prazo": "Até 12 meses"},
         {"dado": "Registro de Operações (ROPA)", "prazo": "5 anos para prestação de contas (Art. 6º, X e Art. 37)"},
     ]
 
@@ -278,6 +300,102 @@ def obter_declaracao_completa(
         politica_de_retencao=politica_retencao,
         direitos_do_titular=direitos,
     )
+
+
+# ── Dados de uso do beta (doc 52 §6.7 e §7.6) ─────────────────────────
+
+
+def _situacao_do_uso(db: Session, usuario: UserModel) -> MeUsoResponse:
+    return MeUsoResponse(
+        coleta_ativa=usuario.uso_coleta_ativa,
+        alterada_em=as_utc(usuario.uso_coleta_alterada_em),
+        coleta_em_vigor=portao.motivo_de_bloqueio(db, usuario, "B") is None,
+        beta_fim=settings.beta_fim,
+        contagens=painel.contagens_da_conta(db, usuario.id),
+    )
+
+
+@router.get("/uso", response_model=MeUsoResponse)
+def obter_situacao_do_uso(
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """O interruptor da coleta de uso e quanto já foi registrado sobre a conta."""
+    return _situacao_do_uso(db, usuario)
+
+
+@router.get("/uso/registros", response_model=MeUsoRegistrosResponse)
+def ver_o_que_foi_registrado(
+    limite: int = 200,
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """
+    Os registros de uso da própria conta, em linguagem comum (art. 18, II).
+
+    É o acesso que o Aviso promete na seção "Dados de uso durante o beta", e
+    ele existe para que ninguém precise acreditar na descrição: dá para
+    conferir, linha a linha, o que foi guardado.
+    """
+    return painel.registros_legiveis_da_conta(db, usuario.id, limite=max(1, min(limite, 500)))
+
+
+@router.patch("/uso", response_model=MeUsoResponse)
+def alterar_coleta_de_uso(
+    dados: MeUsoUpdate,
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """
+    Liga ou desliga a coleta de uso da plataforma (Nível B) — a oposição do
+    art. 18, §2º, exercida sem precisar justificar.
+    """
+    if dados.coleta_ativa != usuario.uso_coleta_ativa:
+        usuario.uso_coleta_ativa = dados.coleta_ativa
+        usuario.uso_coleta_alterada_em = datetime.now(timezone.utc)
+        ropa_service.registrar(
+            db,
+            operation="usage_opt_in" if dados.coleta_ativa else "usage_opt_out",
+            legal_basis="art7_VI_exercicio_de_direitos",
+            purpose=(
+                "Titular religou a coleta de dados de uso do beta"
+                if dados.coleta_ativa
+                else "Titular se opôs à coleta de dados de uso do beta (art. 18, §2º)"
+            ),
+            data_categories=["uso_da_plataforma"],
+            user_id=usuario.id,
+            commit=False,
+        )
+        db.commit()
+        db.refresh(usuario)
+
+    if dados.apagar_registros:
+        _apagar_uso(db, usuario)
+    return _situacao_do_uso(db, usuario)
+
+
+def _apagar_uso(db: Session, usuario: UserModel) -> None:
+    painel.apagar_uso_da_conta(db, usuario.id, commit=False)
+    ropa_service.registrar(
+        db,
+        operation="usage_data_erased",
+        legal_basis="art7_VI_exercicio_de_direitos",
+        purpose="Eliminação dos dados de uso do beta a pedido do titular",
+        data_categories=["uso_da_plataforma", "diagnostico_tecnico", "consumo_de_ia"],
+        user_id=usuario.id,
+        commit=False,
+    )
+    db.commit()
+
+
+@router.delete("/uso", response_model=MeUsoResponse)
+def apagar_dados_de_uso(
+    db: Session = Depends(get_db),
+    usuario: UserModel = Depends(require_session),
+):
+    """Apaga os eventos, erros e chamadas de IA registrados sobre a conta."""
+    _apagar_uso(db, usuario)
+    return _situacao_do_uso(db, usuario)
 
 
 @router.patch("", response_model=MeSummaryResponse)
@@ -324,6 +442,8 @@ def exportar_para_portabilidade(
     """
     try:
         pacote = profile_service.export_profile(db, usuario.id, session_prefs={})
+        if isinstance(pacote, dict):
+            pacote["dados_de_uso_do_beta"] = painel.exportar_uso_da_conta(db, usuario.id)
 
         # Registrar no ROPA
         ropa_service.registrar(

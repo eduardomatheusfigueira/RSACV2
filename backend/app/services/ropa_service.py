@@ -54,6 +54,13 @@ OPERACOES = frozenset({
     "team_invitation_issued",
     "team_membership_created",
     "team_membership_revoked",
+    # Dados de uso do beta (doc 52 §7.4). Uma linha por decisão sobre a
+    # coleta, nunca uma por evento: volume não é prestação de contas.
+    "usage_opt_out",
+    "usage_opt_in",
+    "usage_data_erased",
+    "usage_data_exported",
+    "usage_collection_changed",
 })
 
 # Categorias, não valores. "contato" é categoria; "fulano@exemplo.br" não é.
@@ -67,6 +74,9 @@ CATEGORIAS = frozenset({
     "referencia_bibliografica",  # metadados de publicações
     "documento",                 # PDF obtido
     "consentimento",             # data e versão do aceite
+    "uso_da_plataforma",         # telas, ações, tempo ativo (doc 52 §5.1–5.3)
+    "diagnostico_tecnico",       # ocorrências de erro sanitizadas (§5.4)
+    "consumo_de_ia",             # tokens por chamada de IA (§5.5)
 })
 
 # Incisos do art. 7º da LGPD.

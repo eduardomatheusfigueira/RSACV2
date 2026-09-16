@@ -22,7 +22,10 @@ import './AceiteDeTermos.css'
 const CHAVE = 'rsac_aceite_termos'
 
 /** Espelha `terms_version` em `backend/app/config.py`. */
-const VERSAO = '2026-09'
+const VERSAO = '2026-09.2'
+
+/** A mesma versão, para quem precisa compará-la com a aceita pela conta. */
+export const VERSAO_DOS_DOCUMENTOS = VERSAO
 
 /** Endereços dos documentos na landing, servidos pela mesma origem. */
 const URL_TERMOS = '/termos'
@@ -83,9 +86,15 @@ export function AceiteDeTermos({ children }: { children: React.ReactNode }): JSX
 
         <p className="aceite-texto">
           O Revsist usa <strong>um único cookie</strong>, técnico, que serve para
-          manter você conectado depois do login. Não há rastreador, anúncio, pixel
-          de telemetria nem métrica de terceiros — nada que siga você por outros
-          sites.
+          manter você conectado depois do login. Não há anúncio, nem rastreador ou
+          pixel de terceiros — nada que siga você por outros sites.
+        </p>
+
+        <p className="aceite-texto">
+          <strong>Durante o beta, registramos no nosso próprio servidor como a
+          plataforma é usada</strong> — telas, ações, erros e consumo de IA —,
+          nunca o conteúdo da sua pesquisa. Você pode desligar isso em
+          Configurações.
         </p>
 
         <label className="aceite-marcacao">

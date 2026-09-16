@@ -1632,6 +1632,102 @@ class APIClient {
     await this.request<void>(`/feedback/${feedbackId}`, { method: 'DELETE' })
   }
 
+  // ── Privacidade e dados de uso do beta (doc 52 §6.7) ────────────────
+
+  async aceitarTermos(): Promise<import('@/types/api').AuthUser> {
+    return this.request('/auth/terms/accept', { method: 'POST' })
+  }
+
+  async getSituacaoDeUso(): Promise<import('@/types/api').SituacaoDeUso> {
+    return this.request('/me/uso')
+  }
+
+  async alterarColetaDeUso(
+    coletaAtiva: boolean,
+    apagarRegistros = false
+  ): Promise<import('@/types/api').SituacaoDeUso> {
+    return this.request('/me/uso', {
+      method: 'PATCH',
+      body: JSON.stringify({ coleta_ativa: coletaAtiva, apagar_registros: apagarRegistros }),
+    })
+  }
+
+  async apagarMeusDadosDeUso(): Promise<import('@/types/api').SituacaoDeUso> {
+    return this.request('/me/uso', { method: 'DELETE' })
+  }
+
+  async getMeusRegistrosDeUso(limite = 200): Promise<import('@/types/api').MeusRegistrosDeUso> {
+    return this.request(`/me/uso/registros?limite=${limite}`)
+  }
+
+  // ── Aba Sistema (doc 52 §6.6) — só a conta dona alcança ─────────────
+
+  async getCicloDoBeta(): Promise<import('@/types/api').CicloDoBeta> {
+    return this.request('/sistema/beta')
+  }
+
+  async getResumoDoSistema(
+    periodo: import('@/types/api').PeriodoDoSistema
+  ): Promise<import('@/types/api').ResumoDoSistema> {
+    return this.request(`/sistema/resumo?periodo=${periodo}`)
+  }
+
+  async getConsumoDeIA(
+    periodo: import('@/types/api').PeriodoDoSistema
+  ): Promise<import('@/types/api').ConsumoDeIA> {
+    return this.request(`/sistema/ia?periodo=${periodo}`)
+  }
+
+  async getErrosDoBeta(
+    periodo: import('@/types/api').PeriodoDoSistema
+  ): Promise<{ itens: import('@/types/api').ErroAgrupado[] }> {
+    return this.request(`/sistema/erros?periodo=${periodo}`)
+  }
+
+  async acompanharErro(
+    impressao: string,
+    dados: { situacao: import('@/types/api').SituacaoDeErro; nota?: string; versao?: string }
+  ): Promise<{ situacao: import('@/types/api').SituacaoDeErro; resolvido_na_versao: string; nota: string }> {
+    return this.request(`/sistema/erros/${impressao}`, { method: 'PATCH', body: JSON.stringify(dados) })
+  }
+
+  async getDadosDeUso(): Promise<{
+    tabelas: import('@/types/api').TabelaDeDadosDeUso[]
+    ultima_retencao_em: string | null
+  }> {
+    return this.request('/sistema/dados')
+  }
+
+  async getDiarioDoSistema(limite = 50): Promise<{ itens: import('@/types/api').AcaoDoSistema[] }> {
+    return this.request(`/sistema/acoes?limite=${limite}`)
+  }
+
+  async mudarColeta(
+    acao: 'ativar' | 'pausar' | 'encerrar',
+    dados: { motivo?: string; confirmacao?: string } = {}
+  ): Promise<{ estado: import('@/types/api').EstadoDaColeta; motivo: string }> {
+    return this.request(`/sistema/coleta/${acao}`, { method: 'POST', body: JSON.stringify(dados) })
+  }
+
+  async aplicarRetencaoAgora(): Promise<{ total: number; eliminados: Record<string, number> }> {
+    return this.request('/sistema/dados/retencao', { method: 'POST' })
+  }
+
+  async consultarTitular(email: string): Promise<{ contagens: import('@/types/api').ContagensDeUso; coleta_ativa: boolean }> {
+    return this.request('/sistema/titulares/consulta', { method: 'POST', body: JSON.stringify({ email }) })
+  }
+
+  async exportarTitular(email: string): Promise<Record<string, unknown[]>> {
+    return this.request('/sistema/titulares/exportacao', { method: 'POST', body: JSON.stringify({ email }) })
+  }
+
+  async eliminarTitular(email: string, confirmacao: string): Promise<{ apagados: import('@/types/api').ContagensDeUso }> {
+    return this.request('/sistema/titulares/eliminacao', {
+      method: 'POST',
+      body: JSON.stringify({ email, confirmacao }),
+    })
+  }
+
   async revokeInvite(inviteId: string): Promise<{ success: boolean; message: string }> {
     return this.request<{ success: boolean; message: string }>(`/invites/${inviteId}`, {
       method: 'DELETE',

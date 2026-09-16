@@ -1,0 +1,428 @@
+/**
+ * Revsist — Aba Sistema (doc 52 §6.6).
+ *
+ * Reaproveita a moldura do painel de administração (`admin-panel`,
+ * `admin-toolbar`, `admin-tab-btn`, de SettingsPage.css) e acrescenta só o
+ * que é próprio daqui: cartão do ciclo, portão, indicadores e tabelas.
+ */
+
+.sis-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.sis-subabas {
+  flex: 1 1 auto;
+}
+
+.sis-periodo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 140px;
+}
+
+.sis-painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sis-muted {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.sis-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.sis-subtitulo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* ── Ciclo do beta ── */
+
+.sis-ciclo__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.sis-destaque {
+  margin: var(--space-0-5) 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.sis-progresso {
+  height: 8px;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.sis-progresso__barra {
+  height: 100%;
+  min-width: 2px;
+  background: var(--color-accent);
+}
+
+.sis-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1-5);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-sm);
+}
+
+/* ── Portão ── */
+
+.sis-portao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sis-portao__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1-5);
+  font-size: var(--font-size-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sis-portao__item:last-child {
+  border-bottom: none;
+}
+
+.sis-portao__rotulo {
+  color: var(--color-text-primary);
+}
+
+.sis-ok {
+  color: var(--color-success-on-surface);
+}
+
+.sis-falta {
+  color: var(--color-error-on-surface);
+}
+
+.sis-aviso {
+  color: var(--color-warning-on-surface);
+}
+
+.sis-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* ── Indicadores ── */
+
+.sis-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-2);
+}
+
+.sis-indicador {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.sis-indicador__valor {
+  font-size: var(--font-size-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tabelas ── */
+
+.sis-tabela {
+  width: 100%;
+  font-size: var(--font-size-xs);
+  border-collapse: collapse;
+}
+
+.sis-tabela th,
+.sis-tabela td {
+  padding: var(--space-1-5) var(--space-2);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sis-tabela thead th,
+.sis-tabela tbody th {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.sis-tabela td {
+  color: var(--color-text-primary);
+}
+
+.sis-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.sis-tabela th.sis-num,
+.sis-tabela td.sis-num {
+  text-align: right;
+}
+
+.sis-barra-horizontal {
+  display: block;
+  height: 4px;
+  margin-top: var(--space-1);
+  overflow: hidden;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-full);
+}
+
+.sis-barra-horizontal > span {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+
+/* ── Formulários e ações ── */
+
+.sis-formulario,
+.sis-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.sis-campo-longo {
+  display: flex;
+  flex: 1 1 260px;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sis-campo-curto {
+  display: flex;
+  flex: 0 0 160px;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sis-campo-longo textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1-5) var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+
+.sis-campo-longo textarea:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--color-accent);
+}
+
+.sis-perigo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
+}
+
+.sis-perigo strong {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.sis-titular {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.sis-titular p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+/* ── Erros ── */
+
+.sis-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sis-erro {
+  border-left: 3px solid var(--color-text-tertiary);
+}
+
+.sis-erro--novo {
+  border-left-color: var(--color-warning);
+}
+
+.sis-erro--investigando {
+  border-left-color: var(--color-info);
+}
+
+.sis-erro--resolvido {
+  border-left-color: var(--color-success);
+}
+
+.sis-erro__cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.sis-erro__tipo {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.sis-erro__impressao {
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+.sis-erro__mensagem {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  word-break: break-word;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.sis-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-tertiary);
+}
+
+.sis-meta code {
+  font-family: var(--font-mono);
+}
+
+.sis-erro__pilha summary {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.sis-erro__pilha pre {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+}
+
+.sis-erro__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* ── Diário ── */
+
+.sis-diario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sis-diario li {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 180px) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  font-size: var(--font-size-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (max-width: 720px) {
+  .sis-diario li {
+    grid-template-columns: 1fr;
+    gap: var(--space-0-5);
+  }
+
+  .sis-tabela {
+    display: block;
+    overflow-x: auto;
+  }
+}

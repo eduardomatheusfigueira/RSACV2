@@ -30,6 +30,7 @@ from app.infrastructure.ai.prompts import (
     build_protocol_suggestion_prompt,
     build_screening_prompt,
 )
+from app.services.uso import medidor
 
 logger = logging.getLogger(__name__)
 
@@ -340,6 +341,22 @@ class GeminiAIClient(BaseAIClient):
             },
         }
 
+        inicio = time.monotonic()
+        # Posição da chave no rodízio, para o registro de consumo (doc 52 §5.5).
+        # Nunca a chave, nem um hash dela.
+        ordinal = self.api_keys.index(key) + 1 if key in self.api_keys else None
+
+        def anotar(resultado: str, **extra) -> None:
+            medidor.anotar(
+                provedor=self.provider_name,
+                modelo_pedido=self.model_name,
+                resultado=resultado,
+                caracteres_enviados=len(prompt),
+                latencia_ms=int((time.monotonic() - inicio) * 1000),
+                chave_ordinal=ordinal,
+                **extra,
+            )
+
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 res = await client.post(url, json=payload)
@@ -353,18 +370,33 @@ class GeminiAIClient(BaseAIClient):
                         .get("text", "")
                     )
                     cleaned = self._clean_json(candidate_text)
-                    return json.loads(cleaned), "ok", None
+                    medida = {
+                        "modelo_respondeu": data.get("modelVersion") or model,
+                        "tokens": medidor.tokens_do_gemini(data),
+                        "caracteres_recebidos": len(candidate_text or ""),
+                    }
+                    try:
+                        convertido = json.loads(cleaned)
+                    except json.JSONDecodeError:
+                        anotar("resposta_invalida", **medida)
+                        raise
+                    anotar("ok", **medida)
+                    return convertido, "ok", None
 
                 if res.status_code == 429:
-                    return None, "limite", self._analisar_429(res)
+                    analise = self._analisar_429(res)
+                    anotar("limite_diario" if analise[1] else "limite_minuto", modelo_respondeu=model)
+                    return None, "limite", analise
 
                 if res.status_code in (400, 404):
                     logger.warning(
                         f"[Gemini] Modelo '{model}' retornou {res.status_code}. Tentando o próximo..."
                     )
+                    anotar("modelo_indisponivel", modelo_respondeu=model)
                     return None, "falha", f"modelo '{model}' indisponível (HTTP {res.status_code})"
 
                 logger.warning(f"[Gemini] Erro na API (HTTP {res.status_code}): {res.text[:100]}")
+                anotar("falha", modelo_respondeu=model)
                 return None, "falha", f"HTTP {res.status_code}"
 
         except json.JSONDecodeError as e:
@@ -372,6 +404,7 @@ class GeminiAIClient(BaseAIClient):
             raise RuntimeError("O modelo Gemini não retornou um JSON válido.")
         except Exception as e:
             logger.warning(f"[Gemini] Falha na requisição ({type(e).__name__}): {e}")
+            anotar("falha", modelo_respondeu=model)
             return None, "falha", f"{type(e).__name__}: {e}"
 
     #: Quanto uma dupla chave+modelo fica de fora quando a cota é DIÁRIA.

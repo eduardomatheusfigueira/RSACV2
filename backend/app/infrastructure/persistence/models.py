@@ -23,6 +23,7 @@ from sqlalchemy import (
     UniqueConstraint,
     event,
     text,
+    true,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
@@ -797,6 +798,16 @@ class UserModel(Base):
     profession: Mapped[str] = mapped_column(String(100), default="", server_default="")
     research_area: Mapped[str] = mapped_column(String(200), default="", server_default="")
 
+    # ── Dados de uso do beta (doc 52 §6.3) ────────────────────────────
+    # O interruptor do Nível B, que a própria pessoa liga e desliga. Nasce
+    # ligado (D-02), e `uso_coleta_alterada_em` é a prova da oposição.
+    uso_coleta_ativa: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true()
+    )
+    uso_coleta_alterada_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -1134,6 +1145,171 @@ class ProcessingRecordModel(Base):
     # que não sai do Revsist.
     recipient: Mapped[str | None] = mapped_column(String(64), nullable=True)
     international: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Dados de uso do beta (doc 52 §6.3)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Regime oposto ao do ROPA. O ROPA sobrevive à eliminação da conta porque
+# prova que ela aconteceu; estes registros descrevem o comportamento de uma
+# pessoa e **morrem com a conta**. Daí `ON DELETE CASCADE` em `user_id` — que
+# o PostgreSQL faz valer — e, para o SQLite sem o PRAGMA, a exclusão explícita
+# em `executar_eliminacao_completa_usuario`.
+
+
+class UsoEventoModel(Base):
+    """
+    Um evento de uso da plataforma: tela vista, ação acionada, sessão de uso.
+
+    `propriedades` só contém chaves e valores que o vocabulário fechado
+    aceitou (`services/uso/vocabulario.py`). Não existe propriedade de texto
+    livre, e é isso — não a boa vontade de quem instrumenta — que impede o
+    conteúdo da pesquisa de cair aqui.
+    """
+
+    __tablename__ = "uso_eventos"
+    __table_args__ = (
+        Index("ix_uso_eventos_user_ocorrido", "user_id", "ocorrido_em"),
+        Index("ix_uso_eventos_nome_ocorrido", "nome", "ocorrido_em"),
+        Index("ix_uso_eventos_recebido", "recebido_em"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    # Aleatório, gerado no navegador; não tem relação com o token de sessão.
+    sessao_uso_id: Mapped[str] = mapped_column(String(36), default="")
+    nome: Mapped[str] = mapped_column(String(64), nullable=False)
+    tela: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    propriedades: Mapped[str] = mapped_column(Text, default="{}")
+    ocorrido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recebido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    versao_app: Mapped[str] = mapped_column(String(20), default="")
+
+
+class UsoErroModel(Base):
+    """
+    Uma ocorrência de erro, no navegador ou no servidor, já sanitizada.
+
+    A sanitização acontece **antes** de a linha existir
+    (`services/uso/erros.py`): mensagem sem e-mail, URL, número longo nem
+    trecho entre aspas; pilha só com `arquivo:linha:função`.
+    """
+
+    __tablename__ = "uso_erros"
+    __table_args__ = (
+        Index("ix_uso_erros_impressao_ocorrido", "impressao", "ocorrido_em"),
+        Index("ix_uso_erros_user", "user_id"),
+        Index("ix_uso_erros_recebido", "recebido_em"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True
+    )
+    origem: Mapped[str] = mapped_column(String(10), nullable=False)  # cliente | servidor
+    impressao: Mapped[str] = mapped_column(String(64), nullable=False)
+    tipo: Mapped[str] = mapped_column(String(80), nullable=False)
+    mensagem: Mapped[str] = mapped_column(String(300), default="")
+    pilha: Mapped[str] = mapped_column(Text, default="")
+    tela: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    rota: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    status_http: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    correlacao: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    versao_app: Mapped[str] = mapped_column(String(20), default="")
+    navegador: Mapped[str] = mapped_column(String(40), default="")
+    ocorrido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recebido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class UsoChamadaIAModel(Base):
+    """
+    Uma tentativa de chamada a provedor de IA, com a contagem de tokens.
+
+    Toda tentativa, e não só a que deu certo: uma recusa por cota também gasta
+    requisição, e é justamente a proporção de recusas que diz se o rodízio de
+    chaves está funcionando. Nunca a chave, o prompt ou a resposta.
+    """
+
+    __tablename__ = "uso_ia_chamadas"
+    __table_args__ = (
+        Index("ix_uso_ia_user_ocorrido", "user_id", "ocorrido_em"),
+        Index("ix_uso_ia_modelo_ocorrido", "provedor", "modelo_respondeu", "ocorrido_em"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    # Sem FK: excluir um projeto não pode ser bloqueado pelo histórico de
+    # consumo, e o consumo continua sendo da pessoa que pagou por ele.
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    operacao: Mapped[str] = mapped_column(String(32), nullable=False)
+    provedor: Mapped[str] = mapped_column(String(40), nullable=False)
+    modelo_pedido: Mapped[str] = mapped_column(String(100), default="")
+    modelo_respondeu: Mapped[str] = mapped_column(String(100), default="")
+    chave_ordinal: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tentativa: Mapped[int] = mapped_column(Integer, default=1)
+    resultado: Mapped[str] = mapped_column(String(24), nullable=False)
+    tokens_entrada: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_saida: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_raciocinio: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_cache: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    estimado: Mapped[bool] = mapped_column(Boolean, default=False)
+    latencia_ms: Mapped[int] = mapped_column(Integer, default=0)
+    ocorrido_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SistemaEstadoDaColetaModel(Base):
+    """
+    O estado da coleta de uso, numa linha só.
+
+    `encerrada` é terminal (doc 52 §6.6.4): um encerramento que pudesse voltar
+    a `ativa` seria uma prorrogação do beta disfarçada de botão.
+    """
+
+    __tablename__ = "sistema_estado_da_coleta"
+
+    id: Mapped[str] = mapped_column(String(20), primary_key=True, default="unico")
+    estado: Mapped[str] = mapped_column(String(20), nullable=False, default="aguardando")
+    alterado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    alterado_por: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    motivo: Mapped[str] = mapped_column(String(300), default="")
+
+
+class UsoErroAcompanhamentoModel(Base):
+    """Como o controlador está tratando um defeito — por impressão, não por ocorrência."""
+
+    __tablename__ = "uso_erros_acompanhamento"
+
+    impressao: Mapped[str] = mapped_column(String(64), primary_key=True)
+    situacao: Mapped[str] = mapped_column(String(20), nullable=False, default="novo")
+    resolvido_na_versao: Mapped[str] = mapped_column(String(20), default="")
+    nota: Mapped[str] = mapped_column(Text, default="")
+    atualizado_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class SistemaAcaoModel(Base):
+    """
+    Diário das ações administrativas da aba Sistema.
+
+    Sem FK em `executada_por` pela mesma razão do ROPA: o diário precisa
+    sobreviver à conta que agiu. `parametros` nunca leva dado de titular — o
+    e-mail de um pedido de titular, por exemplo, não é gravado aqui.
+    """
+
+    __tablename__ = "sistema_acoes"
+    __table_args__ = (Index("ix_sistema_acoes_executada", "executada_em"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    acao: Mapped[str] = mapped_column(String(40), nullable=False)
+    executada_em: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    executada_por: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    parametros: Mapped[str] = mapped_column(Text, default="{}")
+    resultado: Mapped[str] = mapped_column(String(300), default="")
 
 
 # ─────────────────────────────────────────────────────────────────────

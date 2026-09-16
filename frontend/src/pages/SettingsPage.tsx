@@ -54,6 +54,8 @@ import {
   MessageSquareText,
 } from 'lucide-react'
 import { PainelFeedback } from '@/components/feedback/PainelFeedback'
+import { AbaSistema } from '@/components/sistema/AbaSistema'
+import { AbaPrivacidade } from '@/components/privacidade/AbaPrivacidade'
 import { api } from '@/api/client'
 import { useSettingsStore } from '@/stores/useSettingsStore'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -504,17 +506,17 @@ export function SettingsPage(): JSX.Element {
   // ── Gestão de Abas Principais & Controle de Usuários (Owner) ─────
   const { user } = useAuthStore()
   const isOwner = user?.role === 'owner'
-  const [mainTab, setMainTab] = useState<'assistance' | 'sources' | 'appearance' | 'portability' | 'admin'>(() => {
+  const [mainTab, setMainTab] = useState<'assistance' | 'sources' | 'appearance' | 'portability' | 'privacidade' | 'admin' | 'sistema'>(() => {
     try {
       const saved = localStorage.getItem('rsac_settings_tab')
-      if (saved && ['assistance', 'sources', 'appearance', 'portability', 'admin'].includes(saved)) {
+      if (saved && ['assistance', 'sources', 'appearance', 'portability', 'privacidade', 'admin', 'sistema'].includes(saved)) {
         return saved as any
       }
     } catch {}
     return 'assistance'
   })
 
-  const handleSelectMainTab = (tab: 'assistance' | 'sources' | 'appearance' | 'portability' | 'admin') => {
+  const handleSelectMainTab = (tab: 'assistance' | 'sources' | 'appearance' | 'portability' | 'privacidade' | 'admin' | 'sistema') => {
     setMainTab(tab)
     try {
       localStorage.setItem('rsac_settings_tab', tab)
@@ -1269,16 +1271,38 @@ export function SettingsPage(): JSX.Element {
         >
           <FolderArchive size={14} className="tab-icon" /> <span className="tab-label">4. Backup & Portabilidade</span>
         </button>
+        <button
+          type="button"
+          className={`settings-main-tab-btn ${mainTab === 'privacidade' ? 'active' : ''}`}
+          onClick={() => handleSelectMainTab('privacidade')}
+        >
+          <Lock size={14} className="tab-icon" /> <span className="tab-label">5. Privacidade & Dados de uso</span>
+        </button>
         {isOwner && (
           <button
             type="button"
             className={`settings-main-tab-btn ${mainTab === 'admin' ? 'active' : ''}`}
             onClick={() => handleSelectMainTab('admin')}
           >
-            <ShieldCheck size={14} className="tab-icon" /> <span className="tab-label">5. Administração & Usuários</span>
+            <ShieldCheck size={14} className="tab-icon" /> <span className="tab-label">6. Administração & Usuários</span>
+          </button>
+        )}
+        {isOwner && (
+          <button
+            type="button"
+            className={`settings-main-tab-btn ${mainTab === 'sistema' ? 'active' : ''}`}
+            onClick={() => handleSelectMainTab('sistema')}
+          >
+            <Server size={14} className="tab-icon" /> <span className="tab-label">7. Sistema</span>
           </button>
         )}
       </nav>
+
+      {/* ── ABA 5: PRIVACIDADE & DADOS DE USO (doc 52 §6.7) ── */}
+      {mainTab === 'privacidade' && <AbaPrivacidade />}
+
+      {/* ── ABA 7: SISTEMA — dados de uso e ciclo do beta (Owner, doc 52) ── */}
+      {mainTab === 'sistema' && isOwner && <AbaSistema />}
 
       {/* ── ABA 1: INTELIGÊNCIA ARTIFICIAL ── */}
       {mainTab === 'assistance' && (
@@ -1935,7 +1959,7 @@ export function SettingsPage(): JSX.Element {
         </div>
       )}
 
-      {/* ── ABA 5: ADMINISTRAÇÃO & USUÁRIOS (Owner) ── */}
+      {/* ── ABA 6: ADMINISTRAÇÃO & USUÁRIOS (Owner) ── */}
       {mainTab === 'admin' && isOwner && (
         <div className="settings-tab-content">
           <Card className="settings-card">

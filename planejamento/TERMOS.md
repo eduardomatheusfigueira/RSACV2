@@ -1,5 +1,12 @@
 # Termos de Uso da Plataforma Revsist
 
+> ⚠️ **Documento histórico (versão 1.0).** O texto vigente é o publicado em
+> [`/privacidade`](../landing/privacidade/index.html) e
+> [`/termos`](../landing/termos/index.html) — versão 2.1, vigente desde
+> 15/09/2026. Este arquivo é mantido como registro do que valia antes e **não
+> deve ser atualizado**: manter duas fontes da verdade foi justamente o que
+> fez esta cópia divergir do publicado (doc 52 §8.5).
+
 **Versão:** 1.0  
 **Data de Vigência:** 29 de agosto de 2026  
 **Última Atualização:** 29 de agosto de 2026  

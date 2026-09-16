@@ -181,13 +181,15 @@ def test_lista_de_categorias_vazia_e_recusada(db_session):
 
 
 def test_as_operacoes_do_plano_estao_previstas():
-    """§40.5.2 e §43.14 listam operações previstas no ROPA."""
+    """§40.5.2, §43.14 e doc 52 §7.4 listam operações previstas no ROPA."""
     assert OPERACOES == {
         "signup", "login", "data_export", "data_erasure",
         "ai_dispatch", "pdf_fetch", "consent_given", "consent_revoked",
         "team_invitation_issued", "team_membership_created", "team_membership_revoked",
         "invite_requested", "invite_approved_notice",
         "feedback_received",
+        "usage_opt_out", "usage_opt_in", "usage_data_erased", "usage_data_exported",
+        "usage_collection_changed",
     }
 
 

@@ -29,7 +29,9 @@ from app.api.v1.protocols import router as protocols_router
 from app.api.v1.screening import router as screening_router
 from app.api.v1.screening_ai import router as screening_ai_router
 from app.api.v1.settings import router as settings_router
+from app.api.v1.sistema import router as sistema_router
 from app.api.v1.team import router as team_router
+from app.api.v1.uso import router as uso_router
 from app.config import settings
 from app.schemas.common import HealthResponse
 from app.security.dependencies import require_session
@@ -81,5 +83,7 @@ api_router.include_router(insights_router)
 api_router.include_router(bibliometria_router)
 api_router.include_router(profile_router)
 api_router.include_router(protocol_catalog_router)
+api_router.include_router(uso_router)
+api_router.include_router(sistema_router)
 
 

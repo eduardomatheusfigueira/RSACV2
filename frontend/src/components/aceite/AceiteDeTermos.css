@@ -125,3 +125,29 @@
     padding: var(--space-6) var(--space-4) var(--space-4) var(--space-4);
   }
 }
+
+/* ── Reaceite (doc 52 §8.0) ────────────────────────────────────────── */
+
+.aceite-erro {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-error-on-surface);
+  text-align: left;
+}
+
+.aceite-adiar {
+  width: 100%;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.aceite-adiar:hover {
+  color: var(--color-text-primary);
+}
